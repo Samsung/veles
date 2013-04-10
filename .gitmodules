@@ -1,0 +1,4 @@
+[submodule "Znicz"]
+	path = Znicz
+	branch = master
+	url = ssh://alserver.rnd.samsung.ru:29418/Znicz.git
