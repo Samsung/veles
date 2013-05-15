@@ -1,0 +1,244 @@
+#  This file is a part of SEAPT, Samsung Extended Autotools Project Template
+
+#  Copyright 2012,2013 Samsung R&D Institute Russia
+#  All rights reserved.
+#
+#  Redistribution and use in source and binary forms, with or without
+#  modification, are permitted provided that the following conditions are met: 
+#
+#  1. Redistributions of source code must retain the above copyright notice, this
+#     list of conditions and the following disclaimer. 
+#  2. Redistributions in binary form must reproduce the above copyright notice,
+#     this list of conditions and the following disclaimer in the documentation
+#     and/or other materials provided with the distribution.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+#  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+#  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+#  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+#  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+#  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+#  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+#  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+#  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+#  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+AC_PREREQ(2.68)
+AC_CONFIG_SRCDIR([configure.ac])
+AC_CONFIG_MACRO_DIR([m4])
+AC_CANONICAL_BUILD
+AC_CANONICAL_HOST
+AC_CANONICAL_SYSTEM
+
+AC_CONFIG_HEADERS([src/config.h])
+
+AC_ARG_VAR(SYSROOT, [override your compiler's default sysroot (--sysroot)])
+AS_IF([test "x$SYSROOT" != "x" ],    
+    CPPFLAGS="$CPPFLAGS --sysroot=$SYSROOT"
+    LDFLAGS="$LDFLAGS --sysroot=$SYSROOT"
+)
+
+AC_GNU_SOURCE
+AC_PROG_CXX
+AC_PROG_CC
+AC_HEADER_STDC
+AC_C_BIGENDIAN([AC_MSG_ERROR([Big endian hosts are not supported.])])
+
+# Initialize automake
+AM_INIT_AUTOMAKE([1.11 dist-xz foreign color-tests])
+# Nicely formatted make output
+AM_SILENT_RULES([yes])
+# Rebuild everything be default
+AM_MAINTAINER_MODE([enable])
+
+# This allows us specify individual liking flags for each target
+AM_PROG_CC_C_O
+
+# Check for GCC/Clang version
+AC_MSG_CHECKING([whether gcc version is >= 4.6.0 / clang version is >= 3.1])
+AC_EGREP_CPP(passed, [
+#ifdef __GNUC__
+#if !(__GNUC__ < 4 || __GNUC_MINOR__ < 6 || __GNUC_PATCHLEVEL__ < 0)
+passed
+#endif
+#endif
+#ifdef __clang__
+#if !(__clang_major__ < 3 || __clang_minor__ < 1)
+passed
+#endif
+#endif
+], [
+    AC_MSG_RESULT([yes])
+    AC_DEFINE([INLINE], [static __attribute__((always_inline)) inline], [Set modifiers to always inline the code])
+    AC_DEFINE([UNUSED], [__attribute__((unused))], [Mark parameters as unused to avoid warnings])
+    AC_DEFINE([MALLOC], [__attribute__ ((__malloc__))], [malloc() function attribute])
+    AC_DEFINE([WARN_UNUSED_RESULT], [__attribute__ ((__warn_unused_result__))],
+              [warn about unused result function attribute])
+    AC_DEFINE([NOTNULL(...)], [__attribute__ ((__nonnull__ (__VA_ARGS__)))],
+              [Mark pointer parameters which must not be NULL])
+], [    
+    AC_MSG_RESULT([no])
+    AC_MSG_ERROR([Building this project requires GCC >= 4.6.0 or clang >= 3.1])
+])
+
+# Initialize Libtool
+LT_INIT
+
+# Check if Libtool is present
+# Libtool is used for building share libraries
+AC_PROG_LIBTOOL
+
+# Enable pkg-config
+m4_ifndef([PKG_PROG_PKG_CONFIG], AC_MSG_ERROR([Configuration requires pkg-config to be installed]))
+PKG_PROG_PKG_CONFIG
+
+# Check whether to build subdirectories in parallel
+AC_ARG_ENABLE([parallel_build],
+    AS_HELP_STRING([--enable-parallel-build], [build subdirectories in parallel])
+)
+AM_CONDITIONAL([PARALLEL_BUILD], [test "x$enable_parallel_build" == "xyes"])
+
+# Use fancy make output by default
+AC_ARG_ENABLE([colors],
+    AS_HELP_STRING([--disable-colors], [do not use enhanced colored make output])
+)
+AS_IF([test "x$enable_colors" != "xno"], [
+    am__v_CXX_0="@echo -e \"  \\033@<:@01;32m\$(CXX)\\033@<:@00m   \" \$@;"
+    am__v_CC_0="@echo -e \"  \\033@<:@01;32m\$(CC)\\033@<:@00m   \" \$@;"
+    am__v_CXXLD_0="@echo -e \"  \\033@<:@01;31m\$(CXXLD)\\033@<:@00m   \" \$@;"
+    am__v_CCLD_0="@echo -e \"  \\033@<:@01;31m\$(CCLD)\\033@<:@00m   \" \$@;"
+    am__v_GEN_0="@echo -e \"  \\033@<:@01;36mGEN\\033@<:@00m   \" \$@;"
+], [
+    am__v_CXX_0="@echo \"  CXX   \" \$@;"
+    am__v_CC_0="@echo \"  CC    \" \$@;"
+    am__v_CXXLD_0="@echo \"  CXXLD \" \$@;"
+    am__v_CCLD_0="@echo \"  CCLD  \" \$@;"
+    am__v_GEN_0="@echo \"  GEN   \" \$@;"
+])
+AC_SUBST([am__v_CXX_0])
+AC_SUBST([am__v_CC_0])
+AC_SUBST([am__v_CCLD_0])
+AC_SUBST([am__v_CXXLD_0])
+AC_SUBST([am__v_GEN_0])
+
+# Check for Doxygen
+AC_ARG_ENABLE([doxygen],
+    AS_HELP_STRING([--disable-doxygen], [do not build HTML documentation with Doxygen])
+)
+
+AS_IF([test "x$enable_doxygen" != "xno"], [
+    
+    # If Doxygen is enabled...
+    AC_PATH_PROG([DOXYGEN], [doxygen], "")
+    AS_IF([test -z "$DOXYGEN"],
+        AC_MSG_WARN([Doxygen was not found - continuing without building the documentation])
+    )
+    
+    AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
+    AM_COND_IF([HAVE_DOXYGEN], [
+        AC_CONFIG_FILES([docs/Doxyfile
+                         docs/Makefile])
+        DOCS_DIR=docs
+        
+        # Doxygen will require htags tools from GNU Global
+        AC_PATH_PROG(GLOBAL, [htags], "")
+        AS_IF([test -z "$GLOBAL"],
+            AC_MSG_ERROR([Doxygen requires GNU GLOBAL to be installed])
+        )
+        
+        # Doxygen will require dot tool from Graphviz
+        AC_ARG_VAR(DOT, path to Graphviz dot)        
+        AC_PATH_PROG(DOT, [dot], "")
+        AS_IF([test -z "$DOT"],
+            AC_MSG_ERROR([Doxygen requires Graphviz to be installed])
+        )
+    ])
+],[
+    AM_CONDITIONAL([HAVE_DOXYGEN], [false])
+])
+AC_SUBST([DOCS_DIR])
+
+# Check for debug configuration
+AC_ARG_ENABLE([debug], AS_HELP_STRING([--enable-debug], [build in debug configuration]),
+              [DEBUG_FLAGS="-O0 -DDEBUG -Wextra" enable_debug=yes],
+              [enable_debug=no])
+AM_CONDITIONAL(DEBUG, test "x$enable_debug" == "xyes")
+
+# Enable/disable LTO
+AC_ARG_ENABLE([lto],
+    AS_HELP_STRING([--enable-lto], [build with link-time optimizations (-flto)])
+)
+
+AS_IF([test "x$enable_lto" == "xyes"], [
+    CPPFLAGS="$CPPFLAGS -flto" LDFLAGS="$LDFLAGS -flto"
+])
+
+# Check whether to build tests
+AC_ARG_ENABLE([tests],
+    AS_HELP_STRING([--disable-tests], [do not build the tests])
+)
+AM_CONDITIONAL(TESTS, test "x$enable_tests" != "xno")
+
+AM_COND_IF([TESTS], [    
+    TESTS_DIR=tests
+    AC_CONFIG_FILES(tests/Makefile
+                    tests/google/Makefile
+                    )
+
+], [
+    # Default visibility of symbols is hidden
+    CPPFLAGS="$CPPFLAGS -fvisibility=hidden"
+])
+AC_SUBST([TESTS_DIR])
+
+# Check whether to generate test coverage
+AC_ARG_ENABLE([coverage],
+    AS_HELP_STRING([--enable-test-coverage],
+                   [build with code coverage generation (this option depends on debug and tests switches)])
+)
+AS_IF([test "x$enable_test_coverage" == "xyes" -a "x$enable_debug" == "xyes" -a "x$enable_tests" != "xno"], [
+    CPPFLAGS="$CPPFLAGS --coverage"
+    LDFLAGS="$LDFLAGS -lgcov"
+])
+
+# Link with Makefile.am in source directories
+AC_CONFIG_FILES(Makefile $PACKAGE_NAME.pc
+                inc/Makefile
+                src/Makefile
+                )
+                
+# Security xFLAGS
+SECURITYFLAGS="-fstack-protector --param=ssp-buffer-size=4 -D_FORTIFY_SOURCE=2 -Wall -Wno-comment -Wformat-security"
+CXXFLAGS="$CXXFLAGS $SECURITYFLAGS"
+CFLAGS="$CFLAGS $SECURITYFLAGS"
+LDFLAGS="$LDFLAGS -Wl,-z,relro -Wl,--hash-style=gnu"
+
+# Compile with -rdynamic
+LDFLAGS="$LDFLAGS -rdynamic"
+
+# Use the latest C++ standard
+CXXFLAGS="$CXXFLAGS -std=c++0x -fno-deduce-init-list"
+
+# Warn of unused precompiled headers
+CXXFLAGS="$CXXFLAGS -Winvalid-pch"
+
+# Use the modern C standard
+CFLAGS="$CFLAGS -std=c99"
+
+# All include paths should be relative to source root or includes directory
+CPPFLAGS="$CPPFLAGS -I\$(top_srcdir) -I\$(top_srcdir)/inc -I\$(top_builddir)"
+
+# Append debug flags
+CFLAGS="$CFLAGS $DEBUG_FLAGS"
+CXXFLAGS="$CXXFLAGS $DEBUG_FLAGS"
+
+# Use OpenMP
+CPPFLAGS="$CPPFLAGS -fopenmp"
+
+# Use the best march
+AS_IF([test ${host%%-*} == i686 -o ${host%%-*} == x86_64], [
+    CPPFLAGS="$CPPFLAGS -march=native"
+])
+AS_IF([test ${host%%-*} == arm], [
+    CPPFLAGS="$CPPFLAGS -march=armv7-a -mfpu=neon"
+])
