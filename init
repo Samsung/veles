@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ ! -e "Znicz/.project" ]; then
+if [ ! -e "Znicz/.project" -o ! -e libSoundFeatureExtraction/.project ]; then
 	user=$(git remote -v | grep -oE '//[^@]+' -m1 | cut -c3-)
     sed -i "/$user/b; s/ssh:\/\//ssh:\/\/$user@/g" .gitmodules
     git submodule update --init	
