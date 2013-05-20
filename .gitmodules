@@ -4,4 +4,4 @@
 	url = ssh://alserver.rnd.samsung.ru:29418/Znicz.git
 [submodule "libSoundFeatureExtraction"]
 	path = libSoundFeatureExtraction
-	url = ssh://alserver.rnd.samsung.ru:29418/SpeechFeatureExtraction.git
+	url = ssh://alserver.rnd.samsung.ru:29418/SoundFeatureExtraction.git
