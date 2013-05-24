@@ -49,6 +49,31 @@ class Rand(object):
         numpy.random.set_state(state)
         _lock.release()
 
+    def shuffle(self, arr):
+        """numpy.shuffle() with saving the random state.
+        """
+        global _lock
+        _lock.acquire()
+        state = numpy.random.get_state()
+        numpy.random.set_state(self.state)
+        numpy.random.shuffle(arr)
+        self.state = numpy.random.get_state()
+        numpy.random.set_state(state)
+        _lock.release()
+
+    def permutation(self, x):
+        """numpy.permutation() with saving the random state.
+        """
+        global _lock
+        _lock.acquire()
+        state = numpy.random.get_state()
+        numpy.random.set_state(self.state)
+        retval = numpy.random.permutation(x)
+        self.state = numpy.random.get_state()
+        numpy.random.set_state(state)
+        _lock.release()
+        return retval
+
 
 # Default global random instance.
 default = Rand()
