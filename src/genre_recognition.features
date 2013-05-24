@@ -1,0 +1,2 @@
+ZeroCrossings [ZeroCrossings];
+F0_HPS [Window(type=rectangular), Window, RDFT, ComplexMagnitude, HPS];

@@ -7,7 +7,7 @@ Created on May 21, 2013
 
 import logging
 import Znicz.error as error
-import Znicz.units as units
+import units
 import numpy
 from libsndfile import libsndfile, SF_INFO
 from ctypes import byref, c_short, c_char_p, POINTER
@@ -23,8 +23,8 @@ class SndFileLoader(units.Unit):
         self.test_only = False
         if unpickling:
             return
-        self.output = []
-        self.file_list = []
+        self.outputs = []
+        self.files_list = []
 
     @staticmethod
     def open_file(file_name):
@@ -56,13 +56,13 @@ class SndFileLoader(units.Unit):
         return {"data": data, "sampling_rate": info.samplerate}
 
     def initialize(self):
-        for file in self.file_list:
+        for file in self.files_list:
             handle, info = self.open_file(file)
-            handle.close()
+            libsndfile().sf_close(handle)
             logging.info("Checked " + file + ": " +
-                         info.format_to_str(info.format) + ", " + info.frames +
-                         " samples at " + info.samplerate + " Hz")
+                         info.str_format() + ", " + str(info.frames) +
+                         " samples at " + str(info.samplerate) + " Hz")
 
     def run(self):
-        for file in self.file_list:
-            self.output.append(self.decode_file(file))
+        for file in self.files_list:
+            self.outputs.append(self.decode_file(file))

@@ -30,8 +30,8 @@ class Test(unittest.TestCase):
                        "SubbandEnergy, Log, DWPT(order=4, tree=1 2 3 3)]")
         sf.initialize()
         sf.run()
-        sf.save_to_text_file("/tmp/test_snd_features.txt",
-                             ["First and only input"])
+        sf.save_to_file("/tmp/test_snd_features.xml",
+                        ["First and only input"])
         pass
 
 

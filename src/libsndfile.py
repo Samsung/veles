@@ -66,9 +66,9 @@ class libsndfile(object):
     def __init__(self, path=None):
         if not self._handle or (path != self._path and path and path != ""):
             if not path or path == "":
-                logging.warning("Library path was not specified, "
-                                 "will use the default")
-                path = "libsndfile.so"
+                logging.info("Library path was not specified, "
+                             "will use the default")
+                path = "libsndfile.so.1"
             self._path = path
             try:
                 logging.debug("Trying to load " + path + "...")
