@@ -186,7 +186,7 @@ USAGE
         logging.debug("Parsing the supplied features...")
         extr.add_features(features)
         extr.initialize()
-        """
+
         pcount = mp.cpu_count()
         splitted_found_files = [found_files[i::pcount] for i in range(pcount)]
         with mp.Pool(pcount) as pool:
@@ -196,12 +196,11 @@ USAGE
             pool.close()
             pool.join()
             extr.outputs = list(chain(*[r.get() for r in results_async]))
-        """
-        extr.outputs = mp_run(found_files, extr)
-        logging.debug("Saving the results...")
-        # extr.save_to_file(output, list(chain(*splitted_found_files)))
-        extr.save_to_file(output, found_files)
 
+        logging.debug("Saving the results...")
+        extr.save_to_file(output, list(chain(*splitted_found_files)))
+
+        logging.debug("Done")
         return 0
     except KeyboardInterrupt:
         logging.critical("Interrupted")

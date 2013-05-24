@@ -69,10 +69,14 @@ class SoundFeatures(units.Unit):
         if len(labels) != len(self.outputs):
             logging.error("Labels and outputs size mismatch")
         root = ElementTree.Element("features", {"version": "1.0"})
-        for i in range(0, len(labels)):
-            label = labels[i]
+        indices_map = sorted(range(0, len(labels)), key=lambda x: labels[x])
+        labels.sort()
+        for j in range(0, len(labels)):
+            i = indices_map[j]
+            label = labels[j]
             file_element = ElementTree.SubElement(root,
-                                                  "file", {"name": label})
+                                                  "file",
+                                                  {"name": label})
             for feature in self.features:
                 feat_element = ElementTree.SubElement(
                     file_element, "feature",
@@ -81,7 +85,7 @@ class SoundFeatures(units.Unit):
                 if self.outputs[i]:
                     if len(self.outputs[i][feature.name].shape) > 0:
                         feat_element.attrib["value"] = "".join(\
-                            str(Decimal(el).normalize()) + " " \
+                            str(Decimal(float(el)).normalize()) + " " \
                             for el in self.outputs[i][feature.name])
                     else:
                         feat_element.attrib["value"] = \
