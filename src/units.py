@@ -11,7 +11,8 @@ import _thread
 
 
 def realign(arr, boundary=4096):
-    """Reallocates array to become PAGE-aligned as required for clEnqueueMapBuffer().
+    """Reallocates array to become PAGE-aligned as required for
+        clEnqueueMapBuffer().
     """
     if arr == None:
         return None
@@ -29,6 +30,7 @@ def realign(arr, boundary=4096):
     newarr[:] = arr[:]
     return newarr
 
+
 def aligned_zeros(shape, boundary=4096, dtype=numpy.float32):
     """Allocates PAGE-aligned array required for clEnqueueMapBuffer().
     """
@@ -43,11 +45,12 @@ def aligned_zeros(shape, boundary=4096, dtype=numpy.float32):
 
 
 class SmartPickling(object):
-    """Will save attributes ending with _ as None when pickling and will call constructor upon unpickling.
+    """Will save attributes ending with _ as None when pickling and will call
+        constructor upon unpickling.
     """
     def __init__(self, unpickling=0):
         """Constructor.
-        
+
         Parameters:
             unpickling: if 1, object is being created via unpickling.
         """
@@ -162,7 +165,8 @@ class Unit(SmartPickling):
         for dst in self.links_to.keys():
             if dst.enabled and not dst.initialized:
                 # _thread.start_new_thread(self._initialize_dst, (dst, ))
-                self._initialize_dst(dst)  # there is no need to invoke it on different thread
+                # there is no need to invoke it on different thread
+                self._initialize_dst(dst)
 
     def run_dependent(self):
         """Invokes run() on dependent units.
@@ -176,7 +180,8 @@ class Unit(SmartPickling):
 
         Returns:
             None: all ok, dependent units will be initialized.
-            non-zero: error possibly occured, dependent units will not be initialized.
+            non-zero: error possibly occured, dependent units will not be
+                      initialized.
         """
         pass
 
