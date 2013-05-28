@@ -158,7 +158,8 @@ USAGE
             raise CLIError("include and exclude pattern are equal! "
                            "Nothing will be processed.")
 
-        Library(library_path)
+        # We can do work in parallel more effectively with multiprocessing
+        Library(library_path).set_omp_transforms_max_threads_num(1)
 
         features = open(feature_file).read().split(";")
         features.remove("")
