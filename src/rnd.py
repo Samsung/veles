@@ -19,7 +19,7 @@ class Rand(object):
         state: random state.
     """
     def __init__(self):
-        self.state = None
+        self.state = numpy.random.get_state()
 
     def seed(self, seed):
         global _lock
