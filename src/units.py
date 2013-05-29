@@ -105,7 +105,6 @@ class Unit(SmartPickling):
     Attributes:
         links_from: dictionary of units it depends on.
         links_to: dictionary of dependent units.
-        enabled: enabled unit or not.
         initialized: initialized unit or not.
         gate_lock_: lock.
         run_lock_: lock.
@@ -119,7 +118,6 @@ class Unit(SmartPickling):
             return
         self.links_from = {}
         self.links_to = {}
-        self.enabled = 1  # TODO(a.kazantsev): think about its purpose.
 
     def link_from(self, src):
         """Adds notification link.
@@ -163,17 +161,17 @@ class Unit(SmartPickling):
         """Invokes initialize() on dependent units.
         """
         for dst in self.links_to.keys():
-            if dst.enabled and not dst.initialized:
-                # _thread.start_new_thread(self._initialize_dst, (dst, ))
-                # there is no need to invoke it on different thread
+            if not dst.initialized:
+                #_thread.start_new_thread(self._initialize_dst, (dst, ))
+                # FIXME(a.kazantsev): there is no need to invoke it on
+                # different thread.
                 self._initialize_dst(dst)
 
     def run_dependent(self):
         """Invokes run() on dependent units.
         """
         for dst in self.links_to.keys():
-            if dst.enabled:
-                _thread.start_new_thread(self._run_dst, (dst,))
+            _thread.start_new_thread(self._run_dst, (dst,))
 
     def initialize(self):
         """Allocate buffers here.
