@@ -108,6 +108,11 @@ class Unit(SmartPickling):
         initialized: initialized unit or not.
         gate_lock_: lock.
         run_lock_: lock.
+        gate_block: if true, gate() and run() will not be executed and
+                    notification will not be sent further.
+        gate_skip: if true, gate() and run() will not be executed, but
+                   but notification will be sent further.
+        gate_not: if true, inverses conditions for gate_block and gate_skip.
     """
     def __init__(self, unpickling=0):
         super(Unit, self).__init__(unpickling=unpickling)
@@ -118,6 +123,9 @@ class Unit(SmartPickling):
             return
         self.links_from = {}
         self.links_to = {}
+        self.gate_block = [0]
+        self.gate_skip = [0]
+        self.gate_not = [0]
 
     def link_from(self, src):
         """Adds notification link.
@@ -128,6 +136,10 @@ class Unit(SmartPickling):
     def _initialize_dst(self, dst):
         """Initializes dst.
         """
+        if (dst.gate_skip[0] and not dst.gate_not[0]) or \
+           (not dst.gate_skip[0] and dst.gate_not[0]):
+            dst.run_dependent()
+            return
         if not dst.gate(self):
             return
         self.run_lock_.acquire()
@@ -141,6 +153,10 @@ class Unit(SmartPickling):
     def _run_dst(self, dst):
         """Runs dst.
         """
+        if (dst.gate_skip[0] and not dst.gate_not[0]) or \
+           (not dst.gate_skip[0] and dst.gate_not[0]):
+            dst.run_dependent()
+            return
         if not dst.gate(self):
             return
         self.run_lock_.acquire()
@@ -161,20 +177,32 @@ class Unit(SmartPickling):
         """Invokes initialize() on dependent units.
         """
         for dst in self.links_to.keys():
-            if not dst.initialized:
-                #_thread.start_new_thread(self._initialize_dst, (dst, ))
-                # FIXME(a.kazantsev): there is no need to invoke it on
-                # different thread.
-                self._initialize_dst(dst)
+            if dst.initialized:
+                continue
+            if (dst.gate_block[0] and not dst.gate_not[0]) or \
+               (not dst.gate_block[0] and dst.gate_not[0]):
+                continue
+            #_thread.start_new_thread(self._initialize_dst, (dst, ))
+            # FIXME(a.kazantsev): there is no need to invoke it on
+            # different thread.
+            self._initialize_dst(dst)
 
     def run_dependent(self):
         """Invokes run() on dependent units.
         """
         for dst in self.links_to.keys():
+            if (dst.gate_block[0] and not dst.gate_not[0]) or \
+               (not dst.gate_block[0] and dst.gate_not[0]):
+                continue
             _thread.start_new_thread(self._run_dst, (dst,))
 
     def initialize(self):
         """Allocate buffers here.
+
+        initialize() invoked in the same order as run(), including gate() and
+        effects of gate_block, gate_skip and gate_not.
+
+        If initialize() succedes, initialized flag will be automatically set.
 
         Returns:
             None: all ok, dependent units will be initialized.
