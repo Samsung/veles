@@ -10,7 +10,7 @@ import sys
 import os
 import cmd
 import traceback
-import _thread
+#import _thread
 
 
 def add_path(path):
@@ -34,10 +34,18 @@ uni.compile()
 
 
 class VelesShell(cmd.Cmd):
+    """Simple Veles shell.
+
+    Attributes:
+        last_exec: last python code had been executed.
+        to_exec: python code to be executed.
+    """
     def __init__(self):
         self.intro = "Welcome to Veles shell.\n"
         self.prompt = "(Veles) "
         super(VelesShell, self).__init__()
+        self.last_exec = ""
+        self.to_exec = ""
 
     def do_quit(self, arg):
         """Exit the shell.
@@ -53,13 +61,19 @@ class VelesShell(cmd.Cmd):
     def _exec(self, line):
         try:
             exec(line, globals(), globals())
+            self.last_exec = line
         except:
             a, b, c = sys.exc_info()
             traceback.print_exception(a, b, c)
 
     def default(self, line):
-        #_thread.start_new_thread(self._exec, (line, ))
-        self._exec(line)
+        self.to_exec += line
+        if len(line) and line[len(line) - 1] == "\\":
+            self.to_exec += "\n"
+            return
+        #_thread.start_new_thread(self._exec, (self.to_exec, ))
+        self._exec(self.to_exec)
+        self.to_exec = ""
 
     def emptyline(self):
         pass
