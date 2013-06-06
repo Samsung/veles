@@ -8,6 +8,7 @@ Units in data stream neural network model.
 import time
 import numpy
 import _thread
+import threading
 
 
 def realign(arr, boundary=4096):
@@ -136,11 +137,11 @@ class Unit(SmartPickling):
     def _initialize_dst(self, dst):
         """Initializes dst.
         """
+        if not dst.gate(self):  # gate has a priority over skip
+            return
         if (dst.gate_skip[0] and not dst.gate_not[0]) or \
            (not dst.gate_skip[0] and dst.gate_not[0]):
-            dst.run_dependent()
-            return
-        if not dst.gate(self):
+            dst.initialize_dependent()
             return
         self.run_lock_.acquire()
         if dst.initialize():
@@ -153,15 +154,14 @@ class Unit(SmartPickling):
     def _run_dst(self, dst):
         """Runs dst.
         """
+        if not dst.gate(self):  # gate has a priority over skip
+            return
         if (dst.gate_skip[0] and not dst.gate_not[0]) or \
            (not dst.gate_skip[0] and dst.gate_not[0]):
             dst.run_dependent()
             return
-        if not dst.gate(self):
-            return
         self.run_lock_.acquire()
-        # Initialize unit runtime if it is not initialized
-        # TODO(a.kazantsev): or maybe raise an exception?
+        # Initialize unit runtime if it is not initialized.
         if not dst.initialized:
             if dst.initialize():
                 self.run_lock_.release()
@@ -174,7 +174,7 @@ class Unit(SmartPickling):
         dst.run_dependent()
 
     def initialize_dependent(self):
-        """Invokes initialize() on dependent units.
+        """Invokes initialize() on dependent units on the same thread.
         """
         for dst in self.links_to.keys():
             if dst.initialized:
@@ -182,13 +182,10 @@ class Unit(SmartPickling):
             if (dst.gate_block[0] and not dst.gate_not[0]) or \
                (not dst.gate_block[0] and dst.gate_not[0]):
                 continue
-            #_thread.start_new_thread(self._initialize_dst, (dst, ))
-            # FIXME(a.kazantsev): there is no need to invoke it on
-            # different thread.
             self._initialize_dst(dst)
 
     def run_dependent(self):
-        """Invokes run() on dependent units.
+        """Invokes run() on dependent units on different threads.
         """
         for dst in self.links_to.keys():
             if (dst.gate_block[0] and not dst.gate_not[0]) or \
@@ -294,3 +291,29 @@ class OpenCLUnit(Unit):
         if not self.device:
             return self.cpu_run()
         return self.gpu_run()
+
+
+class Repeater(Unit):
+    """Repeater.
+    """
+    def gate(self):
+        """Gate is always open.
+        """
+        return 1
+
+
+class EndPoint(Unit):
+    """End point with semaphore.
+
+    Attributes:
+        sem_: semaphore.
+    """
+    def __init__(self, unpickling=0):
+        super(EndPoint, self).__init__(unpickling=unpickling)
+        self.sem_ = threading.Semaphore(0)
+
+    def run(self):
+        self.sem_.release()
+
+    def wait(self):
+        self.sem_.acquire()
