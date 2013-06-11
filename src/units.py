@@ -7,8 +7,75 @@ Units in data stream neural network model.
 """
 import time
 import numpy
-import _thread
 import threading
+import traceback
+import sys
+
+
+class ThreadPool(object):
+    """Pool of threads.
+
+    Attributes:
+        sem_: semaphore.
+        queue: queue of requests.
+        total_threads: number of threads in the pool.
+        free_threads: number of free threads in the pool.
+    """
+    def __init__(self, max_free_threads=10):
+        self.sem_ = threading.Semaphore(0)
+        self.lock_ = threading.Lock()
+        self.queue = []
+        self.total_threads = 0
+        self.free_threads = 0
+        self.max_free_threads = max_free_threads
+        threading.Thread(target=self.pool_cleaner).start()
+
+    def pool_cleaner(self):
+        self.lock_.acquire()
+        self.total_threads += 1
+        self.lock_.release()
+        while True:
+            self.lock_.acquire()
+            self.free_threads += 1
+            if self.free_threads > self.max_free_threads:
+                self.free_threads -= 1
+                self.lock_.release()
+                return
+            self.lock_.release()
+            try:
+                self.sem_.acquire()
+            except:  # return in case of broken semaphore
+                self.lock_.acquire()
+                self.free_threads -= 1
+                self.total_threads -= 1
+                self.lock.release()
+                return
+            self.lock_.acquire()
+            self.free_threads -= 1
+            if self.free_threads <= 0:
+                threading.Thread(target=self.pool_cleaner).start()
+            try:
+                (run, args) = self.queue.pop(0)
+            except:
+                self.total_threads -= 1
+                self.lock_.release()
+                return
+            self.lock_.release()
+            try:
+                run(*args)
+            except:
+                #TODO(a.kazantsev): add good error handling here.
+                a, b, c = sys.exc_info()
+                traceback.print_exception(a, b, c)
+
+    def request(self, run, args=()):
+        self.lock_.acquire()
+        self.queue.append((run, args))
+        self.lock_.release()
+        self.sem_.release()
+
+
+pool = ThreadPool()
 
 
 def realign(arr, boundary=4096):
@@ -118,8 +185,8 @@ class Unit(SmartPickling):
     """
     def __init__(self, unpickling=0):
         super(Unit, self).__init__(unpickling=unpickling)
-        self.gate_lock_ = _thread.allocate_lock()
-        self.run_lock_ = _thread.allocate_lock()
+        self.gate_lock_ = threading.Lock()
+        self.run_lock_ = threading.Lock()
         self.initialized = 0
         if unpickling:
             return
@@ -195,7 +262,8 @@ class Unit(SmartPickling):
             if (dst.gate_block[0] and not dst.gate_block_not[0]) or \
                (not dst.gate_block[0] and dst.gate_block_not[0]):
                 continue
-            _thread.start_new_thread(self._run_dst, (dst,))
+            global pool
+            pool.request(self._run_dst, (dst, ))
 
     def initialize(self):
         """Allocate buffers here.
