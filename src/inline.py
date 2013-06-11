@@ -24,7 +24,7 @@ class Inline(object):
                 f: float
                 d: double
                 *: numpy array of corresponding type,
-                the last character means type of returned value,
+                the last character means type of returned value (v: void),
                 for example: iif*i means: int function_name(int, int, float*)
         module_name: name of the compiled module.
         module: loaded compiled module.
@@ -84,6 +84,11 @@ class Inline(object):
                     arg_names.append("arg%d" % (len(arg_types) - 1, ))
                     call_types.append("double")
                     formats.append("d")
+                elif t == "v":
+                    arg_types.append("void")
+                    arg_names.append("arg%d" % (len(arg_types) - 1, ))
+                    call_types.append("void")
+                    formats.append("v")
                 else:
                     raise error.ErrBadFormat("Unknown function argument type.")
 
@@ -96,15 +101,26 @@ class Inline(object):
                 "\", &" + ", &".join(arg_names[0:-1]) + "))\n" + \
                 "        return NULL;\n\n"
 
-            x_method += "    " + arg_types[len(arg_types) - 1] + \
-            " retval = " + \
-            "(" + arg_types[len(arg_types) - 1] + ")" + function_name + "(" + \
+            #x_method += "    Py_BEGIN_ALLOW_THREADS\n\n"
+
+            if argument_types[-1] != "v":
+                x_method += "    " + arg_types[-1] + \
+                " retval = (" + arg_types[-1] + ")"
+            else:
+                x_method += "    "
+
+            x_method += function_name + "(" + \
             ", ".join(("(" + call_types[i] + ")" + arg_names[i]) \
                       for i in range(0, len(call_types) - 1)) + ");\n"
 
-            x_method += "    return Py_BuildValue(\"" + \
-            formats[len(formats) - 1] + "\", retval);\n" + \
-            "}\n"
+            #x_method += "\n    Py_END_ALLOW_THREADS\n\n"
+
+            if argument_types[-1] != "v":
+                x_method += "    return Py_BuildValue(\"" + \
+                formats[-1] + "\", retval);\n}\n"
+            else:
+                x_method += "    return PyLong_FromLong(0);\n}\n"
+
             x_methods += x_method
 
         s_methods += "    {NULL, NULL, 0, NULL}\n" + \

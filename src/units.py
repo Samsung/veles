@@ -113,7 +113,8 @@ class Unit(SmartPickling):
                     notification will not be sent further.
         gate_skip: if true, gate() and run() will not be executed, but
                    but notification will be sent further.
-        gate_not: if true, inverses conditions for gate_block and gate_skip.
+        gate_block_not: if true, inverses conditions for gate_block.
+        gate_skip_not: if true, inverses conditions for gate_skip.
     """
     def __init__(self, unpickling=0):
         super(Unit, self).__init__(unpickling=unpickling)
@@ -126,7 +127,8 @@ class Unit(SmartPickling):
         self.links_to = {}
         self.gate_block = [0]
         self.gate_skip = [0]
-        self.gate_not = [0]
+        self.gate_block_not = [0]
+        self.gate_skip_not = [0]
 
     def link_from(self, src):
         """Adds notification link.
@@ -139,8 +141,8 @@ class Unit(SmartPickling):
         """
         if not dst.gate(self):  # gate has a priority over skip
             return
-        if (dst.gate_skip[0] and not dst.gate_not[0]) or \
-           (not dst.gate_skip[0] and dst.gate_not[0]):
+        if (dst.gate_skip[0] and not dst.gate_skip_not[0]) or \
+           (not dst.gate_skip[0] and dst.gate_skip_not[0]):
             dst.initialize_dependent()
             return
         self.run_lock_.acquire()
@@ -156,10 +158,12 @@ class Unit(SmartPickling):
         """
         if not dst.gate(self):  # gate has a priority over skip
             return
-        if (dst.gate_skip[0] and not dst.gate_not[0]) or \
-           (not dst.gate_skip[0] and dst.gate_not[0]):
+        if (dst.gate_skip[0] and not dst.gate_skip_not[0]) or \
+           (not dst.gate_skip[0] and dst.gate_skip_not[0]):
             dst.run_dependent()
             return
+        # TODO(a.kazantsev): if previous run has not yet executed,
+        # leave only one new in queue.
         self.run_lock_.acquire()
         # Initialize unit runtime if it is not initialized.
         if not dst.initialized:
@@ -179,8 +183,8 @@ class Unit(SmartPickling):
         for dst in self.links_to.keys():
             if dst.initialized:
                 continue
-            if (dst.gate_block[0] and not dst.gate_not[0]) or \
-               (not dst.gate_block[0] and dst.gate_not[0]):
+            if (dst.gate_block[0] and not dst.gate_block_not[0]) or \
+               (not dst.gate_block[0] and dst.gate_block_not[0]):
                 continue
             self._initialize_dst(dst)
 
@@ -188,8 +192,8 @@ class Unit(SmartPickling):
         """Invokes run() on dependent units on different threads.
         """
         for dst in self.links_to.keys():
-            if (dst.gate_block[0] and not dst.gate_not[0]) or \
-               (not dst.gate_block[0] and dst.gate_not[0]):
+            if (dst.gate_block[0] and not dst.gate_block_not[0]) or \
+               (not dst.gate_block[0] and dst.gate_block_not[0]):
                 continue
             _thread.start_new_thread(self._run_dst, (dst,))
 
@@ -197,7 +201,7 @@ class Unit(SmartPickling):
         """Allocate buffers here.
 
         initialize() invoked in the same order as run(), including gate() and
-        effects of gate_block, gate_skip and gate_not.
+        effects of gate_block and gate_skip.
 
         If initialize() succedes, initialized flag will be automatically set.
 
@@ -296,7 +300,7 @@ class OpenCLUnit(Unit):
 class Repeater(Unit):
     """Repeater.
     """
-    def gate(self):
+    def gate(self, src):
         """Gate is always open.
         """
         return 1

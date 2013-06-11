@@ -11,6 +11,13 @@ import os
 import cmd
 import traceback
 #import _thread
+import pickle
+
+
+# Imports for conveniece
+import numpy
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
 
 def add_path(path):
@@ -26,11 +33,10 @@ add_path("%s/../Znicz" % (this_dir, ))
 import inline
 
 
-uni = inline.Inline()
-uni.sources.append("#include <unistd.h>\n"
-                   "static int Exit(int status) { _exit(status); }")
-uni.function_descriptions = {"Exit": "ii"}
-uni.compile()
+unistd = inline.Inline()
+unistd.sources.append("#include <unistd.h>")
+unistd.function_descriptions = {"_exit": "iv"}
+unistd.compile()
 
 
 class VelesShell(cmd.Cmd):
@@ -79,16 +85,39 @@ class VelesShell(cmd.Cmd):
         pass
 
 
+def snapshot(obj, fnme):
+    fout = open(fnme, "wb")
+    pickle.dump(obj, fout)
+    fout.close()
+
+
+veles_shell = VelesShell()
+
+
 def main():
-    sh = VelesShell()
+    #global this_dir
+    #fnme = "%s/../Znicz/cache/sh.pickle" % (this_dir, )
+    global veles_shell
+    #try:
+    #    fin = open(fnme, "rb")
+    #    (sh.last_exec, sh.cmdqueue, sh.lastcmd) = pickle.load(fin)
+    #    fin.close()
+    #except IOError:
+    #    pass
     while True:
         try:
-            sh.cmdloop()
+            veles_shell.cmdloop()
             break
         except KeyboardInterrupt:
             pass
-    global uni
-    uni.execute("Exit", 0)
+    #try:
+    #    fout = open(fnme, "wb")
+    #    pickle.dump((sh.last_exec, sh.cmdqueue, sh.lastcmd), fout)
+    #    fout.close()
+    #except IOError:
+    #    pass
+    global unistd
+    unistd.execute("_exit", 0)
 
 
 if __name__ == "__main__":

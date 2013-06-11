@@ -11,7 +11,7 @@ import os
 
 c_code = inline.Inline()
 c_code.sources.append(os.path.dirname(inline.__file__) + "/c/wavelet.c")
-c_code.function_descriptions = {"transform": "f*f*iiiiii"}
+c_code.function_descriptions = {"transform": "f*f*iiiiiv"}
 c_code.compile()
 
 

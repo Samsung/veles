@@ -194,7 +194,7 @@ static void UpdateTexture(int L, int N, float *texture, float *texture_temp, int
 }
 
 
-static int transform(float *a, float *tmp, int width, int height, int N, int L, int forward)
+static void transform(float *a, float *tmp, int width, int height, int N, int L, int forward)
 {
  if(N < 0)
   N = 0;
@@ -205,5 +205,4 @@ static int transform(float *a, float *tmp, int width, int height, int N, int L, 
  if(L > 10)
   L = 10;
  UpdateTexture(L, N, a, tmp, width, height, forward);
- return 0;
 }

@@ -14,3 +14,7 @@ dtypes = {"float": numpy.float32, "double": numpy.float64}
 # Current number type
 dtype = "float"
 #dtype = "double"
+
+# CL pragmas
+pragmas = {"float": "",
+           "double": "#pragma OPENCL EXTENSION cl_khr_fp64: enable"}
