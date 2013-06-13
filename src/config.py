@@ -18,3 +18,6 @@ dtype = "float"
 # CL pragmas
 pragmas = {"float": "",
            "double": "#pragma OPENCL EXTENSION cl_khr_fp64: enable"}
+
+# inline.py argument types
+inline_types = {"float": "f", "double": "d"}
