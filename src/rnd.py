@@ -6,10 +6,10 @@ Random generators.
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
 import numpy
-import _thread
+import threading
 
 
-_lock = _thread.allocate_lock()
+_lock = threading.Lock()
 
 
 class Rand(object):

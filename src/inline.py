@@ -10,6 +10,11 @@ import os
 import time
 import error
 import sys
+import threading
+
+
+lock_ = threading.Lock()
+used_names = {}
 
 
 class Inline(object):
@@ -43,7 +48,15 @@ class Inline(object):
             self.function_descriptions = {}
         else:
             self.function_descriptions = function_descriptions
-        self.module_name = ("inline%.3f" % (time.time(), )).replace(".", "_")
+        global lock_
+        global used_names
+        lock_.acquire()
+        while True:
+            self.module_name = ("i%.3f" % (time.time(), )).replace(".", "")
+            if self.module_name not in used_names:
+                break
+        used_names[self.module_name] = 1
+        lock_.release()
 
     def compile(self):
         s = "#include <Python.h>\n\n"
