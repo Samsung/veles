@@ -74,6 +74,17 @@ class Rand(object):
         _lock.release()
         return retval
 
+    def randint(self, low, high=None, size=None):
+        global _lock
+        _lock.acquire()
+        state = numpy.random.get_state()
+        numpy.random.set_state(self.state)
+        retval = numpy.random.randint(low, high, size)
+        self.state = numpy.random.get_state()
+        numpy.random.set_state(state)
+        _lock.release()
+        return retval
+
 
 # Default global random instance.
 default = Rand()
