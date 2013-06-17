@@ -15,9 +15,10 @@ dtypes = {"float": numpy.float32, "double": numpy.float64}
 dtype = "float"
 #dtype = "double"
 
-# CL pragmas
-pragmas = {"float": "",
-           "double": "#pragma OPENCL EXTENSION cl_khr_fp64: enable"}
+# CL defines
+cl_defines = {"float": "#define dtype float",
+              "double": "#pragma OPENCL EXTENSION cl_khr_fp64: enable\n"
+                        "#define dtype double"}
 
 # inline.py argument types
 inline_types = {"float": "f", "double": "d"}
