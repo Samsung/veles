@@ -1,24 +1,54 @@
 """
-Created on Jun 17, 2013
+Unless otherwise specified by LICENSE.txt files in individual
+directories, all code is
 
-@author: Kazantsev Alexey <a.kazantsev@samsung.com>
+Copyright (C) 2011, the scikit-image team
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+ 1. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the
+    distribution.
+ 3. Neither the name of skimage nor the names of its contributors may be
+    used to endorse or promote products derived from this software without
+    specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
 """
+
+
 import numpy as np
 from scipy import sqrt, pi, arctan2, cos, sin
 from scipy.ndimage import uniform_filter
 
 
-#FIXME(a.kazantsev): from pythonxy git with GPL license - need rewrite.
+# FIXME(a.kazantsev): from pythonxy git with GPL license - need rewrite.
 def hog(image, orientations=9, pixels_per_cell=(8, 8),
-        cells_per_block=(3, 3), visualise=False, normalise=False):
+        cells_per_block=(3, 3), visualise=False, normalize=False):
     """Extract Histogram of Oriented Gradients (HOG) for a given image.
 
     Compute a Histogram of Oriented Gradients (HOG) by
 
-        1. (optional) global image normalisation
+        1. (optional) global image normalization
         2. computing the gradient image in x and y
         3. computing gradient histograms
-        4. normalising across blocks
+        4. normalizing across blocks
         5. flattening into a feature vector
 
     Parameters
@@ -33,8 +63,8 @@ def hog(image, orientations=9, pixels_per_cell=(8, 8),
         Number of cells in each block.
     visualise : bool, optional
         Also return an image of the HOG.
-    normalise : bool, optional
-        Apply power law compression to normalise the image before
+    normalize : bool, optional
+        Apply power law compression to normalize the image before
         processing.
 
     Returns
@@ -56,10 +86,10 @@ def hog(image, orientations=9, pixels_per_cell=(8, 8),
     image = np.atleast_2d(image)
 
     """
-    The first stage applies an optional global image normalisation
-    equalisation that is designed to reduce the influence of illumination
+    The first stage applies an optional global image normalization
+    equalization that is designed to reduce the influence of illumination
     effects. In practice we use gamma (power law) compression, either
-    computing the square root or the log of each colour channel.
+    computing the square root or the log of each color channel.
     Image texture strength is typically proportional to the local surface
     illumination so this compression helps to reduce the effects of local
     shadowing and illumination variations.
@@ -68,14 +98,14 @@ def hog(image, orientations=9, pixels_per_cell=(8, 8),
     if image.ndim > 3:
         raise ValueError("Currently only supports grey-level images")
 
-    if normalise:
+    if normalize:
         image = sqrt(image)
 
     """
     The second stage computes first order image gradients. These capture
     contour, silhouette and some texture information, while providing
     further resistance to illumination variations. The locally dominant
-    colour channel is used, which provides colour invariance to a large
+    color channel is used, which provides color invariance to a large
     extent. Variant methods may also include second order image derivatives,
     which act as primitive bar detectors - a useful feature for capturing,
     e.g. bar like structures in bicycles and limbs in humans.
@@ -114,7 +144,7 @@ def hog(image, orientations=9, pixels_per_cell=(8, 8),
     # compute orientations integral images
     orientation_histogram = np.zeros((n_cellsy, n_cellsx, orientations))
     for i in range(orientations):
-        #create new integral image for this orientation
+        # create new integral image for this orientation
         # isolate orientations in this range
 
         temp_ori = np.where(orientation < 180 / orientations * (i + 1),
@@ -129,7 +159,7 @@ def hog(image, orientations=9, pixels_per_cell=(8, 8),
         uniform_filter(temp_mag, size=(cy, cx))[cy / 2::cy, cx / 2::cx]
 
     # now for each cell, compute the histogram
-    #orientation_histogram = np.zeros((n_cellsx, n_cellsy, orientations))
+    # orientation_histogram = np.zeros((n_cellsx, n_cellsy, orientations))
 
     radius = min(cx, cy) // 2 - 1
     hog_image = None
@@ -150,30 +180,30 @@ def hog(image, orientations=9, pixels_per_cell=(8, 8),
                     hog_image[rr, cc] += orientation_histogram[y, x, o]
 
     """
-    The fourth stage computes normalisation, which takes local groups of
-    cells and contrast normalises their overall responses before passing
+    The fourth stage computes normalization, which takes local groups of
+    cells and contrast normalizes their overall responses before passing
     to next stage. Normalisation introduces better invariance to illumination,
     shadowing, and edge contrast. It is performed by accumulating a measure
     of local histogram "energy" over local groups of cells that we call
-    "blocks". The result is used to normalise each cell in the block.
+    "blocks". The result is used to normalize each cell in the block.
     Typically each individual cell is shared between several blocks, but
-    its normalisations are block dependent and thus different. The cell
+    its normalizations are block dependent and thus different. The cell
     thus appears several times in the final output vector with different
-    normalisations. This may seem redundant but it improves the performance.
-    We refer to the normalised block descriptors as Histogram of Oriented
+    normalizations. This may seem redundant but it improves the performance.
+    We refer to the normalized block descriptors as Histogram of Oriented
     Gradient (HOG) descriptors.
     """
 
     n_blocksx = (n_cellsx - bx) + 1
     n_blocksy = (n_cellsy - by) + 1
-    normalised_blocks = np.zeros((n_blocksy, n_blocksx,
+    normalized_blocks = np.zeros((n_blocksy, n_blocksx,
                                   by, bx, orientations))
 
     for x in range(n_blocksx):
         for y in range(n_blocksy):
             block = orientation_histogram[y:y + by, x:x + bx, :]
             eps = 1e-5
-            normalised_blocks[y, x, :] = block / sqrt(block.sum() ** 2 + eps)
+            normalized_blocks[y, x, :] = block / sqrt(block.sum() ** 2 + eps)
 
     """
     The final step collects the HOG descriptors from all blocks of a dense
@@ -182,6 +212,6 @@ def hog(image, orientations=9, pixels_per_cell=(8, 8),
     """
 
     if visualise:
-        return normalised_blocks.ravel(), hog_image
+        return normalized_blocks.ravel(), hog_image
     else:
-        return normalised_blocks.ravel()
+        return normalized_blocks.ravel()
