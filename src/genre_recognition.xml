@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<features>	
+	<transform name="Window" parameters="type=rectangular,length=512,step=205">
+		<transform name="ZeroCrossings">
+			<transform name="Stats" parameters="interval=50">
+				<feature name="ZeroCrossings" />
+			</transform>	
+		</transform>
+		<transform name="Window" parameters="type=hamming">
+			<transform name="Energy">
+				<transform name="Stats" parameters="interval=50">
+					<feature name="Energy" />
+				</transform>
+				<feature name="VAD_energy" />
+			</transform>
+			<transform name="RDFT">
+				<transform name="ComplexMagnitude">
+					<transform name="Centroid">
+						<transform name="Stats" parameters="interval=50">
+							<feature name="Centroid" />
+						</transform>
+					</transform>
+					<transform name="Rolloff">
+						<transform name="Stats" parameters="interval=50">
+							<feature name="Rolloff" />
+						</transform>
+					</transform>
+					<transform name="Flux">
+						<transform name="Stats" parameters="interval=50">
+							<feature name="Flux" />
+						</transform>
+					</transform>					
+					<transform name="HPS">
+						<transform name="Stats" parameters="interval=50">
+							<feature name="F0" />
+						</transform>
+						<feature name="VAD_F0" />
+					</transform>
+					<transform name="Mean" parameters="types=arithmetic geometric">
+						<transform name="SFM">
+							<feature name="VAD_SFM" />
+						</transform>
+					</transform>
+				</transform>
+			</transform>
+			<transform name="Fork" parameters="factor=6">
+				<transform name="RDFT">
+					<transform name="FrequencyBands" parameters="bands=200 400 800 1600 3200">
+						<transform name="IRDFT">
+							<transform name="IWindow" parameters="length=512">
+								<transform name="Rectify">
+									<transform name="Convolve" parameters="window = half-hanning-right, length=12800">
+										<transform name="Diffrect">
+											<transform name="Beat">
+												<feature name="Beat"/>
+											</transform>
+										</transform>
+									</transform>
+								</transform>
+							</transform>
+						</transform>
+					</transform>
+				</transform>
+			</transform>
+		</transform>
+	</transform>
+</features>
