@@ -6,7 +6,7 @@ Created on May 21, 2013
 
 
 import logging
-import Znicz.error as error
+import error
 import units
 import numpy
 from libsndfile import libsndfile, SF_INFO
@@ -53,7 +53,8 @@ class SndFileLoader(units.Unit):
         logging.info("Loaded " + file_name + ": " +
                      info.str_format() + ", " + str(info.frames) +
                      " samples at " + str(info.samplerate) + " Hz")
-        return {"data": data, "sampling_rate": info.samplerate}
+        return {"data": data, "sampling_rate": info.samplerate,
+                "name": file_name}
 
     def initialize(self):
         for file in self.files_list:

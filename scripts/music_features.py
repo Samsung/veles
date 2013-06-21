@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # encoding: utf-8
 '''
 This script extracts music features from audio files.
@@ -22,12 +22,14 @@ It uses libSoundFeatureExtraction as the calculation backend.
 from itertools import chain
 import logging
 import multiprocessing as mp
+import os
 import re
 import sys
-import os
+import time
 from snd_features import SoundFeatures
 from snd_file_loader import SndFileLoader
 from sound_feature_extraction.library import Library
+from sound_feature_extraction.features_xml import FeaturesXml
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -161,8 +163,7 @@ USAGE
         # We can do work in parallel more effectively with multiprocessing
         Library(library_path).set_omp_transforms_max_threads_num(1)
 
-        features = open(feature_file).read().split(";")
-        features.remove("")
+        features = FeaturesXml.parse(feature_file)
         logging.info("Read %d features" % len(features))
 
         found_files = []
@@ -183,10 +184,14 @@ USAGE
             logging.warn("No files were found")
             return 0
         logging.info("Found %d files" % len(found_files))
+
+        timer = time.time()
         extr = SoundFeatures()
         logging.debug("Parsing the supplied features...")
         extr.add_features(features)
         extr.initialize()
+        logging.info("Done in %f" % (time.time() - timer))
+        timer = time.time()
 
         pcount = mp.cpu_count()
         splitted_found_files = [found_files[i::pcount] for i in range(pcount)]
@@ -198,10 +203,12 @@ USAGE
             pool.join()
             extr.outputs = list(chain(*[r.get() for r in results_async]))
 
+        logging.info("Done in %f" % (time.time() - timer))
+        timer = time.time()
         logging.debug("Saving the results...")
         extr.save_to_file(output, list(chain(*splitted_found_files)))
 
-        logging.debug("Done")
+        logging.info("Done in %f" % (time.time() - timer))
         return 0
     except KeyboardInterrupt:
         logging.critical("Interrupted")

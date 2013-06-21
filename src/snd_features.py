@@ -59,6 +59,8 @@ class SoundFeatures(units.Unit):
                 extr = Extractor(self.features, size, sampling_rate)
                 for data in inputs[sampling_rate][size]:
                     try:
+                        logging.debug("Extracting features from " +
+                                      data["name"])
                         self.outputs.append(extr.calculate(data["data"]))
                     except Exception as e:
                         logging.warn("Failed to extract features from "
