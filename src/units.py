@@ -203,46 +203,46 @@ class Unit(SmartPickling):
         self.links_from[src] = 0
         src.links_to[self] = 0
 
-    def _initialize_dst(self, dst):
-        """Initializes dst.
+    def check_gate_and_initialize(self, src):
+        """Check gate state and initialize if it is open.
         """
-        if not dst.gate(self):  # gate has a priority over skip
+        if not self.gate(src):  # gate has a priority over skip
             return
-        if (dst.gate_skip[0] and not dst.gate_skip_not[0]) or \
-           (not dst.gate_skip[0] and dst.gate_skip_not[0]):
-            dst.initialize_dependent()
+        if (self.gate_skip[0] and not self.gate_skip_not[0]) or \
+           (not self.gate_skip[0] and self.gate_skip_not[0]):
+            self.initialize_dependent()
             return
         self.run_lock_.acquire()
-        if dst.initialize():
+        if self.initialize():
             self.run_lock_.release()
             return
-        dst.initialized = 1
+        self.initialized = 1
         self.run_lock_.release()
-        dst.initialize_dependent()
+        self.initialize_dependent()
 
-    def _run_dst(self, dst):
-        """Runs dst.
+    def check_gate_and_run(self, src):
+        """Check gate state and run if it is open.
         """
-        if not dst.gate(self):  # gate has a priority over skip
+        if not self.gate(src):  # gate has a priority over skip
             return
-        if (dst.gate_skip[0] and not dst.gate_skip_not[0]) or \
-           (not dst.gate_skip[0] and dst.gate_skip_not[0]):
-            dst.run_dependent()
+        if (self.gate_skip[0] and not self.gate_skip_not[0]) or \
+           (not self.gate_skip[0] and self.gate_skip_not[0]):
+            self.run_dependent()
             return
-        # TODO(a.kazantsev): if previous run has not yet executed,
-        # leave only one new in queue.
-        self.run_lock_.acquire()
+        # If previous run has not yet executed, discard notification.
+        if not self.run_lock_.acquire(False):
+            return
         # Initialize unit runtime if it is not initialized.
-        if not dst.initialized:
-            if dst.initialize():
+        if not self.initialized:
+            if self.initialize():
                 self.run_lock_.release()
                 return
-            dst.initialized = 1
-        if dst.run():
+            self.initialized = 1
+        if self.run():
             self.run_lock_.release()
             return
         self.run_lock_.release()
-        dst.run_dependent()
+        self.run_dependent()
 
     def initialize_dependent(self):
         """Invokes initialize() on dependent units on the same thread.
@@ -253,7 +253,7 @@ class Unit(SmartPickling):
             if (dst.gate_block[0] and not dst.gate_block_not[0]) or \
                (not dst.gate_block[0] and dst.gate_block_not[0]):
                 continue
-            self._initialize_dst(dst)
+            dst.check_gate_and_initialize(self)
 
     def run_dependent(self):
         """Invokes run() on dependent units on different threads.
@@ -263,7 +263,7 @@ class Unit(SmartPickling):
                (not dst.gate_block[0] and dst.gate_block_not[0]):
                 continue
             global pool
-            pool.request(self._run_dst, (dst, ))
+            pool.request(dst.check_gate_and_run, (self, ))
 
     def initialize(self):
         """Allocate buffers here.
@@ -339,7 +339,7 @@ class OpenCLUnit(Unit):
     Attributes:
         device: Device object.
         prg_: OpenCL program.
-        cl_sources: OpenCL source files.
+        cl_sources: OpenCL source files: file => defines.
     """
     def __init__(self, device=None, unpickling=0):
         super(OpenCLUnit, self).__init__(unpickling=unpickling)

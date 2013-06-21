@@ -8,9 +8,9 @@ Console command line interface for Veles platform.
 """
 import sys
 import os
+import signal
 import cmd
 import traceback
-#import _thread
 import pickle
 
 
@@ -32,13 +32,7 @@ add_path("%s/../src" % (this_dir, ))
 add_path("%s/../Znicz" % (this_dir, ))
 
 
-import inline
-
-
-unistd = inline.Inline()
-unistd.sources.append("#include <unistd.h>")
-unistd.function_descriptions = {"_exit": "iv"}
-unistd.compile()
+import units
 
 
 class VelesShell(cmd.Cmd):
@@ -79,7 +73,7 @@ class VelesShell(cmd.Cmd):
         if len(line) and line[len(line) - 1] == "\\":
             self.to_exec += "\n"
             return
-        #_thread.start_new_thread(self._exec, (self.to_exec, ))
+        #units.pool.request(self.exec_, self.to_exec)
         self._exec(self.to_exec)
         self.to_exec = ""
 
@@ -118,8 +112,9 @@ def main():
     #    fout.close()
     #except IOError:
     #    pass
-    global unistd
-    unistd.execute("_exit", 0)
+
+    # Because sys.exit() will not exit
+    os.kill(os.getpid(), signal.SIGTERM)
 
 
 if __name__ == "__main__":

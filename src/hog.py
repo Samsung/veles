@@ -38,7 +38,6 @@ from scipy import sqrt, pi, arctan2, cos, sin
 from scipy.ndimage import uniform_filter
 
 
-# FIXME(a.kazantsev): from pythonxy git with GPL license - need rewrite.
 def hog(image, orientations=9, pixels_per_cell=(8, 8),
         cells_per_block=(3, 3), visualise=False, normalize=False):
     """Extract Histogram of Oriented Gradients (HOG) for a given image.
