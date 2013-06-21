@@ -24,13 +24,18 @@ class ThreadPool(object):
     def __init__(self, max_free_threads=10):
         self.sem_ = threading.Semaphore(0)
         self.lock_ = threading.Lock()
+        self.exit_lock_ = threading.Lock()
         self.queue = []
         self.total_threads = 0
         self.free_threads = 0
         self.max_free_threads = max_free_threads
+        self.exit_lock_.acquire()
         threading.Thread(target=self.pool_cleaner).start()
 
     def pool_cleaner(self):
+        """Monitors request queue and executes requests,
+            launching new threads if neccessary.
+        """
         self.lock_.acquire()
         self.total_threads += 1
         self.lock_.release()
@@ -39,6 +44,7 @@ class ThreadPool(object):
             self.free_threads += 1
             if self.free_threads > self.max_free_threads:
                 self.free_threads -= 1
+                self.total_threads -= 1
                 self.lock_.release()
                 return
             self.lock_.release()
@@ -48,7 +54,9 @@ class ThreadPool(object):
                 self.lock_.acquire()
                 self.free_threads -= 1
                 self.total_threads -= 1
-                self.lock.release()
+                if self.total_threads <= 0:
+                    self.exit_lock_.release()
+                self.lock_.release()
                 return
             self.lock_.acquire()
             self.free_threads -= 1
@@ -69,10 +77,23 @@ class ThreadPool(object):
                 traceback.print_exception(a, b, c)
 
     def request(self, run, args=()):
+        """Adds request for execution to the queue.
+        """
         self.lock_.acquire()
         self.queue.append((run, args))
         self.lock_.release()
         self.sem_.release()
+
+    def shutdown(self):
+        """Safely shutdowns thread pool.
+        """
+        sem_ = self.sem_
+        self.sem_ = None
+        self.lock_.acquire()
+        for i in range(0, self.free_threads):
+            sem_.release()
+        self.lock_.release()
+        self.exit_lock_.acquire()
 
 
 pool = ThreadPool()

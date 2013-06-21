@@ -113,8 +113,8 @@ def main():
     #except IOError:
     #    pass
 
-    # Because sys.exit() will not exit
-    os.kill(os.getpid(), signal.SIGTERM)
+    units.pool.shutdown()
+    sys.exit()
 
 
 if __name__ == "__main__":
