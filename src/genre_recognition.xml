@@ -7,13 +7,13 @@
 			</transform>	
 		</transform>
 		<transform name="Window" parameters="type=hamming">
-			<transform name="Energy">
+		    <transform name="Energy">
 				<transform name="Stats" parameters="interval=50">
 					<feature name="Energy" />
 				</transform>
 				<feature name="VAD_energy" />
 			</transform>
-			<transform name="RDFT">
+		    <transform name="RDFT">
 				<transform name="ComplexMagnitude">
 					<transform name="Centroid">
 						<transform name="Stats" parameters="interval=50">
