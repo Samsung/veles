@@ -54,15 +54,16 @@ class CLIError(Exception):
 
 
 def mp_run(files, extr):
-    logging.debug("Reading the files...")
+    sizestr = str(len(files))
+    logging.debug("Reading " + sizestr + " files...")
     loader = SndFileLoader()
     loader.files_list = files
     loader.initialize()
-    logging.debug("Decoding the files...")
+    logging.debug("Decoding " + sizestr + " files...")
     loader.run()
 
     extr.inputs = loader.outputs
-    logging.debug("Extracting features...")
+    logging.debug("Extracting features from " + sizestr + " files...")
     extr.run()
     return extr.outputs
 
@@ -122,6 +123,10 @@ USAGE
                             action="store_true", default=True,
                             help="recurse into subfolders [default: "
                                 "%(default)s]")
+        parser.add_argument("-1", "--single-threaded", dest="single",
+                            action="store_true", default=False,
+                            help="single-threaded extraction [default: "
+                                "%(default)s]")
         parser.add_argument("-v", "--verbose", dest="verbose",
                             action="count", default=0,
                             help="set verbosity level [default: %(default)s]")
@@ -151,6 +156,7 @@ USAGE
         recurse = args.recurse
         inpat = args.include
         expat = args.exclude
+        single = args.single
 
         if verbose > 4:
             verbose = 4
@@ -195,14 +201,19 @@ USAGE
 
         pcount = mp.cpu_count()
         splitted_found_files = [found_files[i::pcount] for i in range(pcount)]
-        with mp.Pool(pcount) as pool:
-            results_async = [pool.apply_async(
-                                mp_run, (splitted_found_files[i], extr,)) \
-                             for i in range(0, pcount)]
-            pool.close()
-            pool.join()
-            extr.outputs = list(chain(*[r.get() for r in results_async]))
-
+        if not single:
+            with mp.Pool(pcount) as pool:
+                results_async = [pool.apply_async(
+                                    mp_run, (splitted_found_files[i], extr,)) \
+                                 for i in range(0, pcount)]
+                pool.close()
+                pool.join()
+                extr.outputs = list(chain(*[r.get() for r in results_async]))
+        else:
+            all_outputs = []
+            for i in range(0, len(found_files)):
+                all_outputs += mp_run(splitted_found_files[i], extr)
+            extr.outputs = all_outputs
         logging.info("Done in %f" % (time.time() - timer))
         timer = time.time()
         logging.debug("Saving the results...")

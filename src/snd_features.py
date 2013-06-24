@@ -46,6 +46,7 @@ class SoundFeatures(units.Unit):
 
     def run(self):
         inputs = {}
+        self.outputs = []
         for sampling_rate, grsr in groupby(
             sorted(self.inputs, key=lambda x: x["sampling_rate"]),
             lambda x: x["sampling_rate"]):
@@ -59,7 +60,7 @@ class SoundFeatures(units.Unit):
                 extr = Extractor(self.features, size, sampling_rate)
                 for data in inputs[sampling_rate][size]:
                     try:
-                        logging.debug("Extracting features from " +
+                        logging.info("Extracting features from " +
                                       data["name"])
                         self.outputs.append(extr.calculate(data["data"]))
                     except Exception as e:
@@ -69,7 +70,9 @@ class SoundFeatures(units.Unit):
 
     def save_to_file(self, file_name, labels):
         if len(labels) != len(self.outputs):
-            logging.error("Labels and outputs size mismatch")
+            raise Exception("Labels and outputs size mismatch (" +
+                            str(len(labels)) + " vs " +
+                            str(len(self.outputs)) + ")")
         root = ElementTree.Element("features", {"version": "1.0"})
         indices_map = sorted(range(0, len(labels)), key=lambda x: labels[x])
         labels.sort()
