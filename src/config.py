@@ -12,8 +12,8 @@ import numpy
 dtypes = {"float": numpy.float32, "double": numpy.float64}
 
 # Current number type
-dtype = "float"
-#dtype = "double"
+#dtype = "float"
+dtype = "double"
 
 # CL defines
 cl_defines = {"float": "#define dtype float",
