@@ -47,7 +47,7 @@
 				<transform name="RDFT">
 					<transform name="FrequencyBands" parameters="bands=200 400 800 1600 3200">
 						<transform name="IRDFT">
-							<transform name="IWindow" parameters="length=512">
+							<transform name="IWindow" parameters="length=512,step=205,inverse_count=6">
 								<transform name="Rectify">
 									<transform name="Convolve" parameters="window = half-hanning-right, length=12800">
 										<transform name="Diffrect">
