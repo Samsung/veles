@@ -26,6 +26,8 @@ import os
 import re
 import sys
 import time
+import threading
+import traceback
 from snd_features import SoundFeatures
 from snd_file_loader import SndFileLoader
 from sound_feature_extraction.library import Library
@@ -54,18 +56,21 @@ class CLIError(Exception):
 
 
 def mp_run(files, extr):
-    sizestr = str(len(files))
-    logging.debug("Reading " + sizestr + " files...")
-    loader = SndFileLoader()
-    loader.files_list = files
-    loader.initialize()
-    logging.debug("Decoding " + sizestr + " files...")
-    loader.run()
+    try:
+        sizestr = str(len(files))
+        logging.debug("Reading " + sizestr + " files...")
+        loader = SndFileLoader()
+        loader.files_list = files
+        loader.initialize()
+        logging.debug("Decoding " + sizestr + " files...")
+        loader.run()
 
-    extr.inputs = loader.outputs
-    logging.debug("Extracting features from " + sizestr + " files...")
-    extr.run()
-    return extr.outputs
+        extr.inputs = loader.outputs
+        logging.debug("Extracting features from " + sizestr + " files...")
+        extr.run()
+        return extr.outputs
+    except:
+        logging.critical("Subprocess failed: %s" % traceback.format_exc())
 
 
 def filter_files(files, root, prefix, inpat, expat):
@@ -127,6 +132,10 @@ USAGE
                             action="store_true", default=False,
                             help="single-threaded extraction [default: "
                                 "%(default)s]")
+        parser.add_argument("-ns", "--no-simd", dest="nosimd",
+                            action="store_true", default=False,
+                            help="disable SIMD acceleration [default: "
+                                "%(default)s]")
         parser.add_argument("-v", "--verbose", dest="verbose",
                             action="count", default=0,
                             help="set verbosity level [default: %(default)s]")
@@ -157,6 +166,7 @@ USAGE
         inpat = args.include
         expat = args.exclude
         single = args.single
+        nosimd = args.nosimd
 
         if verbose > 4:
             verbose = 4
@@ -166,9 +176,12 @@ USAGE
             raise CLIError("include and exclude pattern are equal! "
                            "Nothing will be processed.")
 
+        start_timer = time.time()
+
         # We can do work in parallel more effectively with multiprocessing
         Library(library_path).set_omp_transforms_max_threads_num(1)
-
+        if nosimd:
+            Library(library_path).set_use_simd(0)
         features = FeaturesXml.parse(feature_file)
         logging.info("Read %d features" % len(features))
 
@@ -219,15 +232,14 @@ USAGE
         logging.debug("Saving the results...")
         extr.save_to_file(output, list(chain(*splitted_found_files)))
 
-        logging.info("Done in %f" % (time.time() - timer))
+        logging.info("Finished in %f" % (time.time() - start_timer))
         return 0
     except KeyboardInterrupt:
         logging.critical("Interrupted")
         return 0
     except Exception as e:
-        # logging.critical(program_name + ": " + repr(e) + ":")
+        logging.critical("Failed")
         raise
-        return 2
 
 if __name__ == "__main__":
     sys.exit(main())
