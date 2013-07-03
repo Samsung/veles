@@ -41,8 +41,7 @@ class SoundFeatures(units.Unit):
             self.add_feature(desc)
 
     def initialize(self):
-        # Validate the set features by constructing an Extractor instance
-        Extractor(self.features, 1000, 16000)
+        pass
 
     def run(self):
         inputs = {}
