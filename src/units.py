@@ -31,6 +31,13 @@ class ThreadPool(object):
         self.max_free_threads = max_free_threads
         self.exit_lock_.acquire()
         threading.Thread(target=self.pool_cleaner).start()
+        self.sysexit = sys.exit
+        sys.exit = self.exit
+
+    def exit(self, retcode):
+        self.shutdown()
+        self.sysexit(retcode)
+
 
     def pool_cleaner(self):
         """Monitors request queue and executes requests,
@@ -72,7 +79,7 @@ class ThreadPool(object):
             try:
                 run(*args)
             except:
-                #TODO(a.kazantsev): add good error handling here.
+                # TODO(a.kazantsev): add good error handling here.
                 a, b, c = sys.exc_info()
                 traceback.print_exception(a, b, c)
 
@@ -284,7 +291,7 @@ class Unit(SmartPickling):
                (not dst.gate_block[0] and dst.gate_block_not[0]):
                 continue
             global pool
-            pool.request(dst.check_gate_and_run, (self, ))
+            pool.request(dst.check_gate_and_run, (self,))
 
     def initialize(self):
         """Allocate buffers here.
