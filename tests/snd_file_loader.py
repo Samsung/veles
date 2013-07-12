@@ -22,8 +22,8 @@ class Test(unittest.TestCase):
         loader = SndFileLoader()
         data = loader.decode_file(
             "/home/markhor/Development/speech_files/sawyer.flac")
-        print("%d samples at %d Hz" % (data["data"].size,
-                                       data["sampling_rate"]))
+        logging.info("%d samples at %d Hz" % (data["data"].size,
+                                              data["sampling_rate"]))
 
 
 if __name__ == "__main__":
