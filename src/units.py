@@ -7,103 +7,9 @@ Units in data stream neural network model.
 """
 import time
 import numpy
+import logger
 import threading
-import traceback
-import sys
-
-
-class ThreadPool(object):
-    """Pool of threads.
-
-    Attributes:
-        sem_: semaphore.
-        queue: queue of requests.
-        total_threads: number of threads in the pool.
-        free_threads: number of free threads in the pool.
-    """
-    def __init__(self, max_free_threads=10):
-        self.sem_ = threading.Semaphore(0)
-        self.lock_ = threading.Lock()
-        self.exit_lock_ = threading.Lock()
-        self.queue = []
-        self.total_threads = 0
-        self.free_threads = 0
-        self.max_free_threads = max_free_threads
-        self.exit_lock_.acquire()
-        threading.Thread(target=self.pool_cleaner).start()
-        self.sysexit = sys.exit
-        sys.exit = self.exit
-
-    def exit(self, retcode):
-        self.shutdown()
-        self.sysexit(retcode)
-
-
-    def pool_cleaner(self):
-        """Monitors request queue and executes requests,
-            launching new threads if neccessary.
-        """
-        self.lock_.acquire()
-        self.total_threads += 1
-        self.lock_.release()
-        while True:
-            self.lock_.acquire()
-            self.free_threads += 1
-            if self.free_threads > self.max_free_threads:
-                self.free_threads -= 1
-                self.total_threads -= 1
-                self.lock_.release()
-                return
-            self.lock_.release()
-            try:
-                self.sem_.acquire()
-            except:  # return in case of broken semaphore
-                self.lock_.acquire()
-                self.free_threads -= 1
-                self.total_threads -= 1
-                if self.total_threads <= 0:
-                    self.exit_lock_.release()
-                self.lock_.release()
-                return
-            self.lock_.acquire()
-            self.free_threads -= 1
-            if self.free_threads <= 0:
-                threading.Thread(target=self.pool_cleaner).start()
-            try:
-                (run, args) = self.queue.pop(0)
-            except:
-                self.total_threads -= 1
-                self.lock_.release()
-                return
-            self.lock_.release()
-            try:
-                run(*args)
-            except:
-                # TODO(a.kazantsev): add good error handling here.
-                a, b, c = sys.exc_info()
-                traceback.print_exception(a, b, c)
-
-    def request(self, run, args=()):
-        """Adds request for execution to the queue.
-        """
-        self.lock_.acquire()
-        self.queue.append((run, args))
-        self.lock_.release()
-        self.sem_.release()
-
-    def shutdown(self):
-        """Safely shutdowns thread pool.
-        """
-        sem_ = self.sem_
-        self.sem_ = None
-        self.lock_.acquire()
-        for i in range(0, self.free_threads):
-            sem_.release()
-        self.lock_.release()
-        self.exit_lock_.acquire()
-
-
-pool = ThreadPool()
+import thread_pool
 
 
 def realign(arr, boundary=4096):
@@ -140,7 +46,7 @@ def aligned_zeros(shape, boundary=4096, dtype=numpy.float32):
         .reshape(shape, order="C")
 
 
-class SmartPickling(object):
+class SmartPickler(logger.Logger):
     """Will save attributes ending with _ as None when pickling and will call
         constructor upon unpickling.
     """
@@ -150,7 +56,7 @@ class SmartPickling(object):
         Parameters:
             unpickling: if 1, object is being created via unpickling.
         """
-        pass
+        super(SmartPickler, self).__init__()
 
     def __getstate__(self):
         """What to pickle.
@@ -170,7 +76,7 @@ class SmartPickling(object):
         self.__init__(unpickling=1)
 
 
-class Connector(SmartPickling):
+class Connector(SmartPickler):
     """Connects unit attributes (data flow).
 
     Attributes:
@@ -195,7 +101,7 @@ class Connector(SmartPickling):
         self.mtime = mtime
 
 
-class Unit(SmartPickling):
+class Unit(SmartPickler):
     """General unit in data stream model.
 
     Attributes:
@@ -290,8 +196,7 @@ class Unit(SmartPickling):
             if (dst.gate_block[0] and not dst.gate_block_not[0]) or \
                (not dst.gate_block[0] and dst.gate_block_not[0]):
                 continue
-            global pool
-            pool.request(dst.check_gate_and_run, (self,))
+            thread_pool.pool.request(dst.check_gate_and_run, (self,))
 
     def initialize(self):
         """Allocate buffers here.

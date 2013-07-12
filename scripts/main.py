@@ -8,10 +8,11 @@ Console command line interface for Veles platform.
 """
 import sys
 import os
-import signal
 import cmd
+import logging
 import traceback
 import pickle
+import thread_pool
 
 
 # Imports for conveniece
@@ -28,8 +29,8 @@ def add_path(path):
 this_dir = os.path.dirname(__file__)
 if not this_dir:
     this_dir = "."
-add_path("%s/../src" % (this_dir, ))
-add_path("%s/../Znicz" % (this_dir, ))
+add_path("%s/../src" % (this_dir,))
+add_path("%s/../Znicz" % (this_dir,))
 
 
 import units
@@ -52,7 +53,7 @@ class VelesShell(cmd.Cmd):
     def do_quit(self, arg):
         """Exit the shell.
         """
-        print("\nWill now exit.\n")
+        logging.debug("\nWill now exit.\n")
         return True
 
     def do_exit(self, arg):
@@ -73,7 +74,7 @@ class VelesShell(cmd.Cmd):
         if len(line) and line[len(line) - 1] == "\\":
             self.to_exec += "\n"
             return
-        #units.pool.request(self.exec_, self.to_exec)
+        # thread_pool.pool.request(self.exec_, self.to_exec)
         self._exec(self.to_exec)
         self.to_exec = ""
 
@@ -91,14 +92,14 @@ veles_shell = VelesShell()
 
 
 def main():
-    #global this_dir
-    #fnme = "%s/../Znicz/cache/sh.pickle" % (this_dir, )
+    # global this_dir
+    # fnme = "%s/../Znicz/cache/sh.pickle" % (this_dir, )
     global veles_shell
-    #try:
+    # try:
     #    fin = open(fnme, "rb")
     #    (sh.last_exec, sh.cmdqueue, sh.lastcmd) = pickle.load(fin)
     #    fin.close()
-    #except IOError:
+    # except IOError:
     #    pass
     while True:
         try:
@@ -106,14 +107,14 @@ def main():
             break
         except KeyboardInterrupt:
             pass
-    #try:
+    # try:
     #    fout = open(fnme, "wb")
     #    pickle.dump((sh.last_exec, sh.cmdqueue, sh.lastcmd), fout)
     #    fout.close()
-    #except IOError:
+    # except IOError:
     #    pass
 
-    units.pool.shutdown()
+    thread_pool.pool.shutdown()
     sys.exit()
 
 
