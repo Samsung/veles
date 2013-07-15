@@ -1,10 +1,8 @@
-'''
+"""
 Created on Jul 12, 2013
 
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
-'''
-
-
+"""
 import sys
 import threading
 import traceback
