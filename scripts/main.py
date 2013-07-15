@@ -1,4 +1,4 @@
-#!/usr/bin/python3.3
+#!/usr/bin/python3.3 -O
 """
 Created on Jun 4, 2013
 
