@@ -48,7 +48,8 @@ AM_DEFAULT_SOURCE_EXT = .cc
 
 AM_CPPFLAGS = -I$(top_srcdir)/tests/google
 AM_LDFLAGS = $(top_builddir)/src/libVeles.la \
-       $(top_builddir)/tests/google/lib_gtest.la
+       $(top_builddir)/tests/google/lib_gtest.la \
+       -pthread
 
 noinst_PROGRAMS = $(TESTS)
 
