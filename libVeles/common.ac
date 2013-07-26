@@ -192,7 +192,7 @@ AM_COND_IF([TESTS], [
 AC_SUBST([TESTS_DIR])
 
 # Check whether to generate test coverage
-AC_ARG_ENABLE([coverage],
+AC_ARG_ENABLE([test-coverage],
     AS_HELP_STRING([--enable-test-coverage],
                    [build with code coverage generation (this option depends on debug and tests switches)])
 )
