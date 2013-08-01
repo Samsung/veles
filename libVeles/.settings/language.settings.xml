@@ -3,7 +3,7 @@
 	<configuration id="org.eclipse.linuxtools.cdt.autotools.core.configuration.build.49116234" name="Build (GNU)">
 		<extension point="org.eclipse.cdt.core.LanguageSettingsProvider">
 			<provider copy-of="extension" id="org.eclipse.cdt.managedbuilder.core.GCCBuildCommandParser"/>
-			<provider class="org.eclipse.cdt.managedbuilder.language.settings.providers.GCCBuiltinSpecsDetector" console="false" id="org.eclipse.cdt.managedbuilder.core.GCCBuiltinSpecsDetector" keep-relative-paths="false" name="CDT GCC Builtin Compiler Settings" parameter="${COMMAND} -E -P -v -dD ${INPUTS}" store-entries-with-project="true">
+			<provider class="org.eclipse.cdt.managedbuilder.language.settings.providers.GCCBuiltinSpecsDetector" console="false" env-hash="-2055719358" id="org.eclipse.cdt.managedbuilder.core.GCCBuiltinSpecsDetector" keep-relative-paths="false" name="CDT GCC Builtin Compiler Settings" parameter="${COMMAND} -E -P -v -dD ${INPUTS}" store-entries-with-project="true">
 				<language-scope id="org.eclipse.cdt.core.gcc"/>
 				<language-scope id="org.eclipse.cdt.core.g++"/>
 				<language id="org.eclipse.cdt.core.gcc">
@@ -49,10 +49,10 @@
 					<entry kind="macro" name="__BYTE_ORDER__" value="__ORDER_LITTLE_ENDIAN__">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__CHAR16_TYPE__" value="short">
+					<entry kind="macro" name="__CHAR16_TYPE__" value="short unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__CHAR32_TYPE__" value="unsigned">
+					<entry kind="macro" name="__CHAR32_TYPE__" value="unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__CHAR_BIT__" value="8">
@@ -298,7 +298,7 @@
 					<entry kind="macro" name="__INT16_MAX__" value="32767">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT16_TYPE__" value="short">
+					<entry kind="macro" name="__INT16_TYPE__" value="short int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT32_C(c)" value="c">
@@ -316,7 +316,7 @@
 					<entry kind="macro" name="__INT64_MAX__" value="9223372036854775807L">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT64_TYPE__" value="long">
+					<entry kind="macro" name="__INT64_TYPE__" value="long int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT8_C(c)" value="c">
@@ -325,7 +325,7 @@
 					<entry kind="macro" name="__INT8_MAX__" value="127">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT8_TYPE__" value="signed">
+					<entry kind="macro" name="__INT8_TYPE__" value="signed char">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INTMAX_C(c)" value="c ## L">
@@ -334,43 +334,43 @@
 					<entry kind="macro" name="__INTMAX_MAX__" value="9223372036854775807L">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INTMAX_TYPE__" value="long">
+					<entry kind="macro" name="__INTMAX_TYPE__" value="long int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INTPTR_MAX__" value="9223372036854775807L">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INTPTR_TYPE__" value="long">
+					<entry kind="macro" name="__INTPTR_TYPE__" value="long int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT_FAST16_MAX__" value="9223372036854775807L">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT_FAST16_TYPE__" value="long">
+					<entry kind="macro" name="__INT_FAST16_TYPE__" value="long int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT_FAST32_MAX__" value="9223372036854775807L">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT_FAST32_TYPE__" value="long">
+					<entry kind="macro" name="__INT_FAST32_TYPE__" value="long int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT_FAST64_MAX__" value="9223372036854775807L">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT_FAST64_TYPE__" value="long">
+					<entry kind="macro" name="__INT_FAST64_TYPE__" value="long int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT_FAST8_MAX__" value="127">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT_FAST8_TYPE__" value="signed">
+					<entry kind="macro" name="__INT_FAST8_TYPE__" value="signed char">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT_LEAST16_MAX__" value="32767">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT_LEAST16_TYPE__" value="short">
+					<entry kind="macro" name="__INT_LEAST16_TYPE__" value="short int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT_LEAST32_MAX__" value="2147483647">
@@ -382,13 +382,13 @@
 					<entry kind="macro" name="__INT_LEAST64_MAX__" value="9223372036854775807L">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT_LEAST64_TYPE__" value="long">
+					<entry kind="macro" name="__INT_LEAST64_TYPE__" value="long int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT_LEAST8_MAX__" value="127">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT_LEAST8_TYPE__" value="signed">
+					<entry kind="macro" name="__INT_LEAST8_TYPE__" value="signed char">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT_MAX__" value="2147483647">
@@ -463,7 +463,7 @@
 					<entry kind="macro" name="__PTRDIFF_MAX__" value="9223372036854775807L">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__PTRDIFF_TYPE__" value="long">
+					<entry kind="macro" name="__PTRDIFF_TYPE__" value="long int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__REGISTER_PREFIX__" value="">
@@ -478,7 +478,7 @@
 					<entry kind="macro" name="__SIG_ATOMIC_MAX__" value="2147483647">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__SIG_ATOMIC_MIN__" value="(-__SIG_ATOMIC_MAX__">
+					<entry kind="macro" name="__SIG_ATOMIC_MIN__" value="(-__SIG_ATOMIC_MAX__ - 1)">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__SIG_ATOMIC_TYPE__" value="int">
@@ -526,7 +526,7 @@
 					<entry kind="macro" name="__SIZE_MAX__" value="18446744073709551615UL">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__SIZE_TYPE__" value="long">
+					<entry kind="macro" name="__SIZE_TYPE__" value="long unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__SSE2_MATH__" value="1">
@@ -556,7 +556,7 @@
 					<entry kind="macro" name="__UINT16_MAX__" value="65535">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT16_TYPE__" value="short">
+					<entry kind="macro" name="__UINT16_TYPE__" value="short unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT32_C(c)" value="c ## U">
@@ -565,7 +565,7 @@
 					<entry kind="macro" name="__UINT32_MAX__" value="4294967295U">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT32_TYPE__" value="unsigned">
+					<entry kind="macro" name="__UINT32_TYPE__" value="unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT64_C(c)" value="c ## UL">
@@ -574,7 +574,7 @@
 					<entry kind="macro" name="__UINT64_MAX__" value="18446744073709551615UL">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT64_TYPE__" value="long">
+					<entry kind="macro" name="__UINT64_TYPE__" value="long unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT8_C(c)" value="c">
@@ -583,7 +583,7 @@
 					<entry kind="macro" name="__UINT8_MAX__" value="255">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT8_TYPE__" value="unsigned">
+					<entry kind="macro" name="__UINT8_TYPE__" value="unsigned char">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINTMAX_C(c)" value="c ## UL">
@@ -592,61 +592,61 @@
 					<entry kind="macro" name="__UINTMAX_MAX__" value="18446744073709551615UL">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINTMAX_TYPE__" value="long">
+					<entry kind="macro" name="__UINTMAX_TYPE__" value="long unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINTPTR_MAX__" value="18446744073709551615UL">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINTPTR_TYPE__" value="long">
+					<entry kind="macro" name="__UINTPTR_TYPE__" value="long unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT_FAST16_MAX__" value="18446744073709551615UL">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT_FAST16_TYPE__" value="long">
+					<entry kind="macro" name="__UINT_FAST16_TYPE__" value="long unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT_FAST32_MAX__" value="18446744073709551615UL">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT_FAST32_TYPE__" value="long">
+					<entry kind="macro" name="__UINT_FAST32_TYPE__" value="long unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT_FAST64_MAX__" value="18446744073709551615UL">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT_FAST64_TYPE__" value="long">
+					<entry kind="macro" name="__UINT_FAST64_TYPE__" value="long unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT_FAST8_MAX__" value="255">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT_FAST8_TYPE__" value="unsigned">
+					<entry kind="macro" name="__UINT_FAST8_TYPE__" value="unsigned char">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT_LEAST16_MAX__" value="65535">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT_LEAST16_TYPE__" value="short">
+					<entry kind="macro" name="__UINT_LEAST16_TYPE__" value="short unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT_LEAST32_MAX__" value="4294967295U">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT_LEAST32_TYPE__" value="unsigned">
+					<entry kind="macro" name="__UINT_LEAST32_TYPE__" value="unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT_LEAST64_MAX__" value="18446744073709551615UL">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT_LEAST64_TYPE__" value="long">
+					<entry kind="macro" name="__UINT_LEAST64_TYPE__" value="long unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT_LEAST8_MAX__" value="255">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT_LEAST8_TYPE__" value="unsigned">
+					<entry kind="macro" name="__UINT_LEAST8_TYPE__" value="unsigned char">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__USER_LABEL_PREFIX__" value="">
@@ -658,7 +658,7 @@
 					<entry kind="macro" name="__WCHAR_MAX__" value="2147483647">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__WCHAR_MIN__" value="(-__WCHAR_MAX__">
+					<entry kind="macro" name="__WCHAR_MIN__" value="(-__WCHAR_MAX__ - 1)">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__WCHAR_TYPE__" value="int">
@@ -670,7 +670,7 @@
 					<entry kind="macro" name="__WINT_MIN__" value="0U">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__WINT_TYPE__" value="unsigned">
+					<entry kind="macro" name="__WINT_TYPE__" value="unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__amd64" value="1">
@@ -771,10 +771,10 @@
 					<entry kind="macro" name="__BYTE_ORDER__" value="__ORDER_LITTLE_ENDIAN__">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__CHAR16_TYPE__" value="short">
+					<entry kind="macro" name="__CHAR16_TYPE__" value="short unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__CHAR32_TYPE__" value="unsigned">
+					<entry kind="macro" name="__CHAR32_TYPE__" value="unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__CHAR_BIT__" value="8">
@@ -1035,7 +1035,7 @@
 					<entry kind="macro" name="__INT16_MAX__" value="32767">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT16_TYPE__" value="short">
+					<entry kind="macro" name="__INT16_TYPE__" value="short int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT32_C(c)" value="c">
@@ -1053,7 +1053,7 @@
 					<entry kind="macro" name="__INT64_MAX__" value="9223372036854775807L">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT64_TYPE__" value="long">
+					<entry kind="macro" name="__INT64_TYPE__" value="long int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT8_C(c)" value="c">
@@ -1062,7 +1062,7 @@
 					<entry kind="macro" name="__INT8_MAX__" value="127">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT8_TYPE__" value="signed">
+					<entry kind="macro" name="__INT8_TYPE__" value="signed char">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INTMAX_C(c)" value="c ## L">
@@ -1071,43 +1071,43 @@
 					<entry kind="macro" name="__INTMAX_MAX__" value="9223372036854775807L">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INTMAX_TYPE__" value="long">
+					<entry kind="macro" name="__INTMAX_TYPE__" value="long int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INTPTR_MAX__" value="9223372036854775807L">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INTPTR_TYPE__" value="long">
+					<entry kind="macro" name="__INTPTR_TYPE__" value="long int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT_FAST16_MAX__" value="9223372036854775807L">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT_FAST16_TYPE__" value="long">
+					<entry kind="macro" name="__INT_FAST16_TYPE__" value="long int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT_FAST32_MAX__" value="9223372036854775807L">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT_FAST32_TYPE__" value="long">
+					<entry kind="macro" name="__INT_FAST32_TYPE__" value="long int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT_FAST64_MAX__" value="9223372036854775807L">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT_FAST64_TYPE__" value="long">
+					<entry kind="macro" name="__INT_FAST64_TYPE__" value="long int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT_FAST8_MAX__" value="127">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT_FAST8_TYPE__" value="signed">
+					<entry kind="macro" name="__INT_FAST8_TYPE__" value="signed char">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT_LEAST16_MAX__" value="32767">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT_LEAST16_TYPE__" value="short">
+					<entry kind="macro" name="__INT_LEAST16_TYPE__" value="short int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT_LEAST32_MAX__" value="2147483647">
@@ -1119,13 +1119,13 @@
 					<entry kind="macro" name="__INT_LEAST64_MAX__" value="9223372036854775807L">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT_LEAST64_TYPE__" value="long">
+					<entry kind="macro" name="__INT_LEAST64_TYPE__" value="long int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT_LEAST8_MAX__" value="127">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__INT_LEAST8_TYPE__" value="signed">
+					<entry kind="macro" name="__INT_LEAST8_TYPE__" value="signed char">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__INT_MAX__" value="2147483647">
@@ -1200,7 +1200,7 @@
 					<entry kind="macro" name="__PTRDIFF_MAX__" value="9223372036854775807L">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__PTRDIFF_TYPE__" value="long">
+					<entry kind="macro" name="__PTRDIFF_TYPE__" value="long int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__REGISTER_PREFIX__" value="">
@@ -1215,7 +1215,7 @@
 					<entry kind="macro" name="__SIG_ATOMIC_MAX__" value="2147483647">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__SIG_ATOMIC_MIN__" value="(-__SIG_ATOMIC_MAX__">
+					<entry kind="macro" name="__SIG_ATOMIC_MIN__" value="(-__SIG_ATOMIC_MAX__ - 1)">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__SIG_ATOMIC_TYPE__" value="int">
@@ -1263,7 +1263,7 @@
 					<entry kind="macro" name="__SIZE_MAX__" value="18446744073709551615UL">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__SIZE_TYPE__" value="long">
+					<entry kind="macro" name="__SIZE_TYPE__" value="long unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__SSE2_MATH__" value="1">
@@ -1293,7 +1293,7 @@
 					<entry kind="macro" name="__UINT16_MAX__" value="65535">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT16_TYPE__" value="short">
+					<entry kind="macro" name="__UINT16_TYPE__" value="short unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT32_C(c)" value="c ## U">
@@ -1302,7 +1302,7 @@
 					<entry kind="macro" name="__UINT32_MAX__" value="4294967295U">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT32_TYPE__" value="unsigned">
+					<entry kind="macro" name="__UINT32_TYPE__" value="unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT64_C(c)" value="c ## UL">
@@ -1311,7 +1311,7 @@
 					<entry kind="macro" name="__UINT64_MAX__" value="18446744073709551615UL">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT64_TYPE__" value="long">
+					<entry kind="macro" name="__UINT64_TYPE__" value="long unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT8_C(c)" value="c">
@@ -1320,7 +1320,7 @@
 					<entry kind="macro" name="__UINT8_MAX__" value="255">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT8_TYPE__" value="unsigned">
+					<entry kind="macro" name="__UINT8_TYPE__" value="unsigned char">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINTMAX_C(c)" value="c ## UL">
@@ -1329,61 +1329,61 @@
 					<entry kind="macro" name="__UINTMAX_MAX__" value="18446744073709551615UL">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINTMAX_TYPE__" value="long">
+					<entry kind="macro" name="__UINTMAX_TYPE__" value="long unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINTPTR_MAX__" value="18446744073709551615UL">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINTPTR_TYPE__" value="long">
+					<entry kind="macro" name="__UINTPTR_TYPE__" value="long unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT_FAST16_MAX__" value="18446744073709551615UL">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT_FAST16_TYPE__" value="long">
+					<entry kind="macro" name="__UINT_FAST16_TYPE__" value="long unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT_FAST32_MAX__" value="18446744073709551615UL">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT_FAST32_TYPE__" value="long">
+					<entry kind="macro" name="__UINT_FAST32_TYPE__" value="long unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT_FAST64_MAX__" value="18446744073709551615UL">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT_FAST64_TYPE__" value="long">
+					<entry kind="macro" name="__UINT_FAST64_TYPE__" value="long unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT_FAST8_MAX__" value="255">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT_FAST8_TYPE__" value="unsigned">
+					<entry kind="macro" name="__UINT_FAST8_TYPE__" value="unsigned char">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT_LEAST16_MAX__" value="65535">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT_LEAST16_TYPE__" value="short">
+					<entry kind="macro" name="__UINT_LEAST16_TYPE__" value="short unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT_LEAST32_MAX__" value="4294967295U">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT_LEAST32_TYPE__" value="unsigned">
+					<entry kind="macro" name="__UINT_LEAST32_TYPE__" value="unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT_LEAST64_MAX__" value="18446744073709551615UL">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT_LEAST64_TYPE__" value="long">
+					<entry kind="macro" name="__UINT_LEAST64_TYPE__" value="long unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__UINT_LEAST8_MAX__" value="255">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__UINT_LEAST8_TYPE__" value="unsigned">
+					<entry kind="macro" name="__UINT_LEAST8_TYPE__" value="unsigned char">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__USER_LABEL_PREFIX__" value="">
@@ -1395,7 +1395,7 @@
 					<entry kind="macro" name="__WCHAR_MAX__" value="2147483647">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__WCHAR_MIN__" value="(-__WCHAR_MAX__">
+					<entry kind="macro" name="__WCHAR_MIN__" value="(-__WCHAR_MAX__ - 1)">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__WCHAR_TYPE__" value="int">
@@ -1407,7 +1407,7 @@
 					<entry kind="macro" name="__WINT_MIN__" value="0U">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
-					<entry kind="macro" name="__WINT_TYPE__" value="unsigned">
+					<entry kind="macro" name="__WINT_TYPE__" value="unsigned int">
 						<flag value="BUILTIN|READONLY"/>
 					</entry>
 					<entry kind="macro" name="__amd64" value="1">

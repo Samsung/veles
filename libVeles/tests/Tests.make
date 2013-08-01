@@ -55,11 +55,13 @@ noinst_PROGRAMS = $(TESTS)
 
 .PHONY: tests
 
-REALLOG=$(top_builddir)/$(TESTLOG)
+export TESTLOG ?= tests.log
+
+REALLOG = $(top_builddir)/$(TESTLOG)
 
 DEFAULT_TIMEOUT=10
 
-tests:	
+tests:
 	@for dir in $(PARALLEL_SUBDIRS); do \
 		cd $$dir; $(MAKE) --no-print-directory tests; cd ..; \
 	done
