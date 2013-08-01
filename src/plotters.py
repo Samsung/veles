@@ -15,7 +15,6 @@ from PyQt4 import QtGui, QtCore
 import queue
 import threading
 import numpy
-import formats
 import logging
 import config
 import time
@@ -98,7 +97,7 @@ class Graphics:
             while True:
                 plotter = self.event_queue.get_nowait()
                 self.process_event(plotter)
-                if not self.showed:
+                if self.__dict__.get("showed") == False:
                     self.showed = True
                     threading.Thread(target=pp.show).start()
         except queue.Empty:
@@ -435,6 +434,7 @@ class Weights2D(Plotter):
         figure = pp.figure(figure_label)
         figure.clf()
 
+        color = False
         if self.get_shape_from == None:
             sx = int(numpy.round(numpy.sqrt(value.shape[1])))
             sy = int(value.shape[1]) // sx
@@ -442,8 +442,13 @@ class Weights2D(Plotter):
             sx = self.get_shape_from[0][1]
             sy = self.get_shape_from[0][0]
         elif "batch" in self.get_shape_from.__dict__:
-            sx = self.get_shape_from.batch.shape[2]
-            sy = self.get_shape_from.batch.shape[1]
+            if len(self.get_shape_from.batch.shape) == 3:
+                sx = self.get_shape_from.batch.shape[2]
+                sy = self.get_shape_from.batch.shape[1]
+            else:
+                sx = self.get_shape_from.batch.shape[3]
+                sy = self.get_shape_from.batch.shape[2]
+                color = True
         elif "v"  in self.get_shape_from.__dict__:
             sx = self.get_shape_from.v.shape[1]
             sy = self.get_shape_from.v.shape[0]
@@ -451,7 +456,10 @@ class Weights2D(Plotter):
             sx = self.get_shape_from.shape[1]
             sy = self.get_shape_from.shape[0]
 
-        sz = sx * sy
+        if color:
+            sz = sx * sy * 3
+        else:
+            sz = sx * sy
 
         n_cols = int(numpy.round(numpy.sqrt(value.shape[0])))
         n_rows = int(numpy.ceil(value.shape[0] / n_cols))
@@ -462,8 +470,18 @@ class Weights2D(Plotter):
                 ax = figure.add_subplot(n_rows, n_cols, i)
                 ax.cla()
                 v = value[i].ravel()[:sz]
-                ax.imshow(v.reshape(sy, sx),
-                    interpolation="nearest", cmap=cm.gray)
+                if color:
+                    w = numpy.zeros([sy, sx, 3], dtype=v.dtype)
+                    w[:, :, 0:1] = v.reshape(3, sy, sx)[0:1, :, :].reshape(sy,
+                                                sx, 1)[:, :, 0:1]
+                    w[:, :, 1:2] = v.reshape(3, sy, sx)[1:2, :, :].reshape(sy,
+                                                sx, 1)[:, :, 0:1]
+                    w[:, :, 2:3] = v.reshape(3, sy, sx)[2:3, :, :].reshape(sy,
+                                                sx, 1)[:, :, 0:1]
+                    ax.imshow(w, interpolation="nearest")
+                else:
+                    ax.imshow(v.reshape(sy, sx),
+                              interpolation="nearest", cmap=cm.gray)
                 i += 1
                 if i >= value.shape[0]:
                     break
@@ -485,11 +503,12 @@ class Weights2D(Plotter):
         super(Weights2D, self).run()
 
 
-class Image1(Plotter):
-    """Plotter for drawing 1 image.
+class Image(Plotter):
+    """Plotter for drawing N images.
 
     Should be assigned before initialize():
-        input
+        inputs
+        inputs_field
 
     Updates after run():
 
@@ -497,177 +516,80 @@ class Image1(Plotter):
 
     """
     def __init__(self, figure_label="Image", unpickling=0):
-        super(Image1, self).__init__(unpickling=unpickling)
+        super(Image, self).__init__(unpickling=unpickling)
         if unpickling:
             return
-        self.value = None
-        self.input = None  # formats.Batch
+        self.inputs = []
+        self.input_fields = []
         self.figure_label = figure_label
 
-    def initialize(self):
-        if type(self.input) != formats.Batch:
-            return
-        self.value = numpy.zeros_like(self.input.batch[0])
-
-    def redraw(self):
-        figure_label = self.figure_label
-        figure = pp.figure(figure_label)
-        figure.clf()
-
-        ax = figure.add_subplot(111)
-        ax.cla()
-        ax.imshow(self.value, interpolation="nearest", cmap=cm.gray)
-        figure.show()
-        super(Image1, self).redraw()
-
-    def run(self):
-        if type(self.input) != formats.Batch:
-            return
-        self.input.sync(read_only=True)
-        numpy.copyto(self.value, self.input.batch[0])
-        Graphics().event_queue.put(self, block=True)
-        super(Image1, self).run()
-
-
-class Image2(Plotter):
-    """Plotter for drawing 2 images.
-
-    Should be assigned before initialize():
-        input
-        input_field
-        input_field2
-
-    Updates after run():
-
-    Creates within initialize():
-
-    """
-    def __init__(self, figure_label="Image", unpickling=0):
-        super(Image2, self).__init__(unpickling=unpickling)
-        if unpickling:
-            return
-        self.value = None
-        self.input = None  # Connector
-        self.input_field = None
-        self.figure_label = figure_label
-
-    def redraw(self):
-        if type(self.input_field) == int:
-            if self.input_field < 0 or self.input_field >= len(self.input):
-                return
-            value = self.input[self.input_field]
-            value2 = self.input[self.input_field2]
-        else:
-            value = self.input.__dict__[self.input_field]
-            value2 = self.input.__dict__[self.input_field2]
-
+    def draw_image(self, ax, value):
         if type(value) != numpy.ndarray:
+            ax.axis('off')
+            ax.text(0.5, 0.5, "Unsupported type\n%s" % (
+                str(type(value)),), ha='center', va='center')
             return
-
-        figure_label = self.figure_label
-        figure = pp.figure(figure_label)
-        figure.clf()
-
-        if len(value.shape) == 2:
-            sy1 = value.shape[0]
-            sx1 = value.shape[1]
-        elif len(value2.shape) == 2:
-            sy2 = value2.shape[0]
-            sx2 = value2.shape[1]
-            sy1 = sy2
-            sx1 = sx2
-        if len(value2.shape) != 2:
-            sy2 = sy1
-            sx2 = sx1
-
-        ax = figure.add_subplot(2, 1, 0)
-        ax.cla()
-        ax.imshow(value.reshape(sy1, sx1), interpolation="nearest", cmap=cm.gray)
-        ax = figure.add_subplot(2, 1, 1)
-        ax.cla()
-        ax.imshow(value2.reshape(sy2, sx2), interpolation="nearest", cmap=cm.gray)
-
-        figure.show()
-        super(Image2, self).redraw()
-
-    def run(self):
-        Graphics().event_queue.put(self, block=True)
-        super(Image2, self).run()
-
-
-class Image3(Plotter):
-    """Plotter for drawing 3 images.
-
-    Should be assigned before initialize():
-        input
-        input_field
-        input_field2
-        input_field3
-
-    Updates after run():
-
-    Creates within initialize():
-
-    """
-    def __init__(self, figure_label="Image", unpickling=0):
-        super(Image3, self).__init__(unpickling=unpickling)
-        if unpickling:
-            return
-        self.value = None
-        self.input = None  # Connector
-        self.input_field = None
-        self.figure_label = figure_label
-
-    def redraw(self):
-        if type(self.input_field) == int:
-            if self.input_field < 0 or self.input_field >= len(self.input):
-                return
-            value = self.input[self.input_field]
-            value2 = self.input[self.input_field2]
-            value3 = self.input[self.input_field3]
+        w = None
+        color = False
+        l = len(value.shape)
+        if l == 2:
+            sy = value.shape[0]
+            sx = value.shape[1]
+        elif l == 3:
+            if value.shape[0] == 3:
+                sy = value.shape[1]
+                sx = value.shape[2]
+                w = numpy.zeros([sy, sx, 3], dtype=value.dtype)
+                w[:, :, 0:1] = value.reshape(3, sy, sx)[0:1, :, :].reshape(sy,
+                                                    sx, 1)[:, :, 0:1]
+                w[:, :, 1:2] = value.reshape(3, sy, sx)[1:2, :, :].reshape(sy,
+                                                    sx, 1)[:, :, 0:1]
+                w[:, :, 2:3] = value.reshape(3, sy, sx)[2:3, :, :].reshape(sy,
+                                                    sx, 1)[:, :, 0:1]
+                color = True
+            elif value.shape[2] == 3:
+                sy = value.shape[0]
+                sx = value.shape[1]
+                color = True
+            else:
+                sy = int(numpy.round(numpy.sqrt(value.size)))
+                sx = int(numpy.round(value.size / sy))
+                value = value.reshape(sy, sx)
         else:
-            value = self.input.__dict__[self.input_field]
-            value2 = self.input.__dict__[self.input_field2]
-            value3 = self.input.__dict__[self.input_field3]
-
-        if type(value) != numpy.ndarray:
-            return
-
-        if len(value.shape) != 2:
-            sx = int(numpy.round(numpy.sqrt(value.size)))
-            sy = int(numpy.round(value.size / sx))
+            sy = int(numpy.round(numpy.sqrt(value.size)))
+            sx = int(numpy.round(value.size / sy))
             value = value.reshape(sy, sx)
-        if len(value2.shape) != 2:
-            sx = int(numpy.round(numpy.sqrt(value2.size)))
-            sy = int(numpy.round(value2.size / sx))
-            value2 = value2.reshape(sy, sx)
-        if len(value3.shape) != 2:
-            sx = int(numpy.round(numpy.sqrt(value3.size)))
-            sy = int(numpy.round(value3.size / sx))
-            value3 = value3.reshape(sy, sx)
 
+        if w == None:
+            w = value.copy()
+
+        if color:
+            ax.imshow(w, interpolation="nearest")
+        else:
+            ax.imshow(w, interpolation="nearest", cmap=cm.gray)
+
+    def redraw(self):
         figure_label = self.figure_label
         figure = pp.figure(figure_label)
         figure.clf()
 
-        ax = figure.add_subplot(3, 1, 1)
-        ax.cla()
-        ax.imshow(value, interpolation="nearest", cmap=cm.gray)
-
-        ax = figure.add_subplot(3, 1, 2)
-        ax.cla()
-        ax.imshow(value2, interpolation="nearest", cmap=cm.gray)
-
-        ax = figure.add_subplot(3, 1, 3)
-        ax.cla()
-        ax.imshow(value3, interpolation="nearest", cmap=cm.gray)
+        for i, input_field in enumerate(self.input_fields):
+            value = None
+            if type(input_field) == int:
+                if input_field >= 0 and input_field < len(self.inputs[i]):
+                    value = self.inputs[i][input_field]
+            else:
+                value = self.inputs[i].__dict__[input_field]
+            ax = figure.add_subplot(len(self.input_fields), 1, i + 1)
+            ax.cla
+            self.draw_image(ax, value)
 
         figure.show()
-        super(Image3, self).redraw()
+        super(Image, self).redraw()
 
     def run(self):
         Graphics().event_queue.put(self, block=True)
-        super(Image3, self).run()
+        super(Image, self).run()
 
 
 class MSEHistogram(Plotter):
