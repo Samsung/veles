@@ -3,6 +3,7 @@ Created on May 17, 2013
 
 @author: Kumok Akim <a.kumok@samsung.com>
 """
+import matplotlib
 import matplotlib.pyplot as pp
 import matplotlib.patches as patches
 import matplotlib.lines as lines
@@ -17,6 +18,7 @@ import numpy
 import formats
 import logging
 import config
+import time
 
 
 pp.ion()
@@ -74,6 +76,14 @@ class Graphics:
             self.timer.timeout.connect(self.update)
             self.timer.start(100)
             self.root.exec_()
+        elif pp.get_backend() == "WebAgg":
+            self.exiting = False
+            self.showed = False
+            matplotlib.rcParams['webagg.port'] = 8888
+            matplotlib.rcParams['webagg.open_in_browser'] = 'False'
+            while not self.exiting:
+                self.update()
+                time.sleep(0.1)
         self.run_lock.release()
 
     def process_event(self, plotter):
@@ -88,6 +98,9 @@ class Graphics:
             while True:
                 plotter = self.event_queue.get_nowait()
                 self.process_event(plotter)
+                if not self.showed:
+                    self.showed = True
+                    threading.Thread(target=pp.show).start()
         except queue.Empty:
             pass
         if pp.get_backend() == "TkAgg":
@@ -101,6 +114,8 @@ class Graphics:
             self.root.destroy()
         elif pp.get_backend() == "Qt4Agg":
             self.root.quit()
+        elif pp.get_backend() == "WebAgg":
+            self.exiting = True
         self.run_lock.acquire()
         self.run_lock.release()
         logging.info("Done")
