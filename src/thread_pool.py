@@ -30,7 +30,7 @@ class ThreadPool(object):
         self.sysexit = sys.exit
         sys.exit = self.exit
 
-    def exit(self, retcode):
+    def exit(self, retcode=0):
         self.shutdown()
         self.sysexit(retcode)
 
@@ -84,7 +84,8 @@ class ThreadPool(object):
         self.lock_.acquire()
         self.queue.append((run, args))
         self.lock_.release()
-        self.sem_.release()
+        if self.sem_ != None:
+            self.sem_.release()
 
     def shutdown(self):
         """Safely shutdowns thread pool.

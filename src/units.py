@@ -101,6 +101,10 @@ class Connector(SmartPickler):
         self.mtime = mtime
 
 
+def callvle(var):
+    return var() if callable(var) else var
+
+
 class Unit(SmartPickler):
     """General unit in data stream model.
 
@@ -111,11 +115,15 @@ class Unit(SmartPickler):
         gate_lock_: lock.
         run_lock_: lock.
         gate_block: if true, gate() and run() will not be executed and
-                    notification will not be sent further.
+                    notification will not be sent further
+                    (can be a function).
         gate_skip: if true, gate() and run() will not be executed, but
-                   but notification will be sent further.
-        gate_block_not: if true, inverses conditions for gate_block.
-        gate_skip_not: if true, inverses conditions for gate_skip.
+                   but notification will be sent further
+                   (can be a function).
+        gate_block_not: if true, inverses conditions for gate_block
+                   (can be a function).
+        gate_skip_not: if true, inverses conditions for gate_skip
+                   (can be a function).
     """
     def __init__(self, unpickling=0):
         super(Unit, self).__init__(unpickling=unpickling)
@@ -142,8 +150,10 @@ class Unit(SmartPickler):
         """
         if not self.gate(src):  # gate has a priority over skip
             return
-        if (self.gate_skip[0] and not self.gate_skip_not[0]) or \
-           (not self.gate_skip[0] and self.gate_skip_not[0]):
+        if ((callvle(self.gate_skip[0]) and
+             (not callvle(self.gate_skip_not[0]))) or
+            ((not callvle(self.gate_skip[0])) and
+             (callvle(self.gate_skip_not[0])))):
             self.initialize_dependent()
             return
         self.run_lock_.acquire()
@@ -159,8 +169,10 @@ class Unit(SmartPickler):
         """
         if not self.gate(src):  # gate has a priority over skip
             return
-        if (self.gate_skip[0] and not self.gate_skip_not[0]) or \
-           (not self.gate_skip[0] and self.gate_skip_not[0]):
+        if ((callvle(self.gate_skip[0]) and
+             (not callvle(self.gate_skip_not[0]))) or
+            ((not callvle(self.gate_skip[0])) and
+             callvle(self.gate_skip_not[0]))):
             self.run_dependent()
             return
         # If previous run has not yet executed, discard notification.
@@ -184,8 +196,10 @@ class Unit(SmartPickler):
         for dst in self.links_to.keys():
             if dst.initialized:
                 continue
-            if (dst.gate_block[0] and not dst.gate_block_not[0]) or \
-               (not dst.gate_block[0] and dst.gate_block_not[0]):
+            if ((callvle(dst.gate_block[0]) and
+                 (not callvle(dst.gate_block_not[0]))) or
+                ((not callvle(dst.gate_block[0])) and
+                 callvle(dst.gate_block_not[0]))):
                 continue
             dst.check_gate_and_initialize(self)
 
@@ -193,8 +207,10 @@ class Unit(SmartPickler):
         """Invokes run() on dependent units on different threads.
         """
         for dst in self.links_to.keys():
-            if (dst.gate_block[0] and not dst.gate_block_not[0]) or \
-               (not dst.gate_block[0] and dst.gate_block_not[0]):
+            if ((callvle(dst.gate_block[0]) and
+                 (not callvle(dst.gate_block_not[0]))) or
+                ((not callvle(dst.gate_block[0])) and
+                 callvle(dst.gate_block_not[0]))):
                 continue
             thread_pool.pool.request(dst.check_gate_and_run, (self,))
 

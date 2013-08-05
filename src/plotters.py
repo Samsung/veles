@@ -14,6 +14,7 @@ import tkinter
 from PyQt4 import QtGui, QtCore
 import queue
 import threading
+import thread_pool
 import numpy
 import logging
 import config
@@ -56,7 +57,7 @@ class Graphics:
             self.event_queue = queue.Queue()
             self.initialize_lock = threading.Lock()
             self.registered_plotters = {}
-            threading.Thread(target=self.run).start()
+            thread_pool.pool.request(self.run)
 
     def run(self):
         """Creates and runs main graphics window.

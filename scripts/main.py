@@ -12,7 +12,6 @@ import cmd
 import logging
 import traceback
 import pickle
-import thread_pool
 
 
 # Imports for conveniece
@@ -31,8 +30,11 @@ if not this_dir:
     this_dir = "."
 add_path("%s/../src" % (this_dir,))
 add_path("%s/../Znicz" % (this_dir,))
+add_path("%s/../Znicz/tests/functional" % (this_dir,))
 
 
+import config
+import thread_pool
 import units
 
 
@@ -53,7 +55,7 @@ class VelesShell(cmd.Cmd):
     def do_quit(self, arg):
         """Exit the shell.
         """
-        logging.debug("\nWill now exit.\n")
+        print("\nWill now exit.\n")
         return True
 
     def do_exit(self, arg):
@@ -81,6 +83,9 @@ class VelesShell(cmd.Cmd):
     def emptyline(self):
         pass
 
+    def do_EOF(self, arg):
+        return self.do_quit(arg)
+
 
 def snapshot(obj, fnme):
     fout = open(fnme, "wb")
@@ -92,29 +97,17 @@ veles_shell = VelesShell()
 
 
 def main():
-    # global this_dir
-    # fnme = "%s/../Znicz/cache/sh.pickle" % (this_dir, )
+    if __debug__:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
     global veles_shell
-    # try:
-    #    fin = open(fnme, "rb")
-    #    (sh.last_exec, sh.cmdqueue, sh.lastcmd) = pickle.load(fin)
-    #    fin.close()
-    # except IOError:
-    #    pass
     while True:
         try:
             veles_shell.cmdloop()
             break
         except KeyboardInterrupt:
             pass
-    # try:
-    #    fout = open(fnme, "wb")
-    #    pickle.dump((sh.last_exec, sh.cmdqueue, sh.lastcmd), fout)
-    #    fout.close()
-    # except IOError:
-    #    pass
-
-    thread_pool.pool.shutdown()
     sys.exit()
 
 
