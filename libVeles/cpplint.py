@@ -779,12 +779,14 @@ class FileInfo:
       while (root_dir != os.path.dirname(root_dir) and
              not os.path.exists(os.path.join(root_dir, ".git")) and
              not os.path.exists(os.path.join(root_dir, ".hg")) and
-             not os.path.exists(os.path.join(root_dir, ".svn"))):
+             not os.path.exists(os.path.join(root_dir, ".svn")) and
+             not os.path.basename(root_dir).startswith("lib")):
         root_dir = os.path.dirname(root_dir)
 
       if (os.path.exists(os.path.join(root_dir, ".git")) or
           os.path.exists(os.path.join(root_dir, ".hg")) or
-          os.path.exists(os.path.join(root_dir, ".svn"))):
+          os.path.exists(os.path.join(root_dir, ".svn")) or
+          os.path.basename(root_dir).startswith("lib")):
         prefix = os.path.commonprefix([root_dir, project_dir])
         return fullname[len(prefix) + 1:]
 
