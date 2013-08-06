@@ -22,13 +22,11 @@ class Unit {
  public:
   virtual ~Unit() noexcept {
   }
-
   virtual std::string Name() const noexcept = 0;
-
   virtual void Load(const std::string& data) = 0;
   virtual void Execute(float* in, float* out) const = 0;
-  virtual size_t inputs() const noexcept = 0;
-  virtual size_t outputs() const noexcept = 0;
+  virtual size_t InputCount() const noexcept = 0;
+  virtual size_t OutputCount() const noexcept = 0;
 };
 
 }  // namespace Veles
