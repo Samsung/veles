@@ -31,7 +31,7 @@ lib_LTLIBRARIES = libVeles.la
 # Build information for libVeles.la
 
 # Source files
-libVeles_la_SOURCES = unit.cc
+libVeles_la_SOURCES = unit.cc unit_registry.cc
 
 # Linker options
 libVeles_la_LDFLAGS = 
