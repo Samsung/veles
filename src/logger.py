@@ -14,7 +14,12 @@ class Logger(object):
     """
 
     def __init__(self):
+        self.init_unpickled()
+
+    def init_unpickled(self):
         self.logger_ = logging.getLogger(self.__class__.__name__)
 
     def log(self):
+        """Returns the logger associated with this object.
+        """
         return self.logger_

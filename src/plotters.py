@@ -52,19 +52,21 @@ class Graphics:
         return cls._instance
 
     def __init__(self):
-        if not self.is_initialized:
-            self.is_initialized = True
-            self.event_queue = queue.Queue()
-            self.initialize_lock = threading.Lock()
-            self.registered_plotters = {}
-            thread_pool.pool.request(self.run)
+        if self.is_initialized:
+            return
+        self.run_lock = threading.Lock()
+        self.run_lock.acquire()
+        self.is_initialized = True
+        self.exiting = False
+        self.event_queue = queue.Queue()
+        self.initialize_lock = threading.Lock()
+        self.registered_plotters = {}
+        thread_pool.pool.request(self.run)
 
     def run(self):
         """Creates and runs main graphics window.
         Note that this function should be called only by __init__()
         """
-        self.run_lock = threading.Lock()
-        self.run_lock.acquire()
         if pp.get_backend() == "TkAgg":
             self.root = tkinter.Tk()
             self.root.withdraw()
@@ -104,20 +106,21 @@ class Graphics:
         except queue.Empty:
             pass
         if pp.get_backend() == "TkAgg":
-            self.root.after(100, self.update)
+            if not self.exiting:
+                self.root.after(100, self.update)
+            else:
+                self.root.destroy()
+        if pp.get_backend() == "Qt4Agg" and self.exiting:
+            self.timer.stop()
+            self.root.quit()
 
     def wait_finish(self):
         """Waits for user to close the window.
         """
-        logging.info("Waiting for user to close the window...")
-        if pp.get_backend() == "TkAgg":
-            self.root.destroy()
-        elif pp.get_backend() == "Qt4Agg":
-            self.root.quit()
-        elif pp.get_backend() == "WebAgg":
-            self.exiting = True
-        self.run_lock.acquire()
-        self.run_lock.release()
+        self.exiting = True
+        if self.run_lock:
+            self.run_lock.acquire()
+            self.run_lock.release()
         logging.info("Done")
 
 
@@ -127,12 +130,10 @@ class Plotter(units.Unit):
     Attributes:
         lock_: lock.
     """
-    def __init__(self, device=None, unpickling=0):
-        super(Plotter, self).__init__(unpickling=unpickling)
+    def __init__(self, device=None):
+        super(Plotter, self).__init__()
         self.lock_ = threading.Lock()
         self.lock_.acquire()
-        if unpickling:
-            return
 
     def redraw(self):
         """ Do the actual drawing here
@@ -164,16 +165,11 @@ class SimplePlotter(Plotter):
             http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.plot
             for reference.
     """
-    def __init__(self, figure_label="num errorrs",
+    def __init__(self, figure_label="num errors",
                  plot_style="k-",
-                 clear_plot=False,
-                 unpickling=0):
-        super(SimplePlotter, self).__init__(unpickling=unpickling)
-        if unpickling:
-            if "clear_plot" not in self.__dict__:
-                self.clear_plot = False
-            return
-        self.values = list()
+                 clear_plot=False):
+        super(SimplePlotter, self).__init__()
+        self.values = []
         self.input = None  # Connector
         self.input_field = None
         self.figure_label = figure_label
@@ -219,10 +215,8 @@ class MatrixPlotter(Plotter):
     Creates within initialize():
 
     """
-    def __init__(self, figure_label="Matrix", unpickling=0):
-        super(MatrixPlotter, self).__init__(unpickling=unpickling)
-        if unpickling:
-            return
+    def __init__(self, figure_label="Matrix"):
+        super(MatrixPlotter, self).__init__()
         self.value = None
         self.input = None  # Connector
         self.input_field = None
@@ -320,7 +314,7 @@ class MatrixPlotter(Plotter):
         # Headers in first row
         row = 0
         for column in range(1, num_columns - 1):
-            pp.figtext(label=("C%d" % (column - 1,)),
+            pp.figtext(label=("C%d" % (column - 1)),
                             s=(column - 1),
                             x=(column + 0.5) / num_columns,
                             y=(num_rows - row - 0.5) / num_rows,
@@ -329,7 +323,7 @@ class MatrixPlotter(Plotter):
         # Headers in first column
         column = 0
         for row in range(1, num_rows - 1):
-            pp.figtext(label=("R%d" % (row - 1,)),
+            pp.figtext(label=("R%d" % (row - 1)),
                             s=(row - 1),
                             x=(column + 0.5) / num_columns,
                             y=(num_rows - row - 0.5) / num_rows,
@@ -351,7 +345,7 @@ class MatrixPlotter(Plotter):
                     horizontalalignment="center")
                 pp.figtext(
                     label=label,
-                    s=("%.2f%%" % (pt_total,)),
+                    s=("%.2f%%" % (pt_total)),
                     x=(column + 0.5) / num_columns,
                     y=(num_rows - row - 0.66) / num_rows,
                     verticalalignment="center",
@@ -371,7 +365,7 @@ class MatrixPlotter(Plotter):
             horizontalalignment="center")
         pp.figtext(
             label=label,
-            s=("%.2f%%" % (pt_total,)),
+            s=("%.2f%%" % (pt_total)),
             x=(column + 0.5) / num_columns,
             y=(num_rows - row - 0.66) / num_rows,
             verticalalignment="center",
@@ -402,10 +396,8 @@ class Weights2D(Plotter):
     Creates within initialize():
 
     """
-    def __init__(self, figure_label="Weights", limit=256, unpickling=0):
-        super(Weights2D, self).__init__(unpickling=unpickling)
-        if unpickling:
-            return
+    def __init__(self, figure_label="Weights", limit=256):
+        super(Weights2D, self).__init__()
         self.value = None
         self.input = None  # Connector
         self.input_field = None
@@ -516,10 +508,8 @@ class Image(Plotter):
     Creates within initialize():
 
     """
-    def __init__(self, figure_label="Image", unpickling=0):
-        super(Image, self).__init__(unpickling=unpickling)
-        if unpickling:
-            return
+    def __init__(self, figure_label="Image"):
+        super(Image, self).__init__()
         self.inputs = []
         self.input_fields = []
         self.figure_label = figure_label
@@ -528,7 +518,7 @@ class Image(Plotter):
         if type(value) != numpy.ndarray:
             ax.axis('off')
             ax.text(0.5, 0.5, "Unsupported type\n%s" % (
-                str(type(value)),), ha='center', va='center')
+                str(type(value))), ha='center', va='center')
             return
         w = None
         color = False
@@ -604,10 +594,8 @@ class MSEHistogram(Plotter):
     Creates within initialize():
 
     """
-    def __init__(self, figure_label="Histogram", n_bars=35, unpickling=0):
-        super(MSEHistogram, self).__init__(unpickling=unpickling)
-        if unpickling:
-            return
+    def __init__(self, figure_label="Histogram", n_bars=35):
+        super(MSEHistogram, self).__init__()
         self.figure_label = figure_label
         self.val_mse = None
         self.mse_min = None
@@ -675,7 +663,7 @@ class MSEHistogram(Plotter):
         ax.set_title('Histogram', fontsize=25)
         ax.axis([xmin, xmax + ((xmax - xmin) / self.n_bars), ymin, ymax])
         ax.grid(True)
-        leg = ax.legend((self.figure_label.replace("Histogram ", ""),),)
+        leg = ax.legend((self.figure_label.replace("Histogram ", "")))
                         # 'upper center')
         frame = leg.get_frame()
         frame.set_facecolor('#E8D6BB')

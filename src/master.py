@@ -33,6 +33,7 @@ class Master(MPIPeer):
     def __init__(self):
         super(Master, self).__init__()
         self.shutting_down = False
+        self.paused = False
         self.connections = {}
         self.updates_history = {}
         self.id_counter = 1
@@ -91,6 +92,7 @@ class Master(MPIPeer):
         for node_id in self.connections.keys():
             self.run_node(node_id)
         logging.debug("Entered the infinite loop")
+        paused_nodes = self.connections.keys()
         while not self.shutting_down:
             updates = {}
             for node_id, conn in self.connections:
@@ -101,7 +103,14 @@ class Master(MPIPeer):
                     updates[node_id] = update
             for node_id, update in updates:
                 self.handle_update(node_id, update)
-                self.run_node(node_id)
+                if not self.paused:
+                    self.run_node(node_id)
+                else:
+                    paused_nodes.append(node_id)
+            if not self.paused:
+                for node_id in paused_nodes:
+                    self.run_node(node_id)
+                paused_nodes.clear()
 
     def handle_update(self, node_id, update):
         # TODO(v.markovtsev): parse the received object, apply node calculation
@@ -114,3 +123,6 @@ class Master(MPIPeer):
         logging.debug("Running %s", node_id)
         self.updates_history[node_id].append(TimeInterval())
         self.connections[node_id].isend(data_to_send)
+
+    def pause(self):
+        self.paused = True

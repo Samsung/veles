@@ -18,11 +18,8 @@ class SndFileLoader(units.Unit):
     Decodes the specified audio file to the raw signed PCM 16 bit format
     """
 
-    def __init__(self, unpickling=0):
-        super(SndFileLoader, self).__init__(unpickling=unpickling)
-        self.test_only = False
-        if unpickling:
-            return
+    def __init__(self):
+        super(SndFileLoader, self).__init__()
         self.outputs = []
         self.files_list = []
 

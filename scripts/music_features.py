@@ -217,7 +217,7 @@ USAGE
         if not single:
             with mp.Pool(pcount) as pool:
                 results_async = [pool.apply_async(
-                                    mp_run, (splitted_found_files[i], extr,)) \
+                                    mp_run, (splitted_found_files[i], extr)) \
                                  for i in range(0, pcount)]
                 pool.close()
                 pool.join()

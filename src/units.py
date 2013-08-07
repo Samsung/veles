@@ -46,20 +46,25 @@ def aligned_zeros(shape, boundary=4096, dtype=numpy.float32):
         .reshape(shape, order="C")
 
 
-class SmartPickler(logger.Logger):
+class Pickleable(logger.Logger):
     """Will save attributes ending with _ as None when pickling and will call
-        constructor upon unpickling.
+    constructor upon unpickling.
     """
-    def __init__(self, unpickling=0):
-        """Constructor.
-
-        Parameters:
-            unpickling: if 1, object is being created via unpickling.
+    def __init__(self):
+        """Calls init_unpickled() to initialize the attributes which are not
+        pickled.
         """
-        super(SmartPickler, self).__init__()
+        super(Pickleable, self).__init__()
+        self.init_unpickled()
+
+    """This function is called if the object has been just unpickled.
+    """
+    def init_unpickled(self):
+        if hasattr(super(Pickleable, self), "init_unpickled"):
+            super(Pickleable, self).init_unpickled()
 
     def __getstate__(self):
-        """What to pickle.
+        """Selects the attributes to pickle.
         """
         state = {}
         for k, v in self.__dict__.items():
@@ -72,22 +77,20 @@ class SmartPickler(logger.Logger):
         return state
 
     def __setstate__(self, state):
-        """What to unpickle.
+        """Recovers the object after unpickling.
         """
         self.__dict__.update(state)
-        self.__init__(unpickling=1)
+        self.init_unpickled()
 
 
-class Connector(SmartPickler):
+class Connector(Pickleable):
     """Connects unit attributes (data flow).
 
     Attributes:
         mtime: time of the last modification.
     """
-    def __init__(self, unpickling=0):
-        super(Connector, self).__init__(unpickling=unpickling)
-        if unpickling:
-            return
+    def __init__(self):
+        super(Connector, self).__init__()
         self.mtime = 0.0
 
     def update(self):
@@ -107,7 +110,7 @@ def callvle(var):
     return var() if callable(var) else var
 
 
-class Unit(SmartPickler):
+class Unit(Pickleable):
     """General unit in data stream model.
 
     Attributes:
@@ -127,19 +130,20 @@ class Unit(SmartPickler):
         gate_skip_not: if [0] is true, inverses conditions for gate_skip
                    ([0] can be a function).
     """
-    def __init__(self, unpickling=0):
-        super(Unit, self).__init__(unpickling=unpickling)
-        self.gate_lock_ = threading.Lock()
-        self.run_lock_ = threading.Lock()
-        self.initialized = 0
-        if unpickling:
-            return
+    def __init__(self):
+        super(Unit, self).__init__()
         self.links_from = {}
         self.links_to = {}
         self.gate_block = [0]
         self.gate_skip = [0]
         self.gate_block_not = [0]
         self.gate_skip_not = [0]
+
+    def init_unpickled(self):
+        super(Unit, self).init_unpickled()
+        self.gate_lock_ = threading.Lock()
+        self.run_lock_ = threading.Lock()
+        self.initialized = 0
 
     def link_from(self, src):
         """Adds notification link.
@@ -292,13 +296,14 @@ class OpenCLUnit(Unit):
         prg_: OpenCL program.
         cl_sources: OpenCL source files: file => defines.
     """
-    def __init__(self, device=None, unpickling=0):
-        super(OpenCLUnit, self).__init__(unpickling=unpickling)
-        self.prg_ = None
-        if unpickling:
-            return
+    def __init__(self, device=None):
+        super(OpenCLUnit, self).__init__()
         self.device = device
-        self.cl_sources = {}
+
+    def init_unpickled(self):
+        super(OpenCLUnit, self).init_unpickled()
+        self.prg_ = None
+        self.cl_sources_ = {}
 
     def cpu_run(self):
         """Run on CPU only.
@@ -335,8 +340,8 @@ class EndPoint(Unit):
     Attributes:
         sem_: semaphore.
     """
-    def __init__(self, unpickling=0):
-        super(EndPoint, self).__init__(unpickling=unpickling)
+    def __init__(self):
+        super(EndPoint, self).__init__()
         self.sem_ = threading.Semaphore(0)
 
     def run(self):

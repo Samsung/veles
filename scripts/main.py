@@ -28,9 +28,9 @@ def add_path(path):
 this_dir = os.path.dirname(__file__)
 if not this_dir:
     this_dir = "."
-add_path("%s/../src" % (this_dir,))
-add_path("%s/../Znicz" % (this_dir,))
-add_path("%s/../Znicz/tests/functional" % (this_dir,))
+add_path("%s/../src" % (this_dir))
+add_path("%s/../Znicz" % (this_dir))
+add_path("%s/../Znicz/tests/functional" % (this_dir))
 
 
 import config

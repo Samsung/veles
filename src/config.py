@@ -39,17 +39,17 @@ if not this_dir:
     this_dir = "."
 
 #: Directory for cache
-cache_dir = ("%s/../cache" % (this_dir,))
+cache_dir = ("%s/../cache" % (this_dir))
 try:
     os.mkdir(cache_dir)
 except OSError:
     pass
 
 #: Directory for OpenCL source files
-cl_dir = ("%s/../Znicz/cl" % (this_dir,))
+cl_dir = ("%s/../Znicz/cl" % (this_dir))
 
 #: Directory where to save snapshots
-snapshot_dir = ("%s/../snapshots" % (this_dir,))
+snapshot_dir = ("%s/../snapshots" % (this_dir))
 try:
     os.mkdir(snapshot_dir)
 except OSError:

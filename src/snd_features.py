@@ -21,11 +21,8 @@ class SoundFeatures(units.Unit):
     Extracts features from raw audio data.
     """
 
-    def __init__(self, unpickling=0):
-        super(SoundFeatures, self).__init__(unpickling=unpickling)
-        self.test_only = False
-        if unpickling:
-            return
+    def __init__(self):
+        super(SoundFeatures, self).__init__()
         self.features = []
         self.inputs = []
         self.outputs = []
