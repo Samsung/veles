@@ -63,8 +63,10 @@ class SmartPickler(logger.Logger):
         """
         state = {}
         for k, v in self.__dict__.items():
+            w = [None] if type(v) == list and len(v) == 1 and callable(v[0]) \
+                else v
             if k[len(k) - 1] != "_":
-                state[k] = v
+                state[k] = w
             else:
                 state[k] = None
         return state
@@ -114,16 +116,16 @@ class Unit(SmartPickler):
         initialized: initialized unit or not.
         gate_lock_: lock.
         run_lock_: lock.
-        gate_block: if true, gate() and run() will not be executed and
+        gate_block: if [0] is true, gate() and run() will not be executed and
                     notification will not be sent further
-                    (can be a function).
-        gate_skip: if true, gate() and run() will not be executed, but
+                    ([0] can be a function).
+        gate_skip: if [0] is true, gate() and run() will not be executed, but
                    but notification will be sent further
-                   (can be a function).
-        gate_block_not: if true, inverses conditions for gate_block
-                   (can be a function).
-        gate_skip_not: if true, inverses conditions for gate_skip
-                   (can be a function).
+                   ([0] can be a function).
+        gate_block_not: if [0] is true, inverses conditions for gate_block
+                   ([0] can be a function).
+        gate_skip_not: if [0] is true, inverses conditions for gate_skip
+                   ([0] can be a function).
     """
     def __init__(self, unpickling=0):
         super(Unit, self).__init__(unpickling=unpickling)
@@ -312,6 +314,10 @@ class OpenCLUnit(Unit):
         if not self.device:
             return self.cpu_run()
         return self.gpu_run()
+
+
+class Forward(OpenCLUnit):
+    pass
 
 
 class Repeater(Unit):
