@@ -23,10 +23,11 @@ class DummyUnit : public Unit {
     return "Dummy";
   }
 
-  virtual void Load(const std::string&) override {
+  virtual void SetParameter(const std::string&,
+                            std::shared_ptr<void>) override {
   }
 
-  virtual void Execute(float*, float*) const {
+  virtual void Execute(float*, float*) const override {
   }
 
   virtual size_t InputCount() const noexcept {

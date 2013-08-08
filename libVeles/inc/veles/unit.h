@@ -14,7 +14,7 @@
 #define INC_VELES_UNIT_H_
 
 #include <string>
-
+#include <memory>
 namespace Veles {
 
 /** @brief VELES neural network unit */
@@ -22,10 +22,25 @@ class Unit {
  public:
   virtual ~Unit() noexcept {
   }
+  /** @brief Name of the unit
+   */
   virtual std::string Name() const noexcept = 0;
-  virtual void Load(const std::string& data) = 0;
+  /** @brief Sets or modifies a parameter
+   *  @param name Parameter name
+   *  @param value Pointer to parameter data
+   */
+  virtual void SetParameter(const std::string& name,
+                        std::shared_ptr<void> value) = 0;
+  /** @brief Executes this unit on input data
+   *  @param in Input vector
+   *  @param out Output vector
+   */
   virtual void Execute(float* in, float* out) const = 0;
+  /* @brief Number of unit inputs
+   */
   virtual size_t InputCount() const noexcept = 0;
+  /* @brief Number of unit outputs
+   */
   virtual size_t OutputCount() const noexcept = 0;
 };
 
