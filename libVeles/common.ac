@@ -1,3 +1,28 @@
+#  This file is a part of SEAPT, Samsung Extended Autotools Project Template
+
+#  Copyright 2012,2013 Samsung R&D Institute Russia
+#  All rights reserved.
+#
+#  Redistribution and use in source and binary forms, with or without
+#  modification, are permitted provided that the following conditions are met: 
+#
+#  1. Redistributions of source code must retain the above copyright notice, this
+#     list of conditions and the following disclaimer. 
+#  2. Redistributions in binary form must reproduce the above copyright notice,
+#     this list of conditions and the following disclaimer in the documentation
+#     and/or other materials provided with the distribution.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+#  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+#  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+#  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+#  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+#  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+#  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+#  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+#  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+#  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 AC_PREREQ(2.68)
 AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_MACRO_DIR([m4])
@@ -71,7 +96,7 @@ PKG_PROG_PKG_CONFIG
 AC_ARG_ENABLE([parallel_build],
     AS_HELP_STRING([--enable-parallel-build], [build subdirectories in parallel])
 )
-AM_CONDITIONAL([PARALLEL_BUILD], [test "x$enable_parallel_build"=="xyes"])
+AM_CONDITIONAL([PARALLEL_BUILD], [test "x$enable_parallel_build" = "xyes"])
 
 # Use fancy make output by default
 AC_ARG_ENABLE([colors],
@@ -137,13 +162,13 @@ AC_SUBST([DOCS_DIR])
 AC_ARG_ENABLE([debug], AS_HELP_STRING([--enable-debug], [build in debug configuration]),
               [DEBUG_FLAGS="-O0 -DDEBUG -Wextra" enable_debug=yes],
               [DEBUG_FLAGS="-D_FORTIFY_SOURCE=2" enable_debug=no])
-AM_CONDITIONAL(DEBUG, test "x$enable_debug"=="xyes")
+AM_CONDITIONAL(DEBUG, test "x$enable_debug" = "xyes")
 
 # Enable/disable LTO
 AC_ARG_ENABLE([lto],
     AS_HELP_STRING([--enable-lto], [build with link-time optimizations (-flto)])
 )
-AS_IF([test "x$enable_lto"=="xyes"], [
+AS_IF([test "x$enable_lto" = "xyes"], [
     CPPFLAGS="$CPPFLAGS -flto" LDFLAGS="$LDFLAGS -flto"
 ])
 
@@ -151,7 +176,7 @@ AS_IF([test "x$enable_lto"=="xyes"], [
 AC_ARG_ENABLE([fast-math],
     AS_HELP_STRING([--enable-fast-math], [build with unsafe floating point math optimizations (-ffast-math)])
 )
-AS_IF([test "x$enable_fast_math"=="xyes"], [
+AS_IF([test "x$enable_fast_math" = "xyes"], [
     CPPFLAGS="$CPPFLAGS -ffast-math"
 ])
 
@@ -178,7 +203,7 @@ AC_ARG_ENABLE([test-coverage],
     AS_HELP_STRING([--enable-test-coverage],
                    [build with code coverage generation (this option depends on debug and tests switches)])
 )
-AS_IF([test "x$enable_test_coverage"=="xyes" -a "x$enable_debug"=="xyes" -a "x$enable_tests" != "xno"], [
+AS_IF([test "x$enable_test_coverage" = "xyes" -a "x$enable_debug" = "xyes" -a "x$enable_tests" != "xno"], [
     CPPFLAGS="$CPPFLAGS --coverage"
     LDFLAGS="$LDFLAGS -lgcov"
 ])
@@ -219,10 +244,10 @@ CPPFLAGS="$CPPFLAGS -fopenmp"
 
 # Use the best march
 arch=$(echo $host | cut -d '-' -f 1)
-AS_IF([test $arch==i686 -o $arch==x86_64], [
+AS_IF([test $arch = i686 -o $arch = x86_64], [
     CPPFLAGS="$CPPFLAGS -march=native"
 ], [
-	AS_IF([test $arch==arm], [
+	AS_IF([test $arch = arm], [
     	CPPFLAGS="$CPPFLAGS -march=armv7-a -mfpu=neon"
 	])
 ])
