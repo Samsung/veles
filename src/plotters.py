@@ -396,7 +396,7 @@ class Weights2D(Plotter):
     Creates within initialize():
 
     """
-    def __init__(self, figure_label="Weights", limit=256):
+    def __init__(self, figure_label="Weights", limit=64):
         super(Weights2D, self).__init__()
         self.value = None
         self.input = None  # Connector
@@ -462,6 +462,7 @@ class Weights2D(Plotter):
             for col in range(0, n_cols):
                 ax = figure.add_subplot(n_rows, n_cols, i)
                 ax.cla()
+                ax.axis('off')
                 v = value[i].ravel()[:sz]
                 if color:
                     w = numpy.zeros([sy, sx, 3], dtype=v.dtype)
