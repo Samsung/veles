@@ -5,3 +5,6 @@
 [submodule "libSoundFeatureExtraction"]
 	path = libSoundFeatureExtraction
 	url = ssh://alserver.rnd.samsung.ru:29418/SoundFeatureExtraction.git
+[submodule "libVeles/libarchive"]
+	path = libVeles/libarchive
+	url = https://github.com/libarchive/libarchive.git

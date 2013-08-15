@@ -27,6 +27,12 @@
 
 isubuntu="$(uname -v|grep Ubuntu)"
 
+if [ ! -e "libarchive/build/autogen.sh" ]; then
+    git submodule update --init	
+else
+    git submodule update
+fi
+
 check_prog() {
     printf "Checking for $1... "
     if [ -z "$($1 --version 2>/dev/null)" ]; then
@@ -86,6 +92,10 @@ if [ $W -ne 0 ]; then
 else
 	rm -f config.cache-env.tmp
 fi
+
+cd libarchive
+build/autogen.sh
+cd ..
 
 if [ -n "$1" ]; then
 	path=$(pwd)

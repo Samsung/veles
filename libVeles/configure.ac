@@ -26,6 +26,19 @@
 AC_INIT(Veles, 1.0)
 m4_include([common.ac])
 
+# Check whether to use the built-in libarchive
+AC_ARG_WITH([built-in-libarchive],
+    AS_HELP_STRING([--with-built-in-libarchive], [use bundled libarchive]), [
+    LIBARCHIVE_LIBS="\$(top_builddir)/libarchive/libarchive.la"
+    LIBARCHIVE_CFLAGS="-I\$(top_srcdir)/libarchive/libarchive"
+    LIBARCHIVE_DIR=libarchive
+    AC_CONFIG_SUBDIRS([libarchive])    
+], [
+    # Check for installed libarchive
+    PKG_CHECK_MODULES([LIBARCHIVE], [libarchive >= 3.0])
+])
+AC_SUBST([LIBARCHIVE_DIR])
+
 # Check some lib...
 #PKG_CHECK_MODULES([ZLIB], [zlib >= 1.2.3])
 
