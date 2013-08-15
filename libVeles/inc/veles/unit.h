@@ -20,8 +20,7 @@ namespace Veles {
 /** @brief VELES neural network unit */
 class Unit {
  public:
-  virtual ~Unit() noexcept {
-  }
+  virtual ~Unit() = default;
   /** @brief Name of the unit
    */
   virtual std::string Name() const noexcept = 0;
