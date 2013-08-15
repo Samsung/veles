@@ -12,6 +12,17 @@ import threading
 import thread_pool
 
 
+def normalize(a):
+    """Normalizes numpy array to [-1, 1] in-place.
+    """
+    a -= a.min()
+    m = a.max()
+    if m:
+        a /= m
+        a *= 2.0
+        a -= 1.0
+
+
 def realign(arr, boundary=4096):
     """Reallocates array to become PAGE-aligned as required for
         clEnqueueMapBuffer().

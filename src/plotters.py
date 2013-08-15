@@ -24,6 +24,9 @@ import time
 pp.ion()
 
 
+init_lock = threading.Lock()
+
+
 class Graphics:
     """ Class handling all interaction with main graphics window
         NOTE: This class should be created ONLY within one thread
@@ -52,7 +55,10 @@ class Graphics:
         return cls._instance
 
     def __init__(self):
+        global init_lock
+        init_lock.acquire()
         if self.is_initialized:
+            init_lock.release()
             return
         self.run_lock = threading.Lock()
         self.run_lock.acquire()
@@ -62,6 +68,7 @@ class Graphics:
         self.initialize_lock = threading.Lock()
         self.registered_plotters = {}
         thread_pool.pool.request(self.run)
+        init_lock.release()
 
     def run(self):
         """Creates and runs main graphics window.
@@ -434,17 +441,14 @@ class Weights2D(Plotter):
         elif type(self.get_shape_from) == list:
             sx = self.get_shape_from[0][1]
             sy = self.get_shape_from[0][0]
-        elif "batch" in self.get_shape_from.__dict__:
-            if len(self.get_shape_from.batch.shape) == 3:
-                sx = self.get_shape_from.batch.shape[2]
-                sy = self.get_shape_from.batch.shape[1]
+        elif "v" in self.get_shape_from.__dict__:
+            if len(self.get_shape_from.v.shape) == 3:
+                sx = self.get_shape_from.v.shape[2]
+                sy = self.get_shape_from.v.shape[1]
             else:
-                sx = self.get_shape_from.batch.shape[3]
-                sy = self.get_shape_from.batch.shape[2]
+                sx = self.get_shape_from.v.shape[3]
+                sy = self.get_shape_from.v.shape[2]
                 color = True
-        elif "v"  in self.get_shape_from.__dict__:
-            sx = self.get_shape_from.v.shape[1]
-            sy = self.get_shape_from.v.shape[0]
         else:
             sx = self.get_shape_from.shape[1]
             sy = self.get_shape_from.shape[0]
