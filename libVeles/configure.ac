@@ -39,6 +39,22 @@ AC_ARG_WITH([built-in-libarchive],
 ])
 AC_SUBST([LIBARCHIVE_DIR])
 
+# Check whether to use the built-in yaml-cpp
+AC_ARG_WITH([built-in-yaml-cpp],
+    AS_HELP_STRING([--with-built-in-yaml-cpp], [use bundled yaml-cpp]), [
+    YAMLCPP_LIBS="\$(top_builddir)/yaml-cpp/libyaml-cpp.a"
+    YAMLCPP_CFLAGS="-I\$(top_srcdir)/yaml-cpp/include"
+    YAMLCPP_DIR=yaml-cpp
+    mkdir -p yaml-cpp
+    cd yaml-cpp
+    CXXFLAGS=-fPIC cmake ../../yaml-cpp/ -DYAML_CPP_BUILD_TOOLS=OFF -DYAML_CPP_BUILD_CONTRIB=OFF -DBUILD_SHARED_LIBS=OFF
+	cd ..
+], [
+    # Check for installed libarchive
+    PKG_CHECK_MODULES([YAMLCPP], [yaml-cpp >= 0.3])
+])
+AC_SUBST([YAMLCPP_DIR])
+
 # Check some lib...
 #PKG_CHECK_MODULES([ZLIB], [zlib >= 1.2.3])
 

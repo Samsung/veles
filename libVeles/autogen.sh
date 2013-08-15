@@ -27,10 +27,17 @@
 
 isubuntu="$(uname -v|grep Ubuntu)"
 
+mypath=$(pwd)
+cd ..
 if [ ! -e "libarchive/build/autogen.sh" ]; then
     git submodule update --init	
 else
     git submodule update
+fi
+cd $mypath
+
+if [ ! -e "yaml-cpp/CMakeLists.txt" ]; then
+    hg clone https://code.google.com/p/yaml-cpp
 fi
 
 check_prog() {
