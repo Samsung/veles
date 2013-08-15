@@ -15,7 +15,7 @@
 
 #include <memory>
 #include <unordered_map>
-#include "inc/veles/unit.h"
+#include "veles/unit.h"
 
 namespace Veles {
 

@@ -10,7 +10,7 @@
  *  Copyright 2013 Samsung R&D Institute Russia
  */
 
-#include "src/unit_registry.h"
+#include "inc/veles/unit_registry.h"
 #include <cstdio>
 #include <string>
 
