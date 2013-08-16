@@ -6,55 +6,9 @@ Units in data stream neural network model.
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
 import time
-import numpy
 import logger
 import threading
 import thread_pool
-
-
-def normalize(a):
-    """Normalizes numpy array to [-1, 1] in-place.
-    """
-    a -= a.min()
-    m = a.max()
-    if m:
-        a /= m
-        a *= 2.0
-        a -= 1.0
-
-
-def realign(arr, boundary=4096):
-    """Reallocates array to become PAGE-aligned as required for
-        clEnqueueMapBuffer().
-    """
-    if arr == None:
-        return None
-    address = arr.__array_interface__["data"][0]
-    if address % boundary == 0:
-        return arr
-    N = numpy.prod(arr.shape)
-    d = arr.dtype
-    tmp = numpy.empty(N * d.itemsize + boundary, dtype=numpy.uint8)
-    address = tmp.__array_interface__["data"][0]
-    offset = (boundary - address % boundary) % boundary
-    newarr = tmp[offset:offset + N * d.itemsize]\
-        .view(dtype=d)\
-        .reshape(arr.shape, order="C")
-    newarr[:] = arr[:]
-    return newarr
-
-
-def aligned_zeros(shape, boundary=4096, dtype=numpy.float32):
-    """Allocates PAGE-aligned array required for clEnqueueMapBuffer().
-    """
-    N = numpy.prod(shape)
-    d = numpy.dtype(dtype)
-    tmp = numpy.zeros(N * d.itemsize + boundary, dtype=numpy.uint8)
-    address = tmp.__array_interface__["data"][0]
-    offset = (boundary - address % boundary) % boundary
-    return tmp[offset:offset + N * d.itemsize]\
-        .view(dtype=d)\
-        .reshape(shape, order="C")
 
 
 class Pickleable(logger.Logger):
