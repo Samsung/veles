@@ -286,7 +286,9 @@ class MatrixPlotter(Plotter):
                         color = 'cyan'
                 else:
                     if n_elem > 0:
-                        v = int(numpy.round((1.0 - n_elem / max_vle) * 255.0))
+                        v = int(numpy.clip(
+                            numpy.round((1.0 - n_elem / max_vle) * 255.0),
+                            0, 255))
                         color = "#FF%02X%02X" % (v, v)
                     else:
                         color = 'green'
