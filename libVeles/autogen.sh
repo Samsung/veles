@@ -38,6 +38,11 @@ cd $mypath
 
 if [ ! -e "yaml-cpp/CMakeLists.txt" ]; then
     hg clone https://code.google.com/p/yaml-cpp
+    cd yaml-cpp
+    xz -cd ../yaml-cpp11.patch.xz >yaml-cpp11.patch
+    hg import yaml-cpp11.patch
+    rm yaml-cpp11.patch
+    cd ..
 fi
 
 check_prog() {
