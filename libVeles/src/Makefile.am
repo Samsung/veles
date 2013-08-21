@@ -31,7 +31,7 @@ lib_LTLIBRARIES = libVeles.la
 # Build information for libVeles.la
 
 # Source files
-libVeles_la_SOURCES = unit.cc unit_registry.cc workflow.cc
+libVeles_la_SOURCES = unit.cc unit_registry.cc workflow.cc workflow_loader.cc
 
 # Linker options
 libVeles_la_LDFLAGS = 
