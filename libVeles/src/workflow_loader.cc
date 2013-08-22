@@ -10,12 +10,13 @@
  *  Copyright 2013 Samsung R&D Institute Russia
  */
 
+#include "inc/veles/workflow_loader.h"
 #include <dirent.h>
 #include <stdio.h>
 #include "fstream"
 #include <string.h>
 #include <vector>
-#include "inc/veles/workflow_loader.h"
+#include "inc/veles/make_unique.h"
 
 using std::string;
 using std::vector;
@@ -27,7 +28,7 @@ using Veles::PropertiesTable;
 using Veles::WorkflowDescription;
 using Veles::WorkflowExtractionError;
 
-// TODO(EBulychev): unique_ptr, exception, yaml-cpp
+// TODO(EBulychev): exception, yaml-cpp
 
 const char* WorkflowLoader::kWorkFolder = "/tmp/workflow_tmp/";
 /// Default name of decompressed yaml file.
@@ -289,14 +290,12 @@ bool WorkflowLoader::ExtractArchive(const string& filename,
     archive_read_close(ptr);
     archive_read_free(ptr);
   };
-  auto input_archive = std::unique_ptr<archive, decltype(destroy_read_archive)>(
-      archive_read_new(), destroy_read_archive);
+  auto input_archive = std::uniquify(archive_read_new(), destroy_read_archive);
   auto destroy_write_archive = [](archive* ptr) {
     archive_write_close(ptr);
     archive_write_free(ptr);
   };
-  auto ext = std::unique_ptr<archive, decltype(destroy_write_archive)>(
-      archive_write_disk_new(), destroy_write_archive);
+  auto ext = std::uniquify(archive_write_disk_new(), destroy_write_archive);
   archive_entry *entry;
   int r;
 
@@ -345,8 +344,7 @@ bool WorkflowLoader::ExtractArchive(const string& filename,
 
 bool WorkflowLoader::RemoveDirectory(const string& path) {
   {
-  auto dir = std::unique_ptr<DIR, decltype(&closedir)>(
-      opendir(path.c_str()), closedir);
+  auto dir = std::uniquify(opendir(path.c_str()), closedir);
     if (!dir) {  // if pdir wasn't initialised correctly
       fprintf(stderr,
               "Can't open directory to delete, check path + permissions\n");
