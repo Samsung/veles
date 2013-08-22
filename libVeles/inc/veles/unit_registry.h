@@ -71,25 +71,20 @@ class RegisterUnit {
     T unit;
     UnitFactory::InstanceRW().map_[unit.Name()] = std::make_shared<T>;
   }
-
-  /// @brief Dummy method used to bypass the static linkage problem.
-  void Reference() const {
-  }
 };
 
-/// @brief Unit registration utility (to be placed to the source file).
-/// @param T The type of your Unit-derived class.
-#define REGISTER_UNIT(T) RegisterUnit<T> T##RegistryInstance
-
 /// @brief Unit declaration utility (to be placed in the header file).
-/// @param T The type of your Unit-derived class.
-#define DECLARE_UNIT(T) extern RegisterUnit<T> T##RegistryInstance
-
-/// @brief Unit reference utility to bypass the static linkage problem
-/// (to be placed in a source file which is  linked with the static library).
-/// @param NS The namespace where the unit was declared with DECLARE_UNIT().
 /// @param T he type of your Unit-derived class.
-#define REFERENCE_UNIT(NS, T) NS::T##RegistryInstance.Reference()
+#define DECLARE_UNIT(T) extern RegisterUnit<T> T##RegistryInstance; \
+  namespace { \
+  const RegisterUnit<T>& Reference##T##RegistryInstance() { \
+    return T##RegistryInstance; \
+  } \
+  }
+
+/// @brief Unit registration utility (to be placed in the source file).
+/// @param T The type of your Unit-derived class.
+#define REGISTER_UNIT(T) RegisterUnit<T> T##RegistryInstance;
 
 }  // namespace Veles
 
