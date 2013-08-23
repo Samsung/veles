@@ -15,6 +15,11 @@
 
 #include <string>
 #include <memory>
+
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
+
 namespace Veles {
 
 /** @brief VELES neural network unit */
@@ -44,5 +49,9 @@ class Unit {
 };
 
 }  // namespace Veles
+
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
 
 #endif  // INC_VELES_UNIT_H_

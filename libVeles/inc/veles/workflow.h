@@ -19,6 +19,10 @@
 #include <algorithm>
 #include <veles/unit.h>
 
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
+
 namespace Veles {
 
 /** @brief VELES workflow */
@@ -76,5 +80,9 @@ class Workflow {
 };
 
 }  // namespace Veles
+
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
 
 #endif  // INC_WORKFLOW_H_

@@ -20,6 +20,9 @@
 #include <memory>  // For shared_ptr<>
 #include "yaml-cpp/yaml.h"
 
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
 
 namespace Veles {
 /// Type that contains properties
@@ -179,5 +182,9 @@ class WorkflowLoader {
 };
 
 }  // namespace Veles
+
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
 
 #endif  // INC_VELES_WORKFLOW_LOADER_H_

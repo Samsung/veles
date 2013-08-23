@@ -1,4 +1,4 @@
-/*! @file unit_registry.h
+/*! @file unit_factory.h
  *  @brief Defines the unit factory API.
  *  @author markhor
  *  @version 1.0
@@ -10,12 +10,16 @@
  *  Copyright 2013 Samsung R&D Institute Russia
  */
 
-#ifndef SRC_UNIT_REGISTRY_H_
-#define SRC_UNIT_REGISTRY_H_
+#ifndef SRC_UNIT_FACTORY_H_
+#define SRC_UNIT_FACTORY_H_
 
 #include <memory>
 #include <unordered_map>
 #include "veles/unit.h"
+
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
 
 namespace Veles {
 
@@ -88,4 +92,8 @@ class RegisterUnit {
 
 }  // namespace Veles
 
-#endif  // SRC_UNIT_REGISTRY_H_
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
+
+#endif  // SRC_UNIT_FACTORY_H_
