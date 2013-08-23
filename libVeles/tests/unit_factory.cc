@@ -13,7 +13,7 @@
 
 
 #include <gtest/gtest.h>
-#include "inc/veles/unit_registry.h"
+#include "inc/veles/unit_factory.h"
 
 namespace Veles {
 

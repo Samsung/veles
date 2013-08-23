@@ -1,4 +1,4 @@
-/*! @file unit_registry.cc
+/*! @file unit_factory.cc
  *  @brief Implements Veles::UnitFactory class.
  *  @author markhor
  *  @version 1.0
@@ -10,7 +10,7 @@
  *  Copyright 2013 Samsung R&D Institute Russia
  */
 
-#include "inc/veles/unit_registry.h"
+#include "inc/veles/unit_factory.h"
 #include <cstdio>
 #include <string>
 
