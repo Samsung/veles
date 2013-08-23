@@ -63,6 +63,12 @@ AC_ARG_WITH([built-in-yaml-cpp],
 ])
 AC_SUBST([YAMLCPP_DIR])
 
+AM_COND_IF([TESTS], [
+     AC_CONFIG_LINKS([tests/workflow_files/remove_folder_testing.tar.gz:tests/workflow_files/remove_folder_testing.tar.gz
+                      tests/workflow_files/test_archive.tar.gz:tests/workflow_files/test_archive.tar.gz
+		      tests/workflow_files/default.yaml:tests/workflow_files/default.yaml])
+])
+
 # Check some lib...
 #PKG_CHECK_MODULES([ZLIB], [zlib >= 1.2.3])
 

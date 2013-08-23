@@ -13,289 +13,197 @@
 #include "inc/veles/workflow_loader.h"
 #include <dirent.h>
 #include <stdio.h>
-#include "fstream"
 #include <string.h>
+#include <fstream>
 #include <vector>
+#include <exception>
 #include "inc/veles/make_unique.h"
+
 
 using std::string;
 using std::vector;
 using std::shared_ptr;
 using std::ifstream;
+using std::unique_ptr;
 using Veles::WorkflowLoader;
 using Veles::UnitDescription;
 using Veles::PropertiesTable;
 using Veles::WorkflowDescription;
 using Veles::WorkflowExtractionError;
 
-// TODO(EBulychev): exception, yaml-cpp
+// TODO(EBulychev): Add array reading for recursion + test workability
 
 const char* WorkflowLoader::kWorkFolder = "/tmp/workflow_tmp/";
 /// Default name of decompressed yaml file.
 const char* WorkflowLoader::kWorkflowDecompressedFile =
     "workflow_decompressed.yaml";
 
-int WorkflowLoader::Load(const string& archive,
+void WorkflowLoader::Load(const string& archive,
                          const string& fileWithWorkflow) {
   archive_name_ = archive;
   file_with_workflow_ = fileWithWorkflow;
 //  1) Extract archive (using libarchive) to folder kWorkFolder.
-  if (!WorkflowLoader::ExtractArchive(archive.c_str())) {
-    fprintf(stderr, "Error with archive extracting: %s\n", archive.c_str());
-    return kArchiveExtractionError;
-  }
+  WorkflowLoader::ExtractArchive(archive.c_str());
 
 //  2) Read neural network structure from fileWithWorkflow
   string workflow_file = kWorkFolder + file_with_workflow_;
-  if (!WorkflowLoader::GetWorkflow(workflow_file)) {
-    string temp = string(kWorkFolder) + string(kWorkflowDecompressedFile);
-    fprintf(stderr, "Can't extract workflow from YAML file: %s\n",
-      temp.c_str());
-    return kWorkflowFromFileExtractionError;
-  }
+  WorkflowLoader::GetWorkflow(workflow_file);
+
   // Remove kWorkFolder with all files
+  WorkflowLoader::RemoveDirectory(kWorkFolder);
+}
 
-  if (WorkflowLoader::RemoveDirectory(kWorkFolder)) {
-//    printf("Successful folder deleting %s\n", string(kWorkFolder).c_str());
+void WorkflowLoader::GetWorkflow(const string& yaml_filename) {
+  vector<YAML::Node> workflow = YAML::LoadAllFromFile(yaml_filename);
+
+  if (workflow.size() == 1) {
+    CreateWorkflow(workflow.at(0));
+    PrintWorkflowStructure();
   } else {
-    fprintf(stderr, "Unsuccessful folder deleting %s\n", string(kWorkFolder).c_str());
-    return kDeletingTempFolderError;
+    throw std::runtime_error(
+              "Veles::WorkflowLoader::GetWorkflow: bad YAML::Node");
   }
-  return kAllGood;
 }
 
-bool WorkflowLoader::GetWorkflow(const string& yaml_filename) {
-//  string temp = "/home/ebulychev/workspace/compressed_workflow/default.yaml";
-//  vector<YAML::Node> workflow = YAML::LoadAllFromFile(temp);
-//  printf("Number of readen nodes: %ld\n", workflow.size());
-//  printf("workflow is Null : %s\n", (workflow.at(0).IsNull())?"true":"false");
-//  printf("workflow is Scalar : %s\n",
-//         (workflow.at(0).IsScalar())?"true":"false");
-//  printf("workflow is Sequence : %s\n",
-//         (workflow.at(0).IsSequence())?"true":"false");
-//  printf("workflow is Map : %s\n", (workflow.at(0).IsMap())?"true":"false");
-//
-//  if (workflow.size() == 1) {
-//    CreateWorkflow(workflow.at(0));
-//    PrintWorkflowStructure();
-//  }
+void WorkflowLoader::CreateWorkflow(const YAML::Node& doc) {
+  for (auto& it : doc) {
+    string key, value;
 
-//  YAML::Node lineup = YAML::Load("{1B: Prince Fielder, "
-//      "2B: Rickie Weeks, LF: Ryan Braun}");
-//
-//  for ( YAML::const_iterator it=lineup.begin(); it!=lineup.end(); ++it ) {
-//    printf("!!Playing at %s is %s ; Scalar : %s\n",
-//           it->first.as<std::string>().c_str(),
-//           it->second.as<std::string>().c_str(),
-//           (it->second.IsScalar())?"true":"false");
-//  }
-//  string temp("/home/ebulychev/monsters.yaml");
-//  vector<YAML::Node> monsters = YAML::LoadAllFromFile(temp);
-//
-//  printf("Number of readen nodes: %ld\n", monsters.size());
-//  for ( unsigned long i = 0; i < monsters.size(); ++i) {
-//    printf("Monster is Null : %s\n", (monsters.at(i).IsNull())?"true":"false");
-//    printf("Monster is Scalar : %s\n",
-//           (monsters.at(i).IsScalar())?"true":"false");
-//    printf("Monster is Sequence : %s\n",
-//           (monsters.at(i).IsSequence())?"true":"false");
-//    printf("Monster is Map : %s\n", (monsters.at(i).IsMap())?"true":"false");
-//
-//    if (monsters.at(i).IsSequence()) {
-//      printf("CreateWorkflow: %ld\n", monsters.at(i).size());
-//    }
+    if (it.first.IsScalar() && it.second.IsScalar()) {
+      key = it.first.as<string>();
+      value = it.second.as<string>();
+      shared_ptr<string> temp(new string(value));
 
-//    printf("CreateWorkflow_GetUnit\n");
-//    for(YAML::iterator it = monsters.at(i).begin();
-//        it!=monsters.at(i).end(); ++it) {
-//      printf("Null : %s", (it->second.IsNull())?"true":"false");
-//      printf("Scalar : %s", (it->second.IsScalar())?"true":"false");
-//      printf("Sequence : %s", (it->second.IsSequence())?"true":"false");
-//      printf("Map : %s", (it->second.IsMap())?"true":"false");
-//    }
-//  for(YAML::const_iterator it=monsters.begin();it!=monsters.end();++it) {
-//    if (it->second.IsScalar() == true) {
-//      printf("222 Playing at %s is %s : %s\n",
-//             it->first.as<std::string>().c_str(),
-//             it->second.as<std::string>().c_str(),
-//             (it->second.IsScalar())?"true":"false");
-//    }
-//    else {
-//      printf("Null : %s", (it->second.IsNull())?"true":"false")
-//      printf("Scalar : %s", (it->second.IsScalar())?"true":"false");
-//      printf("Sequence : %s", (it->second.IsSequence())?"true":"false");
-//      printf("Map : %s"(it->second.IsMap())?"true":"false");
-//    }
-//  // Open decompressed yaml file /home/ebulychev/monsters.yaml
-//  ifstream fin(yaml_filename);
-//  if (!fin) {
-//    printf("Can't open file: %s\n", yaml_filename.c_str());
-//    return false;
-//  }
-//  try {
-//    YAML::Parser parser(fin);
-//    YAML::Node doc;    // already parsed
-//    parser.GetNextDocument(doc);
-//    WorkflowLoader::CreateWorkflow(doc);
-//  } catch(YAML::ParserException& e) {
-//    printf("%s\n", e.what());
-//    fin.close();
-//    return false;
-//  }
-//  fin.close();
-
-  return true;
-}
-
-//void IterateThroughYAML(YAML::Node& node) {
-//
-//  for (auto it=node.begin();it!=node.end();++it) {
-//
-//    switch (it->Type()) {
-//      case YAML::NodeType::Null:
-//        printf("Null;\n");
-//        break;
-//      case YAML::NodeType::Undefined:
-//        printf("Undefined;\n");
-//        break;
-//      case YAML::NodeType::Scalar:
-//        printf("Scalar \n");
-//        break;
-//      case YAML::NodeType::Sequence:
-//        printf("Sequence;\n");
-//        break;
-//      case YAML::NodeType::Map:
-//        printf("Map \n");
-//
-//        break;
-//    }
-//  }
-//}
-
-bool WorkflowLoader::CreateWorkflow(const YAML::Node& doc) {
-//  for (auto it=doc.begin(); it!=doc.end(); ++it) {
-//    string key, value;
-//
-//    if (it->second.IsScalar()) {
-//      key = it->first.as<std::string>();
-//      value = it->second.as<std::string>();
-//      shared_ptr<void> temp(new string(value));
-//      workflow_.Properties.insert({key, temp});
-//    } else if (it->second.IsSequence()) {
-//      UnitDescription unit;
-//      unit.Name = it->second.Tag();
-//      if (!WorkflowLoader::GetUnit(it->second, &unit)) {
-//        fprintf(stderr, "Bad yaml parser: can't extract unit\n");
-//
-//        return false;
-//      }
-//      WorkflowLoader::workflow_.Units.push_back(unit);
-//    } else if (it->second.IsMap()){
-//      printf("Map: lenght: %ld\n",it->second.size());
-//
-//      YAML::Node temp = it->second;
-//      for (int i = 0; i < temp.size(); ++i) {
-//        switch (temp[i].Type()) {
-//          case YAML::NodeType::Null:
-//            printf("Null;\n");
-//            break;
-//          case YAML::NodeType::Undefined:
-//            printf("Undefined;\n");
-//            break;
-//          case YAML::NodeType::Scalar:
-//            printf("Scalar;\n");
-//            break;
-//          case YAML::NodeType::Sequence:
-//            printf("Sequence;\n");
-//            break;
-//          case YAML::NodeType::Map:
-//            printf("Map : lenght: %ld\n",temp.size());
-//
-//            break;
-//        }
-//      }
-//      return false;
-//    }
-//  }
-  return true;
-}
-
-bool WorkflowLoader::GetUnit(const YAML::Node& doc, UnitDescription* unit) {
-//  for (auto it=doc.begin(); it!=doc.end(); ++it) {
-//    string key, value;
-//
-//    if (it->second.IsScalar() ==  true) {
-//      key = it->first.as<std::string>();
-//      value = it->second.as<std::string>();
-//
-//      shared_ptr<void> temp(new string(value));
-//
-//      unit->Properties.insert({key, temp});
-//
-//      if (key.find(string("link_to_")) != string::npos) {
-//        string new_key = key.substr(string("link_to_").size() );
-//        string link_to_file = kWorkFolder + value;
-//
-//        // Open extracted files
-//        ifstream fstream(link_to_file, std::ios::in|std::ios::binary|
-//                         std::ios::ate);
-//        // Calculate size of float array to read from file
-//        int array_size = fstream.tellg();
-//
-//        // Read array
-//        float* weight = new float[array_size];
-//        fstream.read((char*)weight,  array_size* sizeof(float));
-//
-//        shared_ptr<void> temp2(new float*(weight));
-//
-//        unit->Properties.insert({new_key, temp2});
-//        printf("Array size of %s: %ld\n", new_key.c_str(),
-//               array_size/sizeof(float));
-//
-//        fstream.close();
-//      }
-//    } else {
-//      printf("Can't read unit info\n");
-//      return false;
-//    }
-//  }
-//
-  return true;
-}
-
-void WorkflowLoader::PrintWorkflowStructure() {
-  // Print properties
-  printf("\nWorkFlow properties:\n");
-
-  for (auto x : workflow_.Properties) {
-    printf("%s: %s\n", x.first.c_str(),
-           static_cast<string*>(x.second.get())->c_str());
-  }
-  // Print units and their properties
-  for (unsigned i = 0; i < workflow_.Units.size(); ++i) {
-    printf("\nUnit name: %s\n", workflow_.Units.at(i).Name.c_str());
-
-    for (auto y : workflow_.Units.at(i).Properties) {
-      printf("%s: %s\n", y.first.c_str(),
-             static_cast<string*>(y.second.get())->c_str());
+      workflow_.Properties.insert({key, temp});
+      key.clear();
+      value.clear();
+    } else if (it.first.IsScalar() && it.second.IsMap()) {
+      UnitDescription unit;
+      unit.Name = it.first.as<string>();
+      WorkflowLoader::GetUnit(it.second, &unit);
+      WorkflowLoader::workflow_.Units.push_back(unit);
+    } else {
+      // It can't be neither Scalar nor Map!!!
+      throw std::runtime_error(
+          "Veles::WorkflowLoader::CreateWorkflow: bad YAML::Node");
     }
   }
 }
 
-bool WorkflowLoader::ExtractArchive(const string& filename,
+void WorkflowLoader::GetUnit(const YAML::Node& doc, UnitDescription* unit) {
+  for (auto& it : doc) {
+    string key, value;
+    // Add properties to UnitDescription
+    if (it.first.IsScalar() && it.second.IsScalar()) {
+      // Add properties
+      key = it.first.as<string>();
+      value = it.second.as<string>();
+      auto temp = std::make_shared<string>(value);
+      unit->Properties.insert({key, temp});
+      // Get array from file
+      if (key.find(string("link_to_")) != string::npos) {
+          string new_key = key.substr(string("link_to_").size());
+          unit->Properties.insert({new_key, GetArrayFromFile(value)});
+      }
+    } else if (it.first.IsScalar() && (it.second.IsMap() ||
+        it.second.IsSequence())) {
+      // Recursive adding properties
+      unit->Properties.insert({it.first.as<string>(),
+        GetProperties(it.second)});
+    } else {
+      throw std::runtime_error(
+                    "Veles::WorkflowLoader::GetUnit: bad YAML::Node");
+    }
+  }
+}
+
+shared_ptr<void> WorkflowLoader::GetProperties(const YAML::Node& node) {
+  if (node.IsScalar()) {
+    // Simplest variant - return shared_ptr to string or to float array
+    auto temp = std::make_shared<string>(node.as<string>());
+    return temp;
+  } else if (node.IsMap()) {
+    shared_ptr<vector<PropertiesTable>> tempVectorMap;
+    for (const auto& it : node) {
+      PropertiesTable tempProp;
+      tempProp.insert({it.first.as<string>(), GetProperties(it.second)});
+      tempVectorMap.get()->push_back(tempProp);
+    }
+    return tempVectorMap;
+  } else if (node.IsSequence()) {
+    shared_ptr<vector<shared_ptr<void>>> tempVectorSequence;
+    for (const auto& it : node) {
+      tempVectorSequence.get()->push_back(GetProperties(it));
+    }
+    return tempVectorSequence;
+  }
+  throw std::runtime_error
+  ("Veles::WorkflowLoader::GetProperties: bad YAML::Node");
+}
+
+template <typename T>
+void delete_array(T* p) {
+  delete[] p;
+}
+
+shared_ptr<float>
+WorkflowLoader::GetArrayFromFile(const string& file) {
+  string link_to_file = kWorkFolder + file;
+  // Open extracted files
+  ifstream fstream(link_to_file, std::ios::in|std::ios::binary|
+                   std::ios::ate);
+  // Calculate size of float array to read from file
+  int array_size = fstream.tellg();
+  // Read array
+  auto weight = shared_ptr<float>(new float[array_size],
+                                       delete_array<float>);
+  fstream.read(reinterpret_cast<char*>(weight.get()), array_size*sizeof(float));
+
+  return weight;
+}
+
+string WorkflowLoader::PrintWorkflowStructure() {
+  // Workflow properties to string
+  string result = "\nWorkFlow properties:\n";
+
+  for (auto x : workflow_.Properties) {
+    result += x.first + " : " + *(static_cast<string*>(x.second.get())) + "\n";
+  }
+  // Print units and their properties
+  for (unsigned i = 0; i < workflow_.Units.size(); ++i) {
+    result += "\nUnit name: " + workflow_.Units.at(i).Name + "\n";
+
+    for (auto y : workflow_.Units.at(i).Properties) {
+      result += y.first + " : " + *static_cast<string*>(y.second.get()) + "\n";
+    }
+  }
+  return result;
+}
+
+void WorkflowLoader::ExtractArchive(const string& filename,
     const string& folder) {
+  // Check that folder ends with '/'
+  char ch = folder.back();
+  string folder2;
+  if (ch != '/') {
+    folder2 = folder + string("/");
+  } else {
+    folder2 = folder;
+  }
   static const size_t kBlockSize = 10240;
 
   auto destroy_read_archive = [](archive* ptr) {
     archive_read_close(ptr);
     archive_read_free(ptr);
   };
+
   auto input_archive = std::uniquify(archive_read_new(), destroy_read_archive);
   auto destroy_write_archive = [](archive* ptr) {
     archive_write_close(ptr);
     archive_write_free(ptr);
   };
   auto ext = std::uniquify(archive_write_disk_new(), destroy_write_archive);
+
   archive_entry *entry;
   int r;
 
@@ -305,19 +213,21 @@ bool WorkflowLoader::ExtractArchive(const string& filename,
     archive_read_support_format_tar(input_archive.get());
     if ((r = archive_read_open_filename(input_archive.get(), filename.c_str(),
                                         kBlockSize))) {
-      fprintf(stderr, "archive_read_open_filename() : %s\n",
-             archive_error_string(input_archive.get()));
+      string error =
+          string(R"(Veles::WorkflowLoader::ExtractArchive:
+ archive_read_open_filename() : )") +
+          string(archive_error_string(input_archive.get()));
+      throw std::runtime_error(error);
     }
 
-    do {
-      r = archive_read_next_header(input_archive.get(), &entry);
-      if (r == ARCHIVE_EOF)
-        break;
+    while ((r = archive_read_next_header(input_archive.get(), &entry) !=
+        ARCHIVE_EOF)) {
       if (r != ARCHIVE_OK) {
         fprintf(stderr, "archive_read_next_header() : %s\n",
                archive_error_string(input_archive.get()));
       }
-      auto path = string(folder) + archive_entry_pathname(entry);
+      auto path = folder2 + archive_entry_pathname(entry);
+
       archive_entry_set_pathname(entry, path.c_str());
 
       r = archive_write_header(ext.get(), entry);
@@ -332,27 +242,27 @@ bool WorkflowLoader::ExtractArchive(const string& filename,
                          archive_error_string(ext.get()));
         }
       }
-    } while(true);
-    return true;
+    }
   } catch(const std::exception& e) {
-    fprintf(stderr, "Can't open archive : %s", e.what());
-    return false;
+    string error =
+              string(R"(Veles::WorkflowLoader::ExtractArchive:
+Can't open archive : )") + string(e.what());
+          throw std::runtime_error(error);
   }
-
-  return false; // It shouldn't get here.
 }
 
-bool WorkflowLoader::RemoveDirectory(const string& path) {
+void WorkflowLoader::RemoveDirectory(const string& path) {
   {
   auto dir = std::uniquify(opendir(path.c_str()), closedir);
+
     if (!dir) {  // if pdir wasn't initialised correctly
-      fprintf(stderr,
-              "Can't open directory to delete, check path + permissions\n");
-      return false;  // return false to say "we couldn't do it"
+      throw std::runtime_error
+        ("Can't open directory to delete, check path + permissions\n");
     }  // end if
 
-    dirent *pent = NULL;
-    unsigned char isFile =0x8;  // magic number to find files in folder
+    dirent *pent = nullptr;
+
+    unsigned char isFile = DT_REG;  // magic number to find files in folder
     while ((pent = readdir(dir.get()))) {
       // while there is still something in the directory to list
       if (pent->d_type == isFile) {
@@ -361,10 +271,11 @@ bool WorkflowLoader::RemoveDirectory(const string& path) {
         remove(file_to_delete);
       }
     }
-  // finally, let's clean up
   }
-  if (rmdir(path.c_str()) == 0) return true;  // delete the directory
-  return false;
+  if (rmdir(path.c_str()) != 0) {
+    throw std::runtime_error
+            ("Can't delete directory, check path + permissions\n");
+  }
 }
 
 int WorkflowLoader::CopyData(const archive& ar, archive *aw) {
@@ -373,17 +284,18 @@ int WorkflowLoader::CopyData(const archive& ar, archive *aw) {
   size_t size;
   int64_t offset;
   do {
-   res = archive_read_data_block(const_cast<archive*>(&ar), &buff, &size, &offset);
-   if (res == ARCHIVE_EOF) {
+    res = archive_read_data_block(const_cast<archive*>(&ar), &buff, &size,
+                                  &offset);
+    if (res == ARCHIVE_EOF) {
      return ARCHIVE_OK;
-   }
-   if (res != ARCHIVE_OK) {
+    }
+    if (res != ARCHIVE_OK) {
      fprintf(stderr, "From CopyData : archive_write_data_block() : %s\n",
              archive_error_string(aw));
      break;
-   }
-   res = archive_write_data_block(aw, buff, size, offset);
+    }
+    res = archive_write_data_block(aw, buff, size, offset);
   } while (res == ARCHIVE_OK);
 
   return res;
- }
+}

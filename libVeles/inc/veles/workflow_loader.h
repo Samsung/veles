@@ -55,7 +55,7 @@ enum WorkflowExtractionError {
   kAllGood,
   /// Error occurred when algorithm extracted archive
   kArchiveExtractionError,
-  /// Error occurred when algorithm extracted WorkflowDescription from yaml-file.
+  /// Error occurred when algorithm extracted WorkflowDescription from yaml-file
   kWorkflowFromFileExtractionError,
   /// Error occurred when algorithm deleting temporary folder
   kDeletingTempFolderError
@@ -83,7 +83,7 @@ class WorkflowLoader {
    * 4) Read bin-files to arrays of float, add arrays to WorkflowDescription\n
    * 6) Delete kWorkFolder with all files.\n
    */
-  int Load(const std::string& archive, const std::string& fileWithWorkflow);
+  void Load(const std::string& archive, const std::string& fileWithWorkflow);
   /**
    * @brief Print structure of workflow.
    *
@@ -102,18 +102,20 @@ class WorkflowLoader {
    *   std::cout << "\nUnit name: " << workflow.Units.at(i).Name << std::endl;
    *   for (auto& y : workflow.Units.at(i).Properties)
    *   {
-   *    std::cout << y.first << ": " << static_cast<std::string*>(y.second.get())->c_str() << std::endl;
+   *    std::cout << y.first << ": " <<
+   *    static_cast<std::string*>(y.second.get())->c_str() << std::endl;
    *   }
    * }
    *  @endcode
    * */
-  void PrintWorkflowStructure();
+  std::string PrintWorkflowStructure();
 
   WorkflowDescription GetWorkflowDescription() const { return workflow_; }
   /// Default path to work folder.
   static const char* kWorkFolder;
   /// Default name of decompressed yaml file.
   static const char* kWorkflowDecompressedFile;
+
  private:
   /// @brief Extract file archive.
   /**
@@ -123,7 +125,7 @@ class WorkflowLoader {
    * Function that extract file archive (with name = \b filename) to folder with
    * name = \b folder.
    **/
-  bool ExtractArchive(const std::string& filename,
+  void ExtractArchive(const std::string& filename,
                       const std::string& folder = kWorkFolder);
 
   /**
@@ -135,12 +137,12 @@ class WorkflowLoader {
    *
    * Open yaml file (or print error if it not possible)
    * */
-  bool GetWorkflow() {
+  void GetWorkflow() {
     auto temp = std::string(kWorkFolder) +
         std::string(kWorkflowDecompressedFile);
-    return GetWorkflow(temp);
+    GetWorkflow(temp);
   }
-  bool GetWorkflow(const std::string& yaml_filename);
+  void GetWorkflow(const std::string& yaml_filename);
   /// @brief Extract structure of workflow from YAML::Node
   /**
    * @param[in] workflow In this workflow function will save info from YAML::Node.
@@ -149,7 +151,7 @@ class WorkflowLoader {
    *
    * Function go through YAML::Node and extract info about workflow.
    */
-  bool CreateWorkflow(const YAML::Node& doc);
+  void CreateWorkflow(const YAML::Node& doc);
   /// @brief Extract structure of unit from YAML::Node
   /**
    * @param[in] unit Function will save info from YAML::Node to it.
@@ -159,17 +161,16 @@ class WorkflowLoader {
    * Function go through YAML::Node and extract info about unit. An if it's
    * needed extract files with float arrays and read them to structure.
    */
-  bool GetUnit(const YAML::Node& doc, UnitDescription* unit);
-
-  /// @brief Remove directory with all files inside
+  void GetUnit(const YAML::Node& doc, UnitDescription* unit);
+  std::shared_ptr<void> GetProperties(const YAML::Node& node);
+  std::shared_ptr<float> GetArrayFromFile(const std::string& file);
+  /// @brief Remove directory with all files (not folders!!!) inside.
   /**
    * @param[in] path Path to directory that will be deleted.
-   * @return Return \b false if directory can't be deleted because of bad path or
-   * permissions.
-   *
-   *
+   * @return Return \b false if directory can't be deleted because of bad path
+   * or permissions or folder inside.
    */
-  bool RemoveDirectory(const std::string& path);
+  void RemoveDirectory(const std::string& path);
 
   /// @brief Some function for ExtractArchive
   int  CopyData(const archive& ar, archive *aw);
@@ -178,7 +179,6 @@ class WorkflowLoader {
   // Variable to save path + name of archive with info about workflow
   std::string archive_name_;
   std::string file_with_workflow_;
-
 };
 
 }  // namespace Veles
