@@ -371,11 +371,7 @@ int WorkflowLoader::CopyData(const archive& ar, archive *aw) {
   int res;
   const void *buff;
   size_t size;
-#if ARCHIVE_VERSION >= 3000000
   int64_t offset;
-#else
-  off_t offset;
-#endif
   do {
    res = archive_read_data_block(const_cast<archive*>(&ar), &buff, &size, &offset);
    if (res == ARCHIVE_EOF) {
