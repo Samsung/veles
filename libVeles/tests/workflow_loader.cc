@@ -97,6 +97,7 @@ class WorkflowLoaderTest: public ::testing::Test {
 
   void ComplexYamlTest1() {
     string temp = current_path + "/workflow_files/default.yaml";
+//    string temp = current_path + "/tests/workflow_files/default.yaml";
     ASSERT_NO_THROW(test.GetWorkflow(temp));
 
     string expected_result = R"(
@@ -124,8 +125,8 @@ activation_function : 1
   }
 
   void TestExtractArchive() {
-      string pathToArchive = current_path +
-          "/workflow_files/test_archive.tar.gz";
+    string pathToArchive = current_path + "/workflow_files/test_archive.tar.gz";
+//    string pathToArchive = current_path + "/tests/workflow_files/test_archive.tar.gz";
     char tempFolderName[40] = "/tmp/workflow_files_tmpXXXXXX";
     char* tempFolderName2 = mkdtemp(tempFolderName);
     // Check existence of temporary folder
@@ -155,7 +156,7 @@ activation_function : 1
   void TestRemoveDirectory() {
     string pathToArchive = current_path +
         "/workflow_files/remove_folder_testing.tar.gz";
-//    string pathToArchive = "tests/workflow_files/remove_folder_testing.tar.gz";
+//    string pathToArchive = current_path + "tests/workflow_files/remove_folder_testing.tar.gz";
     char tempFolderName[40] = "/tmp/workflow_files_tmp2XXXXXX";
     char* tempFolderName2 = mkdtemp(tempFolderName);
     // Check existence of temporary folder
@@ -251,6 +252,7 @@ TEST_F(WorkflowLoaderTest, TestPropertiesTable) {
 }
 
 TEST_F(WorkflowLoaderTest, MainTest) {
+
   MainTest();
 }
 

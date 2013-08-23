@@ -89,7 +89,7 @@ class WorkflowLoader {
    */
   void Load(const std::string& archive, const std::string& fileWithWorkflow);
   /**
-   * @brief Print structure of workflow (without float arrays!!!!).
+   * @brief Print structure of workflow (without float arrays).
    *
    * @param[in] workflow Structure of this workflow will be printed.
    *
@@ -166,8 +166,9 @@ class WorkflowLoader {
    */
   void GetUnit(const YAML::Node& doc, UnitDescription* unit);
   std::shared_ptr<void> GetProperties(const YAML::Node& node);
-  std::shared_ptr<float> GetArrayFromFile(const std::string& file);
-  /// @brief Remove directory with all files (not directorys!!!) inside.
+  std::shared_ptr<float> GetArrayFromFile(const std::string& file,
+                                          size_t* arr_size);
+  /// @brief Remove directory with all files (not directories) inside.
   /**
    * @param[in] path Path to directory that will be deleted.
    * @return Return \b false if directory can't be deleted because of bad path

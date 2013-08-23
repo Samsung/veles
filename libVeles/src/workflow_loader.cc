@@ -31,7 +31,7 @@ using Veles::PropertiesTable;
 using Veles::WorkflowDescription;
 using Veles::WorkflowExtractionError;
 
-// TODO(EBulychev): Add array reading for recursion + test workability
+// TODO(EBulychev): Add array reading for recursion
 
 const char* WorkflowLoader::kWorkingDirectory = "/tmp/workflow_tmp/";
 /// Default name of decompressed yaml file.
@@ -48,7 +48,7 @@ void WorkflowLoader::Load(const string& archive,
   //  2) Read neural network structure from fileWithWorkflow
   auto workflow_file = string(kWorkingDirectory) + file_with_workflow_;
   WorkflowLoader::GetWorkflow(workflow_file);
-  // Remove kWorkingDirectory with all files
+  // Remove the working directory with all files
   WorkflowLoader::RemoveDirectory(kWorkingDirectory);
 }
 
@@ -101,7 +101,12 @@ void WorkflowLoader::GetUnit(const YAML::Node& doc, UnitDescription* unit) {
       // Get array from file
       if (key.find(string("link_to_")) != string::npos) {
           string new_key = key.substr(string("link_to_").size());
-          unit->Properties.insert({new_key, GetArrayFromFile(value)});
+          size_t array_size = 0;
+          unit->Properties.insert({new_key, GetArrayFromFile(value,
+                                                             &array_size)});
+          string new_key_to_size = new_key + "_lenght";
+          auto temp_size = std::make_shared<size_t>(array_size);
+          unit->Properties.insert({new_key_to_size, temp_size});
       }
     } else if (it.first.IsScalar() && (it.second.IsMap() ||
         it.second.IsSequence())) {
@@ -121,7 +126,7 @@ shared_ptr<void> WorkflowLoader::GetProperties(const YAML::Node& node) {
     auto temp = std::make_shared<string>(node.as<string>());
     return temp;
   } else if (node.IsMap()) {
-    shared_ptr<vector<PropertiesTable>> tempVectorMap;
+    auto tempVectorMap = std::make_shared<vector<PropertiesTable>>();
     for (const auto& it : node) {
       PropertiesTable tempProp;
       tempProp.insert({it.first.as<string>(), GetProperties(it.second)});
@@ -129,9 +134,9 @@ shared_ptr<void> WorkflowLoader::GetProperties(const YAML::Node& node) {
     }
     return tempVectorMap;
   } else if (node.IsSequence()) {
-    shared_ptr<vector<shared_ptr<void>>> tempVectorSequence;
+    auto tempVectorSequence = std::make_shared<vector<shared_ptr<void>>>();
     for (const auto& it : node) {
-      tempVectorSequence.get()->push_back(GetProperties(it));
+      tempVectorSequence->push_back(GetProperties(it));
     }
     return tempVectorSequence;
   }
@@ -144,8 +149,14 @@ void delete_array(T* p) {
   delete[] p;
 }
 
-shared_ptr<float>
-WorkflowLoader::GetArrayFromFile(const string& file) {
+float* mallocf(size_t length) {
+  void *ptr;
+  return posix_memalign(&ptr, 64, length * sizeof(float)) == 0 ?
+      static_cast<float*>(ptr) : nullptr;
+}
+
+std::shared_ptr<float> WorkflowLoader::GetArrayFromFile(const string& file,
+                                                        size_t* arr_size) {
   string link_to_file = kWorkingDirectory + file;
   // Open extracted files
   ifstream fstream(link_to_file, std::ios::in|std::ios::binary|
@@ -158,8 +169,9 @@ WorkflowLoader::GetArrayFromFile(const string& file) {
   }
   // Calculate size of float array to read from file
   int array_size = fstream.tellg();
+  *arr_size = array_size;
   // Read array
-  auto weight = shared_ptr<float>(new float[array_size], delete_array<float>);
+  auto weight = shared_ptr<float>(mallocf(array_size), free);
   fstream.read(reinterpret_cast<char*>(weight.get()), array_size*sizeof(float));
 
   return weight;
@@ -217,8 +229,8 @@ void WorkflowLoader::ExtractArchive(const string& filename,
     while ((r = archive_read_next_header(input_archive.get(), &entry) !=
         ARCHIVE_EOF)) {
       if (r != ARCHIVE_OK) {
-//        fprintf(stderr, "archive_read_next_header() : %s\n",
-//               archive_error_string(input_archive.get()));
+        fprintf(stderr, "archive_read_next_header() : %s\n",
+               archive_error_string(input_archive.get()));
       }
       auto path = directory + "/" + archive_entry_pathname(entry);
 
