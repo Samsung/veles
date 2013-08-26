@@ -42,11 +42,25 @@ class Master(MPIPeer):
 
     def nodes_listener(self):
         port = MPI.Open_port()
+        """Network address, encoded in the string (supplied by the system),
+           at which the server will be able to accept connections from clients.
+        """
+
         info = MPI.Info.Create()
+        """Creates a new info object.
+           The newly created object contains no key/value pairs.
+        """
         info.Set('ompi_global_scope', 'true')
+
         logging.debug("Publishing %s...", self.mpi_service_name)
         MPI.Publish_name(self.mpi_service_name, info, port)
+        """Publishes the pair (service_name, port_name) so that an application
+           may retrieve port_name by calling MPI_Lookup_name with service_name
+           as an argument.
+           Requires ompi-server to be running.
+        """
         logging.debug("Published %s", self.mpi_service_name)
+
         try:
             while not self.shutting_down:
                 connection = MPI.COMM_WORLD.Accept(port, info)
