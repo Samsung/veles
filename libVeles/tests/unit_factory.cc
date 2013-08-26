@@ -27,7 +27,7 @@ class DummyUnit : public Unit {
                             std::shared_ptr<void>) override {
   }
 
-  virtual void Execute(float*, float*) const override {
+  virtual void Execute(const float*, float*) const override {
   }
 
   virtual size_t InputCount() const noexcept {

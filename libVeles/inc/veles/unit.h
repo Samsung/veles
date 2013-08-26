@@ -39,7 +39,7 @@ class Unit {
    *  @param in Input vector
    *  @param out Output vector
    */
-  virtual void Execute(float* in, float* out) const = 0;
+  virtual void Execute(const float* in, float* out) const = 0;
   /* @brief Number of unit inputs
    */
   virtual size_t InputCount() const noexcept = 0;

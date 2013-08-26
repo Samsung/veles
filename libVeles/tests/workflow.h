@@ -27,7 +27,7 @@ class UnitMock : public Veles::Unit {
   virtual void SetParameter(const std::string& /* name */,
                             std::shared_ptr<void> /* value */) override {
   }
-  virtual void Execute(float* in, float* out) const override {
+  virtual void Execute(const float* in, float* out) const override {
     for(size_t i = 0; i < OutputCount(); ++i) {
       out[i] = in[i % InputCount()] * 2;
     }
