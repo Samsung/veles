@@ -42,6 +42,12 @@ class Workflow {
     units_.clear();
   }
 
+  /** @brief Number of units
+   */
+  size_t UnitCount() {
+    return units_.size();
+  }
+
   /** @brief Executes the workflow
    *  @param begin Iterator to the first element of initial data
    *  @param end Iterator to the end of initial data
@@ -52,9 +58,9 @@ class Workflow {
                          OutputIterator out) const {
     size_t max_size = MaxUnitSize();
     std::unique_ptr<float[], void (*)(void*)> input(
-        MallocF(max_size), std::free);
+        mallocf(max_size), std::free);
     std::unique_ptr<float[], void (*)(void*)> output(
-        MallocF(max_size), std::free);
+        mallocf(max_size), std::free);
     std::copy(begin, end, input.get());
 
     float* curr_in = input.get();
@@ -74,7 +80,7 @@ class Workflow {
    *  @return Maximum size
    */
   size_t MaxUnitSize() const noexcept;
-  static void* MallocF(size_t length);
+  static float* mallocf(size_t length);
 
   std::vector<std::shared_ptr<Unit>> units_;
 };

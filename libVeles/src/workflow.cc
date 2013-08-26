@@ -27,9 +27,10 @@ size_t Workflow::MaxUnitSize() const noexcept {
       !units_.empty() ? units_.front()->OutputCount() : 0);
 }
 
-void* Workflow::MallocF(size_t length) {
+float* Workflow::mallocf(size_t length) {
   void *ptr;
-  return posix_memalign(&ptr, 64, length * sizeof(float)) == 0 ? ptr : nullptr;
+  return posix_memalign(&ptr, 64, length * sizeof(float)) == 0 ?
+      static_cast<float*>(ptr) : nullptr;
 }
 
 }  // namespace Veles
