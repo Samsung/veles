@@ -45,6 +45,9 @@ if [ ! -e "yaml-cpp/CMakeLists.txt" ]; then
     cd ..
 fi
 
+echo "\$(dirname \$0)/configure \$@ --disable-bsdcpio --without-bz2lib --without-lzmadec --without-iconv --without-lzma --without-nettle --without-openssl --without-xml2 --without-expat --disable-bsdtar" > libarchive/configure.gnu
+chmod +x libarchive/configure.gnu
+
 check_prog() {
     printf "Checking for $1... "
     if [ -z "$($1 --version 2>/dev/null)" ]; then
