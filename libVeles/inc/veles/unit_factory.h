@@ -81,6 +81,7 @@ class RegisterUnit {
 /// @param T he type of your Unit-derived class.
 #define DECLARE_UNIT(T) extern RegisterUnit<T> T##RegistryInstance; \
   namespace { \
+  __attribute__((used)) \
   const RegisterUnit<T>& Reference##T##RegistryInstance() { \
     return T##RegistryInstance; \
   } \
