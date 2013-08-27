@@ -30,9 +30,9 @@ isubuntu="$(uname -v|grep Ubuntu)"
 mypath=$(pwd)
 cd ..
 if [ ! -e "libarchive/build/autogen.sh" ]; then
-    git submodule update --init	
+    git submodule update --init	libVeles/libarchive
 else
-    git submodule update
+    git submodule update libVeles/libarchive
 fi
 cd $mypath
 
