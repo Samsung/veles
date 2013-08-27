@@ -16,6 +16,7 @@
 #include "inc/veles/workflow_loader.h"
 
 using std::string;
+using std::static_pointer_cast;
 
 namespace Veles {
 void IterateThroughYAML(const YAML::Node& node);
@@ -31,6 +32,44 @@ class WorkflowLoaderTest: public ::testing::Test {
     } else {
       current_path = currentPath;
     }
+  }
+
+  void MainTest() {
+    // Check everything
+    WorkflowLoader test;
+    string temp = current_path + "/workflow_files/neural_network.tar.gz";
+    ASSERT_NO_THROW(test.Load(temp, "default.yaml"));
+
+    EXPECT_EQ(size_t(2), test.workflow_.Units.size());
+    EXPECT_EQ(size_t(4), test.workflow_.Properties.size());
+    EXPECT_EQ(string("2"),
+              *std::static_pointer_cast<string>(test.workflow_.Properties.at(
+                  "layers_number")));
+    EXPECT_EQ(string("0"),
+              *std::static_pointer_cast<string>(test.workflow_.Properties.at(
+                  "neural_network_type")));
+    EXPECT_EQ(string("Feedforward neural network"),
+              *std::static_pointer_cast<string>(test.workflow_.Properties.at(
+                  "neural_network_type_desc")));
+    EXPECT_EQ(string("SaverUnit2"),
+              *std::static_pointer_cast<string>(test.workflow_.Properties.at(
+                  "service_info")));
+    EXPECT_EQ(string("layer 0"), test.workflow_.Units.at(0).Name);
+    EXPECT_EQ(string("layer 1"), test.workflow_.Units.at(1).Name);
+    EXPECT_EQ(string("tanh"),
+              *std::static_pointer_cast<string>(
+                  test.workflow_.Units.at(0).Properties.at(
+                      "activation_function_descr")));
+    EXPECT_EQ(string("softmax"),
+              *std::static_pointer_cast<string>(
+                  test.workflow_.Units.at(1).Properties.at(
+                      "activation_function_descr")));
+    EXPECT_EQ(string("layer0bias.bin"),
+              *std::static_pointer_cast<string>(
+                  test.workflow_.Units.at(0).Properties.at("link_to_bias")));
+    EXPECT_EQ(string("layer1bias.bin"),
+              *std::static_pointer_cast<string>(
+                  test.workflow_.Units.at(1).Properties.at("link_to_bias")));
   }
 
   void TestPropertiesTable() {
@@ -58,7 +97,6 @@ class WorkflowLoaderTest: public ::testing::Test {
 
   void ComplexYamlTest1() {
     string temp = current_path + "/workflow_files/default.yaml";
-//    string temp = "tests/workflow_files/default.yaml";
     ASSERT_NO_THROW(test.GetWorkflow(temp));
 
     string expected_result = R"(
@@ -86,9 +124,8 @@ activation_function : 1
   }
 
   void TestExtractArchive() {
-    // "/jenkins/workspace/VELES_libVeles/libVeles/"
-    string pathToArchive = current_path + "/workflow_files/test_archive.tar.gz";
-//    string pathToArchive = "tests/workflow_files/test_archive.tar.gz";
+      string pathToArchive = current_path +
+          "/workflow_files/test_archive.tar.gz";
     char tempFolderName[40] = "/tmp/workflow_files_tmpXXXXXX";
     char* tempFolderName2 = mkdtemp(tempFolderName);
     // Check existence of temporary folder
@@ -118,7 +155,7 @@ activation_function : 1
   void TestRemoveDirectory() {
     string pathToArchive = current_path +
         "/workflow_files/remove_folder_testing.tar.gz";
-//   string pathToArchive = "tests/workflow_files/remove_folder_testing.tar.gz";
+//    string pathToArchive = "tests/workflow_files/remove_folder_testing.tar.gz";
     char tempFolderName[40] = "/tmp/workflow_files_tmp2XXXXXX";
     char* tempFolderName2 = mkdtemp(tempFolderName);
     // Check existence of temporary folder
@@ -211,6 +248,10 @@ TEST_F(WorkflowLoaderTest, GetUnitTest) {
 
 TEST_F(WorkflowLoaderTest, TestPropertiesTable) {
   TestPropertiesTable();
+}
+
+TEST_F(WorkflowLoaderTest, MainTest) {
+  MainTest();
 }
 
 }  // namespace Veles

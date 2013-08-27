@@ -33,7 +33,7 @@ using Veles::WorkflowExtractionError;
 
 // TODO(EBulychev): Add array reading for recursion + test workability
 
-const char* WorkflowLoader::kWorkFolder = "/tmp/workflow_tmp/";
+const char* WorkflowLoader::kWorkingDirectory = "/tmp/workflow_tmp/";
 /// Default name of decompressed yaml file.
 const char* WorkflowLoader::kWorkflowDecompressedFile =
     "workflow_decompressed.yaml";
@@ -42,15 +42,14 @@ void WorkflowLoader::Load(const string& archive,
                          const string& fileWithWorkflow) {
   archive_name_ = archive;
   file_with_workflow_ = fileWithWorkflow;
-//  1) Extract archive (using libarchive) to folder kWorkFolder.
-  WorkflowLoader::ExtractArchive(archive.c_str());
 
-//  2) Read neural network structure from fileWithWorkflow
-  string workflow_file = kWorkFolder + file_with_workflow_;
+  //  1) Extract archive (using libarchive) to directory kWorkingDirectory.
+  WorkflowLoader::ExtractArchive(archive_name_);
+  //  2) Read neural network structure from fileWithWorkflow
+  auto workflow_file = string(kWorkingDirectory) + file_with_workflow_;
   WorkflowLoader::GetWorkflow(workflow_file);
-
-  // Remove kWorkFolder with all files
-  WorkflowLoader::RemoveDirectory(kWorkFolder);
+  // Remove kWorkingDirectory with all files
+  WorkflowLoader::RemoveDirectory(kWorkingDirectory);
 }
 
 void WorkflowLoader::GetWorkflow(const string& yaml_filename) {
@@ -58,10 +57,9 @@ void WorkflowLoader::GetWorkflow(const string& yaml_filename) {
 
   if (workflow.size() == 1) {
     CreateWorkflow(workflow.at(0));
-    PrintWorkflowStructure();
   } else {
     throw std::runtime_error(
-              "Veles::WorkflowLoader::GetWorkflow: bad YAML::Node");
+        "Veles::WorkflowLoader::GetWorkflow: can't extract workflow");
   }
 }
 
@@ -148,15 +146,20 @@ void delete_array(T* p) {
 
 shared_ptr<float>
 WorkflowLoader::GetArrayFromFile(const string& file) {
-  string link_to_file = kWorkFolder + file;
+  string link_to_file = kWorkingDirectory + file;
   // Open extracted files
   ifstream fstream(link_to_file, std::ios::in|std::ios::binary|
                    std::ios::ate);
+  if(!fstream.is_open()) {
+    fprintf(stderr, "Veles::WorkflowLoader::GetArrayFromFile: Can't open the "
+            "file with array");
+    throw std::runtime_error
+      ("Veles::WorkflowLoader::GetArrayFromFile: Can't open file with array");
+  }
   // Calculate size of float array to read from file
   int array_size = fstream.tellg();
   // Read array
-  auto weight = shared_ptr<float>(new float[array_size],
-                                       delete_array<float>);
+  auto weight = shared_ptr<float>(new float[array_size], delete_array<float>);
   fstream.read(reinterpret_cast<char*>(weight.get()), array_size*sizeof(float));
 
   return weight;
@@ -181,15 +184,7 @@ string WorkflowLoader::PrintWorkflowStructure() {
 }
 
 void WorkflowLoader::ExtractArchive(const string& filename,
-    const string& folder) {
-  // Check that folder ends with '/'
-  char ch = folder.back();
-  string folder2;
-  if (ch != '/') {
-    folder2 = folder + string("/");
-  } else {
-    folder2 = folder;
-  }
+    const string& directory) {
   static const size_t kBlockSize = 10240;
 
   auto destroy_read_archive = [](archive* ptr) {
@@ -213,20 +208,19 @@ void WorkflowLoader::ExtractArchive(const string& filename,
     archive_read_support_format_tar(input_archive.get());
     if ((r = archive_read_open_filename(input_archive.get(), filename.c_str(),
                                         kBlockSize))) {
-      string error =
-          string(R"(Veles::WorkflowLoader::ExtractArchive:
- archive_read_open_filename() : )") +
-          string(archive_error_string(input_archive.get()));
+      auto error = string("(Veles::WorkflowLoader::ExtractArchive:\n"
+          "archive_read_open_filename(): ") +
+          archive_error_string(input_archive.get()) + ")";
       throw std::runtime_error(error);
     }
 
     while ((r = archive_read_next_header(input_archive.get(), &entry) !=
         ARCHIVE_EOF)) {
       if (r != ARCHIVE_OK) {
-        fprintf(stderr, "archive_read_next_header() : %s\n",
-               archive_error_string(input_archive.get()));
+//        fprintf(stderr, "archive_read_next_header() : %s\n",
+//               archive_error_string(input_archive.get()));
       }
-      auto path = folder2 + archive_entry_pathname(entry);
+      auto path = directory + "/" + archive_entry_pathname(entry);
 
       archive_entry_set_pathname(entry, path.c_str());
 
@@ -244,30 +238,29 @@ void WorkflowLoader::ExtractArchive(const string& filename,
       }
     }
   } catch(const std::exception& e) {
-    string error =
-              string(R"(Veles::WorkflowLoader::ExtractArchive:
-Can't open archive : )") + string(e.what());
-          throw std::runtime_error(error);
+    auto error = string("(Veles::WorkflowLoader::ExtractArchive:\nCan't open "
+        "archive: ") + e.what() + ")";
+    fprintf(stderr, "%s\n", error.c_str());
+    throw std::runtime_error(error);
   }
 }
 
 void WorkflowLoader::RemoveDirectory(const string& path) {
   {
-  auto dir = std::uniquify(opendir(path.c_str()), closedir);
+    auto dir = std::uniquify(opendir(path.c_str()), closedir);
 
-    if (!dir) {  // if pdir wasn't initialised correctly
+    if (!dir) {  // if dir wasn't initialized correctly
       throw std::runtime_error
         ("Can't open directory to delete, check path + permissions\n");
     }  // end if
 
     dirent *pent = nullptr;
 
-    unsigned char isFile = DT_REG;  // magic number to find files in folder
+    unsigned char isFile = DT_REG;  // magic number to find files in directory
     while ((pent = readdir(dir.get()))) {
       // while there is still something in the directory to list
       if (pent->d_type == isFile) {
-        const char *file_to_delete;
-        file_to_delete = string(path + "/" + string(pent->d_name)).c_str();
+        const char *file_to_delete = (path + "/" + pent->d_name).c_str();
         remove(file_to_delete);
       }
     }

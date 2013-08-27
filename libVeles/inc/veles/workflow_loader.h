@@ -61,8 +61,8 @@ enum WorkflowExtractionError {
   kArchiveExtractionError,
   /// Error occurred when algorithm extracted WorkflowDescription from yaml-file
   kWorkflowFromFileExtractionError,
-  /// Error occurred when algorithm deleting temporary folder
-  kDeletingTempFolderError
+  /// Error occurred when algorithm deleting temporary directory
+  kDeletingTempDirectoryError
 };
 
 /**
@@ -80,16 +80,16 @@ class WorkflowLoader {
    * @return Return \b false if can't extract workflow from archive.
    *
    *
-   * 1) Extract archive (using libarchive) to folder kWorkFolder.\n   *
+   * 1) Extract archive (using libarchive) to directory kWorkDirectory.\n   *
    * 2) Read WorkflowDescription from kWorkflowDecompressedFile\n
    * 3) Go through workflow units looking for links to files with weights&\n
    * biases. If find key that content "link_to_" -> extract files (using zlib)\n
    * 4) Read bin-files to arrays of float, add arrays to WorkflowDescription\n
-   * 6) Delete kWorkFolder with all files.\n
+   * 6) Delete kWorkDirectory with all files.\n
    */
   void Load(const std::string& archive, const std::string& fileWithWorkflow);
   /**
-   * @brief Print structure of workflow.
+   * @brief Print structure of workflow (without float arrays!!!!).
    *
    * @param[in] workflow Structure of this workflow will be printed.
    *
@@ -115,8 +115,8 @@ class WorkflowLoader {
   std::string PrintWorkflowStructure();
 
   WorkflowDescription GetWorkflowDescription() const { return workflow_; }
-  /// Default path to work folder.
-  static const char* kWorkFolder;
+  /// Default path to work directory.
+  static const char* kWorkingDirectory;
   /// Default name of decompressed yaml file.
   static const char* kWorkflowDecompressedFile;
 
@@ -124,13 +124,13 @@ class WorkflowLoader {
   /// @brief Extract file archive.
   /**
    * @param[in] filename Name of the archive that should be extracted.
-   * @param[in] folder Name of the folder where will be extracted archive.
+   * @param[in] directory Name of the directory where will be extracted archive.
    *
-   * Function that extract file archive (with name = \b filename) to folder with
-   * name = \b folder.
+   * Function that extract file archive (with name = \b filename) to directory with
+   * name = \b directory.
    **/
   void ExtractArchive(const std::string& filename,
-                      const std::string& folder = kWorkFolder);
+                      const std::string& directory = kWorkingDirectory);
 
   /**
    * @brief Extract workflow from yaml file.
@@ -142,8 +142,7 @@ class WorkflowLoader {
    * Open yaml file (or print error if it not possible)
    * */
   void GetWorkflow() {
-    auto temp = std::string(kWorkFolder) +
-        std::string(kWorkflowDecompressedFile);
+    auto temp = std::string(kWorkingDirectory) + kWorkflowDecompressedFile;
     GetWorkflow(temp);
   }
   void GetWorkflow(const std::string& yaml_filename);
@@ -168,11 +167,11 @@ class WorkflowLoader {
   void GetUnit(const YAML::Node& doc, UnitDescription* unit);
   std::shared_ptr<void> GetProperties(const YAML::Node& node);
   std::shared_ptr<float> GetArrayFromFile(const std::string& file);
-  /// @brief Remove directory with all files (not folders!!!) inside.
+  /// @brief Remove directory with all files (not directorys!!!) inside.
   /**
    * @param[in] path Path to directory that will be deleted.
    * @return Return \b false if directory can't be deleted because of bad path
-   * or permissions or folder inside.
+   * or permissions or directory inside.
    */
   void RemoveDirectory(const std::string& path);
 
