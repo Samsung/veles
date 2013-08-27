@@ -273,7 +273,7 @@ class OpenCLUnit(Unit):
     def cpu_run(self):
         """Run on CPU only.
         """
-        pass
+        return super(OpenCLUnit, self).run()
 
     def gpu_run(self):
         """Run on GPU.
