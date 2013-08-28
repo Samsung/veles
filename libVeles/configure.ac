@@ -49,7 +49,9 @@ AC_ARG_WITH([built-in-yaml-cpp],
     AS_IF([test "$host" = "$build" ], [
     	AC_CONFIG_COMMANDS(cmake, [
         cd yaml-cpp
-        CXXFLAGS="-fPIC -std=c++11" cmake ../$ac_top_srcdir/yaml-cpp -DYAML_CPP_BUILD_TOOLS=OFF -DYAML_CPP_BUILD_CONTRIB=OFF -DBUILD_SHARED_LIBS=OFF
+        CXXFLAGS="-fPIC -std=c++11" cmake ../$ac_top_srcdir/yaml-cpp \
+        	-DYAML_CPP_BUILD_TOOLS=OFF -DYAML_CPP_BUILD_CONTRIB=OFF \
+        	-DBUILD_SHARED_LIBS=OFF
         cd ..])
     ], [
     	echo "set(CMAKE_SYSTEM_NAME Linux)" > $host.cmake
@@ -58,12 +60,15 @@ AC_ARG_WITH([built-in-yaml-cpp],
     	echo "set(CMAKE_CXX_COMPILER $CXX)" >> $host.cmake
     	AC_CONFIG_COMMANDS(cmake_cross, [
         cd yaml-cpp
-        CXXFLAGS="-fPIC -std=c++11" cmake ../$ac_top_srcdir/yaml-cpp -DYAML_CPP_BUILD_TOOLS=OFF -DYAML_CPP_BUILD_CONTRIB=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_TOOLCHAIN_FILE=../$ac_top_srcdir/yaml-cpp/$host.cmake
+        CXXFLAGS="-fPIC -std=c++11" cmake ../$ac_top_srcdir/yaml-cpp \
+        	-DYAML_CPP_BUILD_TOOLS=OFF -DYAML_CPP_BUILD_CONTRIB=OFF \
+        	-DBUILD_SHARED_LIBS=OFF \
+        	-DCMAKE_TOOLCHAIN_FILE=../$host.cmake
         cd ..])
     ])
 ], [
     # Check for installed libarchive
-    PKG_CHECK_MODULES([YAMLCPP], [yaml-cpp >= 0.3])
+    PKG_CHECK_MODULES([YAMLCPP], [yaml-cpp >= 0.5])
 ])
 AC_SUBST([YAMLCPP_DIR])
 
