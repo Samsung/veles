@@ -4,7 +4,9 @@
 	url = ssh://alserver.rnd.samsung.ru:29418/Znicz.git
 [submodule "libSoundFeatureExtraction"]
 	path = libSoundFeatureExtraction
+	branch = master
 	url = ssh://alserver.rnd.samsung.ru:29418/SoundFeatureExtraction.git
 [submodule "libVeles/libarchive"]
 	path = libVeles/libarchive
+	branch = master
 	url = https://github.com/libarchive/libarchive.git
