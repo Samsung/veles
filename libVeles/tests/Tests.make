@@ -46,7 +46,7 @@ endif
 
 AM_DEFAULT_SOURCE_EXT = .cc
 
-AM_CPPFLAGS = -I$(top_srcdir)/tests/google @YAMLCPP_CFLAGS@ @LIBARCHIVE_CFLAGS@
+AM_CPPFLAGS += -I$(top_srcdir)/tests/google @YAMLCPP_CFLAGS@ @LIBARCHIVE_CFLAGS@
 AM_LDFLAGS = $(top_builddir)/src/libVeles.la \
        $(top_builddir)/tests/google/lib_gtest.la \
        @YAMLCPP_LIBS@ @LIBARCHIVE_LIBS@ -pthread

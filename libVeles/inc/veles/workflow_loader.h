@@ -18,7 +18,10 @@
 #include <vector>
 #include <string>
 #include <memory>  // For shared_ptr<>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 #include "yaml-cpp/yaml.h"
+#pragma GCC diagnostic pop
 
 #if __GNUC__ >= 4
 #pragma GCC visibility push(default)

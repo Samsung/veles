@@ -34,7 +34,7 @@ AC_CONFIG_HEADERS([src/config.h])
 
 AC_ARG_VAR(SYSROOT, [override your compiler's default sysroot (--sysroot)])
 AS_IF([test "x$SYSROOT" != "x" ],    
-    CPPFLAGS="$CPPFLAGS --sysroot=$SYSROOT"
+    AM_CPPFLAGS="$AM_CPPFLAGS --sysroot=$SYSROOT"
     LDFLAGS="$LDFLAGS --sysroot=$SYSROOT"
 )
 
@@ -45,7 +45,7 @@ AC_HEADER_STDC
 AC_C_BIGENDIAN([AC_MSG_ERROR([Big endian hosts are not supported.])])
 
 # Initialize automake
-AM_INIT_AUTOMAKE([1.11 dist-xz foreign color-tests])
+AM_INIT_AUTOMAKE([1.11 dist-xz foreign color-tests subdir-objects])
 # Nicely formatted make output
 AM_SILENT_RULES([yes])
 # Rebuild everything be default
@@ -83,10 +83,6 @@ passed
 
 # Initialize Libtool
 LT_INIT
-
-# Check if Libtool is present
-# Libtool is used for building share libraries
-AC_PROG_LIBTOOL
 
 # Enable pkg-config
 m4_ifndef([PKG_PROG_PKG_CONFIG], AC_MSG_ERROR([Configuration requires pkg-config to be installed]))
@@ -160,7 +156,7 @@ AC_SUBST([DOCS_DIR])
 
 # Check for debug configuration
 AC_ARG_ENABLE([debug], AS_HELP_STRING([--enable-debug], [build in debug configuration]),
-              [DEBUG_FLAGS="-O0 -DDEBUG -Wextra" enable_debug=yes],
+              [DEBUG_FLAGS="-O0 -DDEBUG -Wextra -Werror" enable_debug=yes],
               [DEBUG_FLAGS="-D_FORTIFY_SOURCE=2" enable_debug=no])
 AM_CONDITIONAL(DEBUG, test "x$enable_debug" = "xyes")
 
@@ -169,7 +165,7 @@ AC_ARG_ENABLE([lto],
     AS_HELP_STRING([--enable-lto], [build with link-time optimizations (-flto)])
 )
 AS_IF([test "x$enable_lto" = "xyes"], [
-    CPPFLAGS="$CPPFLAGS -flto" LDFLAGS="$LDFLAGS -flto"
+    AM_CPPFLAGS="$AM_CPPFLAGS -flto" LDFLAGS="$LDFLAGS -flto"
 ])
 
 # Enable/disable fast math
@@ -177,7 +173,7 @@ AC_ARG_ENABLE([fast-math],
     AS_HELP_STRING([--enable-fast-math], [build with unsafe floating point math optimizations (-ffast-math)])
 )
 AS_IF([test "x$enable_fast_math" = "xyes"], [
-    CPPFLAGS="$CPPFLAGS -ffast-math"
+    AM_CPPFLAGS="$AM_CPPFLAGS -ffast-math"
 ])
 
 # Check whether to build tests
@@ -186,68 +182,71 @@ AC_ARG_ENABLE([tests],
 )
 AM_CONDITIONAL(TESTS, test "x$enable_tests" != "xno")
 
-AM_COND_IF([TESTS], [    
-    TESTS_DIR=tests
-    AC_CONFIG_FILES(tests/Makefile
-                    tests/google/Makefile
-                    )
-
-], [
-    # Default visibility of symbols is hidden
-    CPPFLAGS="$CPPFLAGS -fvisibility=hidden"
-])
-AC_SUBST([TESTS_DIR])
-
 # Check whether to generate test coverage
 AC_ARG_ENABLE([test-coverage],
     AS_HELP_STRING([--enable-test-coverage],
                    [build with code coverage generation (this option depends on debug and tests switches)])
 )
 AS_IF([test "x$enable_test_coverage" = "xyes" -a "x$enable_debug" = "xyes" -a "x$enable_tests" != "xno"], [
-    CPPFLAGS="$CPPFLAGS --coverage"
+    AM_CPPFLAGS="$AM_CPPFLAGS --coverage"
     LDFLAGS="$LDFLAGS -lgcov"
 ])
-
-# Link with Makefile.am in source directories
-AC_CONFIG_FILES(Makefile $PACKAGE_NAME.pc
-                inc/Makefile
-                src/Makefile
-                )
                 
-# Security xFLAGS
+# Security flags
 SECURITYFLAGS="-fstack-protector --param=ssp-buffer-size=4 -Wall -Wno-comment -Wformat-security"
-CXXFLAGS="$CXXFLAGS $SECURITYFLAGS"
-CFLAGS="$CFLAGS $SECURITYFLAGS"
+AM_CPPFLAGS="$AM_CPPFLAGS $SECURITYFLAGS"
 LDFLAGS="$LDFLAGS -Wl,-z,relro -Wl,--hash-style=gnu"
 
 # Compile with -rdynamic
 LDFLAGS="$LDFLAGS -rdynamic"
 
 # Use the latest C++ standard
-CXXFLAGS="$CXXFLAGS -std=c++0x -fno-deduce-init-list"
+AM_CXXFLAGS="$AM_CXXFLAGS -std=c++0x -fno-deduce-init-list"
+
+# Use C99 standard
+AM_CFLAGS="$AM_CFLAGS -std=c99"
 
 # Warn of unused precompiled headers
-CXXFLAGS="$CXXFLAGS -Winvalid-pch"
+AM_CXXFLAGS="$AM_CXXFLAGS -Winvalid-pch"
 
-# Use the modern C standard
-CFLAGS="$CFLAGS -std=c99"
+# Some extra useful C++ warnings
+AM_CXXFLAGS="$AM_CXXFLAGS -Wold-style-cast -Wnon-virtual-dtor"
 
 # All include paths should be relative to source root or includes directory
-CPPFLAGS="$CPPFLAGS -I\$(top_srcdir) -I\$(top_srcdir)/inc -I\$(top_builddir)"
+AM_CPPFLAGS="$AM_CPPFLAGS -I\$(top_srcdir) -I\$(top_srcdir)/inc -I\$(top_builddir)"
 
 # Append debug flags
-CFLAGS="$CFLAGS $DEBUG_FLAGS"
-CXXFLAGS="$CXXFLAGS $DEBUG_FLAGS"
+AM_CPPFLAGS="$AM_CPPFLAGS $DEBUG_FLAGS"
 
 # Use OpenMP
-CPPFLAGS="$CPPFLAGS -fopenmp"
+AM_CPPFLAGS="$AM_CPPFLAGS -fopenmp"
 
 # Use the best march
 arch=$(echo $host | cut -d '-' -f 1)
 AS_IF([test $arch = i686 -o $arch = x86_64], [
-    CPPFLAGS="$CPPFLAGS -march=native"
+    AM_CPPFLAGS="$AM_CPPFLAGS -march=native"
 ], [
 	AS_IF([test $arch = arm], [
-    	CPPFLAGS="$CPPFLAGS -march=armv7-a -mfpu=neon"
+    	AM_CPPFLAGS="$AM_CPPFLAGS -march=armv7-a -mfpu=neon"
 	])
 ])
+
+AC_SUBST([AM_CXXFLAGS])
+AC_SUBST([AM_CPPFLAGS])
+AC_SUBST([AM_CFLAGS])
+
+# Link with Makefile.am in source directories
+AC_CONFIG_FILES(Makefile $PACKAGE_NAME.pc
+                inc/Makefile
+                src/Makefile)
+                
+AM_COND_IF([TESTS], [    
+    TESTS_DIR=tests
+    AC_CONFIG_FILES(tests/Makefile
+                    tests/google/Makefile)
+
+], [
+    # Default visibility of symbols is hidden
+    AM_CPPFLAGS="$AM_CPPFLAGS -fvisibility=hidden"
+])
+AC_SUBST([TESTS_DIR])               

@@ -49,7 +49,7 @@ AC_ARG_WITH([built-in-yaml-cpp],
     AS_IF([test "$host" = "$build" ], [
     	AC_CONFIG_COMMANDS(cmake, [
         cd yaml-cpp
-        CXXFLAGS="-fPIC -std=c++11" cmake ../$ac_top_srcdir/yaml-cpp \
+        CXXFLAGS="-fPIC -std=c++11 -Wno-deprecated-declarations" cmake ../$ac_top_srcdir/yaml-cpp \
         	-DYAML_CPP_BUILD_TOOLS=OFF -DYAML_CPP_BUILD_CONTRIB=OFF \
         	-DBUILD_SHARED_LIBS=OFF
         cd ..])
@@ -60,7 +60,7 @@ AC_ARG_WITH([built-in-yaml-cpp],
     	echo "set(CMAKE_CXX_COMPILER $CXX)" >> $host.cmake
     	AC_CONFIG_COMMANDS(cmake_cross, [
         cd yaml-cpp
-        CXXFLAGS="-fPIC -std=c++11" cmake ../$ac_top_srcdir/yaml-cpp \
+        CXXFLAGS="-fPIC -std=c++11 -Wno-deprecated-declarations" cmake ../$ac_top_srcdir/yaml-cpp \
         	-DYAML_CPP_BUILD_TOOLS=OFF -DYAML_CPP_BUILD_CONTRIB=OFF \
         	-DBUILD_SHARED_LIBS=OFF \
         	-DCMAKE_TOOLCHAIN_FILE=../$host.cmake

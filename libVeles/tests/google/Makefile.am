@@ -35,7 +35,8 @@ lib_gtest_la_SOURCES = src/gtest-all.cc
 
 # Compiler options. Here we are adding the include directory
 # to be searched for headers included in the source code.
-lib_gtest_la_CPPFLAGS = -I$(top_srcdir)/tests/google
+lib_gtest_la_CXXFLAGS = -I$(top_srcdir)/tests/google \
+	-Wno-missing-field-initializers -Wno-old-style-cast
 
 .PHONY: tests
 
