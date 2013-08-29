@@ -18,6 +18,7 @@
 #include <memory>
 #include <algorithm>
 #include <veles/unit.h>
+#include <veles/make_unique.h>
 
 #if __GNUC__ >= 4
 #pragma GCC visibility push(default)
@@ -57,15 +58,11 @@ class Workflow {
   void Execute(InputIterator begin, InputIterator end,
                          OutputIterator out) const {
     size_t max_size = MaxUnitSize();
-    std::unique_ptr<float[], void (*)(void*)> input(
-        mallocf(max_size), std::free);
-    std::unique_ptr<float[], void (*)(void*)> output(
-        mallocf(max_size), std::free);
+    auto input = std::uniquify(mallocf(max_size), std::free);
+    auto output = std::uniquify(mallocf(max_size), std::free);
     std::copy(begin, end, input.get());
-
     float* curr_in = input.get();
     float* curr_out = output.get();
-
     if (!units_.empty()) {
       for (const auto& unit : units_) {
         unit->Execute(curr_in, curr_out);
