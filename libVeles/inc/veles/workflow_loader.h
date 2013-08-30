@@ -12,16 +12,17 @@
 #ifndef INC_VELES_WORKFLOW_LOADER_H_
 #define INC_VELES_WORKFLOW_LOADER_H_
 
-#include <libarchive/libarchive/archive_entry.h>
-#include <libarchive/libarchive/archive.h>
 #include <unordered_map>
 #include <vector>
 #include <string>
 #include <memory>  // For shared_ptr<>
+#include <libarchive/libarchive/archive_entry.h>
+#include <libarchive/libarchive/archive.h>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
-#include "yaml-cpp/yaml.h"
+#include <yaml-cpp/yaml.h>
 #pragma GCC diagnostic pop
+#include <veles/poison.h>
 
 #if __GNUC__ >= 4
 #pragma GCC visibility push(default)

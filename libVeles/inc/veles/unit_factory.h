@@ -15,7 +15,7 @@
 
 #include <memory>
 #include <unordered_map>
-#include "veles/unit.h"
+#include <veles/unit.h>
 
 #if __GNUC__ >= 4
 #pragma GCC visibility push(default)

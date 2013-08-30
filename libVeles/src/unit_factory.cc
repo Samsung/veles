@@ -42,7 +42,7 @@ UnitFactory::UnitConstructor UnitFactory::operator[](
 
 void UnitFactory::PrintRegisteredUnits() const {
   for (auto tit : map_) {
-    std::printf("%s\n", tit.first.c_str());
+    std::fprintf(stderr, "%s\n", tit.first.c_str());
   }
 }
 

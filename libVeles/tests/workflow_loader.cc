@@ -10,10 +10,10 @@
  *  Copyright 2013 Samsung R&D Institute Russia
  */
 
-#include "inc/veles/workflow_loader.h"
 #include <unistd.h>
 #include <string>
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+#include "inc/veles/workflow_loader.h"
 
 using std::string;
 
@@ -153,20 +153,20 @@ activation_function : 1
 void PrintfNodeType(const YAML::Node& node, const string prepend) {
   switch (node.Type()) {
     case YAML::NodeType::Map:
-      printf("%s is Map, size: %ld\n", prepend.c_str(), node.size());
+      fprintf(stderr, "%s is Map, size: %ld\n", prepend.c_str(), node.size());
       break;
     case YAML::NodeType::Null:
-      printf("%s is Null, size: %ld\n", prepend.c_str(), node.size());
+      fprintf(stderr, "%s is Null, size: %ld\n", prepend.c_str(), node.size());
       break;
     case YAML::NodeType::Scalar:
-      printf("%s is Scalar: %s\n", prepend.c_str(),
+      fprintf(stderr, "%s is Scalar: %s\n", prepend.c_str(),
              node.as<string>().c_str());
       break;
     case YAML::NodeType::Sequence:
-      printf("%s is Sequence, size: %ld\n", prepend.c_str(), node.size());
+      fprintf(stderr, "%s is Sequence, size: %ld\n", prepend.c_str(), node.size());
       break;
     case YAML::NodeType::Undefined:
-      printf("%s is Undefined, size: %ld\n", prepend.c_str(), node.size());
+      fprintf(stderr, "%s is Undefined, size: %ld\n", prepend.c_str(), node.size());
       break;
   }
 }
@@ -175,19 +175,19 @@ void IterateThroughYAML(const YAML::Node& node) {
   for (auto it = node.begin(); it != node.end(); ++it) {
     switch (it->Type()) {
       case YAML::NodeType::Null:
-        printf("Null;\n");
+        fprintf(stderr, "Null;\n");
         break;
       case YAML::NodeType::Undefined:
-        printf("Undefined;\n");
+        fprintf(stderr, "Undefined;\n");
         break;
       case YAML::NodeType::Scalar:
-        printf("Scalar \n");
+        fprintf(stderr, "Scalar \n");
         break;
       case YAML::NodeType::Sequence:
-        printf("Sequence;\n");
+        fprintf(stderr, "Sequence;\n");
         break;
       case YAML::NodeType::Map:
-        printf("Map \n");
+        fprintf(stderr, "Map \n");
         break;
     }
   }
