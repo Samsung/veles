@@ -11,6 +11,7 @@
  */
 
 #include "inc/veles/workflow_loader.h"
+#include "inc/veles/unit_factory.h"
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
@@ -72,14 +73,14 @@ void WorkflowLoader::CreateWorkflow(const YAML::Node& doc) {
       value = it.second.as<string>();
       shared_ptr<string> temp(new string(value));
 
-      workflow_.Properties.insert({key, temp});
+      workflow_desc_.Properties.insert({key, temp});
       key.clear();
       value.clear();
     } else if (it.first.IsScalar() && it.second.IsMap()) {
       UnitDescription unit;
       unit.Name = it.first.as<string>();
       WorkflowLoader::GetUnit(it.second, &unit);
-      WorkflowLoader::workflow_.Units.push_back(unit);
+      WorkflowLoader::workflow_desc_.Units.push_back(unit);
     } else {
       // It can't be neither Scalar nor Map!!!
       throw std::runtime_error(
@@ -159,36 +160,48 @@ std::shared_ptr<float> WorkflowLoader::GetArrayFromFile(const string& file,
                                                         size_t* arr_size) {
   string link_to_file = kWorkingDirectory + file;
   // Open extracted files
-  ifstream fstream(link_to_file, std::ios::in|std::ios::binary|
+  ifstream fr(link_to_file, std::ios::in|std::ios::binary|
                    std::ios::ate);
-  if(!fstream.is_open()) {
-    fprintf(stderr, "Veles::WorkflowLoader::GetArrayFromFile: Can't open the "
-            "file with array");
+  if (!fr.is_open()) {
     throw std::runtime_error
       ("Veles::WorkflowLoader::GetArrayFromFile: Can't open file with array");
   }
   // Calculate size of float array to read from file
-  int array_size = fstream.tellg();
+  int array_size = fr.tellg();
   *arr_size = array_size;
   // Read array
   auto weight = shared_ptr<float>(mallocf(array_size), free);
-  fstream.read(reinterpret_cast<char*>(weight.get()), array_size*sizeof(float));
+  fr.read(reinterpret_cast<char*>(weight.get()), array_size*sizeof(float));
 
   return weight;
+}
+
+void WorkflowLoader::InitilizeWorkflow() {
+  for (auto& it : workflow_desc_.Units) {
+    auto Unit = Veles::UnitFactory::Instance()[it.Name]();
+    for (auto& itUnit : it.Properties) {
+      Unit->SetParameter(itUnit.first, itUnit.second);
+    }
+    workflow_.AddUnit(Unit);
+  }
+}
+
+Veles::Workflow WorkflowLoader::GetWorkflow() {
+  return workflow_;
 }
 
 string WorkflowLoader::PrintWorkflowStructure() {
   // Workflow properties to string
   string result = "\nWorkFlow properties:\n";
 
-  for (auto x : workflow_.Properties) {
+  for (auto x : workflow_desc_.Properties) {
     result += x.first + " : " + *(static_cast<string*>(x.second.get())) + "\n";
   }
   // Print units and their properties
-  for (unsigned i = 0; i < workflow_.Units.size(); ++i) {
-    result += "\nUnit name: " + workflow_.Units.at(i).Name + "\n";
+  for (unsigned i = 0; i < workflow_desc_.Units.size(); ++i) {
+    result += "\nUnit name: " + workflow_desc_.Units.at(i).Name + "\n";
 
-    for (auto y : workflow_.Units.at(i).Properties) {
+    for (auto y : workflow_desc_.Units.at(i).Properties) {
       result += y.first + " : " + *static_cast<string*>(y.second.get()) + "\n";
     }
   }

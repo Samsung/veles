@@ -38,9 +38,9 @@ class WorkflowLoaderTest: public ::testing::Test {
     string temp_path2 = current_path + "/tests/workflow_files/";
     // Check existence of archive
     if (access(temp_path1.c_str(), 0) != -1) {
-      current_path = temp_path1;  // "/workflow_files/"
+      current_path = temp_path1;  // "/workflow_desc_files/"
     } else if (access(temp_path2.c_str(), 0) != -1) {
-      current_path = temp_path2;  // "/tests/workflow_files/"
+      current_path = temp_path2;  // "/tests/workflow_desc_files/"
     } else {
       current_path = "";  // Error
     }
@@ -48,95 +48,94 @@ class WorkflowLoaderTest: public ::testing::Test {
 
   void MainTest2() {
     if (current_path == string("")) {
-      FAIL();  // Can't find folder workflow_files
+      FAIL();  // Can't find folder workflow_desc_files
     }
     // Check everything
     WorkflowLoader test;
 
     string temp = current_path + "workflow.tar.gz";
     ASSERT_NO_THROW(test.Load(temp, "default.yaml"));
-    EXPECT_EQ(size_t(2), test.workflow_.Units.size());
+    EXPECT_EQ(size_t(2), test.workflow_desc_.Units.size());
 
     int first_unit = 0, second_unit = 1;
-    if (test.workflow_.Units.at(0).Name == string("All2AllTanh")) {
+    if (test.workflow_desc_.Units.at(0).Name == string("All2AllTanh")) {
       first_unit = 0;
       second_unit = 1;
-    } else if (test.workflow_.Units.at(1).Name == string("All2AllTanh")) {
+    } else if (test.workflow_desc_.Units.at(1).Name == string("All2AllTanh")) {
       first_unit = 1;
       second_unit = 0;
     } else {
       FAIL();
     }
 //      link_to_output: unit1output.bin
-    EXPECT_EQ(string("All2AllTanh"), test.workflow_.Units.at(first_unit).Name);
-    EXPECT_EQ(string("All2All"), test.workflow_.Units.at(second_unit).Name);
+    EXPECT_EQ(string("All2AllTanh"), test.workflow_desc_.Units.at(first_unit).Name);
+    EXPECT_EQ(string("All2All"), test.workflow_desc_.Units.at(second_unit).Name);
     EXPECT_EQ(string("unit0bias.bin"),
                   *std::static_pointer_cast<string>(
-                      test.workflow_.Units.at(first_unit).Properties.at(
+                      test.workflow_desc_.Units.at(first_unit).Properties.at(
                           "link_to_bias")));
     EXPECT_EQ(string("unit1bias.bin"),
                   *std::static_pointer_cast<string>(
-                      test.workflow_.Units.at(second_unit).Properties.at(
+                      test.workflow_desc_.Units.at(second_unit).Properties.at(
                           "link_to_bias")));
     EXPECT_EQ(string("unit0output.bin"),
                   *std::static_pointer_cast<string>(
-                      test.workflow_.Units.at(first_unit).Properties.at(
+                      test.workflow_desc_.Units.at(first_unit).Properties.at(
                           "link_to_output")));
     EXPECT_EQ(string("unit1output.bin"),
                   *std::static_pointer_cast<string>(
-                      test.workflow_.Units.at(second_unit).Properties.at(
+                      test.workflow_desc_.Units.at(second_unit).Properties.at(
                           "link_to_output")));
   }
 
   void MainTest() {
     if (current_path == string("")) {
-      FAIL();  // Can't find folder workflow_files
+      FAIL();  // Can't find folder workflow_desc_files
     }
     WorkflowLoader test;
     string temp = current_path + "neural_network.tar.gz";
     ASSERT_NO_THROW(test.Load(temp, "default.yaml"));
-
-    EXPECT_EQ(size_t(2), test.workflow_.Units.size()) << "Not equal";
-    EXPECT_EQ(size_t(4), test.workflow_.Properties.size());
+    EXPECT_EQ(size_t(2), test.workflow_desc_.Units.size()) << "Not equal";
+    EXPECT_EQ(size_t(4), test.workflow_desc_.Properties.size());
     EXPECT_EQ(string("2"),
-              *std::static_pointer_cast<string>(test.workflow_.Properties.at(
+              *std::static_pointer_cast<string>(test.workflow_desc_.Properties.at(
                   "layers_number")));
     EXPECT_EQ(string("0"),
-              *std::static_pointer_cast<string>(test.workflow_.Properties.at(
+              *std::static_pointer_cast<string>(test.workflow_desc_.Properties.at(
                   "neural_network_type")));
     EXPECT_EQ(string("Feedforward neural network"),
-              *std::static_pointer_cast<string>(test.workflow_.Properties.at(
+              *std::static_pointer_cast<string>(test.workflow_desc_.Properties.at(
                   "neural_network_type_desc")));
     EXPECT_EQ(string("SaverUnit2"),
-              *std::static_pointer_cast<string>(test.workflow_.Properties.at(
+              *std::static_pointer_cast<string>(test.workflow_desc_.Properties.at(
                   "service_info")));
     int first_layer = 0, second_layer = 1;
-    if (test.workflow_.Units.at(0).Name == string("layer 0")) {
+    if (test.workflow_desc_.Units.at(0).Name == string("layer 0")) {
       first_layer = 0;
       second_layer = 1;
-    } else if (test.workflow_.Units.at(1).Name == string("layer 0")) {
+    } else if (test.workflow_desc_.Units.at(1).Name == string("layer 0")) {
       first_layer = 1;
       second_layer = 0;
     } else {
       FAIL();
     }
-    EXPECT_EQ(string("layer 0"), test.workflow_.Units.at(first_layer).Name);
-    EXPECT_EQ(string("layer 1"), test.workflow_.Units.at(second_layer).Name);
+    EXPECT_EQ(string("layer 0"), test.workflow_desc_.Units.at(first_layer).Name);
+    EXPECT_EQ(string("layer 1"), test.workflow_desc_.Units.at(second_layer).Name);
     EXPECT_EQ(string("tanh"),
               *std::static_pointer_cast<string>(
-                  test.workflow_.Units.at(first_layer).Properties.at(
+                  test.workflow_desc_.Units.at(first_layer).Properties.at(
                       "activation_function_descr")));
     EXPECT_EQ(string("softmax"),
               *std::static_pointer_cast<string>(
-                  test.workflow_.Units.at(second_layer).Properties.at(
+                  test.workflow_desc_.Units.at(second_layer).Properties.at(
                       "activation_function_descr")));
     EXPECT_EQ(string("layer0bias.bin"),
               *std::static_pointer_cast<string>(
-                  test.workflow_.Units.at(first_layer).Properties.at(
+                  test.workflow_desc_.Units.at(first_layer).Properties.at(
                       "link_to_bias")));
     EXPECT_EQ(string("layer1bias.bin"),
               *std::static_pointer_cast<string>(
-                  test.workflow_.Units.at(second_layer).Properties.at(
+                  test.workflow_desc_.Units.at(second_layer).Properties.at(
                       "link_to_bias")));
   }
 
@@ -165,41 +164,37 @@ class WorkflowLoaderTest: public ::testing::Test {
 
   void ComplexYamlTest1() {
     if (current_path == string("")) {
-      FAIL();  // Can't find folder workflow_files
+      FAIL();  // Can't find folder workflow_desc_files
     }
     string temp = current_path + "default.yaml";
     ASSERT_NO_THROW(test.GetWorkflow(temp));
 
-    string expected_result = R"(
-WorkFlow properties:
-service_info : SaverUnit2
-layers_number : 2
-neural_network_type : 0
-neural_network_type_desc : Feedforward neural network
+    string result = test.PrintWorkflowStructure();
 
-Unit name: layer 0
-activation_function_descr : tanh
-width : 784
-layer_number : 0
-height : 100
-activation_function : 0
-
-Unit name: layer 1
-layer_number : 1
-height : 10
-activation_function_descr : softmax
-width : 100
-activation_function : 1
-)";
-    EXPECT_EQ(expected_result, test.PrintWorkflowStructure());
+    EXPECT_NE(string::npos, result.find("service_info : SaverUnit2"));
+    EXPECT_NE(string::npos, result.find("layers_number : 2"));
+    EXPECT_NE(string::npos, result.find("neural_network_type : 0"));
+    EXPECT_NE(string::npos, result.find("neural_network_type_desc : Feedforward neural network"));
+    EXPECT_NE(string::npos, result.find("Unit name: layer 0"));
+    EXPECT_NE(string::npos, result.find("activation_function_descr : tanh"));
+    EXPECT_NE(string::npos, result.find("width : 784"));
+    EXPECT_NE(string::npos, result.find("layer_number : 0"));
+    EXPECT_NE(string::npos, result.find("height : 100"));
+    EXPECT_NE(string::npos, result.find("activation_function : 0"));
+    EXPECT_NE(string::npos, result.find("Unit name: layer 1"));
+    EXPECT_NE(string::npos, result.find("layer_number : 1"));
+    EXPECT_NE(string::npos, result.find("height : 10"));
+    EXPECT_NE(string::npos, result.find("activation_function_descr : softmax"));
+    EXPECT_NE(string::npos, result.find("width : 100"));
+    EXPECT_NE(string::npos, result.find("activation_function : 1"));
   }
 
   void TestExtractArchive() {
     if (current_path == string("")) {
-      FAIL();  // Can't find folder workflow_files
+      FAIL();  // Can't find folder workflow_desc_files
     }
     string pathToArchive = current_path + "test_archive.tar.gz";
-    char tempFolderName[40] = "/tmp/workflow_files_tmpXXXXXX";
+    char tempFolderName[40] = "/tmp/workflow_desc_files_tmpXXXXXX";
     char* tempFolderName2 = mkdtemp(tempFolderName);
     // Check existence of temporary folder
     if (tempFolderName2 == nullptr) {
@@ -227,11 +222,11 @@ activation_function : 1
 
   void TestRemoveDirectory() {
     if (current_path == string("")) {
-      FAIL();  // Can't find folder workflow_files
+      FAIL();  // Can't find folder workflow_desc_files
     }
     string pathToArchive = current_path + "remove_folder_testing.tar.gz";
 
-    char tempFolderName[40] = "/tmp/workflow_files_tmp2XXXXXX";
+    char tempFolderName[40] = "/tmp/workflow_desc_files_tmp2XXXXXX";
     char* tempFolderName2 = mkdtemp(tempFolderName);
     // Check existence of temporary folder
     if (tempFolderName2 == nullptr) {
@@ -247,7 +242,7 @@ activation_function : 1
       FAIL();
     }
     // Check deleting of non existing folder
-    string temp("/tmp/workflow_files_non_existing_folder/");
+    string temp("/tmp/workflow_desc_files_non_existing_folder/");
     EXPECT_ANY_THROW(test.RemoveDirectory(temp));
     temp = tempFolderName2;
     // Extract folder with files with archive and remove this folder

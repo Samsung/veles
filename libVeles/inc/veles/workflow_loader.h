@@ -16,13 +16,14 @@
 #include <vector>
 #include <string>
 #include <memory>  // For shared_ptr<>
-#include <libarchive/libarchive/archive_entry.h>
-#include <libarchive/libarchive/archive.h>
+#include <libarchive/libarchive/archive_entry.h>  // NOLINT(*)
+#include <libarchive/libarchive/archive.h>  // NOLINT(*)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
-#include <yaml-cpp/yaml.h>
+#include <yaml-cpp/yaml.h>  // NOLINT(*)
 #pragma GCC diagnostic pop
-#include <veles/poison.h>
+#include <veles/workflow.h>  // NOLINT(*)
+#include <veles/poison.h>  // NOLINT(*)
 
 #if __GNUC__ >= 4
 #pragma GCC visibility push(default)
@@ -113,9 +114,11 @@ class WorkflowLoader {
    *  @endcode
    * */
   std::string PrintWorkflowStructure();
+  Workflow GetWorkflow();
+  WorkflowDescription GetWorkflowDescription() const { return workflow_desc_; }
 
-  WorkflowDescription GetWorkflowDescription() const { return workflow_; }
-  /// Default path to work directory.
+  void InitilizeWorkflow();
+  /// Default path to working directory.
   static const char* kWorkingDirectory;
   /// Default name of decompressed yaml file.
   static const char* kWorkflowDecompressedFile;
@@ -141,10 +144,11 @@ class WorkflowLoader {
    *
    * Open yaml file (or print error if it not possible)
    * */
-  void GetWorkflow() {
+  void InitWorkflow() {
     auto temp = std::string(kWorkingDirectory) + kWorkflowDecompressedFile;
     GetWorkflow(temp);
   }
+
   void GetWorkflow(const std::string& yaml_filename);
   /// @brief Extract structure of workflow from YAML::Node
   /**
@@ -179,7 +183,8 @@ class WorkflowLoader {
   /// @brief Some function for ExtractArchive
   int  CopyData(const archive& ar, archive *aw);
 
-  WorkflowDescription workflow_;
+  WorkflowDescription workflow_desc_;
+  Workflow workflow_;
   // Variable to save path + name of archive with info about workflow
   std::string archive_name_;
   std::string file_with_workflow_;
