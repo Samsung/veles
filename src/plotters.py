@@ -466,7 +466,7 @@ class Weights2D(Plotter):
         i = 0
         for row in range(0, n_rows):
             for col in range(0, n_cols):
-                ax = figure.add_subplot(n_rows, n_cols, i)
+                ax = figure.add_subplot(n_rows, n_cols, i + 1)
                 ax.cla()
                 ax.axis('off')
                 v = value[i].ravel()[:sz]
