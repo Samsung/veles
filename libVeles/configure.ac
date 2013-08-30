@@ -76,7 +76,8 @@ AM_COND_IF([TESTS], [
      AC_CONFIG_LINKS([tests/workflow_files/remove_folder_testing.tar.gz:tests/workflow_files/remove_folder_testing.tar.gz
                       tests/workflow_files/test_archive.tar.gz:tests/workflow_files/test_archive.tar.gz
                       tests/workflow_files/default.yaml:tests/workflow_files/default.yaml
-                      tests/workflow_files/neural_network.tar.gz:tests/workflow_files/neural_network.tar.gz])
+                      tests/workflow_files/neural_network.tar.gz:tests/workflow_files/neural_network.tar.gz
+		      tests/workflow_files/workflow.tar.gz:tests/workflow_files/workflow.tar.gz])
 ])
 
 # Check some lib...

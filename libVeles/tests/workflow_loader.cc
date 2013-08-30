@@ -10,10 +10,11 @@
  *  Copyright 2013 Samsung R&D Institute Russia
  */
 
+#include <veles/workflow_loader.h>
 #include <unistd.h>
 #include <string>
 #include <gtest/gtest.h>
-#include "inc/veles/workflow_loader.h"
+
 
 using std::string;
 using std::static_pointer_cast;
@@ -25,6 +26,7 @@ void PrintfNodeType(const YAML::Node& node, const string prepend);
 class WorkflowLoaderTest: public ::testing::Test {
  public:
   WorkflowLoaderTest() {
+    current_path = "";
     char  currentPath[FILENAME_MAX];
 
     if (!getcwd(currentPath, sizeof(currentPath))) {
@@ -32,15 +34,69 @@ class WorkflowLoaderTest: public ::testing::Test {
     } else {
       current_path = currentPath;
     }
+    string temp_path1 = current_path + "/workflow_files/";
+    string temp_path2 = current_path + "/tests/workflow_files/";
+    // Check existence of archive
+    if (access(temp_path1.c_str(), 0) != -1) {
+      current_path = temp_path1;  // "/workflow_files/"
+    } else if (access(temp_path2.c_str(), 0) != -1) {
+      current_path = temp_path2;  // "/tests/workflow_files/"
+    } else {
+      current_path = "";  // Error
+    }
+  }
+
+  void MainTest2() {
+    if (current_path == string("")) {
+      FAIL();  // Can't find folder workflow_files
+    }
+    // Check everything
+    WorkflowLoader test;
+
+    string temp = current_path + "workflow.tar.gz";
+    ASSERT_NO_THROW(test.Load(temp, "default.yaml"));
+    EXPECT_EQ(size_t(2), test.workflow_.Units.size());
+
+    int first_unit = 0, second_unit = 1;
+    if (test.workflow_.Units.at(0).Name == string("All2AllTanh")) {
+      first_unit = 0;
+      second_unit = 1;
+    } else if (test.workflow_.Units.at(1).Name == string("All2AllTanh")) {
+      first_unit = 1;
+      second_unit = 0;
+    } else {
+      FAIL();
+    }
+//      link_to_output: unit1output.bin
+    EXPECT_EQ(string("All2AllTanh"), test.workflow_.Units.at(first_unit).Name);
+    EXPECT_EQ(string("All2All"), test.workflow_.Units.at(second_unit).Name);
+    EXPECT_EQ(string("unit0bias.bin"),
+                  *std::static_pointer_cast<string>(
+                      test.workflow_.Units.at(first_unit).Properties.at(
+                          "link_to_bias")));
+    EXPECT_EQ(string("unit1bias.bin"),
+                  *std::static_pointer_cast<string>(
+                      test.workflow_.Units.at(second_unit).Properties.at(
+                          "link_to_bias")));
+    EXPECT_EQ(string("unit0output.bin"),
+                  *std::static_pointer_cast<string>(
+                      test.workflow_.Units.at(first_unit).Properties.at(
+                          "link_to_output")));
+    EXPECT_EQ(string("unit1output.bin"),
+                  *std::static_pointer_cast<string>(
+                      test.workflow_.Units.at(second_unit).Properties.at(
+                          "link_to_output")));
   }
 
   void MainTest() {
-    // Check everything
+    if (current_path == string("")) {
+      FAIL();  // Can't find folder workflow_files
+    }
     WorkflowLoader test;
-    string temp = current_path + "/workflow_files/neural_network.tar.gz";
+    string temp = current_path + "neural_network.tar.gz";
     ASSERT_NO_THROW(test.Load(temp, "default.yaml"));
 
-    EXPECT_EQ(size_t(2), test.workflow_.Units.size());
+    EXPECT_EQ(size_t(2), test.workflow_.Units.size()) << "Not equal";
     EXPECT_EQ(size_t(4), test.workflow_.Properties.size());
     EXPECT_EQ(string("2"),
               *std::static_pointer_cast<string>(test.workflow_.Properties.at(
@@ -54,22 +110,34 @@ class WorkflowLoaderTest: public ::testing::Test {
     EXPECT_EQ(string("SaverUnit2"),
               *std::static_pointer_cast<string>(test.workflow_.Properties.at(
                   "service_info")));
-    EXPECT_EQ(string("layer 0"), test.workflow_.Units.at(0).Name);
-    EXPECT_EQ(string("layer 1"), test.workflow_.Units.at(1).Name);
+    int first_layer = 0, second_layer = 1;
+    if (test.workflow_.Units.at(0).Name == string("layer 0")) {
+      first_layer = 0;
+      second_layer = 1;
+    } else if (test.workflow_.Units.at(1).Name == string("layer 0")) {
+      first_layer = 1;
+      second_layer = 0;
+    } else {
+      FAIL();
+    }
+    EXPECT_EQ(string("layer 0"), test.workflow_.Units.at(first_layer).Name);
+    EXPECT_EQ(string("layer 1"), test.workflow_.Units.at(second_layer).Name);
     EXPECT_EQ(string("tanh"),
               *std::static_pointer_cast<string>(
-                  test.workflow_.Units.at(0).Properties.at(
+                  test.workflow_.Units.at(first_layer).Properties.at(
                       "activation_function_descr")));
     EXPECT_EQ(string("softmax"),
               *std::static_pointer_cast<string>(
-                  test.workflow_.Units.at(1).Properties.at(
+                  test.workflow_.Units.at(second_layer).Properties.at(
                       "activation_function_descr")));
     EXPECT_EQ(string("layer0bias.bin"),
               *std::static_pointer_cast<string>(
-                  test.workflow_.Units.at(0).Properties.at("link_to_bias")));
+                  test.workflow_.Units.at(first_layer).Properties.at(
+                      "link_to_bias")));
     EXPECT_EQ(string("layer1bias.bin"),
               *std::static_pointer_cast<string>(
-                  test.workflow_.Units.at(1).Properties.at("link_to_bias")));
+                  test.workflow_.Units.at(second_layer).Properties.at(
+                      "link_to_bias")));
   }
 
   void TestPropertiesTable() {
@@ -96,8 +164,10 @@ class WorkflowLoaderTest: public ::testing::Test {
   }
 
   void ComplexYamlTest1() {
-    string temp = current_path + "/workflow_files/default.yaml";
-//    string temp = current_path + "/tests/workflow_files/default.yaml";
+    if (current_path == string("")) {
+      FAIL();  // Can't find folder workflow_files
+    }
+    string temp = current_path + "default.yaml";
     ASSERT_NO_THROW(test.GetWorkflow(temp));
 
     string expected_result = R"(
@@ -125,8 +195,10 @@ activation_function : 1
   }
 
   void TestExtractArchive() {
-    string pathToArchive = current_path + "/workflow_files/test_archive.tar.gz";
-//    string pathToArchive = current_path + "/tests/workflow_files/test_archive.tar.gz";
+    if (current_path == string("")) {
+      FAIL();  // Can't find folder workflow_files
+    }
+    string pathToArchive = current_path + "test_archive.tar.gz";
     char tempFolderName[40] = "/tmp/workflow_files_tmpXXXXXX";
     char* tempFolderName2 = mkdtemp(tempFolderName);
     // Check existence of temporary folder
@@ -154,9 +226,11 @@ activation_function : 1
   }
 
   void TestRemoveDirectory() {
-    string pathToArchive = current_path +
-        "/workflow_files/remove_folder_testing.tar.gz";
-//    string pathToArchive = current_path + "tests/workflow_files/remove_folder_testing.tar.gz";
+    if (current_path == string("")) {
+      FAIL();  // Can't find folder workflow_files
+    }
+    string pathToArchive = current_path + "remove_folder_testing.tar.gz";
+
     char tempFolderName[40] = "/tmp/workflow_files_tmp2XXXXXX";
     char* tempFolderName2 = mkdtemp(tempFolderName);
     // Check existence of temporary folder
@@ -201,10 +275,12 @@ void PrintfNodeType(const YAML::Node& node, const string prepend) {
              node.as<string>().c_str());
       break;
     case YAML::NodeType::Sequence:
-      fprintf(stderr, "%s is Sequence, size: %ld\n", prepend.c_str(), node.size());
+      fprintf(stderr, "%s is Sequence, size: %ld\n", prepend.c_str(),
+              node.size());
       break;
     case YAML::NodeType::Undefined:
-      fprintf(stderr, "%s is Undefined, size: %ld\n", prepend.c_str(), node.size());
+      fprintf(stderr, "%s is Undefined, size: %ld\n", prepend.c_str(),
+              node.size());
       break;
   }
 }
@@ -252,8 +328,8 @@ TEST_F(WorkflowLoaderTest, TestPropertiesTable) {
 }
 
 TEST_F(WorkflowLoaderTest, MainTest) {
-
   MainTest();
+  MainTest2();
 }
 
 }  // namespace Veles
