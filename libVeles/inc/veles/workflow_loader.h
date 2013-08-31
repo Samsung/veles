@@ -16,8 +16,6 @@
 #include <vector>
 #include <string>
 #include <memory>  // For shared_ptr<>
-#include <libarchive/libarchive/archive_entry.h>  // NOLINT(*)
-#include <libarchive/libarchive/archive.h>  // NOLINT(*)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #include <yaml-cpp/yaml.h>  // NOLINT(*)
@@ -25,9 +23,12 @@
 #include <veles/workflow.h>  // NOLINT(*)
 #include <veles/poison.h>  // NOLINT(*)
 
+
 #if __GNUC__ >= 4
 #pragma GCC visibility push(default)
 #endif
+
+struct archive;
 
 namespace Veles {
 /// Type that contains properties
@@ -88,7 +89,7 @@ class WorkflowLoader {
    * 4) Read bin-files to arrays of float, add arrays to WorkflowDescription\n
    * 6) Delete kWorkDirectory with all files.\n
    */
-  void Load(const std::string& archive, const std::string& fileWithWorkflow);
+  void Load(const std::string& archive);
   /**
    * @brief Print structure of workflow (without float arrays).
    *

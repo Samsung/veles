@@ -19,6 +19,8 @@
 #include <vector>
 #include <exception>
 #include "inc/veles/make_unique.h"
+#include <libarchive/libarchive/archive_entry.h>  // NOLINT(*)
+#include <libarchive/libarchive/archive.h>  // NOLINT(*)
 
 
 using std::string;
@@ -37,12 +39,13 @@ using Veles::WorkflowExtractionError;
 const char* WorkflowLoader::kWorkingDirectory = "/tmp/workflow_tmp/";
 /// Default name of decompressed yaml file.
 const char* WorkflowLoader::kWorkflowDecompressedFile =
-    "workflow_decompressed.yaml";
+    "default.yaml";
 
-void WorkflowLoader::Load(const string& archive,
-                         const string& fileWithWorkflow) {
+// TODO(EBulychev): delete fileWithWorkflow. fileWithWorkflow will always be
+// workflow.yaml
+void WorkflowLoader::Load(const string& archive) {
   archive_name_ = archive;
-  file_with_workflow_ = fileWithWorkflow;
+  file_with_workflow_ = kWorkflowDecompressedFile;
 
   //  1) Extract archive (using libarchive) to directory kWorkingDirectory.
   WorkflowLoader::ExtractArchive(archive_name_);
@@ -285,8 +288,9 @@ void WorkflowLoader::RemoveDirectory(const string& path) {
     while ((pent = readdir(dir.get()))) {
       // while there is still something in the directory to list
       if (pent->d_type == isFile) {
-        const char *file_to_delete = (path + "/" + pent->d_name).c_str();
-        remove(file_to_delete);
+        string path_to_del = (path + "/" + pent->d_name);
+
+        remove(path_to_del.c_str());
       }
     }
   }

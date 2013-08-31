@@ -54,7 +54,7 @@ class WorkflowLoaderTest: public ::testing::Test {
     WorkflowLoader test;
 
     string temp = current_path + "workflow.tar.gz";
-    ASSERT_NO_THROW(test.Load(temp, "default.yaml"));
+    ASSERT_NO_THROW(test.Load(temp));
     EXPECT_EQ(size_t(2), test.workflow_desc_.Units.size());
 
     int first_unit = 0, second_unit = 1;
@@ -94,7 +94,7 @@ class WorkflowLoaderTest: public ::testing::Test {
     }
     WorkflowLoader test;
     string temp = current_path + "neural_network.tar.gz";
-    ASSERT_NO_THROW(test.Load(temp, "default.yaml"));
+    ASSERT_NO_THROW(test.Load(temp));
     EXPECT_EQ(size_t(2), test.workflow_desc_.Units.size()) << "Not equal";
     EXPECT_EQ(size_t(4), test.workflow_desc_.Properties.size());
     EXPECT_EQ(string("2"),
