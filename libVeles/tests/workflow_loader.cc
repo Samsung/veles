@@ -14,6 +14,10 @@
 #include <unistd.h>
 #include <string>
 #include <gtest/gtest.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#include <yaml-cpp/yaml.h>  // NOLINT(*)
+#pragma GCC diagnostic pop
 
 
 using std::string;

@@ -12,17 +12,12 @@
 #ifndef INC_VELES_WORKFLOW_LOADER_H_
 #define INC_VELES_WORKFLOW_LOADER_H_
 
+#include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
-#include <string>
-#include <memory>  // For shared_ptr<>
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#include <yaml-cpp/yaml.h>  // NOLINT(*)
-#pragma GCC diagnostic pop
-#include <veles/workflow.h>  // NOLINT(*)
 #include <veles/poison.h>  // NOLINT(*)
-
+#include <veles/workflow.h>  // NOLINT(*)
 
 #if __GNUC__ >= 4
 #pragma GCC visibility push(default)
@@ -30,8 +25,14 @@
 
 struct archive;
 
+namespace YAML {
+
+class Node;
+
+}
+
 namespace Veles {
-/// Type that contains properties
+/// Type that contains Unit properties
 typedef std::unordered_map<std::string, std::shared_ptr<void>> PropertiesTable;
 /**
  * Structure that contains all required information about unit to construct it
@@ -118,7 +119,7 @@ class WorkflowLoader {
   Workflow GetWorkflow();
   WorkflowDescription GetWorkflowDescription() const { return workflow_desc_; }
 
-  void InitilizeWorkflow();
+  void InitializeWorkflow();
   /// Default path to working directory.
   static const char* kWorkingDirectory;
   /// Default name of decompressed yaml file.

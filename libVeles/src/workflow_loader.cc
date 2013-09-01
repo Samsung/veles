@@ -11,16 +11,20 @@
  */
 
 #include "inc/veles/workflow_loader.h"
-#include "inc/veles/unit_factory.h"
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
+#include <exception>
 #include <fstream>
 #include <vector>
-#include <exception>
-#include "inc/veles/make_unique.h"
 #include <libarchive/libarchive/archive_entry.h>  // NOLINT(*)
 #include <libarchive/libarchive/archive.h>  // NOLINT(*)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#include <yaml-cpp/yaml.h>  // NOLINT(*)
+#pragma GCC diagnostic pop
+#include "inc/veles/make_unique.h"
+#include "inc/veles/unit_factory.h"
 
 
 using std::string;
@@ -179,7 +183,7 @@ std::shared_ptr<float> WorkflowLoader::GetArrayFromFile(const string& file,
   return weight;
 }
 
-void WorkflowLoader::InitilizeWorkflow() {
+void WorkflowLoader::InitializeWorkflow() {
   for (auto& it : workflow_desc_.Units) {
     auto Unit = Veles::UnitFactory::Instance()[it.Name]();
     for (auto& itUnit : it.Properties) {
