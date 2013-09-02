@@ -23,7 +23,6 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #include <yaml-cpp/yaml.h>  // NOLINT(*)
 #pragma GCC diagnostic pop
-#include "inc/veles/make_unique.h"
 #include "inc/veles/unit_factory.h"
 
 
@@ -56,6 +55,7 @@ void WorkflowLoader::Load(const string& archive) {
   //  2) Read neural network structure from fileWithWorkflow
   auto workflow_file = string(kWorkingDirectory) + file_with_workflow_;
   WorkflowLoader::GetWorkflow(workflow_file);
+
   // Remove the working directory with all files
   WorkflowLoader::RemoveDirectory(kWorkingDirectory);
 }
@@ -112,7 +112,10 @@ void WorkflowLoader::GetUnit(const YAML::Node& doc, UnitDescription* unit) {
           size_t array_size = 0;
           unit->Properties.insert({new_key, GetArrayFromFile(value,
                                                              &array_size)});
-          string new_key_to_size = new_key + "_lenght";
+          if (new_key == string("output") || new_key == string("input")) {
+            array_size /= 60;
+          }
+          string new_key_to_size = new_key + "_length";
           auto temp_size = std::make_shared<size_t>(array_size);
           unit->Properties.insert({new_key_to_size, temp_size});
       }
@@ -174,11 +177,17 @@ std::shared_ptr<float> WorkflowLoader::GetArrayFromFile(const string& file,
       ("Veles::WorkflowLoader::GetArrayFromFile: Can't open file with array");
   }
   // Calculate size of float array to read from file
+  fr.seekg (0, fr.end);
   int array_size = fr.tellg();
-  *arr_size = array_size;
+  fr.seekg (0, fr.beg);
+
+  *arr_size = array_size/sizeof(float); // TODO(EBulychev): ??
   // Read array
   auto weight = shared_ptr<float>(mallocf(array_size), free);
-  fr.read(reinterpret_cast<char*>(weight.get()), array_size*sizeof(float));
+  fr.read(reinterpret_cast<char*>(weight.get()), array_size);
+
+  fprintf(stderr,"%s size = %d bytes,\n1: %f 2: %f \n", file.c_str(),
+          array_size, weight.get()[0], weight.get()[1]);
 
   return weight;
 }
@@ -187,13 +196,34 @@ void WorkflowLoader::InitializeWorkflow() {
   for (auto& it : workflow_desc_.Units) {
     auto Unit = Veles::UnitFactory::Instance()[it.Name]();
     for (auto& itUnit : it.Properties) {
+//      fprintf(stderr, "Properties: %s\n", itUnit.first.c_str());
+      if (string("bias_length") == itUnit.first) {
+        fprintf(stderr, "Properties: %s %zu\n", itUnit.first.c_str(),
+                *static_cast<size_t*>(itUnit.second.get()));
+      } else if (string("input_length") == itUnit.first) {
+        fprintf(stderr, "Properties: %s %zu\n", itUnit.first.c_str(),
+                *static_cast<size_t*>(itUnit.second.get()));
+      } else if (string("output_length") == itUnit.first) {
+        fprintf(stderr, "Properties: %s %zu\n", itUnit.first.c_str(),
+                *static_cast<size_t*>(itUnit.second.get()));
+      } else if (string("weights_length") == itUnit.first) {
+        fprintf(stderr, "Properties: %s %zu\n", itUnit.first.c_str(),
+                *static_cast<size_t*>(itUnit.second.get()));
+      } else {
+        fprintf(stderr, "Properties: %s\n", itUnit.first.c_str());
+      }
+
       Unit->SetParameter(itUnit.first, itUnit.second);
     }
+    fprintf(stderr, "\n\n");
     workflow_.AddUnit(Unit);
   }
 }
 
 Veles::Workflow WorkflowLoader::GetWorkflow() {
+  if (workflow_.UnitCount() == size_t(0)) {
+    InitializeWorkflow();
+  }
   return workflow_;
 }
 

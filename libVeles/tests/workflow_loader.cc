@@ -264,17 +264,17 @@ class WorkflowLoaderTest: public ::testing::Test {
 void PrintfNodeType(const YAML::Node& node, const string prepend) {
   switch (node.Type()) {
     case YAML::NodeType::Map:
-      fprintf(stderr, "%s is Map, size: %ld\n", prepend.c_str(), node.size());
+      fprintf(stderr, "%s is Map, size: %zu\n", prepend.c_str(), node.size());
       break;
     case YAML::NodeType::Null:
-      fprintf(stderr, "%s is Null, size: %ld\n", prepend.c_str(), node.size());
+      fprintf(stderr, "%s is Null, size: %zu\n", prepend.c_str(), node.size());
       break;
     case YAML::NodeType::Scalar:
       fprintf(stderr, "%s is Scalar: %s\n", prepend.c_str(),
              node.as<string>().c_str());
       break;
     case YAML::NodeType::Sequence:
-      fprintf(stderr, "%s is Sequence, size: %ld\n", prepend.c_str(),
+      fprintf(stderr, "%s is Sequence, size: %zu\n", prepend.c_str(),
               node.size());
       break;
     case YAML::NodeType::Undefined:

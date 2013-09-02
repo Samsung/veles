@@ -16,14 +16,21 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <veles/poison.h>  // NOLINT(*)
+
+#include <string>
+#include <memory>  // For shared_ptr<>
 #include <veles/workflow.h>  // NOLINT(*)
+#include <veles/poison.h>  // NOLINT(*)
 
 #if __GNUC__ >= 4
 #pragma GCC visibility push(default)
 #endif
 
 struct archive;
+namespace YAML {
+struct Node;
+}  // namespace YAML
+
 
 namespace YAML {
 
