@@ -18,8 +18,20 @@
 
 namespace Veles {
 
-std::shared_ptr<Unit> Workflow::GetUnit(size_t index) const {
-  if (index >= UnitCount()) {
+void Workflow::Add(const std::shared_ptr<Unit>& unit) {
+  units_.push_back(unit);
+}
+
+void Workflow::Clear() {
+  units_.clear();
+}
+
+size_t Workflow::Size() const noexcept {
+  return units_.size();
+}
+
+std::shared_ptr<Unit> Workflow::Get(size_t index) const {
+  if (index >= Size()) {
     throw std::out_of_range("index");
   }
   return units_[index];

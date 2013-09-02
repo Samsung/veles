@@ -212,12 +212,12 @@ void WorkflowLoader::InitializeWorkflow() {
       Unit->SetParameter(itUnit.first, itUnit.second);
     }
     fprintf(stderr, "\n\n");
-    workflow_.AddUnit(Unit);
+    workflow_.Add(Unit);
   }
 }
 
 Veles::Workflow WorkflowLoader::GetWorkflow() {
-  if (workflow_.UnitCount() == size_t(0)) {
+  if (workflow_.Size() == 0U) {
     InitializeWorkflow();
   }
   return workflow_;

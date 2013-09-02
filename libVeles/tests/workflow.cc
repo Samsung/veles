@@ -22,7 +22,7 @@ const size_t WorkflowTest::kCount = 3;
 TEST(Workflow, Construct) {
   Veles::Workflow workflow;
   size_t kExpectedCount = 0;
-  EXPECT_EQ(kExpectedCount, workflow.UnitCount());
+  EXPECT_EQ(kExpectedCount, workflow.Size());
 }
 
 TEST(Workflow, Add) {
@@ -31,28 +31,28 @@ TEST(Workflow, Add) {
   const size_t kInputs = 3;
   const size_t kOutputs = 4;
   for (size_t i = 0; i < kCount; ++i) {
-    ASSERT_EQ(i, workflow.UnitCount());
+    ASSERT_EQ(i, workflow.Size());
     bool isEven = i % 2 == 0;
-    workflow.AddUnit(
+    workflow.Add(
         std::make_shared<UnitMock>(
             isEven ? kInputs : kOutputs,
             isEven ? kOutputs : kInputs));
   }
   for (size_t i = 0; i < kCount; ++i) {
     bool isEven = i % 2 == 0;
-    ASSERT_EQ(UnitMock::kName, workflow.GetUnit(i)->Name());
-    ASSERT_EQ(isEven ? kInputs : kOutputs, workflow.GetUnit(i)->InputCount());
-    ASSERT_EQ(isEven ? kOutputs : kInputs, workflow.GetUnit(i)->OutputCount());
+    ASSERT_EQ(UnitMock::kName, workflow.Get(i)->Name());
+    ASSERT_EQ(isEven ? kInputs : kOutputs, workflow.Get(i)->InputCount());
+    ASSERT_EQ(isEven ? kOutputs : kInputs, workflow.Get(i)->OutputCount());
   }
-  ASSERT_THROW(workflow.GetUnit(kCount), std::out_of_range);
-  ASSERT_THROW(workflow.GetUnit(kCount * 2), std::out_of_range);
+  ASSERT_THROW(workflow.Get(kCount), std::out_of_range);
+  ASSERT_THROW(workflow.Get(kCount * 2), std::out_of_range);
 }
 
 void WorkflowTest::SetUp() {
   size_t sizes[kCount + 1];
   std::tie(sizes[0], sizes[1], sizes[2], sizes[3]) = GetParam();
   for (size_t i = 0; i < kCount; ++i) {
-    workflow_.AddUnit(
+    workflow_.Add(
         std::make_shared<UnitMock>(sizes[i], sizes[i + 1]));
   }
 }
@@ -82,7 +82,7 @@ TEST_P(WorkflowTest, Construct) {
   size_t inputs = 0;
   size_t outputs = 0;
   std::tie(inputs, std::ignore, std::ignore, outputs) = GetParam();
-  EXPECT_EQ(kCount, workflow_.UnitCount());
+  EXPECT_EQ(kCount, workflow_.Size());
   EXPECT_EQ(inputs, workflow_.InputCount());
   EXPECT_EQ(outputs, workflow_.OutputCount());
 }

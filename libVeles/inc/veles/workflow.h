@@ -33,37 +33,31 @@ class Workflow {
   /** @brief Appends a unit to the end of workflow
    *  @param unit VELES unit
    */
-  void AddUnit(std::shared_ptr<Unit> unit) {
-    units_.push_back(unit);
-  }
+  void Add(const std::shared_ptr<Unit>& unit);
 
   /** @brief Clears the Workflow
    */
-  void Clear() {
-    units_.clear();
-  }
+  void Clear();
 
   /** @brief Returns a unit from workflow
    *  @param index Unit position in workflow
    */
-  std::shared_ptr<Unit> GetUnit(size_t index) const;
+  std::shared_ptr<Unit> Get(size_t index) const;
 
   /** @brief Number of units
    */
-  size_t UnitCount() const noexcept {
-    return units_.size();
-  }
+  size_t Size() const noexcept;
 
   /* @brief Number of workflow inputs
    */
   size_t InputCount() const noexcept {
-    return UnitCount() ? units_.front()->InputCount() : 0;
+    return Size() ? units_.front()->InputCount() : 0;
   }
 
   /* @brief Number of workflow outputs
    */
   size_t OutputCount() const noexcept {
-    return UnitCount() ? units_.back()->OutputCount() : 0;
+    return Size() ? units_.back()->OutputCount() : 0;
   }
 
   /** @brief Executes the workflow

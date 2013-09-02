@@ -71,8 +71,10 @@ class WorkflowLoaderTest: public ::testing::Test {
       FAIL();
     }
 //      link_to_output: unit1output.bin
-    EXPECT_EQ(string("All2AllTanh"), test.workflow_desc_.Units.at(first_unit).Name);
-    EXPECT_EQ(string("All2All"), test.workflow_desc_.Units.at(second_unit).Name);
+    EXPECT_EQ(string("All2AllTanh"), test.workflow_desc_.Units.at(
+        first_unit).Name);
+    EXPECT_EQ(string("All2All"), test.workflow_desc_.Units.at(
+        second_unit).Name);
     EXPECT_EQ(string("unit0bias.bin"),
                   *std::static_pointer_cast<string>(
                       test.workflow_desc_.Units.at(first_unit).Properties.at(
@@ -101,17 +103,18 @@ class WorkflowLoaderTest: public ::testing::Test {
     EXPECT_EQ(size_t(2), test.workflow_desc_.Units.size()) << "Not equal";
     EXPECT_EQ(size_t(4), test.workflow_desc_.Properties.size());
     EXPECT_EQ(string("2"),
-              *std::static_pointer_cast<string>(test.workflow_desc_.Properties.at(
-                  "layers_number")));
+              *std::static_pointer_cast<string>(
+                  test.workflow_desc_.Properties.at("layers_number")));
     EXPECT_EQ(string("0"),
-              *std::static_pointer_cast<string>(test.workflow_desc_.Properties.at(
-                  "neural_network_type")));
+              *std::static_pointer_cast<string>(
+                  test.workflow_desc_.Properties.at("neural_network_type")));
     EXPECT_EQ(string("Feedforward neural network"),
-              *std::static_pointer_cast<string>(test.workflow_desc_.Properties.at(
-                  "neural_network_type_desc")));
+              *std::static_pointer_cast<string>(
+                  test.workflow_desc_.Properties.at(
+                      "neural_network_type_desc")));
     EXPECT_EQ(string("SaverUnit2"),
-              *std::static_pointer_cast<string>(test.workflow_desc_.Properties.at(
-                  "service_info")));
+              *std::static_pointer_cast<string>(
+                  test.workflow_desc_.Properties.at("service_info")));
     int first_layer = 0, second_layer = 1;
     if (test.workflow_desc_.Units.at(0).Name == string("layer 0")) {
       first_layer = 0;
@@ -122,8 +125,10 @@ class WorkflowLoaderTest: public ::testing::Test {
     } else {
       FAIL();
     }
-    EXPECT_EQ(string("layer 0"), test.workflow_desc_.Units.at(first_layer).Name);
-    EXPECT_EQ(string("layer 1"), test.workflow_desc_.Units.at(second_layer).Name);
+    EXPECT_EQ(string("layer 0"), test.workflow_desc_.Units.at(
+        first_layer).Name);
+    EXPECT_EQ(string("layer 1"), test.workflow_desc_.Units.at(
+        second_layer).Name);
     EXPECT_EQ(string("tanh"),
               *std::static_pointer_cast<string>(
                   test.workflow_desc_.Units.at(first_layer).Properties.at(
@@ -177,7 +182,8 @@ class WorkflowLoaderTest: public ::testing::Test {
     EXPECT_NE(string::npos, result.find("service_info : SaverUnit2"));
     EXPECT_NE(string::npos, result.find("layers_number : 2"));
     EXPECT_NE(string::npos, result.find("neural_network_type : 0"));
-    EXPECT_NE(string::npos, result.find("neural_network_type_desc : Feedforward neural network"));
+    EXPECT_NE(string::npos, result.find(
+        "neural_network_type_desc : Feedforward neural network"));
     EXPECT_NE(string::npos, result.find("Unit name: layer 0"));
     EXPECT_NE(string::npos, result.find("activation_function_descr : tanh"));
     EXPECT_NE(string::npos, result.find("width : 784"));
@@ -240,8 +246,8 @@ class WorkflowLoaderTest: public ::testing::Test {
     if (access(pathToArchive.c_str(), 0) == -1) {
       // Delete temporary folder
       rmdir(string(tempFolderName2).c_str());
-      fprintf(stderr,
-             "Path doesn't exist : %s\n", pathToArchive.c_str());
+      fprintf(stderr, "Path doesn't exist : %s\n",
+              pathToArchive.c_str());
       FAIL();
     }
     // Check deleting of non existing folder
