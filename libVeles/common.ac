@@ -39,8 +39,12 @@ AS_IF([test "x$SYSROOT" != "x" ],
 )
 
 AC_GNU_SOURCE
+OLD_CXXFLAGS=$CXXFLAGS
+OLD_CFLAGS=$CFLAGS
 AC_PROG_CXX
 AC_PROG_CC
+CXXFLAGS=$OLD_CXXFLAGS
+CFLAGS=$OLD_CFLAGS
 AC_HEADER_STDC
 AC_C_BIGENDIAN([AC_MSG_ERROR([Big endian hosts are not supported.])])
 
@@ -156,7 +160,7 @@ AC_SUBST([DOCS_DIR])
 
 # Check for debug configuration
 AC_ARG_ENABLE([debug], AS_HELP_STRING([--enable-debug], [build in debug configuration]),
-              [DEBUG_FLAGS="-O0 -DDEBUG -Wextra -Werror" enable_debug=yes],
+              [DEBUG_FLAGS="-g -O0 -DDEBUG -Wextra -Werror" enable_debug=yes],
               [DEBUG_FLAGS="-D_FORTIFY_SOURCE=2" enable_debug=no])
 AM_CONDITIONAL(DEBUG, test "x$enable_debug" = "xyes")
 
