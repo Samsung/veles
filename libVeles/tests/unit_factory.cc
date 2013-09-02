@@ -39,7 +39,8 @@ class DummyUnit : public Unit {
   }
 };
   REGISTER_UNIT(DummyUnit);
-}
+
+}  // namespace Veles
 
 
 TEST(UnitRegistry, DummyCreate) {

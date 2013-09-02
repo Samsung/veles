@@ -10,22 +10,14 @@
  *  Copyright 2013 Samsung R&D Institute Russia
  */
 
-#include <cmath>
-#include <cstdlib>
-#include <gtest/gtest.h>
-#include "inc/veles/workflow.h"
-#include "inc/veles/make_unique.h"
 #include "tests/workflow.h"
+#include <cmath>
+#include <algorithm>
+#include <stdexcept>
+#include "inc/veles/make_unique.h"
+#include "tests/unit_mock.h"
 
-namespace {
-
-float* mallocf(size_t length) {
-  void *ptr;
-  return posix_memalign(&ptr, 64, length * sizeof(float)) == 0
-      ? static_cast<float*>(ptr) : nullptr;
-}
-
-}
+const size_t WorkflowTest::kCount = 3;
 
 TEST(Workflow, Construct) {
   Veles::Workflow workflow;
@@ -40,27 +32,87 @@ TEST(Workflow, Add) {
   const size_t kOutputs = 4;
   for (size_t i = 0; i < kCount; ++i) {
     ASSERT_EQ(i, workflow.UnitCount());
-    workflow.AddUnit(std::make_shared<UnitMock>(kInputs, kOutputs));
+    bool isEven = i % 2 == 0;
+    workflow.AddUnit(
+        std::make_shared<UnitMock>(
+            isEven ? kInputs : kOutputs,
+            isEven ? kOutputs : kInputs));
+  }
+  for (size_t i = 0; i < kCount; ++i) {
+    bool isEven = i % 2 == 0;
+    ASSERT_EQ(UnitMock::kName, workflow.GetUnit(i)->Name());
+    ASSERT_EQ(isEven ? kInputs : kOutputs, workflow.GetUnit(i)->InputCount());
+    ASSERT_EQ(isEven ? kOutputs : kInputs, workflow.GetUnit(i)->OutputCount());
+  }
+  ASSERT_THROW(workflow.GetUnit(kCount), std::out_of_range);
+  ASSERT_THROW(workflow.GetUnit(kCount * 2), std::out_of_range);
+}
+
+void WorkflowTest::SetUp() {
+  size_t sizes[kCount + 1];
+  std::tie(sizes[0], sizes[1], sizes[2], sizes[3]) = GetParam();
+  for (size_t i = 0; i < kCount; ++i) {
+    workflow_.AddUnit(
+        std::make_shared<UnitMock>(sizes[i], sizes[i + 1]));
   }
 }
 
-TEST(Workflow, Execute) {
-  Veles::Workflow workflow;
-  const size_t kCount = 4;
-  const size_t kInputs = 10;
-  for (size_t i = 0; i < kCount; ++i) {
-    workflow.AddUnit(std::make_shared<UnitMock>(kInputs, kInputs));
-  }
-  auto input  = std::uniquify(mallocf(kInputs), std::free);
-  auto output = std::uniquify(mallocf(kInputs), std::free);
-  for (size_t i = 0; i < kInputs; ++i) {
-    input.get()[i] = i;
-  }
-  workflow.Execute(input.get(), input.get() + kInputs, output.get());
+void WorkflowTest::GetExpected(std::vector<size_t>* out) {
+  size_t sizes[kCount + 1];
+  std::tie(sizes[0], sizes[1], sizes[2], sizes[3]) = GetParam();
   float expected_multiply = std::pow(2, kCount);
-  for (size_t i = 0; i < kInputs; ++i) {
-    ASSERT_NEAR(i * expected_multiply, output.get()[i], 0.01);
+  for (size_t i = 0; i < sizes[0]; ++i) {
+    out->push_back((i + 1) * expected_multiply);
+  }
+  for (size_t i = 1; i <= kCount; ++i) {
+    size_t last = sizes[i - 1];
+    ASSERT_NE(static_cast<size_t>(0), last);
+    size_t curr = sizes[i];
+    if (curr > last) {
+      for (size_t j = 0; j < curr - last; ++j) {
+        out->push_back((*out)[j % last]);
+      }
+    } else if (curr < last) {
+      out->resize(curr);
+    }
   }
 }
+
+TEST_P(WorkflowTest, Construct) {
+  size_t inputs = 0;
+  size_t outputs = 0;
+  std::tie(inputs, std::ignore, std::ignore, outputs) = GetParam();
+  EXPECT_EQ(kCount, workflow_.UnitCount());
+  EXPECT_EQ(inputs, workflow_.InputCount());
+  EXPECT_EQ(outputs, workflow_.OutputCount());
+}
+
+TEST_P(WorkflowTest, Execute) {
+  size_t sizes[kCount + 1];
+  std::tie(sizes[0], sizes[1], sizes[2], sizes[3]) = GetParam();
+  size_t inputs = sizes[0];
+  size_t outputs = sizes[kCount];
+  std::tie(inputs, std::ignore, std::ignore, outputs) = GetParam();
+  auto input  = std::uniquify(Simd::mallocf(inputs), std::free);
+  auto output = std::uniquify(Simd::mallocf(outputs), std::free);
+  for (size_t i = 0; i < inputs; ++i) {
+    input.get()[i] = i + 1;
+  }
+  workflow_.Execute(input.get(), input.get() + inputs, output.get());
+  std::vector<size_t> expected;
+  GetExpected(&expected);
+  for (size_t i = 0; i < outputs; ++i) {
+    ASSERT_NEAR(expected[i], output.get()[i], 0.01)
+        << "i = " << i << std::endl;
+  }
+}
+
+INSTANTIATE_TEST_CASE_P(
+    WorkflowTests, WorkflowTest,
+    ::testing::Combine(
+        ::testing::Values(1, 7, 100),
+        ::testing::Values(3, 14),
+        ::testing::Values(5, 10),
+        ::testing::Values(1, 9, 100)));
 
 #include "tests/google/src/gtest_main.cc"

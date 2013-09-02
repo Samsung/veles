@@ -43,10 +43,27 @@ class Workflow {
     units_.clear();
   }
 
+  /** @brief Returns a unit from workflow
+   *  @param index Unit position in workflow
+   */
+  std::shared_ptr<Unit> GetUnit(size_t index) const;
+
   /** @brief Number of units
    */
-  size_t UnitCount() {
+  size_t UnitCount() const noexcept {
     return units_.size();
+  }
+
+  /* @brief Number of workflow inputs
+   */
+  size_t InputCount() const noexcept {
+    return UnitCount() ? units_.front()->InputCount() : 0;
+  }
+
+  /* @brief Number of workflow outputs
+   */
+  size_t OutputCount() const noexcept {
+    return UnitCount() ? units_.back()->OutputCount() : 0;
   }
 
   /** @brief Executes the workflow

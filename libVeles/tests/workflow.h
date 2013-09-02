@@ -13,36 +13,27 @@
 #ifndef TESTS_WORKFLOW_H_
 #define TESTS_WORKFLOW_H_
 
-#include "inc/veles/unit.h"
+#include <vector>
+#include <gtest/gtest.h>
+#include "inc/veles/workflow.h"
 
-/** @brief Dummy unit which passes doubled looped inputs to outputs.
+/** @brief Isolated workflow test using Unit Mock
  */
-class UnitMock : public Veles::Unit {
- public:
-  UnitMock(size_t inputs, size_t outputs) : inputs_(inputs), outputs_(outputs) {
-  }
-  virtual std::string Name() const noexcept override {
-      return "UnitMock";
-    }
-  virtual void SetParameter(const std::string& /* name */,
-                            std::shared_ptr<void> /* value */) override {
-  }
-  virtual void Execute(const float* in, float* out) const override {
-    for(size_t i = 0; i < OutputCount(); ++i) {
-      out[i] = in[i % InputCount()] * 2;
-    }
-  }
-  virtual size_t InputCount() const noexcept override {
-    return inputs_;
-  }
-  virtual size_t OutputCount() const noexcept override {
-    return outputs_;
-  }
+class WorkflowTest : public ::testing::TestWithParam<
+                              std::tuple<size_t, size_t, size_t, size_t>> {
+ protected:
+  static const size_t kCount;
 
- private:
-  size_t inputs_;
-  size_t outputs_;
+  virtual void SetUp() override;
+
+  /** @brief Get expected result of applying UnitMock's repeating algorithm
+   *  to the input vector.
+   *  @detail Example for configuration of sizes: 5 2 3 5:
+   *  in -> [1 2 3 4 5] -> [1 2] (*2) -> [1 2 1] (*4) -> [1 2 1 1 2] (*8) -> out
+   */
+  void GetExpected(std::vector<size_t>* out);
+
+  Veles::Workflow workflow_;
 };
-
 
 #endif  // TESTS_WORKFLOW_H_
