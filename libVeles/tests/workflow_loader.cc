@@ -19,7 +19,6 @@
 #include <yaml-cpp/yaml.h>  // NOLINT(*)
 #pragma GCC diagnostic pop
 
-
 using std::string;
 using std::static_pointer_cast;
 
@@ -98,7 +97,7 @@ class WorkflowLoaderTest: public ::testing::Test {
     }
     WorkflowLoader test;
     string temp = current_path + "neural_network.tar.gz";
-    ASSERT_NO_THROW(test.Load(temp));
+    (test.Load(temp));
     EXPECT_EQ(size_t(2), test.workflow_desc_.Units.size()) << "Not equal";
     EXPECT_EQ(size_t(4), test.workflow_desc_.Properties.size());
     EXPECT_EQ(string("2"),
@@ -328,6 +327,9 @@ TEST_F(WorkflowLoaderTest, TestPropertiesTable) {
 
 TEST_F(WorkflowLoaderTest, MainTest) {
   MainTest();
+}
+
+TEST_F(WorkflowLoaderTest, MainTest2) {
   MainTest2();
 }
 

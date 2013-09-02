@@ -55,7 +55,6 @@ void WorkflowLoader::Load(const string& archive) {
   //  2) Read neural network structure from fileWithWorkflow
   auto workflow_file = string(kWorkingDirectory) + file_with_workflow_;
   WorkflowLoader::GetWorkflow(workflow_file);
-
   // Remove the working directory with all files
   WorkflowLoader::RemoveDirectory(kWorkingDirectory);
 }
@@ -112,9 +111,6 @@ void WorkflowLoader::GetUnit(const YAML::Node& doc, UnitDescription* unit) {
           size_t array_size = 0;
           unit->Properties.insert({new_key, GetArrayFromFile(value,
                                                              &array_size)});
-          if (new_key == string("output") || new_key == string("input")) {
-            array_size /= 60;
-          }
           string new_key_to_size = new_key + "_length";
           auto temp_size = std::make_shared<size_t>(array_size);
           unit->Properties.insert({new_key_to_size, temp_size});
