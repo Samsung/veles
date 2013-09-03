@@ -42,10 +42,16 @@ AC_ARG_WITH([built-in-libarchive],
 ])
 AC_SUBST([LIBARCHIVE_DIR])
 
+AS_IF([test "x$enable_static" != "xno" -a "x$enable_shared" != "xno" ], [
+	AC_MSG_ERROR([Building both shared and static libraries is not supported (use --disable-shared or --disable-static)])
+])
+
 # Check whether to use the built-in yaml-cpp
 AC_ARG_WITH([built-in-yaml-cpp],
     AS_HELP_STRING([--with-built-in-yaml-cpp], [use bundled yaml-cpp]), [
-    YAMLCPP_LIBS="\$(top_builddir)/yaml-cpp/libyaml-cpp.a"
+    AS_IF([test "x$disable_static" = "xyes"], [
+    	YAMLCPP_LIBS="-Wl,--whole-archive,\$(top_builddir)/yaml-cpp/libyaml-cpp.a,-Wl,--no-whole-archive"
+    ])
     YAMLCPP_CFLAGS="-I\$(top_srcdir)/yaml-cpp/include"
     YAMLCPP_DIR=yaml-cpp
     mkdir -p yaml-cpp    
