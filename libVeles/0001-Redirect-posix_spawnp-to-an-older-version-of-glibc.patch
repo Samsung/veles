@@ -1,21 +1,23 @@
-From 91183a2c20432881a57356cca4f3d07ce99966ee Mon Sep 17 00:00:00 2001
+From 38a0b7a5655fef2ab0ceedcc86eaafaaec870de3 Mon Sep 17 00:00:00 2001
 From: Vadim Markovtsev <v.markovtsev@samsung.com>
 Date: Tue, 3 Sep 2013 19:53:42 +0400
 Subject: [PATCH] Redirect posix_spawnp to an older version of glibc
 
 ---
- libarchive/filter_fork_posix.c | 2 ++
- 1 file changed, 2 insertions(+)
+ libarchive/filter_fork_posix.c | 4 ++++
+ 1 file changed, 4 insertions(+)
 
 diff --git a/libarchive/filter_fork_posix.c b/libarchive/filter_fork_posix.c
-index 02dbd4b..f11d133 100644
+index 02dbd4b..0d6052f 100644
 --- a/libarchive/filter_fork_posix.c
 +++ b/libarchive/filter_fork_posix.c
-@@ -24,6 +24,8 @@
+@@ -24,6 +24,10 @@
   * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   */
  
++#ifdef __arm__
 +__asm__(".symver posix_spawnp,posix_spawnp@GLIBC_2.4");
++#endif
 +
  #include "archive_platform.h"
  
