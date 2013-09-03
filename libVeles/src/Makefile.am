@@ -39,30 +39,7 @@ libVeles_la_CXXFLAGS = $(AM_CXXFLAGS) @LIBARCHIVE_CFLAGS@ @YAMLCPP_CFLAGS@ -fPIC
 # Used libraries
 libVeles_la_LIBADD = @LIBARCHIVE_LIBS@ @YAMLCPP_LIBS@
 
+libVeles_la_LDFLAGS = $(AM_LDFLAGS) \
+	-version-info $(INTERFACE_VERSION):$(REVISION_NUMBER):$(AGE_NUMBER)
+
 PARALLEL_SUBDIRS =
-
-
-#######################################
-# Subdirectory instructions
-
-# 1. Create Makefile.am in the subdirectory:
-
-#include $(top_srcdir)/Makefile.common
-
-#noinst_LTLIBRARIES = lib_subdir.la
-
-# Sources
-#lib_subdir_la_SOURCES =
-
-# Compiler options
-#lib_subdir_la_CPPFLAGS =
-
-# 2. Add subdir/Makefile to configure.ac at AC_CONFIG_FILES
-
-# 3. Add reference to lib_subdir.la in libVeles.la:
-
-# libVeles_la_LIBADD = subdir/lib_subdir.la
-
-# 4. Add subdir to parent directory Makefile.am's PARALLEL_SUBDIRS
-
-# PARALLEL_SUBDIRS = subdir
