@@ -174,7 +174,8 @@ class SimplePlotter(Plotter):
     """
     def __init__(self, figure_label="num errors",
                  plot_style="k-",
-                 clear_plot=False):
+                 clear_plot=False,
+                 bounds=None):
         super(SimplePlotter, self).__init__()
         self.values = []
         self.input = None  # Connector
@@ -183,6 +184,7 @@ class SimplePlotter(Plotter):
         self.plot_style = plot_style
         self.input_offs = 0
         self.clear_plot = clear_plot
+        self.bounds = bounds
 
     def redraw(self):
         figure_label = self.figure_label
@@ -192,6 +194,8 @@ class SimplePlotter(Plotter):
         axes = figure.add_subplot(111)  # Main axes
         if self.clear_plot:
             axes.cla()
+        if self.bounds != None:
+            axes.set_ylim(self.bounds[0], self.bounds[1])
         axes.plot(self.values, self.plot_style)
         figure.show()
         super(SimplePlotter, self).redraw()
