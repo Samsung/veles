@@ -286,7 +286,8 @@ class OpenCLUnit(Unit):
         return self.gpu_run()
 
 
-class Forward(OpenCLUnit):
+class Forward(OpenCLUnit, yaml.YAMLObject):
+    yaml_tag = "Unit"
     pass
 
 
