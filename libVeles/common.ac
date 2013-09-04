@@ -180,6 +180,14 @@ AS_IF([test "x$enable_fast_math" = "xyes"], [
     AM_CPPFLAGS="$AM_CPPFLAGS -ffast-math"
 ])
 
+# Enable/disable OpenMP
+AC_ARG_ENABLE([openmp],
+    AS_HELP_STRING([--disable-openmp], [disable parallel OpenMP code (-fopenmp)])
+)
+AS_IF([test "x$enable_openmp" != "xno"], [
+    AM_CPPFLAGS="$AM_CPPFLAGS -fopenmp"
+])
+
 # Check whether to build tests
 AC_ARG_ENABLE([tests],
     AS_HELP_STRING([--disable-tests], [do not build the tests])
@@ -221,9 +229,6 @@ AM_CPPFLAGS="$AM_CPPFLAGS -I\$(top_srcdir) -I\$(top_srcdir)/inc -I\$(top_builddi
 
 # Append debug flags
 AM_CPPFLAGS="$AM_CPPFLAGS $DEBUG_FLAGS"
-
-# Use OpenMP
-AM_CPPFLAGS="$AM_CPPFLAGS -fopenmp"
 
 # Use the best march
 arch=$(echo $host | cut -d '-' -f 1)
