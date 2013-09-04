@@ -31,9 +31,9 @@ mypath=$(pwd)
 cd ..
 if [ ! -e "libarchive/build/autogen.sh" ]; then
     git submodule update --init	libVeles/libarchive
-    cd libarchive
+    cd libVeles/libarchive
     git apply 0001-Redirect-posix_spawnp-to-an-older-version-of-glibc.patch
-    cd ..
+    cd ../..
 else
     git submodule update libVeles/libarchive
 fi
