@@ -9,6 +9,7 @@ import time
 import logger
 import threading
 import thread_pool
+import yaml
 
 
 class Pickleable(logger.Logger):
