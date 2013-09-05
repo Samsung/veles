@@ -27,6 +27,19 @@ pp.ion()
 init_lock = threading.Lock()
 
 
+def norm_image(a):
+    """Normalizes numpy array for passing to imshow.
+    """
+    a -= a.min()
+    m = a.max()
+    if m:
+        m /= 255.0
+        a /= m
+    else:
+        a[:] = 127.5
+    return a.astype(numpy.uint8)
+
+
 class Graphics:
     """ Class handling all interaction with main graphics window
         NOTE: This class should be created ONLY within one thread
@@ -482,9 +495,9 @@ class Weights2D(Plotter):
                                                 sx, 1)[:, :, 0:1]
                     w[:, :, 2:3] = v.reshape(3, sy, sx)[2:3, :, :].reshape(sy,
                                                 sx, 1)[:, :, 0:1]
-                    ax.imshow(w, interpolation="nearest")
+                    ax.imshow(norm_image(w), interpolation="nearest")
                 else:
-                    ax.imshow(v.reshape(sy, sx),
+                    ax.imshow(norm_image(v.reshape(sy, sx)),
                               interpolation="nearest", cmap=cm.gray)
                 i += 1
                 if i >= value.shape[0]:
@@ -566,9 +579,9 @@ class Image(Plotter):
             w = value.copy()
 
         if color:
-            ax.imshow(w, interpolation="nearest")
+            ax.imshow(norm_image(w), interpolation="nearest")
         else:
-            ax.imshow(w, interpolation="nearest", cmap=cm.gray)
+            ax.imshow(norm_image(w), interpolation="nearest", cmap=cm.gray)
 
     def redraw(self):
         figure_label = self.figure_label
