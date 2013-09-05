@@ -50,7 +50,7 @@ AS_IF([test "x$enable_static" != "xno" -a "x$enable_shared" != "xno" ], [
 AC_ARG_WITH([built-in-yaml-cpp],
     AS_HELP_STRING([--with-built-in-yaml-cpp], [use bundled yaml-cpp]), [
     AS_IF([test "x$enable_static" = "xno"], [
-    	YAMLCPP_LIBS="-Wl,--whole-archive \$(top_builddir)/yaml-cpp/libyaml-cpp.a -Wl,--no-whole-archive"
+    	YAMLCPP_LIBS="\$(top_builddir)/yaml-cpp/libyaml-cpp.a"
     ])
     YAMLCPP_CFLAGS="-I\$(top_srcdir)/yaml-cpp/include"
     YAMLCPP_DIR=yaml-cpp
