@@ -43,36 +43,36 @@ AC_ARG_WITH([built-in-libarchive],
 AC_SUBST([LIBARCHIVE_DIR])
 
 AS_IF([test "x$enable_static" != "xno" -a "x$enable_shared" != "xno" ], [
-	AC_MSG_ERROR([Building both shared and static libraries is not supported (use --disable-shared or --disable-static)])
+    AC_MSG_ERROR([Building both shared and static libraries is not supported (use --disable-shared or --disable-static)])
 ])
 
 # Check whether to use the built-in yaml-cpp
 AC_ARG_WITH([built-in-yaml-cpp],
     AS_HELP_STRING([--with-built-in-yaml-cpp], [use bundled yaml-cpp]), [
     AS_IF([test "x$enable_static" = "xno"], [
-    	YAMLCPP_LIBS="\$(top_builddir)/yaml-cpp/libyaml-cpp.a"
+        YAMLCPP_LIBS="-Wl,--whole-archive,\$(top_builddir)/yaml-cpp/libyaml-cpp.a,--no-whole-archive"
     ])
     YAMLCPP_CFLAGS="-I\$(top_srcdir)/yaml-cpp/include"
     YAMLCPP_DIR=yaml-cpp
     mkdir -p yaml-cpp    
     AS_IF([test "$host" = "$build" ], [
-    	AC_CONFIG_COMMANDS(cmake, [
+        AC_CONFIG_COMMANDS(cmake, [
         cd yaml-cpp
         CXXFLAGS="-fPIC -std=c++0x -Wno-deprecated-declarations" cmake ../$ac_top_srcdir/yaml-cpp \
-        	-DYAML_CPP_BUILD_TOOLS=OFF -DYAML_CPP_BUILD_CONTRIB=OFF \
-        	-DBUILD_SHARED_LIBS=OFF
+            -DYAML_CPP_BUILD_TOOLS=OFF -DYAML_CPP_BUILD_CONTRIB=OFF \
+            -DBUILD_SHARED_LIBS=OFF
         cd ..])
     ], [
-    	echo "set(CMAKE_SYSTEM_NAME Linux)" > $host.cmake
-    	echo "set(CMAKE_SYSTEM_VERSION 1)" >> $host.cmake
-    	echo "set(CMAKE_C_COMPILER $CC)" >> $host.cmake
-    	echo "set(CMAKE_CXX_COMPILER $CXX)" >> $host.cmake
-    	AC_CONFIG_COMMANDS(cmake_cross, [
+        echo "set(CMAKE_SYSTEM_NAME Linux)" > $host.cmake
+        echo "set(CMAKE_SYSTEM_VERSION 1)" >> $host.cmake
+        echo "set(CMAKE_C_COMPILER $CC)" >> $host.cmake
+        echo "set(CMAKE_CXX_COMPILER $CXX)" >> $host.cmake
+        AC_CONFIG_COMMANDS(cmake_cross, [
         cd yaml-cpp
         CXXFLAGS="-fPIC -std=c++0x -Wno-deprecated-declarations" cmake ../$ac_top_srcdir/yaml-cpp \
-        	-DYAML_CPP_BUILD_TOOLS=OFF -DYAML_CPP_BUILD_CONTRIB=OFF \
-        	-DBUILD_SHARED_LIBS=OFF \
-        	-DCMAKE_TOOLCHAIN_FILE=../$host.cmake
+            -DYAML_CPP_BUILD_TOOLS=OFF -DYAML_CPP_BUILD_CONTRIB=OFF \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_TOOLCHAIN_FILE=../$host.cmake
         cd ..])
     ])
 ], [
@@ -86,44 +86,7 @@ AM_COND_IF([TESTS], [
                       tests/workflow_files/test_archive.tar.gz:tests/workflow_files/test_archive.tar.gz
                       tests/workflow_files/default.yaml:tests/workflow_files/default.yaml
                       tests/workflow_files/neural_network.tar.gz:tests/workflow_files/neural_network.tar.gz
-		      tests/workflow_files/workflow.tar.gz:tests/workflow_files/workflow.tar.gz])
+                      tests/workflow_files/workflow.tar.gz:tests/workflow_files/workflow.tar.gz])
 ])
-
-# Check some lib...
-#PKG_CHECK_MODULES([ZLIB], [zlib >= 1.2.3])
-
-# Add a feature (not enabled by default)
-#AC_ARG_ENABLE([feature],
-#    AS_HELP_STRING([--enable-feature], [build with feature])
-#)
-#AS_IF([test "x$enable_feature" == "xyes"], [
-#    ...
-#])
-
-# Add a feature (enabled by default)
-#AC_ARG_ENABLE([feature],
-#    AS_HELP_STRING([--disable-feature], [build without feature])
-#)
-#AS_IF([test "x$enable_feature" != "xno"], [
-#    ...
-#])
-
-# Add an optional feature
-#AC_ARG_WITH([feature],
-#    AS_HELP_STRING([--with-feature], [additionally, build feature]), [
-    # Action if true
-#], [
-    # Action if false    
-#])
-
-# Additional tests
-#AM_COND_IF([TESTS], [
-#    AC_CONFIG_FILES(tests/subdirectory/Makefile
-#                    )
-#])
-
-# Link with Makefile.am in additional source directories
-#AC_CONFIG_FILES(src/subdirectory/Makefile
-#                )
 
 AC_OUTPUT
