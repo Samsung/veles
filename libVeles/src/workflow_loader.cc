@@ -177,7 +177,7 @@ std::shared_ptr<float> WorkflowLoader::GetArrayFromFile(const string& file,
   int array_size = fr.tellg();
   fr.seekg (0, fr.beg);
 
-  *arr_size = array_size/sizeof(float); // TODO(EBulychev): ??
+  *arr_size = array_size / sizeof(float);
   // Read array
   auto weight = shared_ptr<float>(mallocf(array_size), free);
   fr.read(reinterpret_cast<char*>(weight.get()), array_size);
@@ -192,7 +192,6 @@ void WorkflowLoader::InitializeWorkflow() {
   for (auto& it : workflow_desc_.Units) {
     auto Unit = Veles::UnitFactory::Instance()[it.Name]();
     for (auto& itUnit : it.Properties) {
-//      fprintf(stderr, "Properties: %s\n", itUnit.first.c_str());
       if (string("bias_length") == itUnit.first) {
         fprintf(stderr, "Properties: %s %zu\n", itUnit.first.c_str(),
                 *static_cast<size_t*>(itUnit.second.get()));
