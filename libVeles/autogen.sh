@@ -29,7 +29,7 @@ isubuntu="$(uname -v|grep Ubuntu)"
 
 mypath=$(pwd)
 cd ..
-if [ ! -e "libarchive/build/autogen.sh" ]; then
+if [ ! -e "$mypath/libarchive/Makefile.am" ]; then
     git submodule update --init	libVeles/libarchive
     cd libVeles/libarchive
     git apply ../0001-Redirect-posix_spawnp-to-an-older-version-of-glibc.patch
