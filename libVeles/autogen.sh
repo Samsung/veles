@@ -50,7 +50,8 @@ fi
 
 echo "\$(dirname \$0)/configure \$@ --disable-bsdcpio --without-bz2lib \
 --without-lzmadec --without-iconv --without-lzma --without-nettle \
---without-openssl --without-xml2 --without-expat --disable-bsdtar" > libarchive/configure.gnu
+--without-openssl --without-xml2 --without-expat --disable-bsdtar \
+--without-lzo2" > libarchive/configure.gnu
 chmod +x libarchive/configure.gnu
 
 check_prog() {
