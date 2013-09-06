@@ -34,7 +34,7 @@ lib_LTLIBRARIES = libVeles.la
 libVeles_la_SOURCES = unit.cc unit_factory.cc workflow.cc workflow_loader.cc
 
 # Compiler options
-libVeles_la_CXXFLAGS = $(AM_CXXFLAGS) @LIBARCHIVE_CFLAGS@ @YAMLCPP_CFLAGS@ -fPIC
+libVeles_la_CPPFLAGS = $(AM_CPPFLAGS) @LIBARCHIVE_CFLAGS@ @YAMLCPP_CFLAGS@ -fPIC
 
 # Used libraries
 libVeles_la_LIBADD = @LIBARCHIVE_LIBS@ @YAMLCPP_LIBS@
