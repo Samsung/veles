@@ -30,6 +30,7 @@ init_lock = threading.Lock()
 def norm_image(a):
     """Normalizes numpy array for passing to imshow.
     """
+    a = a.copy()
     a -= a.min()
     m = a.max()
     if m:
@@ -161,6 +162,7 @@ class Plotter(units.Unit):
         self.lock_.release()
 
     def run(self):
+        Graphics().event_queue.put(self, block=True)
         self.lock_.acquire()
 
 
@@ -217,18 +219,17 @@ class SimplePlotter(Plotter):
         if type(self.input_field) == int:
             if self.input_field < 0 or self.input_field >= len(self.input):
                 return
-            value = self.input[self.input_field]
+            value = float(self.input[self.input_field])
         else:
-            value = self.input.__dict__[self.input_field]
+            value = float(self.input.__dict__[self.input_field])
         if type(value) == numpy.ndarray:
-            value = value[self.input_offs]
+            value = float(value[self.input_offs])
         self.values.append(value)
-        Graphics().event_queue.put(self, block=True)
         super(SimplePlotter, self).run()
 
 
 class MatrixPlotter(Plotter):
-    """Plotter for drawing matrixes
+    """Plotter for drawing matrixes as table.
 
     Should be assigned before initialize():
         input
@@ -241,7 +242,6 @@ class MatrixPlotter(Plotter):
     """
     def __init__(self, figure_label="Matrix"):
         super(MatrixPlotter, self).__init__()
-        self.value = None
         self.input = None  # Connector
         self.input_field = None
         self.figure_label = figure_label
@@ -399,16 +399,6 @@ class MatrixPlotter(Plotter):
         figure.show()
         super(MatrixPlotter, self).redraw()
 
-    def run(self):
-        if type(self.input_field) == int:
-            if self.input_field < 0 or self.input_field >= len(self.input):
-                return
-            self.value = self.input[self.input_field]
-        else:
-            self.value = self.input.__dict__[self.input_field]
-        Graphics().event_queue.put(self, block=True)
-        super(MatrixPlotter, self).run()
-
 
 class Weights2D(Plotter):
     """Plotter for drawing weights as 2D.
@@ -424,7 +414,6 @@ class Weights2D(Plotter):
     """
     def __init__(self, figure_label="Weights", limit=64):
         super(Weights2D, self).__init__()
-        self.value = None
         self.input = None  # Connector
         self.input_field = None
         self.figure_label = figure_label
@@ -509,16 +498,6 @@ class Weights2D(Plotter):
 
         super(Weights2D, self).redraw()
 
-    def run(self):
-        if type(self.input_field) == int:
-            if self.input_field < 0 or self.input_field >= len(self.input):
-                return
-            self.value = self.input[self.input_field]
-        else:
-            self.value = self.input.__dict__[self.input_field]
-        Graphics().event_queue.put(self, block=True)
-        super(Weights2D, self).run()
-
 
 class Image(Plotter):
     """Plotter for drawing N images.
@@ -601,10 +580,6 @@ class Image(Plotter):
 
         figure.show()
         super(Image, self).redraw()
-
-    def run(self):
-        Graphics().event_queue.put(self, block=True)
-        super(Image, self).run()
 
 
 class MSEHistogram(Plotter):
@@ -726,5 +701,4 @@ class MSEHistogram(Plotter):
         self.val_max = self.val_mse.max()
         self.val_min = self.val_mse.min()
 
-        Graphics().event_queue.put(self, block=True)
         super(MSEHistogram, self).run()
