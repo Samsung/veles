@@ -169,7 +169,7 @@ AC_ARG_ENABLE([lto],
     AS_HELP_STRING([--enable-lto], [build with link-time optimizations (-flto)])
 )
 AS_IF([test "x$enable_lto" = "xyes"], [
-    AM_CPPFLAGS="$AM_CPPFLAGS -flto" LDFLAGS="$LDFLAGS -flto"
+    AM_CPPFLAGS="$AM_CPPFLAGS -flto" LDFLAGS="-flto $LDFLAGS"
 ])
 
 # Enable/disable fast math
@@ -186,6 +186,7 @@ AC_ARG_ENABLE([openmp],
 )
 AS_IF([test "x$enable_openmp" != "xno"], [
     AM_CPPFLAGS="$AM_CPPFLAGS -fopenmp"
+    LDFLAGS="-fopenmp $LDFLAGS"
 ])
 
 # Check whether to build tests
@@ -201,16 +202,16 @@ AC_ARG_ENABLE([test-coverage],
 )
 AS_IF([test "x$enable_test_coverage" = "xyes" -a "x$enable_debug" = "xyes" -a "x$enable_tests" != "xno"], [
     AM_CPPFLAGS="$AM_CPPFLAGS --coverage"
-    LDFLAGS="$LDFLAGS -lgcov"
+    LDFLAGS="-lgcov $LDFLAGS"
 ])
                 
 # Security flags
 SECURITYFLAGS="-fstack-protector --param=ssp-buffer-size=4 -Wall -Wno-comment -Wformat-security"
 AM_CPPFLAGS="$AM_CPPFLAGS $SECURITYFLAGS"
-LDFLAGS="$LDFLAGS -Wl,-z,relro -Wl,--hash-style=gnu"
+LDFLAGS="-Wl,-z,relro -Wl,--hash-style=gnu $LDFLAGS"
 
 # Compile with -rdynamic
-LDFLAGS="$LDFLAGS -rdynamic"
+LDFLAGS="-rdynamic $LDFLAGS"
 
 # Use the latest C++ standard
 AM_CXXFLAGS="$AM_CXXFLAGS -std=c++0x -fno-deduce-init-list"
