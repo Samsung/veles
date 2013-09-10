@@ -24,7 +24,7 @@ def resize(a, width, height, interpolation=BILINEAR):
         raise error.ErrBadFormat("a.dtype should be numpy.uint8")
     b = numpy.zeros([height, width], dtype=a.dtype)
     handle.ScalePlane(a.ctypes.data_as(POINTER(c_byte)),
-                      a.shape[1], a.shape[0], a.shape[1],
+                      a.shape[1], a.shape[1], a.shape[0],
                       b.ctypes.data_as(POINTER(c_byte)),
-                      b.shape[1], b.shape[0], b.shape[1], interpolation)
+                      b.shape[1], b.shape[1], b.shape[0], interpolation)
     return b
