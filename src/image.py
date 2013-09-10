@@ -17,6 +17,7 @@ handle.ScalePlane.argtypes = [POINTER(c_byte), c_int, c_int, c_int,
 
 
 BILINEAR = 1
+BOX = 2
 
 
 def resize(a, width, height, interpolation=BILINEAR):
