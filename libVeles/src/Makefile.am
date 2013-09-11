@@ -34,12 +34,14 @@ lib_LTLIBRARIES = libVeles.la
 libVeles_la_SOURCES = unit.cc unit_factory.cc workflow.cc workflow_loader.cc
 
 # Compiler options
-libVeles_la_CPPFLAGS = $(AM_CPPFLAGS) @LIBARCHIVE_CFLAGS@ @YAMLCPP_CFLAGS@ -fPIC
+libVeles_la_CPPFLAGS = $(AM_CPPFLAGS) @LIBARCHIVE_CFLAGS@ @YAMLCPP_CFLAGS@
 
 # Used libraries
 libVeles_la_LIBADD = @LIBARCHIVE_LIBS@ @YAMLCPP_LIBS@
 
 libVeles_la_LDFLAGS = $(AM_LDFLAGS) \
-	-version-info $(INTERFACE_VERSION):$(REVISION_NUMBER):$(AGE_NUMBER)
+	-version-info $(INTERFACE_VERSION):$(REVISION_NUMBER):$(AGE_NUMBER) \
+	-Wl,--whole-archive,$(STATIC_ZLIB_LIBS),--no-whole-archive \
+	-Wl,--whole-archive,$(STATIC_YAMLCPP_LIBS),--no-whole-archive
 
 PARALLEL_SUBDIRS =

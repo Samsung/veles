@@ -37,6 +37,12 @@ if [ ! -e "$mypath/libarchive/Makefile.am" ]; then
 else
     git submodule update libVeles/libarchive
 fi
+
+if [ ! -e "$mypath/zlib/configure" ]; then
+    git submodule update --init	libVeles/zlib
+else
+    git submodule update libVeles/zlib
+fi
 cd $mypath
 
 if [ ! -e "yaml-cpp/CMakeLists.txt" ]; then
@@ -48,7 +54,8 @@ if [ ! -e "yaml-cpp/CMakeLists.txt" ]; then
     cd ..
 fi
 
-echo "\$(dirname \$0)/configure \$@ --disable-bsdcpio --without-bz2lib \
+echo "CFLAGS=-I$mypath/zlib LDFLAGS=-L$mypath/zlib \
+\$(dirname \$0)/configure \$@ --disable-bsdcpio --without-bz2lib \
 --without-lzmadec --without-iconv --without-lzma --without-nettle \
 --without-openssl --without-xml2 --without-expat --disable-bsdtar \
 --without-lzo2" > libarchive/configure.gnu
@@ -82,7 +89,7 @@ check_prog automake automake
 
 rm -rf autom4te.cache m4
 rm -f aclocal.m4 ltmain.sh config.log config.status configure libtool stamp-h1 config.h config.h.in
-find -name Makefile.in -exec rm {} \;
+find -name Makefile.in -a -not -path './zlib/*' -exec rm {} \;
 
 echo "Running aclocal..." ; aclocal $ACLOCAL_FLAGS || exit 1
 echo "Running autoheader..." ; autoheader || exit 1

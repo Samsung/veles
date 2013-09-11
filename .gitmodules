@@ -1,12 +1,16 @@
 [submodule "Znicz"]
-	path = Znicz
-	branch = master
-	url = ssh://alserver.rnd.samsung.ru:29418/Znicz.git
+  path = Znicz
+  branch = master
+  url = ssh://alserver.rnd.samsung.ru:29418/Znicz.git
 [submodule "libSoundFeatureExtraction"]
-	path = libSoundFeatureExtraction
-	branch = master
-	url = ssh://alserver.rnd.samsung.ru:29418/SoundFeatureExtraction.git
+  path = libSoundFeatureExtraction
+  branch = master
+  url = ssh://alserver.rnd.samsung.ru:29418/SoundFeatureExtraction.git
 [submodule "libVeles/libarchive"]
-	path = libVeles/libarchive
-	branch = master
-	url = https://github.com/libarchive/libarchive.git
+  path = libVeles/libarchive
+  branch = master
+  url = https://github.com/libarchive/libarchive.git
+[submodule "libVeles/zlib"]
+  path = libVeles/zlib
+  branch = master
+  url = https://github.com/madler/zlib

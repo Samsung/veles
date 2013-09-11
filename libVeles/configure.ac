@@ -4,10 +4,10 @@
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
-#  modification, are permitted provided that the following conditions are met: 
+#  modification, are permitted provided that the following conditions are met:
 #
 #  1. Redistributions of source code must retain the above copyright notice, this
-#     list of conditions and the following disclaimer. 
+#     list of conditions and the following disclaimer.
 #  2. Redistributions in binary form must reproduce the above copyright notice,
 #     this list of conditions and the following disclaimer in the documentation
 #     and/or other materials provided with the distribution.
@@ -35,12 +35,24 @@ AC_ARG_WITH([built-in-libarchive],
     LIBARCHIVE_LIBS="\$(top_builddir)/libarchive/libarchive.la"
     LIBARCHIVE_CFLAGS="-I\$(top_srcdir)/libarchive/libarchive"
     LIBARCHIVE_DIR=libarchive
-    AC_CONFIG_SUBDIRS([libarchive])    
+    AC_CONFIG_SUBDIRS([libarchive])
+    ZLIB_DIR=zlib
+    STATIC_ZLIB_LIBS="\$(top_builddir)/zlib/libz.a"
+    echo "$AM_CFLAGS $CFLAGS $AM_CPPFLAGS $CPPFLAGS" > zlib.cflags
+    AC_CONFIG_COMMANDS([zlib],
+                       [ln -sf $ac_top_srcdir/zlib zlib && \
+                       cflags=$(cat zlib.cflags)  && \
+                       cd zlib && \
+                       CC=$CC CFLAGS="$cflags -fPIC -Wno-implicit-function-declaration" \
+                       ./configure --static --const && \
+                       cd ..])
 ], [
     # Check for installed libarchive
     PKG_CHECK_MODULES([LIBARCHIVE], [libarchive >= 3.0])
 ])
 AC_SUBST([LIBARCHIVE_DIR])
+AC_SUBST([ZLIB_DIR])
+AC_SUBST([STATIC_ZLIB_LIBS])
 
 AS_IF([test "x$enable_static" != "xno" -a "x$enable_shared" != "xno" ], [
     AC_MSG_ERROR([Building both shared and static libraries is not supported (use --disable-shared or --disable-static)])
@@ -49,16 +61,17 @@ AS_IF([test "x$enable_static" != "xno" -a "x$enable_shared" != "xno" ], [
 # Check whether to use the built-in yaml-cpp
 AC_ARG_WITH([built-in-yaml-cpp],
     AS_HELP_STRING([--with-built-in-yaml-cpp], [use bundled yaml-cpp]), [
-    AS_IF([test "x$enable_static" = "xno"], [
-        YAMLCPP_LIBS="-Wl,--whole-archive,\$(top_builddir)/yaml-cpp/libyaml-cpp.a,--no-whole-archive"
-    ])
+    STATIC_YAMLCPP_LIBS="\$(top_builddir)/yaml-cpp/libyaml-cpp.a"
     YAMLCPP_CFLAGS="-I\$(top_srcdir)/yaml-cpp/include"
     YAMLCPP_DIR=yaml-cpp
+    echo "$AM_CXXFLAGS $CXXFLAGS $AM_CPPFLAGS $CPPFLAGS" > yaml-cpp.cxxflags
     mkdir -p yaml-cpp    
     AS_IF([test "$host" = "$build" ], [
-        AC_CONFIG_COMMANDS(cmake, [
+        AC_CONFIG_COMMANDS([cmake], [
         cd yaml-cpp
-        CXXFLAGS="-fPIC -std=c++0x -Wno-deprecated-declarations" cmake ../$ac_top_srcdir/yaml-cpp \
+        CXXFLAGS="$(cat ../yaml-cpp.cxxflags) \
+        	-Wno-old-style-cast -Wno-deprecated-declarations -fPIC" \
+        cmake ../$ac_top_srcdir/yaml-cpp \
             -DYAML_CPP_BUILD_TOOLS=OFF -DYAML_CPP_BUILD_CONTRIB=OFF \
             -DBUILD_SHARED_LIBS=OFF
         cd ..])
@@ -69,7 +82,9 @@ AC_ARG_WITH([built-in-yaml-cpp],
         echo "set(CMAKE_CXX_COMPILER $CXX)" >> $host.cmake
         AC_CONFIG_COMMANDS(cmake_cross, [
         cd yaml-cpp
-        CXXFLAGS="-fPIC -std=c++0x -Wno-deprecated-declarations" cmake ../$ac_top_srcdir/yaml-cpp \
+        CXXFLAGS="$(cat ../yaml-cpp.cxxflags) \
+        	-Wno-old-style-cast -Wno-deprecated-declarations -fPIC" \
+        cmake ../$ac_top_srcdir/yaml-cpp \
             -DYAML_CPP_BUILD_TOOLS=OFF -DYAML_CPP_BUILD_CONTRIB=OFF \
             -DBUILD_SHARED_LIBS=OFF \
             -DCMAKE_TOOLCHAIN_FILE=../$host.cmake
@@ -80,13 +95,14 @@ AC_ARG_WITH([built-in-yaml-cpp],
     PKG_CHECK_MODULES([YAMLCPP], [yaml-cpp >= 0.5])
 ])
 AC_SUBST([YAMLCPP_DIR])
+AC_SUBST([STATIC_YAMLCPP_LIBS])
 
 AM_COND_IF([TESTS], [
-     AC_CONFIG_LINKS([tests/workflow_files/remove_folder_testing.tar.gz:tests/workflow_files/remove_folder_testing.tar.gz
-                      tests/workflow_files/test_archive.tar.gz:tests/workflow_files/test_archive.tar.gz
-                      tests/workflow_files/default.yaml:tests/workflow_files/default.yaml
-                      tests/workflow_files/neural_network.tar.gz:tests/workflow_files/neural_network.tar.gz
-                      tests/workflow_files/workflow.tar.gz:tests/workflow_files/workflow.tar.gz])
+    AC_CONFIG_LINKS([tests/workflow_files/remove_folder_testing.tar.gz:tests/workflow_files/remove_folder_testing.tar.gz
+                     tests/workflow_files/test_archive.tar.gz:tests/workflow_files/test_archive.tar.gz
+                     tests/workflow_files/default.yaml:tests/workflow_files/default.yaml
+                     tests/workflow_files/neural_network.tar.gz:tests/workflow_files/neural_network.tar.gz
+                     tests/workflow_files/workflow.tar.gz:tests/workflow_files/workflow.tar.gz])    
 ])
 
 AC_OUTPUT
