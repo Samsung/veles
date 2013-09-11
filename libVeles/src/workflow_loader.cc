@@ -265,9 +265,9 @@ void WorkflowLoader::ExtractArchive(const string& filename,
     archive_read_support_format_tar(input_archive.get());
     if ((r = archive_read_open_filename(input_archive.get(), filename.c_str(),
                                         kBlockSize))) {
-      auto error = string("(Veles::WorkflowLoader::ExtractArchive:\n"
+      auto error = string("Veles::WorkflowLoader::ExtractArchive:\n"
           "archive_read_open_filename(): ") +
-          archive_error_string(input_archive.get()) + ")";
+          archive_error_string(input_archive.get());
       throw std::runtime_error(error);
     }
 

@@ -54,7 +54,7 @@ if [ ! -e "yaml-cpp/CMakeLists.txt" ]; then
     cd ..
 fi
 
-echo "CFLAGS=-I$mypath/zlib LDFLAGS=-L$mypath/zlib \
+echo "CFLAGS=\"-I$mypath/zlib -DHAVE_LIBZ=1\" \
 \$(dirname \$0)/configure \$@ --disable-bsdcpio --without-bz2lib \
 --without-lzmadec --without-iconv --without-lzma --without-nettle \
 --without-openssl --without-xml2 --without-expat --disable-bsdtar \
