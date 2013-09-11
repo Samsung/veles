@@ -39,12 +39,11 @@ AC_ARG_WITH([built-in-libarchive],
     ZLIB_DIR=zlib
     STATIC_ZLIB_LIBS="\$(top_builddir)/zlib/libz.a"
     echo "$AM_CFLAGS $CFLAGS $AM_CPPFLAGS $CPPFLAGS" > zlib.cflags
-    sed -i 's/-I$@<:@^ @:>@*//g' zlib.cflags
+    sed -i -e 's/-I$@<:@^ @:>@*//g' -e 's/--coverage//g' zlib.cflags
     AC_CONFIG_COMMANDS([zlib],
                        [ln -sf $ac_top_srcdir/zlib zlib && \
-                       cflags=$(cat zlib.cflags)  && \
                        cd zlib && \
-                       CC=$CC CFLAGS="$cflags -fPIC -Wno-implicit-function-declaration" \
+                       CC=$CC CFLAGS="$(cat ../zlib.cflags) -fPIC -Wno-implicit-function-declaration" \
                        ./configure --static --const && \
                        cd ..])
 ], [
@@ -66,7 +65,7 @@ AC_ARG_WITH([built-in-yaml-cpp],
     YAMLCPP_CFLAGS="-I\$(top_srcdir)/yaml-cpp/include"
     YAMLCPP_DIR=yaml-cpp
     echo "$AM_CXXFLAGS $CXXFLAGS $AM_CPPFLAGS $CPPFLAGS" > yaml-cpp.cxxflags
-    sed -i 's/-I$@<:@^ @:>@*//g' yaml-cpp.cxxflags
+    sed -i -e 's/-I$@<:@^ @:>@*//g' -e 's/--coverage//g' yaml-cpp.cxxflags
     mkdir -p yaml-cpp    
     AS_IF([test "$host" = "$build" ], [
         AC_CONFIG_COMMANDS([cmake], [
