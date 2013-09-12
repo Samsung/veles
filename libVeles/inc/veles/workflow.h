@@ -67,11 +67,12 @@ class Workflow {
    */
   template<class InputIterator, class OutputIterator>
   void Execute(InputIterator begin, InputIterator end,
-                         OutputIterator out) const {
+               OutputIterator out) const {
     size_t max_size = MaxUnitSize();
     auto input = std::uniquify(mallocf(max_size), std::free);
     auto output = std::uniquify(mallocf(max_size), std::free);
     std::copy(begin, end, input.get());
+
     float* curr_in = input.get();
     float* curr_out = output.get();
     if (!units_.empty()) {
