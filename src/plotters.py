@@ -190,6 +190,7 @@ class SimplePlotter(Plotter):
     def __init__(self, figure_label="num errors",
                  plot_style="k-",
                  clear_plot=False,
+                 redraw_plot=False,
                  bounds=None):
         super(SimplePlotter, self).__init__()
         self.values = []
@@ -199,6 +200,7 @@ class SimplePlotter(Plotter):
         self.plot_style = plot_style
         self.input_offs = 0
         self.clear_plot = clear_plot
+        self.redraw_plot = redraw_plot
         self.bounds = bounds
 
     def redraw(self):
@@ -213,18 +215,20 @@ class SimplePlotter(Plotter):
             axes.set_ylim(self.bounds[0], self.bounds[1])
         axes.plot(self.values, self.plot_style)
         figure.show()
+        if self.redraw_plot:
+            figure.canvas.draw()
         super(SimplePlotter, self).redraw()
 
     def run(self):
         if type(self.input_field) == int:
             if self.input_field < 0 or self.input_field >= len(self.input):
                 return
-            value = float(self.input[self.input_field])
+            value = self.input[self.input_field]
         else:
-            value = float(self.input.__dict__[self.input_field])
+            value = self.input.__dict__[self.input_field]
         if type(value) == numpy.ndarray:
-            value = float(value[self.input_offs])
-        self.values.append(value)
+            value = value[self.input_offs]
+        self.values.append(float(value))
         super(SimplePlotter, self).run()
 
 
@@ -397,6 +401,7 @@ class MatrixPlotter(Plotter):
             verticalalignment="center",
             horizontalalignment="center")
         figure.show()
+        figure.canvas.draw()
         super(MatrixPlotter, self).redraw()
 
 
@@ -495,6 +500,7 @@ class Weights2D(Plotter):
                 break
 
         figure.show()
+        figure.canvas.draw()
 
         super(Weights2D, self).redraw()
 
@@ -579,6 +585,7 @@ class Image(Plotter):
             self.draw_image(ax, value)
 
         figure.show()
+        figure.canvas.draw()
         super(Image, self).redraw()
 
 
@@ -682,6 +689,7 @@ class MSEHistogram(Plotter):
                            fontsize=l3, rotation=90)
 
         fig.show()
+        fig.canvas.draw()
         super(MSEHistogram, self).redraw()
 
     def run(self):
