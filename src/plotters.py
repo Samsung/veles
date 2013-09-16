@@ -167,7 +167,7 @@ class Plotter(units.Unit):
 
 
 class SimplePlotter(Plotter):
-    """ Plotter for given values
+    """Accumulates supplied value and draws the accumulated plot.
 
     Should be assigned before initialize():
         input
@@ -186,12 +186,15 @@ class SimplePlotter(Plotter):
         plot_style: Style of lines used for plotting. See
             http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.plot
             for reference.
+        clear_plot: will clear plot at the beginning of redraw().
+        redraw_plot: will redraw plot at the end of redraw().
+        ylim: bounds of plot y-axis.
     """
     def __init__(self, figure_label="num errors",
                  plot_style="k-",
                  clear_plot=False,
                  redraw_plot=False,
-                 bounds=None):
+                 ylim=None):
         super(SimplePlotter, self).__init__()
         self.values = []
         self.input = None  # Connector
@@ -201,7 +204,7 @@ class SimplePlotter(Plotter):
         self.input_offs = 0
         self.clear_plot = clear_plot
         self.redraw_plot = redraw_plot
-        self.bounds = bounds
+        self.ylim = ylim
 
     def redraw(self):
         figure_label = self.figure_label
@@ -211,7 +214,7 @@ class SimplePlotter(Plotter):
         axes = figure.add_subplot(111)  # Main axes
         if self.clear_plot:
             axes.cla()
-        if self.bounds != None:
+        if self.ylim != None:
             axes.set_ylim(self.bounds[0], self.bounds[1])
         axes.plot(self.values, self.plot_style)
         figure.show()
@@ -510,7 +513,7 @@ class Image(Plotter):
 
     Should be assigned before initialize():
         inputs
-        inputs_field
+        input_fields
 
     Updates after run():
 
@@ -581,12 +584,62 @@ class Image(Plotter):
             else:
                 value = self.inputs[i].__dict__[input_field]
             ax = figure.add_subplot(len(self.input_fields), 1, i + 1)
-            ax.cla
+            ax.cla()
             self.draw_image(ax, value)
 
         figure.show()
         figure.canvas.draw()
         super(Image, self).redraw()
+
+
+class Plot(Plotter):
+    """Plotter for drawing N plots together.
+
+    Should be assigned before initialize():
+        inputs
+        input_fields
+        input_styles
+
+    Updates after run():
+
+    Creates within initialize():
+
+    Attributes:
+        inputs: list of inputs.
+        input_fields: list of fields for corresponding input.
+        input_styles: pyplot line styles for corresponding input.
+        ylim: bounds of the plot y-axis.
+    """
+    def __init__(self, figure_label="Plot", ylim=None):
+        super(Plot, self).__init__()
+        self.inputs = []
+        self.input_fields = []
+        self.input_styles = []
+        self.figure_label = figure_label
+        self.ylim = ylim
+
+    def redraw(self):
+        figure_label = self.figure_label
+        figure = pp.figure(figure_label)
+        figure.clf()
+        ax = figure.add_subplot(111)
+        ax.cla()
+        if self.ylim != None:
+            ax.set_ylim(self.ylim[0], self.ylim[1])
+
+        for i, input_field in enumerate(self.input_fields):
+            value = None
+            if type(input_field) == int:
+                if input_field >= 0 and input_field < len(self.inputs[i]):
+                    value = self.inputs[i][input_field]
+            else:
+                value = self.inputs[i].__dict__[input_field]
+
+            ax.plot(value, self.input_styles[i])
+
+        figure.show()
+        figure.canvas.draw()
+        super(Plot, self).redraw()
 
 
 class MSEHistogram(Plotter):
