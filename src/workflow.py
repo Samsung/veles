@@ -88,27 +88,22 @@ class NNWorkflow(units.OpenCLUnit, Workflow):
         for i in range(len(self.forward)):
             variables = self.forward[i].__getstate__()
             for key in variables:
-                pass_next = False
-                # Save numpy array to binary file
-                if type(getattr(self.forward[i], key)) == formats.Vector:
-                    files_to_save.append(
-                        self._save_numpy_to_file(
-                            getattr(self.forward[i], key).v,
-                            key, i, tmppath))
-                    pass_next = True
+                if key in self.forward[i].attributes_to_save:
+                    self.log().debug("%d) %s in attributes to save" % (i, key))
+                    # Save numpy array to binary file
+                    if type(getattr(self.forward[i], key)) == formats.Vector:
+                        for j in range(len(getattr(self.forward[i], key).v.shape)):
+                            name = key + "_shape_" + str(j)
+                            setattr(self.forward[i], name,
+                                getattr(self.forward[i], key).v.shape[j])
+
+                        files_to_save.append(
+                            self._save_numpy_to_file(
+                                getattr(self.forward[i], key).v,
+                                key, i, tmppath))
+                        delattr(self.forward[i], key)
+                else:
                     delattr(self.forward[i], key)
-                # Delete links_to & links_from variables.
-                if (variables[key] == None or
-                    key == 'links_to' or
-                    key == 'links_from' and pass_next == False):
-                    delattr(self.forward[i], key)
-                    pass_next = True
-                # Delete complex variables that can not been save to yaml.
-                if (pass_next == False and
-                    self._is_class_inside_object(getattr(self.forward[i],
-                                                         key))):
-                    delattr(self.forward[i], key)
-                    pass_next = True
             variables = self.forward[i].__getstate__()
             variables_to_save.append(variables)
 
@@ -177,11 +172,6 @@ class NNWorkflow(units.OpenCLUnit, Workflow):
         if numpy_vector_name == "weights":
             self.log().debug("%s\n1: %f 2: %f" % (link_to_numpy,
                              numpy_vector[0][0], numpy_vector[0][1]))
-        elif numpy_vector_name == "output" and unit_number == 1:
-            for i in range(numpy_vector.shape[0]):
-                for j in range(numpy_vector.shape[1]):
-                    self.log().debug("(%d,%d) %f" % (i, j, numpy_vector[i][j]))
-                self.log().debug("")
         f = open("%s/%s" % (path, link_to_numpy), "wb")
         f.write(array_to_save)
         f.close()

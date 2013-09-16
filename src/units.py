@@ -294,6 +294,8 @@ class OpenCLUnit(Unit):
 
 class Forward(OpenCLUnit, yaml.YAMLObject):
     yaml_tag = "Unit"
+    # List that should contain all names of variables to save.
+    attributes_to_save = []
     pass
 
 
