@@ -25,23 +25,15 @@
 
 include $(top_srcdir)/Makefile.common
 
-lib_LTLIBRARIES = libVeles.la
+lib_LTLIBRARIES = libEina.la
 
 #######################################
-# Build information for libVeles.la
+# Build information for libEina.la
 
 # Source files
-libVeles_la_SOURCES = unit.cc unit_factory.cc workflow.cc workflow_loader.cc
-
-# Compiler options
-libVeles_la_CPPFLAGS = $(AM_CPPFLAGS) @LIBARCHIVE_CFLAGS@ @YAMLCPP_CFLAGS@
+libEina_la_SOURCES = eina_log.c eina_inlist.c
 
 # Used libraries
-libVeles_la_LIBADD = @LIBARCHIVE_LIBS@ @YAMLCPP_LIBS@ @EINA_LIBS@
-
-libVeles_la_LDFLAGS = $(AM_LDFLAGS) \
-	-version-info $(INTERFACE_VERSION):$(REVISION_NUMBER):$(AGE_NUMBER) \
-	-Wl,--whole-archive,$(STATIC_ZLIB_LIBS),--no-whole-archive \
-	-Wl,--whole-archive,$(STATIC_YAMLCPP_LIBS),--no-whole-archive
+libEina_la_LIBADD = -lm
 
 PARALLEL_SUBDIRS =

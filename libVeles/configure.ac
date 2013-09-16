@@ -98,6 +98,25 @@ AC_ARG_WITH([built-in-yaml-cpp],
 AC_SUBST([YAMLCPP_DIR])
 AC_SUBST([STATIC_YAMLCPP_LIBS])
 
+# Check whether to use nice Eina logging
+AC_ARG_ENABLE([eina-logging],
+    AS_HELP_STRING([--disable-eina-logging], [do not use Eina as the logging backend])
+)
+AC_ARG_WITH([built-in-eina-logging],
+AS_HELP_STRING([--with-built-in-eina-logging], [use bundled eina_log module]), [
+    AS_IF([test "x$enable_eina_logging" != "xno"], [
+    	EINA_CFLAGS="-I\$(top_srcdir)/eina"
+    	EINA_LIBS="\$(top_builddir)/eina/libEina.la"
+    	EINA_DIR=eina    	
+	])
+], [
+    AS_IF([test "x$enable_eina_logging" != "xno"], [
+        PKG_CHECK_MODULES([EINA], [eina >= 1.0])      
+    ])
+])
+AM_CPPFLAGS="$AM_CPPFLAGS -DEINA $EINA_CFLAGS"
+AC_SUBST([EINA_DIR])
+
 AM_COND_IF([TESTS], [
     AC_CONFIG_LINKS([tests/workflow_files/remove_folder_testing.tar.gz:tests/workflow_files/remove_folder_testing.tar.gz
                      tests/workflow_files/test_archive.tar.gz:tests/workflow_files/test_archive.tar.gz
@@ -105,5 +124,7 @@ AM_COND_IF([TESTS], [
                      tests/workflow_files/neural_network.tar.gz:tests/workflow_files/neural_network.tar.gz
                      tests/workflow_files/workflow.tar.gz:tests/workflow_files/workflow.tar.gz])    
 ])
+
+AC_CONFIG_FILES(eina/Makefile)
 
 AC_OUTPUT
