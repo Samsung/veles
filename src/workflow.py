@@ -151,6 +151,18 @@ class NNWorkflow(units.OpenCLUnit, Workflow):
                 cls_name = "All2All"
             to_print[cls_name] = self.forward[i]
             yaml.dump(to_print, stream)
+
+        # Save info about cropped image
+        obj = {}
+        for name in self.loader.attributes_to_save:
+            if hasattr(self.loader, name):
+                obj[name] = self.loader.__dict__[name]
+            else:
+                self.log().debug("Loader hasn't attribute %s" % name)
+        service_info = {}
+        service_info["service_info"] = obj
+        yaml.dump(service_info, stream)
+
         stream.close()
 
     def _save_numpy_to_file(self, numpy_vector, numpy_vector_name, unit_number,
