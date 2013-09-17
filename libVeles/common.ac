@@ -259,4 +259,43 @@ AM_COND_IF([TESTS], [
     # Default visibility of symbols is hidden
     AM_CPPFLAGS="$AM_CPPFLAGS -fvisibility=hidden"
 ])
-AC_SUBST([TESTS_DIR])               
+AC_SUBST([TESTS_DIR])
+
+COLOR_RED='\033@<:@01;31m'
+COLOR_GREEN='\033@<:@01;32m'
+COLOR_YELLOW='\033@<:@01;33m'
+COLOR_PURPLE='\033@<:@01;35m'
+COLOR_CYAN='\033@<:@01;36m'
+COLOR_WHITE='\033@<:@01;37m'
+COLOR_RESET='\033@<:@00m'
+
+AC_DEFUN([COMMON_PRINT_STATUS], [
+echo
+echo -e "${COLOR_WHITE}-----------------${COLOR_RESET}"
+echo -e "${COLOR_WHITE}- Configuration -${COLOR_RESET}"
+echo -e "${COLOR_WHITE}-----------------${COLOR_RESET}"
+echo
+echo -e "${COLOR_WHITE}Compilation:${COLOR_RESET}"
+echo -e "  CFLAGS.............: ${COLOR_GREEN}$CFLAGS $AM_CFLAGS${COLOR_RESET}"
+echo -e "  CPPFLAGS...........: ${COLOR_GREEN}$CPPFLAGS $AM_CPPFLAGS${COLOR_RESET}"
+echo -e "  CXXFLAGS...........: ${COLOR_GREEN}$CXXFLAGS $AM_CXXFLAGS${COLOR_RESET}"
+echo -e "  LDFLAGS............: ${COLOR_GREEN}$LDFLAGS $AM_LDFLAGS${COLOR_RESET}"
+echo
+echo -e "${COLOR_WHITE}Installation:${COLOR_RESET}"
+echo -e "  Prefix.............: ${COLOR_CYAN}${prefix}${COLOR_RESET}"
+echo -e "  Host...............: ${COLOR_CYAN}${host}${COLOR_RESET}"
+echo
+echo -e "${COLOR_WHITE}Common options:${COLOR_RESET}"
+echo "  parallel_build.....: ${enable_parallel_build:-no}"
+echo "  colors.............: ${enable_colors:-yes}"
+echo "  debug..............: ${enable_debug:-no}"
+echo "  shared.............: ${enable_shared:-yes}"
+echo "  static.............: ${enable_static:-yes}"
+echo "  doxygen............: ${enable_doxygen:-yes}"
+echo "  lto................: ${enable_lto:-no}"
+echo "  fast_math..........: ${enable_fast_math:-no}"
+echo "  openmp.............: ${enable_openmp:-yes}"
+echo "  tests..............: ${enable_tests:-yes}"
+echo "  test_coverage......: ${enable_test_coverage:-no}"
+])
+

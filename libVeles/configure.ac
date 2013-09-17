@@ -130,3 +130,16 @@ AM_COND_IF([TESTS], [
 AC_CONFIG_FILES(eina/Makefile)
 
 AC_OUTPUT
+
+AC_DEFUN([VELES_PRINT_STATUS], [
+echo
+echo -e "${COLOR_WHITE}Veles options:${COLOR_RESET}"
+echo "  built_in_libarchive.....: ${with_built_in_libarchive:-no}"
+echo "  built_in_yaml_cpp.......: ${with_built_in_yaml_cpp:-no}"
+echo "  eina_logging............: ${enable_eina_logging:-yes}"
+echo "  built_in_eina_logging...: ${with_built_in_eina_logging:-no}"
+echo
+])
+
+COMMON_PRINT_STATUS
+VELES_PRINT_STATUS
