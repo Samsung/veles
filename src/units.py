@@ -253,6 +253,11 @@ class Unit(Pickleable):
             del self.links_from[src]
         self.gate_lock_.release()
 
+    def nothing(self):
+        """Function that do nothing.
+        """
+        pass
+
 
 class OpenCLUnit(Unit):
     """Unit that operates using OpenCL.
