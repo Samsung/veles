@@ -30,7 +30,7 @@
 #include <errno.h>
 #include <pthread.h>
 
-#include "eina_config.h"
+#include "inc/veles/eina_config.h"
 #if defined HAVE_EXECINFO_H && defined HAVE_BACKTRACE && defined HAVE_BACKTRACE_SYMBOLS
 # include <execinfo.h>
 # define EINA_LOG_BACKTRACE
@@ -44,7 +44,7 @@
 #include "eina_inlist.h"
 #include "eina_thread.h"
 #include "eina_safety_checks.h"
-#include "eina_log.h"
+#include "inc/veles/eina_log.h"
 #include "eina_inline_private.h"
 
 /* TODO
@@ -1292,6 +1292,17 @@ eina_log_print_unlocked(int domain,
    if (level > d->level)
       return;
 
+   const char *file_slash_pos = strrchr(file,
+#ifdef _WIN32
+                                        '\\'
+#else
+                                        '/'
+#endif
+                                        );
+   if (file_slash_pos) {
+     file = file_slash_pos + 1;
+   }
+
 #ifdef _WIN32
    {
       char *wfmt;
@@ -1334,6 +1345,14 @@ eina_log_print_unlocked(int domain,
 *                                 Global                                     *
 *============================================================================*/
 
+static Eina_Bool eina_log_is_initialized(const Eina_Bool *value) {
+  static Eina_Bool initialized = EINA_FALSE;
+  if (value) {
+    initialized = *value;
+  }
+  return initialized;
+}
+
 /**
  * @internal
  * @brief Initialize the log module.
@@ -1352,6 +1371,9 @@ eina_log_print_unlocked(int domain,
 Eina_Bool
 eina_log_init(void)
 {
+  if (eina_log_is_initialized(NULL)) {
+    return EINA_TRUE;
+  }
 #ifdef EINA_ENABLE_LOG
    const char *level, *tmp;
    int color_disable;
@@ -1446,6 +1468,8 @@ eina_log_init(void)
                    EINA_LOG_STATE_INIT);
 
 #endif
+   Eina_Bool initialized = EINA_TRUE;
+   eina_log_is_initialized(&initialized);
    return EINA_TRUE;
 }
 
@@ -1505,6 +1529,8 @@ eina_log_shutdown(void)
      }
 
 #endif
+   Eina_Bool initialized = EINA_FALSE;
+   eina_log_is_initialized(&initialized);
    return EINA_TRUE;
 }
 

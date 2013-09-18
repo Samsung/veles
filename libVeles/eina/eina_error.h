@@ -21,7 +21,7 @@
 
 #include <stdarg.h>
 
-#include "eina_types.h"
+#include "inc/veles/eina_types.h"
 
 
 /**

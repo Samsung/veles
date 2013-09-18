@@ -19,8 +19,8 @@
 #ifndef EINA_MAGIC_H_
 #define EINA_MAGIC_H_
 
-#include "eina_config.h"
-#include "eina_types.h"
+#include "inc/veles/eina_config.h"
+#include "inc/veles/eina_types.h"
 #include "eina_error.h"
 
 /**

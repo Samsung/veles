@@ -35,7 +35,7 @@
 <flagvalue id="cflags-gprof" value="false"/>
 <flagvalue id="cflags-gcov" value="false"/>
 </flag>
-<option id="user" value="--enable-parallel-build --enable-debug --disable-doxygen"/>
+<option id="user" value=" --quiet --enable-maintainer-mode --enable-parallel-build --enable-debug --disable-doxygen --with-built-in-eina-logging --with-built-in-libarchive --with-built-in-yaml-cpp --disable-static"/>
 <option id="autogen" value="autogen.sh"/>
 <option id="autogenOpts" value=""/>
 </configuration>

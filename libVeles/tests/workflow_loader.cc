@@ -10,10 +10,10 @@
  *  Copyright 2013 Samsung R&D Institute Russia
  */
 
-#include <veles/workflow_loader.h>
 #include <unistd.h>
 #include <string>
 #include <gtest/gtest.h>
+#include <veles/workflow_loader.h>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #include <yaml-cpp/yaml.h>  // NOLINT(*)
@@ -23,17 +23,17 @@ using std::string;
 using std::static_pointer_cast;
 
 namespace Veles {
-void IterateThroughYAML(const YAML::Node& node);
-void PrintfNodeType(const YAML::Node& node, const string prepend);
 
-class WorkflowLoaderTest: public ::testing::Test {
+class WorkflowLoaderTest
+    : public ::testing::Test,
+      protected DefaultLogger<WorkflowLoaderTest, Logger::COLOR_YELLOW> {
  public:
   WorkflowLoaderTest() {
     current_path = "";
     char  currentPath[FILENAME_MAX];
 
     if (!getcwd(currentPath, sizeof(currentPath))) {
-      fprintf(stderr, "Can't locate current directory\n");
+      ERR("Can't locate current directory");
     } else {
       current_path = currentPath;
     }
@@ -48,6 +48,9 @@ class WorkflowLoaderTest: public ::testing::Test {
       current_path = "";  // Error
     }
   }
+
+  void IterateThroughYAML(const YAML::Node& node);
+  void PrintfNodeType(const YAML::Node& node, const string prepend);
 
   void MainTest2() {
     if (current_path == string("")) {
@@ -207,7 +210,7 @@ class WorkflowLoaderTest: public ::testing::Test {
     char* tempFolderName2 = mkdtemp(tempFolderName);
     // Check existence of temporary folder
     if (tempFolderName2 == nullptr) {
-      fprintf(stderr, "Can't create temporary folder");
+      ERR("Can't create temporary folder");
       FAIL();
     }
     // Check existence of archive
@@ -215,7 +218,7 @@ class WorkflowLoaderTest: public ::testing::Test {
       // Delete temporary folder
       rmdir(string(tempFolderName2).c_str());
       // Printf error + FAIL
-      fprintf(stderr, "Path doesn't exist : %s\n", pathToArchive.c_str());
+      ERR("Path doesn't exist : %s", pathToArchive.c_str());
       FAIL();
     }
 
@@ -239,15 +242,14 @@ class WorkflowLoaderTest: public ::testing::Test {
     char* tempFolderName2 = mkdtemp(tempFolderName);
     // Check existence of temporary folder
     if (tempFolderName2 == nullptr) {
-      fprintf(stderr, "Can't create temporary folder");
+      ERR("Can't create temporary folder");
       FAIL();
     }
     // Check existence of archive
     if (access(pathToArchive.c_str(), 0) == -1) {
       // Delete temporary folder
       rmdir(string(tempFolderName2).c_str());
-      fprintf(stderr, "Path doesn't exist : %s\n",
-              pathToArchive.c_str());
+      ERR("Path doesn't exist : %s\n", pathToArchive.c_str());
       FAIL();
     }
     // Check deleting of non existing folder
@@ -266,46 +268,47 @@ class WorkflowLoaderTest: public ::testing::Test {
   string current_path;
 };
 
-void PrintfNodeType(const YAML::Node& node, const string prepend) {
+void WorkflowLoaderTest::PrintfNodeType(const YAML::Node& node,
+                                        const string prepend) {
   switch (node.Type()) {
     case YAML::NodeType::Map:
-      fprintf(stderr, "%s is Map, size: %zu\n", prepend.c_str(), node.size());
+      INF("%s is Map, size: %zu", prepend.c_str(), node.size());
       break;
     case YAML::NodeType::Null:
-      fprintf(stderr, "%s is Null, size: %zu\n", prepend.c_str(), node.size());
+      INF("%s is Null, size: %zu", prepend.c_str(), node.size());
       break;
     case YAML::NodeType::Scalar:
-      fprintf(stderr, "%s is Scalar: %s\n", prepend.c_str(),
+      INF("%s is Scalar: %s", prepend.c_str(),
              node.as<string>().c_str());
       break;
     case YAML::NodeType::Sequence:
-      fprintf(stderr, "%s is Sequence, size: %zu\n", prepend.c_str(),
+      INF("%s is Sequence, size: %zu", prepend.c_str(),
               node.size());
       break;
     case YAML::NodeType::Undefined:
-      fprintf(stderr, "%s is Undefined, size: %ld\n", prepend.c_str(),
+      INF("%s is Undefined, size: %ld", prepend.c_str(),
               node.size());
       break;
   }
 }
 
-void IterateThroughYAML(const YAML::Node& node) {
+void WorkflowLoaderTest::IterateThroughYAML(const YAML::Node& node) {
   for (auto it = node.begin(); it != node.end(); ++it) {
     switch (it->Type()) {
       case YAML::NodeType::Null:
-        fprintf(stderr, "Null;\n");
+        INF("Null");
         break;
       case YAML::NodeType::Undefined:
-        fprintf(stderr, "Undefined;\n");
+        INF("Undefined");
         break;
       case YAML::NodeType::Scalar:
-        fprintf(stderr, "Scalar \n");
+        INF("Scalar");
         break;
       case YAML::NodeType::Sequence:
-        fprintf(stderr, "Sequence;\n");
+        INF("Sequence");
         break;
       case YAML::NodeType::Map:
-        fprintf(stderr, "Map \n");
+        INF("Map");
         break;
     }
   }

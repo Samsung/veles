@@ -17,6 +17,7 @@
 #include <string>
 #include <memory>
 #include <algorithm>
+#include <veles/logger.h>
 #include <veles/unit.h>
 #include <veles/make_unique.h>
 
@@ -27,7 +28,7 @@
 namespace Veles {
 
 /** @brief VELES workflow */
-class Workflow {
+class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
  public:
   virtual ~Workflow() = default;
   /** @brief Appends a unit to the end of workflow

@@ -16,10 +16,8 @@
 
 namespace Veles {
 
-UnitFactory::UnitFactory() {
-}
-
-UnitFactory::~UnitFactory() {
+UnitFactory::UnitFactory()
+    : Logger("UnitFactory", GetColorByIndex(Logger::COLOR_LIGHTBLUE)) {
 }
 
 const UnitFactory& UnitFactory::Instance() {
@@ -42,7 +40,7 @@ UnitFactory::UnitConstructor UnitFactory::operator[](
 
 void UnitFactory::PrintRegisteredUnits() const {
   for (auto tit : map_) {
-    std::fprintf(stderr, "%s\n", tit.first.c_str());
+    INF("%s", tit.first.c_str());
   }
 }
 

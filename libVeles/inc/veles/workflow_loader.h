@@ -19,6 +19,7 @@
 
 #include <string>
 #include <memory>  // For shared_ptr<>
+#include <veles/logger.h>  // NOLINT(*)
 #include <veles/workflow.h>  // NOLINT(*)
 #include <veles/poison.h>  // NOLINT(*)
 
@@ -78,7 +79,8 @@ enum WorkflowExtractionError {
 /**
  * Class that contain all functions to extract workflow from archive.
  * */
-class WorkflowLoader {
+class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
+                                               Logger::COLOR_YELLOW> {
  public:
   friend class WorkflowLoaderTest;
 

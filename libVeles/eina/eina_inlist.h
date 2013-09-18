@@ -19,7 +19,7 @@
 #ifndef EINA_INLIST_H_
 #define EINA_INLIST_H_
 
-#include "eina_types.h"
+#include "inc/veles/eina_types.h"
 #include "eina_iterator.h"
 #include "eina_accessor.h"
 #include <stddef.h>

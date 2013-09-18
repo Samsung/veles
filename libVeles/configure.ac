@@ -105,7 +105,7 @@ AC_ARG_ENABLE([eina-logging],
 AC_ARG_WITH([built-in-eina-logging],
 AS_HELP_STRING([--with-built-in-eina-logging], [use bundled eina_log module]), [
     AS_IF([test "x$enable_eina_logging" != "xno"], [
-    	EINA_CFLAGS="-I\$(top_srcdir)/eina"
+    	EINA_CFLAGS="-DEINA_STRIPPED -I\$(top_srcdir)/eina"
     	EINA_LIBS="\$(top_builddir)/eina/libEina.la"
     	EINA_DIR=eina    	
 	])

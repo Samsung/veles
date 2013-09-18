@@ -61,7 +61,7 @@
 # endif
 #endif
 
-#include "eina_config.h"
+#include <veles/eina_config.h>
 
 #ifdef EINA_UNUSED
 # undef EINA_UNUSED

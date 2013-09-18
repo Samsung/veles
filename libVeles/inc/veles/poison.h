@@ -16,6 +16,9 @@
 #if __GNUC__ >= 4
 // Use the logging facilities instead
 #pragma GCC poison printf
+#ifdef EINA
+#pragma GCC poison fprintf
+#endif
 #endif
 
 #endif  // INC_VELES_POISON_H_

@@ -86,7 +86,7 @@
  * @{
  */
 
-#include "eina_config.h"
+#include "inc/veles/eina_config.h"
 #include "eina_error.h"
 
 /**

@@ -24,20 +24,27 @@
 #include <stdarg.h>
 #include <sys/types.h>
 
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "eina_types.h"
 
-#define EINA_COLOR_LIGHTRED  "\033[31;1m"
-#define EINA_COLOR_RED       "\033[31m"
-#define EINA_COLOR_LIGHTBLUE "\033[34;1m"
-#define EINA_COLOR_BLUE      "\033[34m"
-#define EINA_COLOR_GREEN     "\033[32;1m"
-#define EINA_COLOR_YELLOW    "\033[33;1m"
-#define EINA_COLOR_ORANGE    "\033[0;33m"
-#define EINA_COLOR_WHITE     "\033[37;1m"
-#define EINA_COLOR_LIGHTCYAN "\033[36;1m"
-#define EINA_COLOR_CYAN      "\033[36m"
-#define EINA_COLOR_RESET     "\033[0m"
-#define EINA_COLOR_HIGH      "\033[1m"
+#define EINA_COLOR_LIGHTRED     "\033[31;1m"
+#define EINA_COLOR_RED          "\033[31m"
+#define EINA_COLOR_LIGHTBLUE    "\033[34;1m"
+#define EINA_COLOR_BLUE         "\033[34m"
+#define EINA_COLOR_GREEN        "\033[32;1m"
+#define EINA_COLOR_YELLOW       "\033[33;1m"
+#define EINA_COLOR_ORANGE       "\033[0;33m"
+#define EINA_COLOR_WHITE        "\033[37;1m"
+#define EINA_COLOR_LIGHTCYAN    "\033[36;1m"
+#define EINA_COLOR_CYAN         "\033[36m"
+#define EINA_COLOR_RESET        "\033[0m"
+#define EINA_COLOR_HIGH         "\033[1m"
 
 Eina_Bool eina_log_init(void);
 Eina_Bool eina_log_shutdown(void);
@@ -975,5 +982,12 @@ EAPI void eina_log_timing(int domain,
 /**
  * @}
  */
+
+#ifdef __cplusplus
+}
+#endif
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
 
 #endif /* EINA_LOG_H_ */

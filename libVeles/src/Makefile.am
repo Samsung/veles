@@ -31,7 +31,8 @@ lib_LTLIBRARIES = libVeles.la
 # Build information for libVeles.la
 
 # Source files
-libVeles_la_SOURCES = unit.cc unit_factory.cc workflow.cc workflow_loader.cc
+libVeles_la_SOURCES = unit.cc unit_factory.cc workflow.cc workflow_loader.cc \
+	logger.cc
 
 # Compiler options
 libVeles_la_CPPFLAGS = $(AM_CPPFLAGS) @LIBARCHIVE_CFLAGS@ @YAMLCPP_CFLAGS@

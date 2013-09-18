@@ -15,6 +15,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <veles/logger.h>
 #include <veles/unit.h>
 
 #if __GNUC__ >= 4
@@ -27,7 +28,7 @@ namespace Veles {
 /// @details Use it the following way:
 /// auto unit = UnitFactory::Instance()["All2All"]();
 /// @note Meyers singleton ideal for C++11.
-class UnitFactory {
+class UnitFactory : protected Logger {
   template <class T>
   friend class RegisterUnit;
  public:
@@ -49,7 +50,6 @@ class UnitFactory {
 
  private:
   UnitFactory();
-  ~UnitFactory();
   UnitFactory(const UnitFactory&) = delete;
   UnitFactory& operator=(const UnitFactory&) = delete;
 
@@ -61,7 +61,7 @@ class UnitFactory {
 /// @brief Helper class used to register units. Usually, you do not
 /// want to use it explicitly but rather through REGISTER_UNIT macro.
 template<class T>
-class RegisterUnit {
+class RegisterUnit : DefaultLogger<RegisterUnit<T>, Logger::COLOR_LIGHTBLUE> {
  public:
   /// @brief This function is called during the execution of static
   /// constructors of global RegisterUnit class instances in each of the
@@ -74,6 +74,7 @@ class RegisterUnit {
   RegisterUnit() {
     T unit;
     UnitFactory::InstanceRW().map_[unit.Name()] = std::make_shared<T>;
+    INF("I am registered");
   }
 };
 

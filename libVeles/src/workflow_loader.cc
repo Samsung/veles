@@ -182,8 +182,8 @@ std::shared_ptr<float> WorkflowLoader::GetArrayFromFile(const string& file,
   auto weight = shared_ptr<float>(mallocf(array_size), free);
   fr.read(reinterpret_cast<char*>(weight.get()), array_size);
 
-  fprintf(stderr,"%s size = %d bytes,\n1: %f 2: %f \n", file.c_str(),
-          array_size, weight.get()[0], weight.get()[1]);
+  DBG("%s size = %d bytes,\n1: %f 2: %f", file.c_str(),
+      array_size, weight.get()[0], weight.get()[1]);
 
   return weight;
 }
@@ -193,24 +193,23 @@ void WorkflowLoader::InitializeWorkflow() {
     auto Unit = Veles::UnitFactory::Instance()[it.Name]();
     for (auto& itUnit : it.Properties) {
       if (string("bias_length") == itUnit.first) {
-        fprintf(stderr, "Properties: %s %zu\n", itUnit.first.c_str(),
-                *static_cast<size_t*>(itUnit.second.get()));
+        INF("Properties: %s %zu", itUnit.first.c_str(),
+            *static_cast<size_t*>(itUnit.second.get()));
       } else if (string("input_length") == itUnit.first) {
-        fprintf(stderr, "Properties: %s %zu\n", itUnit.first.c_str(),
-                *static_cast<size_t*>(itUnit.second.get()));
+        INF("Properties: %s %zu", itUnit.first.c_str(),
+            *static_cast<size_t*>(itUnit.second.get()));
       } else if (string("output_length") == itUnit.first) {
-        fprintf(stderr, "Properties: %s %zu\n", itUnit.first.c_str(),
-                *static_cast<size_t*>(itUnit.second.get()));
+        INF("Properties: %s %zu", itUnit.first.c_str(),
+            *static_cast<size_t*>(itUnit.second.get()));
       } else if (string("weights_length") == itUnit.first) {
-        fprintf(stderr, "Properties: %s %zu\n", itUnit.first.c_str(),
-                *static_cast<size_t*>(itUnit.second.get()));
+        INF("Properties: %s %zu", itUnit.first.c_str(),
+            *static_cast<size_t*>(itUnit.second.get()));
       } else {
-        fprintf(stderr, "Properties: %s\n", itUnit.first.c_str());
+        INF("Properties: %s", itUnit.first.c_str());
       }
 
       Unit->SetParameter(itUnit.first, itUnit.second);
     }
-    fprintf(stderr, "\n\n");
     workflow_.Add(Unit);
   }
 }
@@ -274,8 +273,8 @@ void WorkflowLoader::ExtractArchive(const string& filename,
     while ((r = archive_read_next_header(input_archive.get(), &entry) !=
         ARCHIVE_EOF)) {
       if (r != ARCHIVE_OK) {
-        fprintf(stderr, "archive_read_next_header() : %s\n",
-               archive_error_string(input_archive.get()));
+        ERR("archive_read_next_header() : %s",
+            archive_error_string(input_archive.get()));
       }
       auto path = directory + "/" + archive_entry_pathname(entry);
 
@@ -283,21 +282,21 @@ void WorkflowLoader::ExtractArchive(const string& filename,
 
       r = archive_write_header(ext.get(), entry);
       if (r != ARCHIVE_OK) {
-        fprintf(stderr, "archive_write_header() : %s\n",
-               archive_error_string(ext.get()));
+        ERR("archive_write_header() : %s",
+            archive_error_string(ext.get()));
       } else {
         CopyData(*input_archive.get(), ext.get());
         r = archive_write_finish_entry(ext.get());
         if (r != ARCHIVE_OK) {
-          fprintf(stderr, "archive_write_finish_entry() : %s\n",
-                         archive_error_string(ext.get()));
+          ERR("archive_write_finish_entry() : %s",
+              archive_error_string(ext.get()));
         }
       }
     }
   } catch(const std::exception& e) {
     auto error = string("(Veles::WorkflowLoader::ExtractArchive:\nCan't open "
         "archive: ") + e.what() + ")";
-    fprintf(stderr, "%s\n", error.c_str());
+    ERR("%s", error.c_str());
     throw std::runtime_error(error);
   }
 }
@@ -341,8 +340,8 @@ int WorkflowLoader::CopyData(const archive& ar, archive *aw) {
      return ARCHIVE_OK;
     }
     if (res != ARCHIVE_OK) {
-     fprintf(stderr, "From CopyData : archive_write_data_block() : %s\n",
-             archive_error_string(aw));
+     ERR("From CopyData : archive_write_data_block() : %s",
+         archive_error_string(aw));
      break;
     }
     res = archive_write_data_block(aw, buff, size, offset);

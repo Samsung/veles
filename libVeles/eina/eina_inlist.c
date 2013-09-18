@@ -25,10 +25,10 @@
 
 #include <stdio.h>
 
-#include "eina_config.h"
+#include "inc/veles/eina_config.h"
 #include "eina_private.h"
 #include "eina_error.h"
-#include "eina_log.h"
+#include "inc/veles/eina_log.h"
 
 /* undefs EINA_ARG_NONULL() so NULL checks are not compiled out! */
 #include "eina_safety_checks.h"
