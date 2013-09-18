@@ -153,8 +153,11 @@ class Plotter(units.Unit):
     """
     def __init__(self, device=None):
         super(Plotter, self).__init__()
-        self.lock_ = threading.Lock()
         self.lock_.acquire()
+
+    def init_unpickled(self):
+        super(Plotter, self).init_unpickled()
+        self.lock_ = threading.Lock()
 
     def redraw(self):
         """ Do the actual drawing here
@@ -215,7 +218,7 @@ class SimplePlotter(Plotter):
         if self.clear_plot:
             axes.cla()
         if self.ylim != None:
-            axes.set_ylim(self.bounds[0], self.bounds[1])
+            axes.set_ylim(self.ylim[0], self.ylim[1])
         axes.plot(self.values, self.plot_style)
         figure.show()
         if self.redraw_plot:

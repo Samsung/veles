@@ -307,8 +307,8 @@ class EndPoint(Unit):
     Attributes:
         sem_: semaphore.
     """
-    def __init__(self):
-        super(EndPoint, self).__init__()
+    def init_unpickled(self):
+        super(EndPoint, self).init_unpickled()
         self.sem_ = threading.Semaphore(0)
 
     def run(self):
