@@ -129,10 +129,9 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
   WorkflowDescription GetWorkflowDescription() const { return workflow_desc_; }
 
   void InitializeWorkflow();
-  /// Default path to working directory.
-  static const char* kWorkingDirectory;
-  /// Default name of decompressed yaml file.
-  static const char* kWorkflowDecompressedFile;
+
+ protected:
+  const WorkflowDescription& workflow_desc() const;
 
  private:
   /// @brief Extract file archive.
@@ -193,6 +192,11 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
 
   /// @brief Some function for ExtractArchive
   int  CopyData(const archive& ar, archive *aw);
+
+  /// Default path to working directory.
+  static const char* kWorkingDirectory;
+  /// Default name of decompressed yaml file.
+  static const char* kWorkflowDecompressedFile;
 
   WorkflowDescription workflow_desc_;
   Workflow workflow_;

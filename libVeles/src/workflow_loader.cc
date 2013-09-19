@@ -349,3 +349,7 @@ int WorkflowLoader::CopyData(const archive& ar, archive *aw) {
 
   return res;
 }
+
+const WorkflowDescription& WorkflowLoader::workflow_desc() const {
+  return workflow_desc_;
+}
