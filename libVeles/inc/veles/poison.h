@@ -15,7 +15,7 @@
 
 #if __GNUC__ >= 4
 // Use the logging facilities instead
-#pragma GCC poison printf
+#pragma GCC poison printf cout cerr
 #ifdef EINA
 #pragma GCC poison fprintf
 #endif
