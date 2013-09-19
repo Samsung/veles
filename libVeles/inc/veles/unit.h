@@ -15,7 +15,6 @@
 
 #include <string>
 #include <memory>
-#include <veles/poison.h>
 
 #if __GNUC__ >= 4
 #pragma GCC visibility push(default)

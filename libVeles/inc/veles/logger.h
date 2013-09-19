@@ -13,7 +13,11 @@
 #ifndef INC_VELES_LOGGER_H_
 #define INC_VELES_LOGGER_H_
 
+#include <string>
+#include <typeinfo>
+
 #ifdef EINA
+#include <veles/poison.h>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #ifndef EINA_STRIPPED
@@ -23,9 +27,6 @@
 #endif
 #pragma GCC diagnostic pop
 #endif
-
-#include <string>
-#include <typeinfo>
 
 #ifdef EINA
 

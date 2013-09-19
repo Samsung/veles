@@ -15,10 +15,7 @@
 
 #if __GNUC__ >= 4
 // Use the logging facilities instead
-#pragma GCC poison printf cout cerr
-#ifdef EINA
-#pragma GCC poison fprintf
-#endif
+#pragma GCC poison printf fprintf cout cerr
 #endif
 
 #endif  // INC_VELES_POISON_H_
