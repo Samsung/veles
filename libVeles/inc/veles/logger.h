@@ -45,11 +45,11 @@
 #define ERRI(x, ...) EINA_LOG_DOM_ERR((x)->log_domain(), __VA_ARGS__)
 #define CRTI(x, ...) EINA_LOG_DOM_CRIT((x)->log_domain(), __VA_ARGS__)
 
-#define DBGC(x, ...) EINA_LOG_DOM_DBG(x::log_domain(), __VA_ARGS__)
-#define INFC(x, ...) EINA_LOG_DOM_INFO(x::log_domain(), __VA_ARGS__)
-#define WRNC(x, ...) EINA_LOG_DOM_WARN(x::log_domain(), __VA_ARGS__)
-#define ERRC(x, ...) EINA_LOG_DOM_ERR(x::log_domain(), __VA_ARGS__)
-#define CRTC(x, ...) EINA_LOG_DOM_CRIT(x::log_domain(), __VA_ARGS__)
+#define DBGS(x, ...) EINA_LOG_DOM_DBG(x::log_domain(), __VA_ARGS__)
+#define INFS(x, ...) EINA_LOG_DOM_INFO(x::log_domain(), __VA_ARGS__)
+#define WRNS(x, ...) EINA_LOG_DOM_WARN(x::log_domain(), __VA_ARGS__)
+#define ERRS(x, ...) EINA_LOG_DOM_ERR(x::log_domain(), __VA_ARGS__)
+#define CRTS(x, ...) EINA_LOG_DOM_CRIT(x::log_domain(), __VA_ARGS__)
 
 #else
 
@@ -70,11 +70,11 @@
 #define ERRI(x, ...) FALLBACK_LOG(__VA_ARGS__)
 #define CRTI(x, ...) FALLBACK_LOG(__VA_ARGS__)
 
-#define DBGC(x, ...) FALLBACK_LOG(__VA_ARGS__)
-#define INFC(x, ...) FALLBACK_LOG(__VA_ARGS__)
-#define WRNC(x, ...) FALLBACK_LOG(__VA_ARGS__)
-#define ERRC(x, ...) FALLBACK_LOG(__VA_ARGS__)
-#define CRTC(x, ...) FALLBACK_LOG(__VA_ARGS__)
+#define DBGS(x, ...) FALLBACK_LOG(__VA_ARGS__)
+#define INFS(x, ...) FALLBACK_LOG(__VA_ARGS__)
+#define WRNS(x, ...) FALLBACK_LOG(__VA_ARGS__)
+#define ERRS(x, ...) FALLBACK_LOG(__VA_ARGS__)
+#define CRTS(x, ...) FALLBACK_LOG(__VA_ARGS__)
 
 #endif
 
