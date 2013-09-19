@@ -146,9 +146,7 @@ class NNWorkflow(units.OpenCLUnit, Workflow):
             self.log().debug("Saving " + cls.__name__ + "...")
             cls.yaml_dumper.add_representer(cls, cls.to_yaml)
             cls_name = self.forward[i].__class__.__name__
-            # TODO(EBulychev): remove this hack
-            if cls_name == "All2AllSoftmax":
-                cls_name = "All2All"
+
             to_print[cls_name] = self.forward[i]
             yaml.dump(to_print, stream)
 
