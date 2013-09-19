@@ -75,6 +75,8 @@ class Rand(object):
         return retval
 
     def randint(self, low, high=None, size=None):
+        """Returns random integer(s) from [low, high).
+        """
         global _lock
         _lock.acquire()
         state = numpy.random.get_state()
