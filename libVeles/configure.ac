@@ -114,7 +114,9 @@ AS_HELP_STRING([--with-built-in-eina-logging], [use bundled eina_log module]), [
         PKG_CHECK_MODULES([EINA], [eina >= 1.0])      
     ])
 ])
-AM_CPPFLAGS="$AM_CPPFLAGS -DEINA $EINA_CFLAGS"
+AS_IF([test "x$enable_eina_logging" != "xno"], [
+	AM_CPPFLAGS="$AM_CPPFLAGS -DEINA $EINA_CFLAGS"
+])
 AC_SUBST([EINA_DIR])
 
 AM_COND_IF([TESTS], [
