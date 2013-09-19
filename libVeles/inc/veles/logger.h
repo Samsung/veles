@@ -17,7 +17,6 @@
 #include <typeinfo>
 
 #ifdef EINA
-#include <veles/poison.h>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #ifndef EINA_STRIPPED
@@ -29,6 +28,7 @@
 #endif
 
 #ifdef EINA
+#include <veles/poison.h>
 
 #define EINA_COLOR_LIGHTVIOLET  "\033[35;1m"
 #define EINA_COLOR_VIOLET       "\033[35m"
