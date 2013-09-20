@@ -182,7 +182,7 @@ std::shared_ptr<float> WorkflowLoader::GetArrayFromFile(const string& file,
   auto weight = shared_ptr<float>(mallocf(array_size), free);
   fr.read(reinterpret_cast<char*>(weight.get()), array_size);
 
-  DBG("%s size = %d bytes,\n1: %f 2: %f", file.c_str(),
+  DBG("%s size = %d bytes, 1: %f 2: %f", file.c_str(),
       array_size, weight.get()[0], weight.get()[1]);
 
   return weight;
