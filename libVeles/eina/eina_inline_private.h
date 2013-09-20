@@ -17,40 +17,16 @@
  */
 
 #ifndef EINA_INLINE_PRIVATE_H_
-# define EINA_INLINE_PRIVATE_H_
+#define EINA_INLINE_PRIVATE_H_
 
+#include <time.h>
+#include <sys/time.h>
 
-#ifndef _WIN32
-#ifndef __USE_POSIX199309
-#define __USE_POSIX199309
-#endif
-# include <time.h>
-# include <sys/time.h>
-#else
-# define WIN32_LEAN_AND_MEAN
-# include <windows.h>
-# undef WIN32_LEAN_AND_MEAN
-#endif /* _WIN2 */
-
-#ifndef _WIN32
 typedef struct timespec Eina_Nano_Time;
-#else
-typedef LARGE_INTEGER Eina_Nano_Time;
-
-extern LARGE_INTEGER _eina_counter_frequency;
-#endif
 
 static inline int
 _eina_time_get(Eina_Nano_Time *tp)
 {
-#ifndef _WIN32
-# if defined(CLOCK_PROCESS_CPUTIME_ID)
-   return clock_gettime(CLOCK_PROCESS_CPUTIME_ID, tp);
-# elif defined(CLOCK_PROF)
-   return clock_gettime(CLOCK_PROF, tp);
-# elif defined(CLOCK_REALTIME)
-   return clock_gettime(CLOCK_REALTIME, tp);
-# else
    struct timeval tv;
 
    if (gettimeofday(&tv, NULL))
@@ -60,40 +36,20 @@ _eina_time_get(Eina_Nano_Time *tp)
    tp->tv_nsec = tv.tv_usec * 1000L;
 
    return 0;
-# endif
-#else
-   return QueryPerformanceCounter(tp);
-#endif /* _WIN2 */
 }
 
 static inline long int
 _eina_time_convert(Eina_Nano_Time *tp)
 {
-  long int r;
-
-#ifndef _WIN32
-  r = tp->tv_sec * 1000000000 + tp->tv_nsec;
-#else
-  r = (long int)(((long long int)tp->QuadPart * 1000000000ll) /
-		 (long long int)_eina_counter_frequency.QuadPart);
-#endif
-
+  long int r = tp->tv_sec * 1000000000 + tp->tv_nsec;
   return r;
 }
 
 static inline long int
 _eina_time_delta(Eina_Nano_Time *start, Eina_Nano_Time *end)
 {
-  long int r;
-
-#ifndef _WIN32
-  r = (end->tv_sec - start->tv_sec) * 1000000000 +
+  long int r = (end->tv_sec - start->tv_sec) * 1000000000 +
     end->tv_nsec - start->tv_nsec;
-#else
-  r = (long int)(((long long int)(end->QuadPart - start->QuadPart)
-		  * 1000000000LL)
-		 / (long long int)_eina_counter_frequency.QuadPart);
-#endif
 
   return r;
 }
