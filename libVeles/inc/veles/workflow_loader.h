@@ -83,7 +83,7 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
                                                Logger::COLOR_YELLOW> {
  public:
   friend class WorkflowLoaderTest;
-
+  WorkflowLoader(): working_directory_(kWorkingDirectory) {}
   /// Destructor. Do nothing.
   virtual ~WorkflowLoader() = default;
   /// @brief Main function.
@@ -130,6 +130,16 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
 
   void InitializeWorkflow();
 
+  /// @brief Changes the directory where the archives are unpacked to.
+  void set_working_directory(const std::string directory) {
+    working_directory_ = directory;
+  }
+
+  /// @brief Returns the directory where the archives are unpacked to.
+  const std::string& working_directory() {
+    return working_directory_;
+  }
+
  protected:
   const WorkflowDescription& workflow_desc() const;
 
@@ -155,7 +165,7 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
    * Open yaml file (or print error if it not possible)
    * */
   void InitWorkflow() {
-    auto temp = std::string(kWorkingDirectory) + kWorkflowDecompressedFile;
+    auto temp = std::string(working_directory_) + kWorkflowDecompressedFile;
     GetWorkflow(temp);
   }
 
@@ -191,12 +201,14 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
   void RemoveDirectory(const std::string& path);
 
   /// @brief Some function for ExtractArchive
-  int  CopyData(const archive& ar, archive *aw);
+  int CopyData(const archive& ar, archive *aw);
 
   /// Default path to working directory.
-  static const char* kWorkingDirectory;
+  std::string working_directory_;
   /// Default name of decompressed yaml file.
   static const char* kWorkflowDecompressedFile;
+
+  static const char* kWorkingDirectory;
 
   WorkflowDescription workflow_desc_;
   Workflow workflow_;

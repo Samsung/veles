@@ -37,12 +37,11 @@ using Veles::PropertiesTable;
 using Veles::WorkflowDescription;
 using Veles::WorkflowExtractionError;
 
-// TODO(EBulychev): Add array reading for recursion
-
-const char* WorkflowLoader::kWorkingDirectory = "/tmp/workflow_tmp/";
 /// Default name of decompressed yaml file.
 const char* WorkflowLoader::kWorkflowDecompressedFile =
     "default.yaml";
+
+const char* WorkflowLoader::kWorkingDirectory = "/tmp/workflow_tmp/";
 
 // TODO(EBulychev): delete fileWithWorkflow. fileWithWorkflow will always be
 // workflow.yaml
@@ -53,10 +52,10 @@ void WorkflowLoader::Load(const string& archive) {
   //  1) Extract archive (using libarchive) to directory kWorkingDirectory.
   WorkflowLoader::ExtractArchive(archive_name_);
   //  2) Read neural network structure from fileWithWorkflow
-  auto workflow_file = string(kWorkingDirectory) + file_with_workflow_;
+  auto workflow_file = string(working_directory_) + file_with_workflow_;
   WorkflowLoader::GetWorkflow(workflow_file);
   // Remove the working directory with all files
-  WorkflowLoader::RemoveDirectory(kWorkingDirectory);
+  WorkflowLoader::RemoveDirectory(working_directory_);
 }
 
 void WorkflowLoader::GetWorkflow(const string& yaml_filename) {
@@ -164,7 +163,7 @@ float* mallocf(size_t length) {
 
 std::shared_ptr<float> WorkflowLoader::GetArrayFromFile(const string& file,
                                                         size_t* arr_size) {
-  string link_to_file = kWorkingDirectory + file;
+  string link_to_file = working_directory_ + file;
   // Open extracted files
   ifstream fr(link_to_file, std::ios::in|std::ios::binary|
                    std::ios::ate);
