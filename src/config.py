@@ -10,18 +10,18 @@ import numpy
 
 #: Supported float types as OpenCL => numpy dictionary.
 dtypes = {"float": numpy.float32, "double": numpy.float64}
+c_dtypes = {"float": numpy.complex64, "double": numpy.complex128}
 
 #: Current number type
 #dtype = "float"
 dtype = "double"
 
 #: CL defines
-cl_defines = {"float": "#define dtype float",
+cl_defines = {"float": "#define dtype float\n"
+                       "#define sizeof_dtype 4",
               "double": "#pragma OPENCL EXTENSION cl_khr_fp64: enable\n"
-                        "#define dtype double"}
-
-#: optional/inline.py argument types
-inline_types = {"float": "f", "double": "d"}
+                        "#define dtype double\n"
+                        "#define sizeof_dtype 8"}
 
 #: Supported int types as OpenCL => numpy dictionary.
 itypes = {"char": numpy.int8, "short": numpy.int16, "int": numpy.int32,
