@@ -9,6 +9,12 @@
  *  @section Copyright
  *  Copyright 2013 Samsung R&D Institute Russia
  */
+
+/*!
+ * @mainpage Workflow extracting & execution.
+ * \image html docs/neural-network.jpg
+ *
+ */
 #ifndef INC_VELES_WORKFLOW_LOADER_H_
 #define INC_VELES_WORKFLOW_LOADER_H_
 
@@ -52,7 +58,7 @@ struct UnitDescription {
   PropertiesTable Properties;
 };
 /**
- * Structure that contains all required information about workflow to construct it.
+ * @brief Structure that contains all required information about workflow to construct it.
  */
 struct WorkflowDescription {
   /** Unordered map of workflow properties.
@@ -77,7 +83,7 @@ enum WorkflowExtractionError {
 };
 
 /**
- * Class that contain all functions to extract workflow from archive.
+ * @brief Class that contain all functions to extract workflow from archive.
  * */
 class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
                                                Logger::COLOR_YELLOW> {
@@ -125,7 +131,17 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
    *  @endcode
    * */
   std::string PrintWorkflowStructure();
+  /**
+   * @brief Get extracted workflow.
+   *
+   * @return Return extracted workflow.
+   * */
   Workflow GetWorkflow();
+  /**
+   * @brief Get workflow description (type of description = WorkflowDescription).
+   *
+   * @return Return workflow description (type of description = WorkflowDescription).
+   * */
   WorkflowDescription GetWorkflowDescription() const { return workflow_desc_; }
 
   void InitializeWorkflow();
