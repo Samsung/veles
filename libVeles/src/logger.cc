@@ -157,7 +157,11 @@ std::string Logger::Demangle(const char *symbol) noexcept {
   return symbol;
 }
 
-std::string Logger::GetColorByIndex(unsigned index) noexcept {
+std::string Logger::GetColorByIndex(unsigned
+#ifdef EINA
+                                    index
+#endif
+                                    ) noexcept {
 #ifdef EINA
   switch (index) {
     case COLOR_LIGHTRED:
