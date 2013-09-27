@@ -95,6 +95,8 @@ class Unit(Pickleable):
                    ([0] can be a function).
         gate_skip_not: if [0] is true, inverses conditions for gate_skip
                    ([0] can be a function).
+        exports: list of attribute names to export
+                 (None - unit is not exportable).
     """
     def __init__(self):
         super(Unit, self).__init__()
@@ -104,6 +106,7 @@ class Unit(Pickleable):
         self.gate_skip = [0]
         self.gate_block_not = [0]
         self.gate_skip_not = [0]
+        self.exports = None
 
     def init_unpickled(self):
         super(Unit, self).init_unpickled()
@@ -290,13 +293,6 @@ class OpenCLUnit(Unit):
         if not self.device:
             return self.cpu_run()
         return self.gpu_run()
-
-
-class Forward(OpenCLUnit, yaml.YAMLObject):
-    yaml_tag = "Unit"
-    # List that should contain all names of variables to save.
-    attributes_to_save = []
-    pass
 
 
 class Repeater(Unit):
