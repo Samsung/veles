@@ -43,7 +43,7 @@ AC_ARG_WITH([built-in-libarchive],
     AC_CONFIG_COMMANDS([zlib],
                        [ln -sf $ac_top_srcdir/zlib zlib && \
                        cd zlib && \
-                       CC=$CC CFLAGS="$(cat ../zlib.cflags) -fPIC -Wno-implicit-function-declaration" \
+                       CC=$CC CFLAGS="$(cat $ac_abs_top_builddir/zlib.cflags) -fPIC -Wno-implicit-function-declaration" \
                        ./configure --static --const && \
                        cd ..])
 ], [
