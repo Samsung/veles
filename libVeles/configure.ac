@@ -38,7 +38,7 @@ AC_ARG_WITH([built-in-libarchive],
     AC_CONFIG_SUBDIRS([libarchive])
     ZLIB_DIR=zlib
     STATIC_ZLIB_LIBS="\$(top_builddir)/zlib/libz.a"
-    echo "$AM_CFLAGS $CFLAGS $AM_CPPFLAGS $CPPFLAGS" > zlib.cflags
+    echo "$AM_CFLAGS $CFLAGS $AM_CPPFLAGS $CPPFLAGS -fvisibility=default" > zlib.cflags
     sed -i -e 's/-I$@<:@^ @:>@*//g' -e 's/--coverage//g' zlib.cflags
     AC_CONFIG_COMMANDS([zlib],
                        [ln -sf $ac_top_srcdir/zlib zlib && \
