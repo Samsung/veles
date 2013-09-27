@@ -16,8 +16,10 @@ class ThreadPool(object):
         queue: queue of requests.
         total_threads: number of threads in the pool.
         free_threads: number of free threads in the pool.
+        max_free_threads: maximum number of free threads in the pool.
+        max_threads: maximum number of threads in the pool.
     """
-    def __init__(self, max_free_threads=10):
+    def __init__(self, max_free_threads=32, max_threads=512):
         self.sem_ = threading.Semaphore(0)
         self.lock_ = threading.Lock()
         self.exit_lock_ = threading.Lock()
@@ -25,6 +27,7 @@ class ThreadPool(object):
         self.total_threads = 0
         self.free_threads = 0
         self.max_free_threads = max_free_threads
+        self.max_threads = max_threads
         self.exit_lock_.acquire()
         threading.Thread(target=self.pool_cleaner).start()
         self.sysexit = sys.exit
@@ -62,7 +65,8 @@ class ThreadPool(object):
                 return
             self.lock_.acquire()
             self.free_threads -= 1
-            if self.free_threads <= 0:
+            if (self.free_threads <= 0 and
+                self.total_threads < self.max_threads):
                 threading.Thread(target=self.pool_cleaner).start()
             try:
                 (run, args) = self.queue.pop(0)

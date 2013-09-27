@@ -532,8 +532,7 @@ class Image(Plotter):
     def draw_image(self, ax, value):
         if type(value) != numpy.ndarray:
             ax.axis('off')
-            ax.text(0.5, 0.5, "Unsupported type\n%s" % (
-                str(type(value))), ha='center', va='center')
+            ax.text(0.5, 0.5, str(value), ha='center', va='center')
             return
         w = None
         color = False
