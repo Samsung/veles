@@ -82,34 +82,44 @@ class NNWorkflow(units.OpenCLUnit, Workflow):
         if not os.path.exists(tmppath):
             os.makedirs(tmppath)
         files_to_save = []
+        dict_temp = {}
         variables_to_save = []
-        # Go through forward elements & save numpy array to binary file &
-        # delete some variables
-        for i in range(len(self.forward)):
-            variables = self.forward[i].__getstate__()
+        # Go through units & save numpy array to binary file
+        units_to_export = [self.loader]
+        units_to_export.extend(self.forward)
+        for i in range(len(units_to_export)):
+            u = units_to_export[i]
+            if u.exports == None:
+                self.log().debug("%s continue" % u.__class__.__name__)
+                continue
+            variables = u.__getstate__()
             for key in variables:
-                if key in self.forward[i].attributes_to_save:
-                    self.log().debug("%d) %s in attributes to save" % (i, key))
+                if key in u.exports:
+                    self.log().debug("%s in attributes to export" % (key))
                     # Save numpy array to binary file
-                    if type(getattr(self.forward[i], key)) == formats.Vector:
-                        for j in range(len(getattr(self.forward[i], key).v.shape)):
+                    if type(getattr(u, key)) == formats.Vector and i >= 1:
+                        for j in range(len(getattr(u, key).v.shape)):
                             name = key + "_shape_" + str(j)
-                            setattr(self.forward[i], name,
-                                getattr(self.forward[i], key).v.shape[j])
+                            self.log().info(name)
+                            dict_temp[name] = getattr(u, key).v.shape[j]
+
+                        link_to_numpy = "unit" + str(i - 1) + key + ".bin"
+
+                        dict_temp['link_to_' + key] = link_to_numpy
 
                         files_to_save.append(
                             self._save_numpy_to_file(
-                                getattr(self.forward[i], key).v,
-                                key, i, tmppath))
-                        delattr(self.forward[i], key)
-                else:
-                    delattr(self.forward[i], key)
-            variables = self.forward[i].__getstate__()
-            variables_to_save.append(variables)
+                                getattr(u, key).v, link_to_numpy, tmppath))
+                    else :
+                        dict_temp[key] = getattr(u, key)
+            temp__ = {}
+            temp__[u.__class__.__name__] = dict_temp
+            variables_to_save.append(temp__)
+            dict_temp = {}
 
         # Save forward elements to yaml.
         yaml_name = 'default.yaml'
-        self._save_to_yaml("%s/%s" % (tmppath, yaml_name))
+        self._save_to_yaml("%s/%s" % (tmppath, yaml_name), variables_to_save)
         # Compress archive
         tar = tarfile.open("%s.tar.gz" % (filename), "w:gz")
         tar.add("%s/%s" % (tmppath, yaml_name),
@@ -118,7 +128,7 @@ class NNWorkflow(units.OpenCLUnit, Workflow):
             tar.add("%s/%s" % (tmppath, files_to_save[i]),
                     arcname=files_to_save[i], recursive=False)
         tar.close()
-#         # delete temporary folder
+        # delete temporary folder
         shutil.rmtree(tmppath)
 
     def _is_class_inside_object(self, obj_to_check):
@@ -133,56 +143,24 @@ class NNWorkflow(units.OpenCLUnit, Workflow):
             return True
         return False
 
-    def _save_to_yaml(self, yaml_name):
+    def _save_to_yaml(self, yaml_name, to_yaml):
         """Print workflow to yaml-file.
         Parameters:
             yaml_name: filename to save.
         """
         stream = open(yaml_name, "w")
-
-        for i in range(len(self.forward)):
-            to_print = {}
-            cls = self.forward[i].__class__
-            self.log().debug("Saving " + cls.__name__ + "...")
-            cls.yaml_dumper.add_representer(cls, cls.to_yaml)
-            cls_name = self.forward[i].__class__.__name__
-
-            to_print[cls_name] = self.forward[i]
-            yaml.dump(to_print, stream)
-
-        # Save info about cropped image
-        obj = {}
-        for name in self.loader.attributes_to_save:
-            if hasattr(self.loader, name):
-                obj[name] = self.loader.__dict__[name]
-            else:
-                self.log().debug("Loader hasn't attribute %s" % name)
-        service_info = {}
-        service_info["service_info"] = obj
-        yaml.dump(service_info, stream)
-
+        yaml.dump(to_yaml, stream)
         stream.close()
 
-    def _save_numpy_to_file(self, numpy_vector, numpy_vector_name, unit_number,
-                            path):
+    def _save_numpy_to_file(self, numpy_vector, numpy_vector_name, path):
         """Save numpy array to binary file.
         Parameters:
             numpy_vector: contains numpy array.
-            numpy_vector_name: name of the numpy array.
-            unit_number: number of unit that contains this numpy array.
-            path: path to folder to save binary file.
+            numpy_vector_name: name of the binary file to save numpy array.
         """
-        link_to_numpy = "unit" + str(unit_number) + numpy_vector_name + ".bin"
-
-        setattr(self.forward[unit_number], 'link_to_' + numpy_vector_name,
-                link_to_numpy)
-
         array_to_save = numpy.float32(numpy_vector.ravel())
 
-        if numpy_vector_name == "weights":
-            self.log().debug("%s\n1: %f 2: %f" % (link_to_numpy,
-                             numpy_vector[0][0], numpy_vector[0][1]))
-        f = open("%s/%s" % (path, link_to_numpy), "wb")
+        f = open("%s/%s" % (path, numpy_vector_name), "wb")
         f.write(array_to_save)
         f.close()
-        return link_to_numpy
+        return numpy_vector_name
