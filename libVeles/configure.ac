@@ -133,11 +133,11 @@ AC_OUTPUT
 
 AC_DEFUN([VELES_PRINT_STATUS], [
 echo
-echo -e "${COLOR_WHITE}Veles options:${COLOR_RESET}"
-echo "  built_in_libarchive.....: ${with_built_in_libarchive:-no}"
-echo "  built_in_yaml_cpp.......: ${with_built_in_yaml_cpp:-no}"
-echo "  eina_logging............: ${enable_eina_logging:-yes}"
-echo "  built_in_eina_logging...: ${with_built_in_eina_logging:-no}"
+echo -e "${COLOR_WHITE}$PACKAGE_NAME options:${COLOR_RESET}"
+echo "  built_in_libarchive.....: $(color_yes_no ${with_built_in_libarchive:-no})"
+echo "  built_in_yaml_cpp.......: $(color_yes_no ${with_built_in_yaml_cpp:-no})"
+echo "  eina_logging............: $(color_yes_no ${enable_eina_logging:-yes})"
+echo "  built_in_eina_logging...: $(color_yes_no ${with_built_in_eina_logging:-no})"
 echo
 ])
 
