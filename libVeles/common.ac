@@ -296,6 +296,8 @@ echo
 echo -e "${COLOR_WHITE}Installation:${COLOR_RESET}"
 echo -e "  Prefix.............: ${COLOR_CYAN}${prefix}${COLOR_RESET}"
 echo -e "  Host...............: ${COLOR_CYAN}${host}${COLOR_RESET}"
+echo -e "  Shared.............: $(color_yes_no ${enable_shared:-yes})"
+echo -e "  Static.............: $(color_yes_no ${enable_static:-yes})"
 echo
 echo -e "${COLOR_WHITE}Common options:${COLOR_RESET}"
 echo -e "  parallel_build.....: $(color_yes_no ${enable_parallel_build:-no})"
