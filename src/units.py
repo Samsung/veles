@@ -22,7 +22,7 @@ class Pickleable(logger.Logger):
         pickled.
         """
         super(Pickleable, self).__init__()
-        self.init_unpickled()
+        #self.init_unpickled()  # already called in Logger()
 
     """This function is called if the object has been just unpickled.
     """
