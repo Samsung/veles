@@ -9,6 +9,8 @@ import time
 import logger
 import threading
 import thread_pool
+import config
+import pyopencl
 
 
 class Pickleable(logger.Logger):
@@ -268,10 +270,12 @@ class OpenCLUnit(Unit):
         device: Device object.
         prg_: OpenCL program.
         cl_sources: OpenCL source files: file => defines.
+        prg_src: last built OpenCL program source code text.
     """
     def __init__(self, device=None):
         super(OpenCLUnit, self).__init__()
         self.device = device
+        self.prg_src = None
 
     def init_unpickled(self):
         super(OpenCLUnit, self).init_unpickled()
@@ -289,9 +293,44 @@ class OpenCLUnit(Unit):
         return self.cpu_run()
 
     def run(self):
-        if not self.device:
-            return self.cpu_run()
-        return self.gpu_run()
+        t1 = time.time()
+        if self.device:
+            self.gpu_run()
+        else:
+            self.cpu_run()
+        self.log().debug("%s in %.2f sec" % (self.__class__.__name__,
+                                             time.time() - t1))
+
+    def build_program(self, defines, log_fnme=None):
+        """Builds OpenCL program.
+
+        _prg will be initialized with built program.
+
+        Parameters:
+            defines: additional definitions.
+
+        Returns:
+            Built OpenCL program source code.
+        """
+        s = defines
+        fin = open("%s/defines.cl" % (config.cl_dir), "r")
+        s += fin.read()
+        fin.close()
+        for src, define in self.cl_sources_.items():
+            s += "\n" + define + "\n"
+            fin = open(src, "r")
+            s += fin.read()
+            fin.close()
+        fin = open("%s/matrix_multiplication.cl" % (config.cl_dir), "r")
+        s_mx_mul = fin.read()
+        fin.close()
+        s = s.replace("MX_MUL", s_mx_mul)
+        if log_fnme != None:
+            flog = open(log_fnme, "w")
+            flog.write(s)
+            flog.close()
+        self.prg_src = s
+        self.prg_ = pyopencl.Program(self.device.context_, s).build()
 
 
 class Repeater(Unit):

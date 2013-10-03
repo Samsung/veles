@@ -43,8 +43,20 @@ class Rand(object):
         state = numpy.random.get_state()
         numpy.random.set_state(self.state)
         arr = arr.reshape(arr.size)
-        arr[:] = (numpy.random.rand(arr.size) * (vle_max - vle_min) + \
-                  vle_min)[:]
+        if arr.dtype in (numpy.complex64, numpy.complex128):
+            # Fill the circle in case of complex numbers.
+            r = numpy.random.rand(arr.size) * (vle_max - vle_min)
+            a = numpy.random.rand(arr.size) * numpy.pi * 2.0
+            arr.real[:] = r * numpy.cos(a)
+            arr.imag[:] = r * numpy.sin(a)
+
+            # Test version that fill imaginary part with zeros.
+            #arr.real[:] = (numpy.random.rand(arr.size) * (vle_max - vle_min) +
+            #               vle_min)[:]
+            #arr.imag[:] = 0
+        else:
+            arr[:] = (numpy.random.rand(arr.size) * (vle_max - vle_min) +
+                      vle_min)[:]
         self.state = numpy.random.get_state()
         numpy.random.set_state(state)
         _lock.release()
