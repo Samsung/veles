@@ -223,7 +223,7 @@ USAGE
                 extr.outputs = list(chain(*[r.get() for r in results_async]))
         else:
             all_outputs = []
-            for i in range(0, len(found_files)):
+            for i in range(0, len(splitted_found_files)):
                 all_outputs += mp_run(splitted_found_files[i], extr)
             extr.outputs = all_outputs
         logging.info("Done in %f", (time.time() - timer))
