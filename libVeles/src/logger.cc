@@ -19,9 +19,7 @@ namespace Veles {
 
 // The following defines must not be converted to static const members of Logger
 // due to the undefined order in which static constructors are invoked.
-#ifdef EINA
 #define kDefaultLoggerColor EINA_COLOR_WHITE
-#endif
 #define kCommonDomain ""
 #define kUnintializedLogDomain_ (-1)
 
