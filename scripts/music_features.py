@@ -221,6 +221,7 @@ USAGE
                 pool.close()
                 pool.join()
                 extr.outputs = list(chain(*[r.get() for r in results_async]))
+                logging.info("Analyzed %d files", len(extr.outputs))
         else:
             all_outputs = []
             for i in range(0, len(splitted_found_files)):

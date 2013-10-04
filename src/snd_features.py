@@ -67,6 +67,7 @@ class SoundFeatures(units.Unit):
             raise Exception("Labels and outputs size mismatch (" +
                             str(len(labels)) + " vs " +
                             str(len(self.outputs)) + ")")
+        logging.debug("Saving %d results", len(labels))
         root = {"version": "1.0", "files": {}}
         indices_map = sorted(range(0, len(labels)), key=lambda x: labels[x])
         labels.sort()
