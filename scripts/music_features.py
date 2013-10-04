@@ -26,7 +26,6 @@ import os
 import re
 import sys
 import time
-import threading
 import traceback
 from snd_features import SoundFeatures
 from snd_file_loader import SndFileLoader
@@ -70,16 +69,16 @@ def mp_run(files, extr):
         extr.run()
         return extr.outputs
     except:
-        logging.critical("Subprocess failed: %s" % traceback.format_exc())
+        logging.critical("Subprocess failed: %s", traceback.format_exc())
 
 
 def filter_files(files, root, prefix, inpat, expat):
-    for file in files:
+    for f in files:
         if (not inpat or \
-                re.match(inpat, prefix + file)) and \
+                re.match(inpat, prefix + f)) and \
            (not expat or \
-                not re.match(expat, prefix + file)):
-            full_name = os.path.join(root, file)
+                not re.match(expat, prefix + f)):
+            full_name = os.path.join(root, f)
             logging.debug("Added " + full_name)
             yield full_name
 
@@ -92,7 +91,7 @@ def main(argv=None):  # IGNORE:C0111
     else:
         sys.argv.extend(argv)
 
-    program_name = os.path.basename(sys.argv[0])
+    # program_name = os.path.basename(sys.argv[0])
     program_version = "v%s" % __version__
     program_build_date = str(__updated__)
     program_version_message = \
@@ -183,12 +182,12 @@ USAGE
         if nosimd:
             Library(library_path).set_use_simd(0)
         features = FeaturesXml.parse(feature_file)
-        logging.info("Read %d features" % len(features))
+        logging.info("Read %d features", len(features))
 
         found_files = []
         for inpath in paths:
             if recurse:
-                for root, dirs, files in os.walk(inpath, followlinks=True):
+                for root, _, files in os.walk(inpath, followlinks=True):
                     logging.debug("Scanning " + root + "...")
                     found_files.extend(filter_files(files, root,
                                                     root[len(inpath):],
@@ -202,14 +201,14 @@ USAGE
         if len(found_files) == 0:
             logging.warn("No files were found")
             return 0
-        logging.info("Found %d files" % len(found_files))
+        logging.info("Found %d files", len(found_files))
 
         timer = time.time()
         extr = SoundFeatures()
         logging.debug("Parsing the supplied features...")
         extr.add_features(features)
         extr.initialize()
-        logging.info("Done in %f" % (time.time() - timer))
+        logging.info("Done in %f", (time.time() - timer))
         timer = time.time()
 
         pcount = mp.cpu_count()
@@ -227,12 +226,12 @@ USAGE
             for i in range(0, len(found_files)):
                 all_outputs += mp_run(splitted_found_files[i], extr)
             extr.outputs = all_outputs
-        logging.info("Done in %f" % (time.time() - timer))
+        logging.info("Done in %f", (time.time() - timer))
         timer = time.time()
         logging.debug("Saving the results...")
         extr.save_to_file(output, list(chain(*splitted_found_files)))
 
-        logging.info("Finished in %f" % (time.time() - start_timer))
+        logging.info("Finished in %f", (time.time() - start_timer))
         return 0
     except KeyboardInterrupt:
         logging.critical("Interrupted")

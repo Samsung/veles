@@ -8,12 +8,10 @@ Created on May 21, 2013
 from decimal import Decimal
 from itertools import groupby
 import logging
-import numpy
-from xml.etree import ElementTree
+import pickle
 import units
 from sound_feature_extraction.extractor import Extractor
 from sound_feature_extraction.feature import Feature
-from inspect import isclass
 
 
 class SoundFeatures(units.Unit):
@@ -69,27 +67,18 @@ class SoundFeatures(units.Unit):
             raise Exception("Labels and outputs size mismatch (" +
                             str(len(labels)) + " vs " +
                             str(len(self.outputs)) + ")")
-        root = ElementTree.Element("features", {"version": "1.0"})
+        root = {"version": "1.0", "files": {}}
         indices_map = sorted(range(0, len(labels)), key=lambda x: labels[x])
         labels.sort()
         for j in range(0, len(labels)):
             i = indices_map[j]
             label = labels[j]
-            file_element = ElementTree.SubElement(root,
-                                                  "file",
-                                                  {"name": label})
+            file_element = {"features": {}}
             for feature in self.features:
-                feat_element = ElementTree.SubElement(
-                    file_element, "feature",
-                    {"description": feature.description(),
-                     "name": feature.name})
+                feat_element = {"description": feature.description()}
                 if self.outputs[i]:
-                    if len(self.outputs[i][feature.name].shape) > 0:
-                        feat_element.attrib["value"] = "".join(\
-                            str(Decimal(float(el)).normalize()) + " " \
-                            for el in self.outputs[i][feature.name])
-                    else:
-                        feat_element.attrib["value"] = \
-                            str(self.outputs[i][feature.name])
-        ElementTree.ElementTree(root).write(file_name, encoding="utf-8",
-                                            xml_declaration=True)
+                    feat_element["value"] = self.outputs[i][feature.name]
+                file_element["features"][feature.name] = feat_element
+            root["files"][label] = file_element
+        fout = open(file_name, "wb")
+        pickle.dump(root, fout)

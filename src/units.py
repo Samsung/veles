@@ -24,7 +24,7 @@ class Pickleable(logger.Logger):
         super(Pickleable, self).__init__()
         #self.init_unpickled()  # already called in Logger()
 
-    """This function is called if the object has been just unpickled.
+    """This function is called if the object has just been unpickled.
     """
     def init_unpickled(self):
         if hasattr(super(Pickleable, self), "init_unpickled"):
