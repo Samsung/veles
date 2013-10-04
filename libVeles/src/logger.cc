@@ -17,14 +17,13 @@
 
 namespace Veles {
 
-const std::string Logger::kCommonDomain = "";
-const std::string Logger::kDefaultLoggerColor =
+// The following defines must not be converted to static const members of Logger
+// due to the undefined order in which static constructors are invoked.
 #ifdef EINA
-    EINA_COLOR_WHITE
-#else
-    ""
+#define kDefaultLoggerColor EINA_COLOR_WHITE
 #endif
-    ;
+#define kCommonDomain ""
+#define kUnintializedLogDomain_ (-1)
 
 Logger::Logger(const std::string &domain = "VELES",
                const std::string &color = kDefaultLoggerColor
@@ -84,9 +83,9 @@ void Logger::InitializeEina() noexcept {
   eina_log_init();
 #endif
   eina_log_threads_enable();
-  int len = kCommonDomain.size() + strlen(domain_str_.c_str()) + 1;
+  int len = strlen(kCommonDomain) + strlen(domain_str_.c_str()) + 1;
   char *fullDomain = new char[len];
-  snprintf(fullDomain, len, "%s%s", kCommonDomain.c_str(), domain_str_.c_str());
+  snprintf(fullDomain, len, "%s%s", kCommonDomain, domain_str_.c_str());
   log_domain_ = eina_log_domain_register(fullDomain, color_.c_str());
   if (log_domain_ < 0) {
     int message_len = len + 128;
