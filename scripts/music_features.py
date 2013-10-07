@@ -123,6 +123,10 @@ USAGE
                             help="name of the XML file with extracted "
                                  "features [default: %(default)s]",
                             metavar="path", required=True)
+        parser.add_argument("-g", "--graph", dest="report",
+                            help="save the extraction report graphs at "
+                                 "this path [default: %(default)s]",
+                            metavar="path", required=False)
         parser.add_argument("-r", "--recursive", dest="recurse",
                             action="store_true", default=True,
                             help="recurse into subfolders [default: "
@@ -159,6 +163,7 @@ USAGE
         library_path = args.library
         feature_file = args.features
         output = args.output
+        report = args.report
         paths = args.paths
         verbose = args.verbose
         recurse = args.recurse
@@ -204,7 +209,7 @@ USAGE
         logging.info("Found %d files", len(found_files))
 
         timer = time.time()
-        extr = SoundFeatures()
+        extr = SoundFeatures(report)
         logging.debug("Parsing the supplied features...")
         extr.add_features(features)
         extr.initialize()

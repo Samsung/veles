@@ -8,6 +8,7 @@ Created on May 21, 2013
 from decimal import Decimal
 from itertools import groupby
 import logging
+import os
 import pickle
 import units
 from sound_feature_extraction.extractor import Extractor
@@ -19,11 +20,12 @@ class SoundFeatures(units.Unit):
     Extracts features from raw audio data.
     """
 
-    def __init__(self):
+    def __init__(self, report_path):
         super(SoundFeatures, self).__init__()
         self.features = []
         self.inputs = []
         self.outputs = []
+        self.report_path = report_path
 
     def add_feature(self, description):
         description = description.strip()
@@ -57,6 +59,11 @@ class SoundFeatures(units.Unit):
                         logging.info("Extracting features from " +
                                       data["name"])
                         self.outputs.append(extr.calculate(data["data"]))
+                        if (self.report_path != None):
+                            extr.report(
+                                os.path.join(self.report_path,
+                                             os.path.basename(data["name"]) +
+                                                ".dot"))
                     except Exception as e:
                         logging.warn("Failed to extract features from "
                                      "input: " + repr(e))
