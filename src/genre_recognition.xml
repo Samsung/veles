@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<features>	
+<features>
 	<transform name="Window" parameters="type=rectangular,length=512,step=205">
 		<transform name="ZeroCrossings">
 			<transform name="Merge">
@@ -14,7 +14,7 @@
 					<transform name="Stats" parameters="interval=50">
 						<feature name="Energy" />
 					</transform>
-				</transform>	
+				</transform>
 				<feature name="VAD_energy" />
 			</transform>
 		    <transform name="RDFT">
@@ -39,7 +39,7 @@
 								<feature name="Flux" />
 							</transform>
 						</transform>
-					</transform>					
+					</transform>
 					<transform name="HPS">
 						<transform name="Merge">
 							<transform name="Stats" parameters="interval=50">
@@ -59,12 +59,14 @@
 				<transform name="RDFT">
 					<transform name="FrequencyBands" parameters="bands=200 400 800 1600 3200">
 						<transform name="IRDFT">
-							<transform name="IWindow" parameters="length=512,step=205,inverse_count=6">
-								<transform name="Rectify">									
-									<transform name="Convolve" parameters="window=half-hanning-right, length=12800">
-										<transform name="Diff" parameters="rectify=true">
-											<transform name="Beat" parameters="bands=6">
-												<feature name="Beat"/>
+							<transform name="IWindow" parameters="length=512,step=205,inverse_count=6,interleaved=true">
+								<transform name="Rectify">
+									<transform name="Window" parameters="type=hamming,length=220500,step=110250,interleaved=true">
+										<transform name="Convolve" parameters="window=half-hanning-right, length=8820">
+											<transform name="Diff" parameters="rectify=true">
+												<transform name="Beat" parameters="bands=6">
+													<feature name="Beat"/>
+												</transform>
 											</transform>
 										</transform>
 									</transform>
