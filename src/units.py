@@ -77,6 +77,10 @@ def callvle(var):
     return var() if callable(var) else var
 
 
+global_lock = threading.Lock()
+pool = None
+
+
 class Unit(Pickleable):
     """General unit in data stream model.
 
@@ -110,6 +114,12 @@ class Unit(Pickleable):
         self.exports = None
 
     def init_unpickled(self):
+        global global_lock
+        global pool
+        global_lock.acquire()
+        if pool == None:
+            pool = thread_pool.ThreadPool()
+        global_lock.release()
         super(Unit, self).init_unpickled()
         self.gate_lock_ = threading.Lock()
         self.run_lock_ = threading.Lock()
@@ -182,13 +192,14 @@ class Unit(Pickleable):
     def run_dependent(self):
         """Invokes run() on dependent units on different threads.
         """
+        global pool
         for dst in self.links_to.keys():
             if ((callvle(dst.gate_block[0]) and
                  (not callvle(dst.gate_block_not[0]))) or
                 ((not callvle(dst.gate_block[0])) and
                  callvle(dst.gate_block_not[0]))):
                 continue
-            thread_pool.pool.request(dst.check_gate_and_run, (self,))
+            pool.request(dst.check_gate_and_run, (self,))
 
     def initialize(self):
         """Allocate buffers here.

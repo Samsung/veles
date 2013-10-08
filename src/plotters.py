@@ -14,11 +14,11 @@ import tkinter
 from PyQt4 import QtGui, QtCore
 import queue
 import threading
-import thread_pool
 import numpy
 import logging
 import config
 import time
+import thread_pool
 
 
 pp.ion()
@@ -81,7 +81,8 @@ class Graphics:
         self.event_queue = queue.Queue()
         self.initialize_lock = threading.Lock()
         self.registered_plotters = {}
-        thread_pool.pool.request(self.run)
+        self.pool = thread_pool.ThreadPool()
+        self.pool.request(self.run)
         init_lock.release()
 
     def run(self):
@@ -123,7 +124,7 @@ class Graphics:
                 self.process_event(plotter)
                 if self.__dict__.get("showed") == False:
                     self.showed = True
-                    threading.Thread(target=pp.show).start()
+                    self.pool.request(pp.show)
         except queue.Empty:
             pass
         if pp.get_backend() == "TkAgg":
@@ -142,6 +143,7 @@ class Graphics:
         if self.run_lock:
             self.run_lock.acquire()
             self.run_lock.release()
+        self.pool.shutdown()
         logging.info("Done")
 
 

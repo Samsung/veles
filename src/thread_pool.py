@@ -5,7 +5,11 @@ Created on Jul 12, 2013
 """
 import sys
 import threading
+import queue
 import traceback
+
+
+global_lock = threading.Lock()
 
 
 class ThreadPool(object):
@@ -17,21 +21,25 @@ class ThreadPool(object):
         total_threads: number of threads in the pool.
         free_threads: number of free threads in the pool.
         max_free_threads: maximum number of free threads in the pool.
-        max_threads: maximum number of threads in the pool.
+        max_threads: maximum number of executing threads in the pool.
+        max_enqueued_tasks: maximum number of tasks enqueued for execution,
+                            request() will block if that count is reached.
     """
-    def __init__(self, max_free_threads=32, max_threads=512):
-        self.sem_ = threading.Semaphore(0)
+    def __init__(self, max_free_threads=32, max_threads=512,
+                 max_enqueued_tasks=2048):
         self.lock_ = threading.Lock()
         self.exit_lock_ = threading.Lock()
-        self.queue = []
+        self.queue_ = queue.Queue(max_enqueued_tasks)
         self.total_threads = 0
         self.free_threads = 0
         self.max_free_threads = max_free_threads
         self.max_threads = max_threads
         self.exit_lock_.acquire()
         threading.Thread(target=self.pool_cleaner).start()
+        global_lock.acquire()
         self.sysexit = sys.exit
         sys.exit = self.exit
+        global_lock.release()
 
     def exit(self, retcode=0):
         self.shutdown()
@@ -54,26 +62,16 @@ class ThreadPool(object):
                 return
             self.lock_.release()
             try:
-                self.sem_.acquire()
-            except:  # return in case of broken semaphore
-                self.lock_.acquire()
-                self.free_threads -= 1
-                self.total_threads -= 1
-                if self.total_threads <= 0:
-                    self.exit_lock_.release()
-                self.lock_.release()
-                return
+                (run, args) = self.queue_.get()
+                if self.queue_ == None:
+                    raise Exception()
+            except:  # return in case of broken queue
+                return self.broken_queue()
             self.lock_.acquire()
             self.free_threads -= 1
             if (self.free_threads <= 0 and
                 self.total_threads < self.max_threads):
                 threading.Thread(target=self.pool_cleaner).start()
-            try:
-                (run, args) = self.queue.pop(0)
-            except:
-                self.total_threads -= 1
-                self.lock_.release()
-                return
             self.lock_.release()
             try:
                 run(*args)
@@ -81,26 +79,44 @@ class ThreadPool(object):
                 # TODO(a.kazantsev): add good error handling here.
                 a, b, c = sys.exc_info()
                 traceback.print_exception(a, b, c)
+            try:
+                self.queue_.task_done()
+            except:
+                return self.broken_queue()
+
+    def broken_queue(self):
+        self.lock_.acquire()
+        self.free_threads -= 1
+        self.total_threads -= 1
+        if self.total_threads <= 0:
+            self.exit_lock_.release()
+        self.lock_.release()
 
     def request(self, run, args=()):
         """Adds request for execution to the queue.
         """
-        self.lock_.acquire()
-        self.queue.append((run, args))
-        self.lock_.release()
-        if self.sem_ != None:
-            self.sem_.release()
+        self.queue_.put((run, args))
 
-    def shutdown(self):
+    def shutdown(self, execute_remaining=False):
         """Safely shutdowns thread pool.
         """
-        sem_ = self.sem_
-        self.sem_ = None
+        self.lock_.acquire()
+        if self.queue_ == None:
+            self.lock_.release()
+            return
+        self.lock_.release()
+        if execute_remaining:
+            self.queue_.join()
+        queue_ = self.queue_
+        self.queue_ = None
         self.lock_.acquire()
         for i in range(0, self.free_threads):
-            sem_.release()
+            queue_.put((None, None))
+        if self.total_threads <= 0:
+            self.lock_.release()
+            return
         self.lock_.release()
         self.exit_lock_.acquire()
-
-
-pool = ThreadPool()
+        global_lock.acquire()
+        sys.exit = self.sysexit
+        global_lock.release()
