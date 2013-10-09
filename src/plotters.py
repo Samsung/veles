@@ -19,26 +19,13 @@ import logging
 import config
 import time
 import thread_pool
+import formats
 
 
 pp.ion()
 
 
 init_lock = threading.Lock()
-
-
-def norm_image(a):
-    """Normalizes numpy array for passing to imshow.
-    """
-    a = a.copy()
-    a -= a.min()
-    m = a.max()
-    if m:
-        m /= 255.0
-        a /= m
-    else:
-        a[:] = 127.5
-    return a.astype(numpy.uint8)
 
 
 class Graphics:
@@ -425,7 +412,7 @@ class Weights2D(Plotter):
     Creates within initialize():
 
     """
-    def __init__(self, figure_label="Weights", limit=64):
+    def __init__(self, figure_label="Weights", limit=64, yuv=False):
         super(Weights2D, self).__init__()
         self.input = None  # Connector
         self.input_field = None
@@ -433,6 +420,7 @@ class Weights2D(Plotter):
         self.get_shape_from = None
         self.limit = limit
         self.transposed = False
+        self.yuv = [1 if yuv else 0]
 
     def redraw(self):
         if type(self.input_field) == int:
@@ -497,9 +485,11 @@ class Weights2D(Plotter):
                                                 sx, 1)[:, :, 0:1]
                     w[:, :, 2:3] = v.reshape(3, sy, sx)[2:3, :, :].reshape(sy,
                                                 sx, 1)[:, :, 0:1]
-                    ax.imshow(norm_image(w), interpolation="nearest")
+                    ax.imshow(formats.norm_image(w, self.yuv[0]),
+                              interpolation="nearest")
                 else:
-                    ax.imshow(norm_image(v.reshape(sy, sx)),
+                    ax.imshow(formats.norm_image(v.reshape(sy, sx),
+                                                 self.yuv[0]),
                               interpolation="nearest", cmap=cm.gray)
                 i += 1
                 if i >= value.shape[0]:
@@ -525,11 +515,12 @@ class Image(Plotter):
     Creates within initialize():
 
     """
-    def __init__(self, figure_label="Image"):
+    def __init__(self, figure_label="Image", yuv=False):
         super(Image, self).__init__()
         self.inputs = []
         self.input_fields = []
         self.figure_label = figure_label
+        self.yuv = [1 if yuv else 0]
 
     def draw_image(self, ax, value):
         if type(value) != numpy.ndarray:
@@ -571,9 +562,11 @@ class Image(Plotter):
             w = value.copy()
 
         if color:
-            ax.imshow(norm_image(w), interpolation="nearest")
+            ax.imshow(formats.norm_image(w, self.yuv[0]),
+                      interpolation="nearest")
         else:
-            ax.imshow(norm_image(w), interpolation="nearest", cmap=cm.gray)
+            ax.imshow(formats.norm_image(w, self.yuv[0]),
+                      interpolation="nearest", cmap=cm.gray)
 
     def redraw(self):
         figure_label = self.figure_label
