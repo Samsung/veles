@@ -27,6 +27,7 @@ import re
 import sys
 import time
 import traceback
+import units
 from snd_features import SoundFeatures
 from snd_file_loader import SndFileLoader
 from sound_feature_extraction.library import Library
@@ -238,6 +239,7 @@ USAGE
         extr.save_to_file(output, list(chain(*splitted_found_files)))
 
         logging.info("Finished in %f", (time.time() - start_timer))
+        units.pool.shutdown()
         return 0
     except KeyboardInterrupt:
         logging.critical("Interrupted")
