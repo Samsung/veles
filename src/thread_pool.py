@@ -47,7 +47,7 @@ class ThreadPool(object):
 
     def pool_cleaner(self):
         """Monitors request queue and executes requests,
-            launching new threads if neccessary.
+            launching new threads if necessary.
         """
         self.lock_.acquire()
         self.total_threads += 1
