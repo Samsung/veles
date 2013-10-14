@@ -5,6 +5,32 @@ Global configuration variables.
 
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
+global sconfig
+global _sconfig_empty
+
+
+class Config(object):
+    """Config service class.
+    """
+    def __getattr__(self, name):
+        return _sconfig_empty
+
+
+#: Global config
+sconfig = Config()
+
+#: Default config value
+_sconfig_empty = Config()
+
+
+def getConfig(value, default_value=None):
+    """Gets value from global config.
+    """
+    if(value == _sconfig_empty):
+        return default_value
+    return value
+
+
 import numpy
 
 
