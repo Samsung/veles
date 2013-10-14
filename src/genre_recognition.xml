@@ -61,7 +61,7 @@
 				<transform name="Window" parameters="type=rectangular, length=122253, step=61127, interleaved=true">
 					<transform name="Convolve" parameters="window=half-hanning-right, length=8820">
 						<!-- 122253 + 8820 - 1 = 131072 = 2^17 -->
-						<transform name="Diff" parameters="rectify=true, swt=12">
+						<transform name="Diff" parameters="rectify=true, swt=11">
 							<transform name="Beat" parameters="bands=6,debug=true">
 								<feature name="Beat"/>
 							</transform>
