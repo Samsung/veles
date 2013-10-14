@@ -99,6 +99,17 @@ class Rand(object):
         _lock.release()
         return retval
 
+    def rand(self, *args):
+        global _lock
+        _lock.acquire()
+        state = numpy.random.get_state()
+        numpy.random.set_state(self.state)
+        retval = numpy.random.rand(*args)
+        self.state = numpy.random.get_state()
+        numpy.random.set_state(state)
+        _lock.release()
+        return retval
+
 
 # Default global random instance.
 default = Rand()
