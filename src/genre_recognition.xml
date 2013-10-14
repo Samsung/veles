@@ -56,11 +56,12 @@
 		</transform>
 	</transform>
 	<transform name="Fork" parameters="factor=6">
-		<transform name="FrequencyBands" parameters="bands=200 400 800 1600 3200, filter=chebyshevII, lengths=64 64 64 128 128 128">
+		<transform name="FrequencyBands" parameters="bands=200 400 800 1600 3200, filter=chebyshevII, lengths=48 64 96 96 128 128">
 			<transform name="Rectify">
-				<transform name="Window" parameters="type=rectangular ,length=220500, step=110250, interleaved=true">
+				<transform name="Window" parameters="type=rectangular, length=122253, step=61127, interleaved=true">
 					<transform name="Convolve" parameters="window=half-hanning-right, length=8820">
-						<transform name="Diff" parameters="rectify=true">
+						<!-- 122253 + 8820 - 1 = 131072 = 2^17 -->
+						<transform name="Diff" parameters="rectify=true, swt=12">
 							<transform name="Beat" parameters="bands=6,debug=true">
 								<feature name="Beat"/>
 							</transform>
