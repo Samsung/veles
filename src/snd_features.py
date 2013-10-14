@@ -41,24 +41,26 @@ class SoundFeatures(units.Unit):
         pass
 
     def run(self):
-        inputs = {}
+        sorted_inputs = {}
+        sorted_outputs = {}
         self.outputs = []
         for sampling_rate, grsr in groupby(
             sorted(self.inputs, key=lambda x: x["sampling_rate"]),
             lambda x: x["sampling_rate"]):
-            inputs[sampling_rate] = {}
+            sorted_inputs[sampling_rate] = {}
             for size, grsz in groupby(
                 sorted(grsr, key=lambda x: x["data"].size),
                 lambda x: x["data"].size):
-                inputs[sampling_rate][size] = list(grsz)
-        for sampling_rate in inputs:
-            for size in inputs[sampling_rate]:
+                sorted_inputs[sampling_rate][size] = list(grsz)
+        for sampling_rate in sorted_inputs:
+            for size in sorted_inputs[sampling_rate]:
                 extr = Extractor(self.features, size, sampling_rate)
-                for data in inputs[sampling_rate][size]:
+                for data in sorted_inputs[sampling_rate][size]:
                     try:
                         logging.info("Extracting features from " +
                                       data["name"])
-                        self.outputs.append(extr.calculate(data["data"]))
+                        sorted_outputs[data["name"]] = \
+                            extr.calculate(data["data"])
                         if (self.report_path != None):
                             extr.report(
                                 os.path.join(self.report_path,
@@ -67,7 +69,10 @@ class SoundFeatures(units.Unit):
                     except Exception as e:
                         logging.warn("Failed to extract features from "
                                      "input: " + repr(e))
-                        self.outputs.append(None)
+                        sorted_outputs[data["name"]] = None
+        # Fill self.outputs from sorted_outputs in self.inputs order
+        for inp in self.inputs:
+            self.outputs.append(sorted_outputs[inp["name"]])
 
     def save_to_file(self, file_name, labels):
         if len(labels) != len(self.outputs):
