@@ -5,6 +5,7 @@
 *.in
 aclocal.m4
 autom4te.cache
+test-driver
 compile
 config.cache-env
 config.guess
