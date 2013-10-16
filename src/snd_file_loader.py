@@ -7,21 +7,19 @@ Created on May 21, 2013
 
 import logging
 import error
-import units
 import numpy
 from libsndfile import libsndfile, SF_INFO
 from ctypes import byref, c_short, c_char_p, POINTER
 
 
-class SndFileLoader(units.Unit):
+class SndFileLoader(object):
     """
     Decodes the specified audio file to the raw signed PCM 16 bit format
+    using libsndfile.
     """
 
     def __init__(self):
         super(SndFileLoader, self).__init__()
-        self.outputs = []
-        self.files_list = []
 
     @staticmethod
     def open_file(file_name):
@@ -33,15 +31,24 @@ class SndFileLoader(units.Unit):
         if not handle:
             raise error.ErrBadFormat("Audio file " + file_name + " does not "
                                      "exist or is in an unsupported format.")
-        if info.channels > 1:
+
+        if info.channels > 2:
             raise error.ErrBadFormat("Audio file " + file_name +
-                                     " has more than one channel. "
-                                     "Only mono is allowed.")
-        return handle, info
+                                     " has more than two channels. "
+                                     "Only mono or stereo are allowed.")
+        return {"handle": handle, "samples": info.frames,
+                "sampling_rate": info.samplerate, "channels": info.channels,
+                "info": info}
+
+    @staticmethod
+    def close_file(opened_data):
+        libsndfile().sf_close(opened_data["handle"])
 
     @staticmethod
     def decode_file(file_name):
-        handle, info = SndFileLoader.open_file(file_name)
+        opened_data = SndFileLoader.open_file(file_name)
+        handle = opened_data["handle"]
+        info = opened_data["info"]
         data = numpy.empty(info.frames, dtype=numpy.short)
         libsndfile().sf_readf_short(handle,
                                     data.ctypes.data_as(POINTER(c_short)),
@@ -49,18 +56,14 @@ class SndFileLoader(units.Unit):
         libsndfile().sf_close(handle)
         logging.info("Loaded " + file_name + ": " +
                      info.str_format() + ", " + str(info.frames) +
-                     " samples at " + str(info.samplerate) + " Hz")
+                     " samples at " + str(info.samplerate) + " Hz in " +
+                     str(info.channels) + " channels")
         return {"data": data, "sampling_rate": info.samplerate,
+                "samples": info.frames, "channels": info.channels,
                 "name": file_name}
 
-    def initialize(self):
-        for file in self.files_list:
-            handle, info = self.open_file(file)
-            libsndfile().sf_close(handle)
-            logging.info("Checked " + file + ": " +
-                         info.str_format() + ", " + str(info.frames) +
-                         " samples at " + str(info.samplerate) + " Hz")
+    @staticmethod
+    def file_format(opened_data):
+        return opened_data["info"].str_format()
 
-    def run(self):
-        for file in self.files_list:
-            self.outputs.append(self.decode_file(file))
+    supported_extensions = ["wav", "flac", "ogg", "au"]

@@ -29,7 +29,7 @@ import time
 import traceback
 import units
 from snd_features import SoundFeatures
-from snd_file_loader import SndFileLoader
+from audio_file_loader import AudioFileLoader
 from sound_feature_extraction.library import Library
 from sound_feature_extraction.features_xml import FeaturesXml
 
@@ -59,7 +59,7 @@ def mp_run(files, extr):
     try:
         sizestr = str(len(files))
         logging.debug("Reading " + sizestr + " files...")
-        loader = SndFileLoader()
+        loader = AudioFileLoader()
         loader.files_list = files
         loader.initialize()
         logging.debug("Decoding " + sizestr + " files...")
@@ -75,10 +75,8 @@ def mp_run(files, extr):
 
 def filter_files(files, root, prefix, inpat, expat):
     for f in files:
-        if (not inpat or \
-                re.match(inpat, prefix + f)) and \
-           (not expat or \
-                not re.match(expat, prefix + f)):
+        if (not inpat or re.match(inpat, prefix + f)) and \
+           (not expat or not re.match(expat, prefix + f)):
             full_name = os.path.join(root, f)
             logging.debug("Added " + full_name)
             yield full_name
@@ -244,7 +242,7 @@ USAGE
     except KeyboardInterrupt:
         logging.critical("Interrupted")
         return 0
-    except Exception as e:
+    except Exception:
         logging.critical("Failed")
         raise
 

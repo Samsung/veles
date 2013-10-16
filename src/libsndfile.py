@@ -67,7 +67,7 @@ class libsndfile(object):
         if not self._handle or (path != self._path and path and path != ""):
             if not path or path == "":
                 logging.info("Library path was not specified, "
-                             "will use the default")
+                             "will use the default (libsndfile.so.1)")
                 path = "libsndfile.so.1"
             self._path = path
             try:
@@ -107,6 +107,7 @@ class libsndfile(object):
     _instance = None
     _handle = None
     _path = None
+    __all__ = ['sf_open', 'sf_close', 'sf_readf_short']
     SFM_READ = 0x10
     SFM_WRITE = 0x20
     SFM_RDWR = 0x30
