@@ -1,74 +1,81 @@
 <?xml version="1.0" encoding="utf-8"?>
 <features>
-	<transform name="Window" parameters="type=rectangular,length=512,step=512">
-		<transform name="ZeroCrossings">
-			<transform name="Merge">
-				<transform name="Stats" parameters="interval=50">
-					<feature name="ZeroCrossings" />
+	<!--<transform name="Mix" condition="channels==2">-->
+		<transform name="Lowpass" parameters="frequency=4000,length=192">
+			<transform name="Window" parameters="type=hamming,length=512,step=220">
+				<transform name="Energy">
+					<feature name="VAD_energy" />
 				</transform>
-			</transform>
-		</transform>
-	    <transform name="Energy">
-	    	<transform name="Merge">
-				<transform name="Stats" parameters="interval=50">
-					<feature name="Energy" />
-				</transform>
-			</transform>
-			<feature name="VAD_energy" />
-		</transform>
-	    <transform name="RDFT">
-			<transform name="ComplexMagnitude">
-				<transform name="Centroid">
-					<transform name="Merge">
-						<transform name="Stats" parameters="interval=50">
-							<feature name="Centroid" />
+				<transform name="RDFT">
+					<transform name="ComplexMagnitude">
+						<transform name="HPS">
+							<feature name="VAD_F0" />
 						</transform>
-					</transform>
-				</transform>
-				<transform name="Rolloff">
-					<transform name="Merge">
-						<transform name="Stats" parameters="interval=50">
-							<feature name="Rolloff" />
-						</transform>
-					</transform>
-				</transform>
-				<transform name="Flux">
-					<transform name="Merge">
-						<transform name="Stats" parameters="interval=50">
-							<feature name="Flux" />
-						</transform>
-					</transform>
-				</transform>
-				<transform name="HPS">
-					<transform name="Merge">
-						<transform name="Stats" parameters="interval=50">
-							<feature name="F0" />
-						</transform>
-					</transform>
-					<feature name="VAD_F0" />
-				</transform>
-				<transform name="Mean" parameters="types=arithmetic geometric">
-					<transform name="SFM">
-						<feature name="VAD_SFM" />
-					</transform>
-				</transform>
-			</transform>
-		</transform>
-	</transform>
-	<transform name="Fork" parameters="factor=6">
-		<transform name="FrequencyBands" parameters="bands=200 400 800 1600 3200, filter=chebyshevII, lengths=48 64 96 96 128 128">
-			<transform name="Rectify">
-				<transform name="Window" parameters="type=rectangular, length=122253, step=61127, interleaved=true">
-					<transform name="Convolve" parameters="window=half-hanning-right, length=8820">
-						<!-- 122253 + 8820 - 1 = 131072 = 2^17 -->
-						<transform name="Diff" parameters="rectify=true, swt=11">
-							<transform name="Beat" parameters="bands=6,debug=true">
-								<feature name="Beat"/>
+						<transform name="Mean" parameters="types=arithmetic geometric">
+							<transform name="SFM">
+								<feature name="VAD_SFM" />
 							</transform>
 						</transform>
 					</transform>
 				</transform>
-			</transform>	
+			</transform>
 		</transform>
-	</transform>
+		<transform name="Window" parameters="type=hamming,length=512,step=220">
+			<transform name="ZeroCrossings">
+				<transform name="Merge">
+					<transform name="Stats" parameters="interval=100">
+						<feature name="ZeroCrossings" />
+					</transform>
+				</transform>
+			</transform>
+		    <transform name="Energy">
+		    	<transform name="Merge">
+					<transform name="Stats" parameters="interval=100">
+						<feature name="Energy" />
+					</transform>
+				</transform>			
+			</transform>		
+		    <transform name="RDFT">
+				<transform name="ComplexMagnitude">
+					<transform name="Centroid">
+						<transform name="Merge">
+							<transform name="Stats" parameters="interval=100">
+								<feature name="Centroid" />
+							</transform>
+						</transform>
+					</transform>
+					<transform name="Rolloff">
+						<transform name="Merge">
+							<transform name="Stats" parameters="interval=100">
+								<feature name="Rolloff" />
+							</transform>
+						</transform>
+					</transform>
+					<transform name="Flux">
+						<transform name="Merge">
+							<transform name="Stats" parameters="interval=100">
+								<feature name="Flux" />
+							</transform>
+						</transform>
+					</transform>				
+				</transform>
+			</transform>
+		</transform>
+		<transform name="Fork" parameters="factor=6">
+			<transform name="FrequencyBands" parameters="bands=200 400 800 1600 3200, filter=chebyshevII, lengths=48 64 96 96 128 128">
+				<transform name="Rectify">
+					<transform name="Window" parameters="type=rectangular, length=122253, step=61127, interleaved=true">
+						<transform name="Convolve" parameters="window=half-hanning-right, length=8820">
+							<!-- 122253 + 8820 - 1 = 131072 = 2^17 -->
+							<transform name="Diff" parameters="rectify=true, swt=11">
+								<transform name="Beat" parameters="bands=6,debug=true">
+									<feature name="Beat"/>
+								</transform>
+							</transform>
+						</transform>
+					</transform>
+				</transform>	
+			</transform>
+		</transform>
+	<!--</transform>-->
 </features>
