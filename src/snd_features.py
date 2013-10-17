@@ -40,36 +40,43 @@ class SoundFeatures(units.Unit):
     def initialize(self):
         pass
 
+    def extract(self, name, data, extr):
+        try:
+            logging.info("Extracting features from " + name)
+            result = extr.calculate(data)
+            if (self.report_path != None):
+                extr.report(os.path.join(self.report_path,
+                                         os.path.basename(name) + ".dot"))
+            return result
+        except Exception as e:
+            logging.warn("Failed to extract features from input: " + repr(e))
+            return None
+
     def run(self):
         sorted_inputs = {}
         sorted_outputs = {}
         self.outputs = []
-        for sampling_rate, grsr in groupby(
-            sorted(self.inputs, key=lambda x: x["sampling_rate"]),
-            lambda x: x["sampling_rate"]):
-            sorted_inputs[sampling_rate] = {}
-            for size, grsz in groupby(
-                sorted(grsr, key=lambda x: x["data"].size),
-                lambda x: x["data"].size):
-                sorted_inputs[sampling_rate][size] = list(grsz)
-        for sampling_rate in sorted_inputs:
-            for size in sorted_inputs[sampling_rate]:
-                extr = Extractor(self.features, size, sampling_rate)
-                for data in sorted_inputs[sampling_rate][size]:
-                    try:
-                        logging.info("Extracting features from " +
-                                      data["name"])
-                        sorted_outputs[data["name"]] = \
-                            extr.calculate(data["data"])
-                        if (self.report_path != None):
-                            extr.report(
-                                os.path.join(self.report_path,
-                                             os.path.basename(data["name"]) +
-                                                ".dot"))
-                    except Exception as e:
-                        logging.warn("Failed to extract features from "
-                                     "input: " + repr(e))
-                        sorted_outputs[data["name"]] = None
+        for channels, grch in groupby(
+            sorted(self.inputs, key=lambda x: x["channels"]),
+                    lambda x: x["channels"]):
+            sorted_inputs[channels] = {}
+            for sampling_rate, grsr in groupby(
+                sorted(grch, key=lambda x: x["sampling_rate"]),
+                lambda x: x["sampling_rate"]):
+                sorted_inputs[channels][sampling_rate] = {}
+                for size, grsz in groupby(
+                    sorted(grsr, key=lambda x: x["data"].size),
+                    lambda x: x["data"].size):
+                    sorted_inputs[channels][sampling_rate][size] = list(grsz)
+        for channels, grch in sorted_inputs.items():
+            for sampling_rate, grsr in grch.items():
+                for size, grsz in grsr.items():
+                    extr = Extractor(self.features, size, sampling_rate,
+                                     channels)
+                    for data in sorted_inputs[channels][sampling_rate][size]:
+                        sorted_outputs[data["name"]] = (
+                            self.extract(data["name"], data["data"], extr),
+                            sampling_rate, channels)
         # Fill self.outputs from sorted_outputs in self.inputs order
         for inp in self.inputs:
             self.outputs.append(sorted_outputs[inp["name"]])
@@ -88,9 +95,11 @@ class SoundFeatures(units.Unit):
             label = labels[j]
             file_element = {"features": {}}
             for feature in self.features:
-                feat_element = {"description": feature.description()}
+                feat_element = {"description": feature.description(
+                    {"sampling_rate": self.outputs[i][1],
+                     "channels": self.outputs[i][2]})}
                 if self.outputs[i]:
-                    feat_element["value"] = self.outputs[i][feature.name]
+                    feat_element["value"] = self.outputs[i][0][feature.name]
                 file_element["features"][feature.name] = feat_element
             root["files"][label] = file_element
         fout = open(file_name, "wb")

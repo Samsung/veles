@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <features>
-	<!--<transform name="Mix" condition="channels==2">-->
+	<transform name="Mix" condition="channels==2">
 		<transform name="Lowpass" parameters="frequency=4000,length=192">
 			<transform name="Window" parameters="type=hamming,length=512,step=220">
 				<transform name="Energy">
@@ -77,5 +77,5 @@
 				</transform>	
 			</transform>
 		</transform>
-	<!--</transform>-->
+	</transform>
 </features>
