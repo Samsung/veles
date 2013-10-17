@@ -27,6 +27,40 @@
 
 isubuntu="$(uname -v|grep Ubuntu)"
 
+mypath=$(pwd)
+cd ..
+if [ ! -e "$mypath/libarchive/Makefile.am" ]; then
+    git submodule update --init	libVeles/libarchive
+    cd libVeles/libarchive
+    git apply ../0001-Redirect-posix_spawnp-to-an-older-version-of-glibc.patch
+    cd ../..
+else
+    git submodule update libVeles/libarchive
+fi
+
+if [ ! -e "$mypath/zlib/configure" ]; then
+    git submodule update --init	libVeles/zlib
+else
+    git submodule update libVeles/zlib
+fi
+cd $mypath
+
+if [ ! -e "yaml-cpp/CMakeLists.txt" ]; then
+    hg clone https://code.google.com/p/yaml-cpp
+    cd yaml-cpp
+    xz -cd ../yaml-cpp11.patch.xz >yaml-cpp11.patch
+    hg import yaml-cpp11.patch
+    rm yaml-cpp11.patch
+    cd ..
+fi
+
+echo "CFLAGS=\"-I$mypath/zlib -DHAVE_LIBZ=1\" \
+\$(dirname \$0)/configure \$@ --disable-bsdcpio --without-bz2lib \
+--without-lzmadec --without-iconv --without-lzma --without-nettle \
+--without-openssl --without-xml2 --without-expat --disable-bsdtar \
+--without-lzo2" > libarchive/configure.gnu
+chmod +x libarchive/configure.gnu
+
 check_prog() {
     printf "Checking for $1... "
     if [ -z "$($1 --version 2>/dev/null)" ]; then
@@ -53,9 +87,9 @@ check_prog autoconf autoconf
 check_prog libtoolize libtool
 check_prog automake automake
 
-rm -rf autom4te.cache
+rm -rf autom4te.cache m4
 rm -f aclocal.m4 ltmain.sh config.log config.status configure libtool stamp-h1 config.h config.h.in
-find -name Makefile.in -exec rm {} \;
+find -name Makefile.in -a -not -path './zlib/*' -exec rm {} \;
 
 mkdir -p m4
 echo "Running aclocal..." ; aclocal $ACLOCAL_FLAGS || (rmdir --ignore-fail-on-non-empty m4; exit 1)
@@ -88,6 +122,10 @@ if [ $W -ne 0 ]; then
 else
 	rm -f config.cache-env.tmp
 fi
+
+cd libarchive
+build/autogen.sh
+cd ..
 
 if [ -n "$1" ]; then
 	path=$(pwd)
