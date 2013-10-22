@@ -69,8 +69,13 @@
 							<!-- 122253 + 8820 - 1 = 131072 = 2^17 -->
 							<transform name="Diff" parameters="rectify=true, swt=11">
 								<transform name="Beat" parameters="bands=6,debug=true">
-									<feature name="Beat"/>
-								</transform>
+									<transform name="PeakAnalysis">
+										<feature name="Beats"/>									
+									</transform>
+									<transform name="BeatDynamicProgramming">
+										<feature name="MainBeat"/>									
+									</transform>
+								</transform>							
 							</transform>
 						</transform>
 					</transform>
