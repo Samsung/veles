@@ -36,17 +36,22 @@ class WorkflowLoaderTest
       ERR("Can't locate current directory");
     } else {
       current_path = currentPath;
+      DBG("current_path: %s", current_path.c_str());
     }
     string temp_path1 = current_path + "/workflow_files/";
     string temp_path2 = current_path + "/tests/workflow_files/";
+    string temp_path3 = current_path + "/../workflow_files/";
     // Check existence of archive
     if (access(temp_path1.c_str(), 0) != -1) {
       current_path = temp_path1;  // "/workflow_desc_files/"
     } else if (access(temp_path2.c_str(), 0) != -1) {
       current_path = temp_path2;  // "/tests/workflow_desc_files/"
+    } else if (access(temp_path3.c_str(), 0) != -1) {
+      current_path = temp_path3;  // "/../workflow_desc_files/"
     } else {
       current_path = "";  // Error
     }
+    DBG("Path to workflow files: %s", current_path.c_str());
   }
 
   void IterateThroughYAML(const YAML::Node& node);
@@ -54,6 +59,7 @@ class WorkflowLoaderTest
 
   void MainTest2() {
     if (current_path == string("")) {
+      ERR("Can't find folder workflow_desc_files");
       FAIL();  // Can't find folder workflow_desc_files
     }
     // Check everything
@@ -98,6 +104,7 @@ class WorkflowLoaderTest
 
   void MainTest() {
     if (current_path == string("")) {
+      ERR("Can't find folder workflow_desc_files");
       FAIL();  // Can't find folder workflow_desc_files
     }
     WorkflowLoader test;
@@ -175,6 +182,7 @@ class WorkflowLoaderTest
 
   void ComplexYamlTest1() {
     if (current_path == string("")) {
+      ERR("Can't find folder workflow_desc_files");
       FAIL();  // Can't find folder workflow_desc_files
     }
     string temp = current_path + "default.yaml";
@@ -203,6 +211,7 @@ class WorkflowLoaderTest
 
   void TestExtractArchive() {
     if (current_path == string("")) {
+      ERR("Can't find folder workflow_desc_files");
       FAIL();  // Can't find folder workflow_desc_files
     }
     string pathToArchive = current_path + "test_archive.tar.gz";
@@ -234,6 +243,7 @@ class WorkflowLoaderTest
 
   void TestRemoveDirectory() {
     if (current_path == string("")) {
+      ERR("Can't find folder workflow_desc_files");
       FAIL();  // Can't find folder workflow_desc_files
     }
     string pathToArchive = current_path + "remove_folder_testing.tar.gz";
