@@ -23,8 +23,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include <string>
-#include <memory>  // For shared_ptr<>
 #include <veles/logger.h>  // NOLINT(*)
 #include <veles/workflow.h>  // NOLINT(*)
 #include <veles/poison.h>  // NOLINT(*)
@@ -46,6 +44,25 @@ class Node;
 }
 
 namespace Veles {
+
+class WorkflowExtractionFailedException : public std::exception {
+ public:
+  WorkflowExtractionFailedException(const std::string& file,
+                                    const std::string& reason)
+      : message_(std::string("Extraction of the workflow \"") + file +
+                 "\" has failed due to " + reason + ".") {
+  }
+
+  virtual ~WorkflowExtractionFailedException() = default;
+
+  virtual const char* what() const noexcept {
+    return message_.c_str();
+  }
+
+ private:
+  std::string message_;
+};
+
 /// Type that contains Unit properties
 typedef std::unordered_map<std::string, std::shared_ptr<void>> PropertiesTable;
 /**

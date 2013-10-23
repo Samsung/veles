@@ -239,7 +239,7 @@ string WorkflowLoader::PrintWorkflowStructure() {
 }
 
 void WorkflowLoader::ExtractArchive(const string& filename,
-    const string& directory) {
+                                    const string& directory) {
   static const size_t kBlockSize = 10240;
 
   auto destroy_read_archive = [](archive* ptr) {
@@ -263,10 +263,10 @@ void WorkflowLoader::ExtractArchive(const string& filename,
     archive_read_support_format_tar(input_archive.get());
     if ((r = archive_read_open_filename(input_archive.get(), filename.c_str(),
                                         kBlockSize))) {
-      auto error = string("Veles::WorkflowLoader::ExtractArchive:\n"
-          "archive_read_open_filename(): ") +
-          archive_error_string(input_archive.get());
-      throw std::runtime_error(error);
+      ERR("archive_read_open_filename(): %s",
+          archive_error_string(input_archive.get()));
+      throw WorkflowExtractionFailedException(filename, archive_error_string(
+          input_archive.get()));
     }
 
     while ((r = archive_read_next_header(input_archive.get(), &entry) !=
@@ -274,6 +274,9 @@ void WorkflowLoader::ExtractArchive(const string& filename,
       if (r != ARCHIVE_OK) {
         ERR("archive_read_next_header() : %s",
             archive_error_string(input_archive.get()));
+        throw WorkflowExtractionFailedException(
+            filename, string("archive_read_next_header(): ") +
+            archive_error_string(ext.get()));
       }
       auto path = directory + "/" + archive_entry_pathname(entry);
 
@@ -283,11 +286,18 @@ void WorkflowLoader::ExtractArchive(const string& filename,
       if (r != ARCHIVE_OK) {
         ERR("archive_write_header() : %s",
             archive_error_string(ext.get()));
+        throw WorkflowExtractionFailedException(
+            filename, string("archive_write_header(): ") +
+            archive_error_string(ext.get()));
+
       } else {
         CopyData(*input_archive.get(), ext.get());
         r = archive_write_finish_entry(ext.get());
         if (r != ARCHIVE_OK) {
           ERR("archive_write_finish_entry() : %s",
+              archive_error_string(ext.get()));
+          throw WorkflowExtractionFailedException(
+              filename, string("archive_write_finish_entry(): ") +
               archive_error_string(ext.get()));
         }
       }
