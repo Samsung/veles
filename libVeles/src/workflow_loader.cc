@@ -276,7 +276,7 @@ void WorkflowLoader::ExtractArchive(const string& filename,
             archive_error_string(input_archive.get()));
         throw WorkflowExtractionFailedException(
             filename, string("archive_read_next_header(): ") +
-            archive_error_string(ext.get()));
+            archive_error_string(input_archive.get()));
       }
       auto path = directory + "/" + archive_entry_pathname(entry);
 

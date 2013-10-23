@@ -53,8 +53,6 @@ class WorkflowExtractionFailedException : public std::exception {
                  "\" has failed due to " + reason + ".") {
   }
 
-  virtual ~WorkflowExtractionFailedException() = default;
-
   virtual const char* what() const noexcept {
     return message_.c_str();
   }
