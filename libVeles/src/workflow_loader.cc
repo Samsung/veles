@@ -51,6 +51,7 @@ void WorkflowLoader::Load(const string& archive) {
 
   //  1) Extract archive (using libarchive) to directory kWorkingDirectory.
   WorkflowLoader::ExtractArchive(archive_name_);
+  DBG("Successfull archive extracting\n");
   //  2) Read neural network structure from fileWithWorkflow
   auto workflow_file = string(working_directory_) + file_with_workflow_;
   WorkflowLoader::GetWorkflow(workflow_file);
@@ -61,9 +62,14 @@ void WorkflowLoader::Load(const string& archive) {
 void WorkflowLoader::GetWorkflow(const string& yaml_filename) {
   vector<YAML::Node> workflow = YAML::LoadAllFromFile(yaml_filename);
 
+  DBG("Number of extracted nodes from yaml: %zu\n", workflow.size());
+
   if (workflow.size() == 1) {
+    //enum value { Undefined, Null, Scalar, Sequence, Map };
+    DBG("Node type %d", workflow.at(0).Type());
     CreateWorkflow(workflow.at(0));
   } else {
+    ERR("Veles::WorkflowLoader::GetWorkflow: can't extract workflow");
     throw std::runtime_error(
         "Veles::WorkflowLoader::GetWorkflow: can't extract workflow");
   }
@@ -71,9 +77,11 @@ void WorkflowLoader::GetWorkflow(const string& yaml_filename) {
 
 void WorkflowLoader::CreateWorkflow(const YAML::Node& doc) {
   for (auto& it : doc) {
+    DBG("inside");
     string key, value;
 
     if (it.first.IsScalar() && it.second.IsScalar()) {
+      DBG("Scalar & scalar");
       key = it.first.as<string>();
       value = it.second.as<string>();
       shared_ptr<string> temp(new string(value));
@@ -82,12 +90,14 @@ void WorkflowLoader::CreateWorkflow(const YAML::Node& doc) {
       key.clear();
       value.clear();
     } else if (it.first.IsScalar() && it.second.IsMap()) {
+      DBG("Scalar & map");
       UnitDescription unit;
       unit.Name = it.first.as<string>();
       WorkflowLoader::GetUnit(it.second, &unit);
       WorkflowLoader::workflow_desc_.Units.push_back(unit);
     } else {
       // It can't be neither Scalar nor Map!!!
+      ERR("Veles::WorkflowLoader::CreateWorkflow: bad YAML::Node");
       throw std::runtime_error(
           "Veles::WorkflowLoader::CreateWorkflow: bad YAML::Node");
     }
@@ -146,6 +156,7 @@ shared_ptr<void> WorkflowLoader::GetProperties(const YAML::Node& node) {
     }
     return tempVectorSequence;
   }
+  ERR("Veles::WorkflowLoader::GetProperties: bad YAML::Node");
   throw std::runtime_error
   ("Veles::WorkflowLoader::GetProperties: bad YAML::Node");
 }
@@ -272,11 +283,14 @@ void WorkflowLoader::ExtractArchive(const string& filename,
     while ((r = archive_read_next_header(input_archive.get(), &entry) !=
         ARCHIVE_EOF)) {
       if (r != ARCHIVE_OK) {
-        ERR("archive_read_next_header() : %s",
-            archive_error_string(input_archive.get()));
-        throw WorkflowExtractionFailedException(
-            filename, string("archive_read_next_header(): ") +
-            archive_error_string(input_archive.get()));
+        string error;
+        if (archive_error_string(input_archive.get()) != nullptr) {
+          error = archive_error_string(input_archive.get());
+        } else {
+          error = "empty string";
+        }
+
+        DBG("archive_read_next_header() : %s", error.c_str());
       }
       auto path = directory + "/" + archive_entry_pathname(entry);
 
@@ -284,20 +298,13 @@ void WorkflowLoader::ExtractArchive(const string& filename,
 
       r = archive_write_header(ext.get(), entry);
       if (r != ARCHIVE_OK) {
-        ERR("archive_write_header() : %s",
+        DBG("archive_write_header() : %s",
             archive_error_string(ext.get()));
-        throw WorkflowExtractionFailedException(
-            filename, string("archive_write_header(): ") +
-            archive_error_string(ext.get()));
-
       } else {
         CopyData(*input_archive.get(), ext.get());
         r = archive_write_finish_entry(ext.get());
         if (r != ARCHIVE_OK) {
-          ERR("archive_write_finish_entry() : %s",
-              archive_error_string(ext.get()));
-          throw WorkflowExtractionFailedException(
-              filename, string("archive_write_finish_entry(): ") +
+          DBG("archive_write_finish_entry() : %s",
               archive_error_string(ext.get()));
         }
       }
