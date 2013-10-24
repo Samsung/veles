@@ -200,27 +200,29 @@ std::shared_ptr<float> WorkflowLoader::GetArrayFromFile(const string& file,
 
 void WorkflowLoader::InitializeWorkflow() {
   for (auto& it : workflow_desc_.Units) {
-    auto Unit = Veles::UnitFactory::Instance()[it.Name]();
-    for (auto& itUnit : it.Properties) {
-      if (string("bias_length") == itUnit.first) {
-        INF("Properties: %s %zu", itUnit.first.c_str(),
-            *static_cast<size_t*>(itUnit.second.get()));
-      } else if (string("input_length") == itUnit.first) {
-        INF("Properties: %s %zu", itUnit.first.c_str(),
-            *static_cast<size_t*>(itUnit.second.get()));
-      } else if (string("output_length") == itUnit.first) {
-        INF("Properties: %s %zu", itUnit.first.c_str(),
-            *static_cast<size_t*>(itUnit.second.get()));
-      } else if (string("weights_length") == itUnit.first) {
-        INF("Properties: %s %zu", itUnit.first.c_str(),
-            *static_cast<size_t*>(itUnit.second.get()));
-      } else {
-        INF("Properties: %s", itUnit.first.c_str());
+    auto unit_constructor = Veles::UnitFactory::Instance()[it.Name];
+    if (unit_constructor) {
+      auto unit = unit_constructor();
+      for (auto& it_unit : it.Properties) {
+        if (string("bias_length") == it_unit.first) {
+          INF("Properties: %s %zu", it_unit.first.c_str(),
+              *static_cast<size_t*>(it_unit.second.get()));
+        } else if (string("input_length") == it_unit.first) {
+          INF("Properties: %s %zu", it_unit.first.c_str(),
+              *static_cast<size_t*>(it_unit.second.get()));
+        } else if (string("output_length") == it_unit.first) {
+          INF("Properties: %s %zu", it_unit.first.c_str(),
+              *static_cast<size_t*>(it_unit.second.get()));
+        } else if (string("weights_length") == it_unit.first) {
+          INF("Properties: %s %zu", it_unit.first.c_str(),
+              *static_cast<size_t*>(it_unit.second.get()));
+        } else {
+          INF("Properties: %s", it_unit.first.c_str());
+        }
+        unit->SetParameter(it_unit.first, it_unit.second);
       }
-
-      Unit->SetParameter(itUnit.first, itUnit.second);
+      workflow_.Add(unit);
     }
-    workflow_.Add(Unit);
   }
 }
 
