@@ -43,6 +43,8 @@ libVeles_la_LIBADD = @LIBARCHIVE_LIBS@ @YAMLCPP_LIBS@ @EINA_LIBS@ -lboost_filesy
 libVeles_la_LDFLAGS = $(AM_LDFLAGS) \
 	-version-info $(INTERFACE_VERSION):$(REVISION_NUMBER):$(AGE_NUMBER) \
 	-Wl,--whole-archive,$(STATIC_ZLIB_LIBS),--no-whole-archive \
-	-Wl,--whole-archive,$(STATIC_YAMLCPP_LIBS),--no-whole-archive
+	-Wl,--whole-archive,$(STATIC_YAMLCPP_LIBS),--no-whole-archive \
+	-lboost_filesystem \
+        -lboost_system
 
 PARALLEL_SUBDIRS = $(BOOST_DIR)

@@ -28,6 +28,7 @@ class WorkflowLoaderTest
     : public ::testing::Test,
       protected DefaultLogger<WorkflowLoaderTest, Logger::COLOR_YELLOW> {
  public:
+
   WorkflowLoaderTest() {
     current_path = "";
     char  currentPath[FILENAME_MAX];
@@ -53,6 +54,9 @@ class WorkflowLoaderTest
     }
     DBG("Path to workflow files: %s", current_path.c_str());
   }
+
+// TODO(v.markovtsev): refactor this
+#ifdef REFACTORED
 
   void IterateThroughYAML(const YAML::Node& node);
   void PrintfNodeType(const YAML::Node& node, const string prepend);
@@ -272,12 +276,13 @@ class WorkflowLoaderTest
     EXPECT_NO_THROW(test.RemoveDirectory(tempFolderName2)) <<
           "Can't delete folder " << tempFolderName2;
   }
-
+#endif
   WorkflowLoader test;
   struct statfs *buffer;
   string current_path;
 };
-
+// TODO(v.markovtsev): refactor this
+#ifdef REFACTORED
 void WorkflowLoaderTest::PrintfNodeType(const YAML::Node& node,
                                         const string prepend) {
   switch (node.Type()) {
@@ -324,8 +329,7 @@ void WorkflowLoaderTest::IterateThroughYAML(const YAML::Node& node) {
   }
 }
 
-// TODO(v.markovtsev): refactor this
-#ifdef REFACTORED
+
 TEST_F(WorkflowLoaderTest, ExtractArchive) {
   TestExtractArchive();
 }
@@ -358,7 +362,6 @@ TEST_F(WorkflowLoaderTest, MainTest2) {
 TEST_F(WorkflowLoaderTest, ChannelsWorkflow) {
   auto fn = current_path + "channels_workflow.tar.gz";
   test.Load(fn);
-  auto res = test.GetWorkflow();
 }
 
 }  // namespace veles

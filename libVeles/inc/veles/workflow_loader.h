@@ -17,7 +17,6 @@
  */
 #ifndef INC_VELES_WORKFLOW_LOADER_H_
 #define INC_VELES_WORKFLOW_LOADER_H_
-
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -31,17 +30,19 @@
 #pragma GCC visibility push(default)
 #endif
 
+namespace boost
+{
+namespace filesystem
+{
+class path;
+}  // namespace filesystem
+}  // namespace boost
+
 struct archive;
 namespace YAML {
-struct Node;
+class Node;
 }  // namespace YAML
 
-
-namespace YAML {
-
-class Node;
-
-}
 
 namespace veles {
 
@@ -110,7 +111,7 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
   /// @brief Main function.
   /**
    * @param[in] archive Name of the archive that contain workflow.
-   * @return Return \b false if can't extract workflow from archive.
+   * @return Throw exception if can't extract workflow from archive.
    *
    *
    * 1) Extract archive (using libarchive) to directory kWorkDirectory.\n   *
@@ -162,14 +163,12 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
   void InitializeWorkflow();
 
   /// @brief Changes the directory where the archives are unpacked to.
-  void set_working_directory(const std::string directory) {
-    working_directory_ = directory;
-  }
+  /// @param[in] directory New path for working directory.
+  void set_working_directory(const std::string& directory);
 
   /// @brief Returns the directory where the archives are unpacked to.
-  const std::string& working_directory() {
-    return working_directory_;
-  }
+  /// @return Return path to working directory.
+  const std::string& working_directory();
 
  protected:
   const WorkflowDescription& workflow_desc() const;
@@ -178,14 +177,21 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
   /// @brief Extract file archive.
   /**
    * @param[in] filename Name of the archive that should be extracted.
-   * @param[in] directory Name of the directory where the extracted archive will
-   * be.
+   * @param[in] directory Name of the directory where will be extracted archive.
    *
-   * Function that extract file archive (with name = \b filename) to directory
-   * with name = \b directory.
+   * Function that extract file archive (with name = \b filename) to directory with
+   * name = \b directory.
    **/
   void ExtractArchive(const std::string& filename,
-                      const std::string& directory = kDefaultWorkingDirectory);
+                      const boost::filesystem::path& directory);
+  /// @brief Extract file archive.
+  /**
+   * @param[in] filename Name of the archive that should be extracted.
+   *
+   * Function that extract file archive (with name = \b filename) to  default
+   * directory.
+   **/
+  void ExtractArchive(const std::string& filename);
 
   /**
    * @brief Extract workflow from yaml file.
@@ -196,10 +202,7 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
    *
    * Open yaml file (or print error if it not possible)
    * */
-  void InitWorkflow() {
-    auto temp = std::string(working_directory_) + kWorkflowDecompressedFile;
-    GetWorkflow(temp);
-  }
+  void InitWorkflow();
 
   void GetWorkflow(const std::string& yaml_filename);
   /// @brief Extract structure of workflow from YAML::Node
@@ -230,26 +233,23 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
    * @return Return \b false if directory can't be deleted because of bad path
    * or permissions or directory inside.
    */
-  void RemoveDirectory(const std::string& path);
+  void RemoveDirectory(const boost::filesystem::path& path);
 
   /// @brief Some function for ExtractArchive
   int CopyData(const archive& ar, archive *aw);
 
-  /// Default path to working directory.
-  std::string working_directory_;
   /// Default name of decompressed yaml file.
   static const char* kWorkflowDecompressedFile;
 
-  static const char* kDefaultWorkingDirectory;
+  static const char* kWorkingDirectory;
 
   WorkflowDescription workflow_desc_;
   Workflow workflow_;
   // Variable to save path + name of archive with info about workflow
   std::string archive_name_;
-  std::string file_with_workflow_;
 };
 
-}  // namespace veles
+}  // namespace Veles
 
 #if __GNUC__ >= 4
 #pragma GCC visibility pop
