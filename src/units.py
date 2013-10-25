@@ -22,7 +22,7 @@ class Pickleable(logger.Logger):
         pickled.
         """
         super(Pickleable, self).__init__()
-        #self.init_unpickled()  # already called in Logger()
+        # self.init_unpickled()  # already called in Logger()
 
     """This function is called if the object has just been unpickled.
     """
@@ -87,13 +87,13 @@ class Unit(Pickleable):
     Attributes:
         links_from: dictionary of units it depends on.
         links_to: dictionary of dependent units.
-        initialized: initialized unit or not.
+        is_initialized: is_initialized unit or not.
         gate_lock_: lock.
         run_lock_: lock.
-        gate_block: if [0] is true, gate() and run() will not be executed and
+        gate_block: if [0] is true, open_gate() and run() will not be executed and
                     notification will not be sent further
                     ([0] can be a function).
-        gate_skip: if [0] is true, gate() and run() will not be executed, but
+        gate_skip: if [0] is true, open_gate() and run() will not be executed, but
                    but notification will be sent further
                    ([0] can be a function).
         gate_block_not: if [0] is true, inverses conditions for gate_block
@@ -117,25 +117,28 @@ class Unit(Pickleable):
         global global_lock
         global pool
         global_lock.acquire()
-        if pool == None:
-            pool = thread_pool.ThreadPool()
-        global_lock.release()
+        try:
+            if pool == None:
+                pool = thread_pool.ThreadPool()
+        finally:
+            global_lock.release()
         super(Unit, self).init_unpickled()
         self.gate_lock_ = threading.Lock()
         self.run_lock_ = threading.Lock()
-        self.initialized = 0
+        self.is_initialized = False
 
     def link_from(self, src):
         """Adds notification link.
         """
-        self.links_from[src] = 0
-        src.links_to[self] = 0
+        self.links_from[src] = False
+        src.links_to[self] = False
 
     def check_gate_and_initialize(self, src):
         """Check gate state and initialize if it is open.
         """
-        if not self.gate(src):  # gate has a priority over skip
+        if not self.open_gate(src):  # gate has a priority over skip
             return
+        # Optionally skip the execution
         if ((callvle(self.gate_skip[0]) and
              (not callvle(self.gate_skip_not[0]))) or
             ((not callvle(self.gate_skip[0])) and
@@ -143,44 +146,46 @@ class Unit(Pickleable):
             self.initialize_dependent()
             return
         self.run_lock_.acquire()
-        if self.initialize():
-            self.run_lock_.release()
+        try:
+            self.initialize()
+            self.is_initialized = True
+        except:
             return
-        self.initialized = 1
-        self.run_lock_.release()
+        finally:
+            self.run_lock_.release()
         self.initialize_dependent()
 
     def check_gate_and_run(self, src):
         """Check gate state and run if it is open.
         """
-        if not self.gate(src):  # gate has a priority over skip
+        if not self.open_gate(src):  # gate has a priority over skip
             return
+        # Optionally skip the execution
         if ((callvle(self.gate_skip[0]) and
              (not callvle(self.gate_skip_not[0]))) or
             ((not callvle(self.gate_skip[0])) and
              callvle(self.gate_skip_not[0]))):
             self.run_dependent()
             return
-        # If previous run has not yet executed, discard notification.
-        if not self.run_lock_.acquire(False):
+        # If previous run has not yet finished, discard notification.
+        if not self.run_lock_.acquire(blocking=False):
             return
-        # Initialize unit runtime if it is not initialized.
-        if not self.initialized:
-            if self.initialize():
-                self.run_lock_.release()
-                return
-            self.initialized = 1
-        if self.run():
+        try:
+            if not self.is_initialized:
+                self.initialize()
+                self.is_initialized = True
+            self.run()
+        except:
+            return
+        finally:
             self.run_lock_.release()
-            return
-        self.run_lock_.release()
         self.run_dependent()
 
     def initialize_dependent(self):
         """Invokes initialize() on dependent units on the same thread.
         """
         for dst in self.links_to.keys():
-            if dst.initialized:
+            if dst.is_initialized:
                 continue
             if ((callvle(dst.gate_block[0]) and
                  (not callvle(dst.gate_block_not[0]))) or
@@ -204,49 +209,41 @@ class Unit(Pickleable):
     def initialize(self):
         """Allocate buffers here.
 
-        initialize() invoked in the same order as run(), including gate() and
-        effects of gate_block and gate_skip.
+        initialize() invoked in the same order as run(), including
+        open_gate() and effects of gate_block and gate_skip.
 
-        If initialize() succedes, initialized flag will be automatically set.
-
-        Returns:
-            None: all ok, dependent units will be initialized.
-            non-zero: error possibly occured, dependent units will not be
-                      initialized.
+        If initialize() succeeds, self.is_initialized flag will be automatically
+        set.
         """
         pass
 
     def run(self):
         """Do the job here.
-
-        Returns:
-            None: all ok, dependent units will be run.
-            non-zero: error possibly occured, dependent units will not be run.
         """
         pass
 
-    def gate(self, src):
+    def open_gate(self, src):
         """Called before run() or initialize().
 
         Returns:
-            non-zero: gate is open, will invoke run() or initialize().
-            zero: gate is closed, will not invoke further.
+            True: gate is open, can call run() or initialize().
+            False: gate is closed, run() and initialize() shouldn't be called.
         """
         self.gate_lock_.acquire()
         if not len(self.links_from):
             self.gate_lock_.release()
-            return 1
+            return True
         if src in self.links_from:
-            self.links_from[src] = 1
+            self.links_from[src] = True
         if not all(self.links_from.values()):
             self.gate_lock_.release()
-            return 0
+            return False
         for src in self.links_from:  # reset activation flags
-            self.links_from[src] = 0
+            self.links_from[src] = False
         self.gate_lock_.release()
-        return 1
+        return True
 
-    def unlink(self):
+    def unlink_all(self):
         """Unlinks self from other units.
         """
         self.gate_lock_.acquire()
@@ -267,11 +264,6 @@ class Unit(Pickleable):
         if src in self.links_from:
             del self.links_from[src]
         self.gate_lock_.release()
-
-    def nothing(self):
-        """Function that do nothing.
-        """
-        pass
 
 
 class OpenCLUnit(Unit):
@@ -315,7 +307,7 @@ class OpenCLUnit(Unit):
     def build_program(self, defines, log_fnme=None):
         """Builds OpenCL program.
 
-        _prg will be initialized with built program.
+        _prg will be is_initialized with built program.
 
         Parameters:
             defines: additional definitions.
@@ -347,7 +339,7 @@ class OpenCLUnit(Unit):
 class Repeater(Unit):
     """Repeater.
     """
-    def gate(self, src):
+    def open_gate(self, src):
         """Gate is always open.
         """
         return 1
