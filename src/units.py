@@ -50,6 +50,20 @@ class Pickleable(logger.Logger):
         self.init_unpickled()
 
 
+class Distributable():
+    def generate_data_for_master(self):
+        return None
+
+    def generate_data_for_slave(self):
+        return None
+
+    def apply_data_from_master(self, data):
+        pass
+
+    def apply_data_from_slave(self, data):
+        pass
+
+
 class Connector(Pickleable):
     """Connects unit attributes (data flow).
 
@@ -81,7 +95,7 @@ global_lock = threading.Lock()
 pool = None
 
 
-class Unit(Pickleable):
+class Unit(Pickleable, Distributable):
     """General unit in data stream model.
 
     Attributes:
@@ -112,6 +126,8 @@ class Unit(Pickleable):
         self.gate_block_not = [0]
         self.gate_skip_not = [0]
         self.exports = None
+        self.applied_data_from_master_recursively = False
+        self.applied_data_from_slave_recursively = False
 
     def init_unpickled(self):
         global global_lock
@@ -143,7 +159,7 @@ class Unit(Pickleable):
              (not callvle(self.gate_skip_not[0]))) or
             ((not callvle(self.gate_skip[0])) and
              (callvle(self.gate_skip_not[0])))):
-            self.initialize_dependent()
+            self.initialize_recursively()
             return
         self.run_lock_.acquire()
         try:
@@ -153,7 +169,7 @@ class Unit(Pickleable):
             return
         finally:
             self.run_lock_.release()
-        self.initialize_dependent()
+        self.initialize_recursively()
 
     def check_gate_and_run(self, src):
         """Check gate state and run if it is open.
@@ -165,7 +181,7 @@ class Unit(Pickleable):
              (not callvle(self.gate_skip_not[0]))) or
             ((not callvle(self.gate_skip[0])) and
              callvle(self.gate_skip_not[0]))):
-            self.run_dependent()
+            self.run_recursively()
             return
         # If previous run has not yet finished, discard notification.
         if not self.run_lock_.acquire(blocking=False):
@@ -179,9 +195,9 @@ class Unit(Pickleable):
             return
         finally:
             self.run_lock_.release()
-        self.run_dependent()
+        self.run_recursively()
 
-    def initialize_dependent(self):
+    def initialize_recursively(self):
         """Invokes initialize() on dependent units on the same thread.
         """
         for dst in self.links_to.keys():
@@ -194,7 +210,7 @@ class Unit(Pickleable):
                 continue
             dst.check_gate_and_initialize(self)
 
-    def run_dependent(self):
+    def run_recursively(self):
         """Invokes run() on dependent units on different threads.
         """
         global pool
@@ -264,6 +280,34 @@ class Unit(Pickleable):
         if src in self.links_from:
             del self.links_from[src]
         self.gate_lock_.release()
+
+    def generate_data_for_master_recursively(self):
+        self.applied_data_from_master_recursively = False
+        data = self.generate_data_for_master()
+        for dst in self.links_to.keys():
+            data = data + dst.generate_data_for_master_recursively()
+
+    def generate_data_for_slave_recursively(self):
+        self.applied_data_from_slave_recursively = False
+        data = self.generate_data_for_slave()
+        for dst in self.links_to.keys():
+            data = data + dst.generate_data_for_slave_recursively()
+
+    def apply_data_from_master_recursively(self, data):
+        if not self.applied_data_from_master_recursively:
+            self.apply_data_from_master(data[0])
+            self.applied_data_from_master_recursively = True
+            data = data[1:]
+        for dst in self.links_to.keys():
+            dst.apply_data_from_master_recursively(data)
+
+    def apply_data_from_slave_recursively(self, data):
+        if not self.applied_data_from_slave_recursively:
+            self.apply_data_from_slave(data[0])
+            self.applied_data_from_slave_recursively = True
+            data = data[1:]
+        for dst in self.links_to.keys():
+            dst.apply_data_from_slave_recursively(data)
 
 
 class OpenCLUnit(Unit):

@@ -6,6 +6,7 @@ Base class for workflows.
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
 import units
+import pickle
 
 
 class Workflow(units.Unit):
@@ -26,10 +27,26 @@ class Workflow(units.Unit):
         In the child class:
             call the parent method at the end.
         """
-        retval = self.start_point.run_dependent()
+        retval = self.start_point.run_recursively()
         if retval:
             return retval
         self.end_point.wait()
+
+    def generate_data_for_master(self):
+        data = self.start_point.generate_data_for_master_recursively()
+        return pickle.dumps(data)
+
+    def generate_data_for_slave(self):
+        data = self.start_point.generate_data_for_slave_recursively()
+        return pickle.dumps(data)
+
+    def apply_data_from_master(self, data):
+        real_data = pickle.loads(data)
+        self.start_point.apply_data_from_master_recursively(real_data)
+
+    def apply_data_from_slave(self, data):
+        real_data = pickle.loads(data)
+        self.apply_data_from_slave_recursively(real_data)
 
 
 import os
