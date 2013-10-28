@@ -127,7 +127,7 @@ class NNWorkflow(units.OpenCLUnit, Workflow):
                         files_to_save.append(
                             self._save_numpy_to_file(
                                 getattr(u, key).v, link_to_numpy, tmppath))
-                    else :
+                    else:
                         dict_temp[key] = getattr(u, key)
             temp__ = {}
             temp__[u.__class__.__name__] = dict_temp
@@ -166,7 +166,8 @@ class NNWorkflow(units.OpenCLUnit, Workflow):
             yaml_name: filename to save.
         """
         stream = open(yaml_name, "w")
-        yaml.dump(to_yaml, stream)
+        for i in range(len(to_yaml)):
+            yaml.dump(to_yaml[i], stream)
         stream.close()
 
     def _save_numpy_to_file(self, numpy_vector, numpy_vector_name, path):

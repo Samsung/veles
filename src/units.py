@@ -104,10 +104,10 @@ class Unit(Pickleable, Distributable):
         is_initialized: is_initialized unit or not.
         gate_lock_: lock.
         run_lock_: lock.
-        gate_block: if [0] is true, open_gate() and run() will not be executed and
-                    notification will not be sent further
+        gate_block: if [0] is true, open_gate() and run() will not be executed
+                    and notification will not be sent further
                     ([0] can be a function).
-        gate_skip: if [0] is true, open_gate() and run() will not be executed, but
+        gate_skip: if [0] is true, open_gate() and run() will not be executed,
                    but notification will be sent further
                    ([0] can be a function).
         gate_block_not: if [0] is true, inverses conditions for gate_block
@@ -228,8 +228,8 @@ class Unit(Pickleable, Distributable):
         initialize() invoked in the same order as run(), including
         open_gate() and effects of gate_block and gate_skip.
 
-        If initialize() succeeds, self.is_initialized flag will be automatically
-        set.
+        If initialize() succeeds, self.is_initialized flag will be
+        automatically set.
         """
         pass
 
@@ -308,6 +308,13 @@ class Unit(Pickleable, Distributable):
             data = data[1:]
         for dst in self.links_to.keys():
             dst.apply_data_from_slave_recursively(data)
+
+    def nothing(self, *args, **kwargs):
+        """Function that do nothing.
+
+        It may be used to overload some methods to do nothing.
+        """
+        pass
 
 
 class OpenCLUnit(Unit):
