@@ -355,13 +355,15 @@ class OpenCLUnit(Unit):
         self.log().debug("%s in %.2f sec" % (self.__class__.__name__,
                                              time.time() - t1))
 
-    def build_program(self, defines, log_fnme=None):
+    def build_program(self, defines, log_fnme=None, s_append=""):
         """Builds OpenCL program.
 
         _prg will be is_initialized with built program.
 
         Parameters:
             defines: additional definitions.
+            log_fnme: file to write constructed source to.
+            s_append: string to append to constructed source.
 
         Returns:
             Built OpenCL program source code.
@@ -375,6 +377,7 @@ class OpenCLUnit(Unit):
             fin = open(src, "r")
             s += fin.read()
             fin.close()
+        s += s_append
         fin = open("%s/matrix_multiplication.cl" % (config.cl_dir), "r")
         s_mx_mul = fin.read()
         fin.close()

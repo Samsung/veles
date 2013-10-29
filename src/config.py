@@ -76,11 +76,43 @@ itypes = {"char": numpy.int8, "short": numpy.int16, "int": numpy.int32,
           "ulong": numpy.uint64}
 
 
-# Allowable types for automatic conversion for use in OpenCL
+#: Allowable types for automatic conversion for use in OpenCL
 # (automatic conversion implemeted in formats.py).
 convert_map = {numpy.float32: numpy.float64, numpy.float64: numpy.float32,
                numpy.complex64: numpy.complex128,
                numpy.complex128: numpy.complex64}
+
+
+import error
+
+
+#: Map between numpy types and opencl.
+def numpy_dtype_to_opencl(dtype):
+    if dtype == numpy.float32:
+        return "float"
+    if dtype == numpy.float64:
+        return "double"
+    if dtype == numpy.complex64:
+        return "float2"
+    if dtype == numpy.complex128:
+        return "double2"
+    if dtype == numpy.int8:
+        return "char"
+    if dtype == numpy.int16:
+        return "short"
+    if dtype == numpy.int32:
+        return "int"
+    if dtype == numpy.int64:
+        return "long"
+    if dtype == numpy.uint8:
+        return "uchar"
+    if dtype == numpy.uint16:
+        return "ushort"
+    if dtype == numpy.uint32:
+        return "uint"
+    if dtype == numpy.uint64:
+        return "ulong"
+    raise error.ErrNotExists()
 
 
 # Directories
