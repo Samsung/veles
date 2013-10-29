@@ -28,7 +28,9 @@
 #endif
 
 #ifdef EINA
+#ifndef NO_POISON
 #include <veles/poison.h>
+#endif
 
 #define EINA_COLOR_LIGHTVIOLET  "\033[35;1m"
 #define EINA_COLOR_VIOLET       "\033[35m"
