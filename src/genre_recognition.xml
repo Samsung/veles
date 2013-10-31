@@ -1,15 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <features>
 	<transform name="Mix" condition="channels==2">
-		<transform name="Window" parameters="type=hanning,length=1024,step=441">
+		<transform name="Window" parameters="type=hanning,length=4096,step=2048">
 			<transform name="RDFT">
 				<transform name="ComplexMagnitude">
-					<transform name="Peaks" parameters="number=6,swt_order=6,swt_level=3">
-						<feature name="SpectrogramPeaks" />				
-					</transform>
-					<transform name="HPS">
-						<feature name="F0" />
-					</transform>
+					<transform name="Peaks" parameters="number=10">
+						<feature name="SpectrogramPeaks" />
+				    </transform>						
 				</transform>
 			</transform>
 		</transform>
@@ -26,8 +23,8 @@
 					<transform name="Stats" parameters="interval=100">
 						<feature name="Energy" />
 					</transform>
-				</transform>			
-			</transform>		
+				</transform>
+			</transform>
 		    <transform name="RDFT">
 				<transform name="ComplexMagnitude">
 					<transform name="Centroid">
@@ -50,7 +47,7 @@
 								<feature name="Flux" />
 							</transform>
 						</transform>
-					</transform>				
+					</transform>
 				</transform>
 			</transform>
 		</transform>
@@ -61,18 +58,18 @@
 						<transform name="Convolve" parameters="window=half-hanning-right, length=8820">
 							<!-- 122253 + 8820 - 1 = 131072 = 2^17 -->
 							<transform name="Diff" parameters="rectify=true, swt=11">
-								<transform name="Beat" parameters="bands=6,debug=true">
+								<transform name="Beat" parameters="bands=6">
 									<transform name="PeakAnalysis">
-										<feature name="Beats"/>									
+										<feature name="Beats"/>
 									</transform>
-									<transform name="BeatDynamicProgramming">
-										<feature name="MainBeat"/>									
+									<transform name="PeakDynamicProgramming" parameters="mind_values=true">
+										<feature name="MainBeat"/>
 									</transform>
-								</transform>							
+								</transform>
 							</transform>
 						</transform>
 					</transform>
-				</transform>	
+				</transform>
 			</transform>
 		</transform>
 	</transform>
