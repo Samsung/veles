@@ -31,11 +31,11 @@ using std::vector;
 using std::shared_ptr;
 using std::ifstream;
 using std::unique_ptr;
-using Veles::WorkflowLoader;
-using Veles::UnitDescription;
-using Veles::PropertiesTable;
-using Veles::WorkflowDescription;
-using Veles::WorkflowExtractionError;
+using veles::WorkflowLoader;
+using veles::UnitDescription;
+using veles::PropertiesTable;
+using veles::WorkflowDescription;
+using veles::WorkflowExtractionError;
 
 /// Default name of decompressed yaml file.
 const char* WorkflowLoader::kWorkflowDecompressedFile =
@@ -69,9 +69,9 @@ void WorkflowLoader::GetWorkflow(const string& yaml_filename) {
     DBG("Node type %d", workflow.at(0).Type());
     CreateWorkflow(workflow.at(0));
   } else {
-    ERR("Veles::WorkflowLoader::GetWorkflow: can't extract workflow");
+    ERR("veles::WorkflowLoader::GetWorkflow: can't extract workflow");
     throw std::runtime_error(
-        "Veles::WorkflowLoader::GetWorkflow: can't extract workflow");
+        "veles::WorkflowLoader::GetWorkflow: can't extract workflow");
   }
 }
 
@@ -97,9 +97,9 @@ void WorkflowLoader::CreateWorkflow(const YAML::Node& doc) {
       WorkflowLoader::workflow_desc_.Units.push_back(unit);
     } else {
       // It can't be neither Scalar nor Map!!!
-      ERR("Veles::WorkflowLoader::CreateWorkflow: bad YAML::Node");
+      ERR("veles::WorkflowLoader::CreateWorkflow: bad YAML::Node");
       throw std::runtime_error(
-          "Veles::WorkflowLoader::CreateWorkflow: bad YAML::Node");
+          "veles::WorkflowLoader::CreateWorkflow: bad YAML::Node");
     }
   }
 }
@@ -131,7 +131,7 @@ void WorkflowLoader::GetUnit(const YAML::Node& doc, UnitDescription* unit) {
         GetProperties(it.second)});
     } else {
       throw std::runtime_error(
-                    "Veles::WorkflowLoader::GetUnit: bad YAML::Node");
+                    "veles::WorkflowLoader::GetUnit: bad YAML::Node");
     }
   }
 }
@@ -156,9 +156,9 @@ shared_ptr<void> WorkflowLoader::GetProperties(const YAML::Node& node) {
     }
     return tempVectorSequence;
   }
-  ERR("Veles::WorkflowLoader::GetProperties: bad YAML::Node");
+  ERR("veles::WorkflowLoader::GetProperties: bad YAML::Node");
   throw std::runtime_error
-  ("Veles::WorkflowLoader::GetProperties: bad YAML::Node");
+  ("veles::WorkflowLoader::GetProperties: bad YAML::Node");
 }
 
 template <typename T>
@@ -180,7 +180,7 @@ std::shared_ptr<float> WorkflowLoader::GetArrayFromFile(const string& file,
                    std::ios::ate);
   if (!fr.is_open()) {
     throw std::runtime_error
-      ("Veles::WorkflowLoader::GetArrayFromFile: Can't open file with array");
+      ("veles::WorkflowLoader::GetArrayFromFile: Can't open file with array");
   }
   // Calculate size of float array to read from file
   fr.seekg (0, fr.end);
@@ -200,7 +200,7 @@ std::shared_ptr<float> WorkflowLoader::GetArrayFromFile(const string& file,
 
 void WorkflowLoader::InitializeWorkflow() {
   for (auto& it : workflow_desc_.Units) {
-    auto unit_constructor = Veles::UnitFactory::Instance()[it.Name];
+    auto unit_constructor = veles::UnitFactory::Instance()[it.Name];
     if (unit_constructor) {
       auto unit = unit_constructor();
       for (auto& it_unit : it.Properties) {
@@ -226,7 +226,7 @@ void WorkflowLoader::InitializeWorkflow() {
   }
 }
 
-Veles::Workflow WorkflowLoader::GetWorkflow() {
+veles::Workflow WorkflowLoader::GetWorkflow() {
   if (workflow_.Size() == 0U) {
     InitializeWorkflow();
   }
@@ -312,7 +312,7 @@ void WorkflowLoader::ExtractArchive(const string& filename,
       }
     }
   } catch(const std::exception& e) {
-    auto error = string("(Veles::WorkflowLoader::ExtractArchive:\nCan't open "
+    auto error = string("(veles::WorkflowLoader::ExtractArchive:\nCan't open "
         "archive: ") + e.what() + ")";
     ERR("%s", error.c_str());
     throw std::runtime_error(error);

@@ -22,7 +22,7 @@
 using std::string;
 using std::static_pointer_cast;
 
-namespace Veles {
+namespace veles {
 
 class WorkflowLoaderTest
     : public ::testing::Test,
@@ -352,6 +352,6 @@ TEST_F(WorkflowLoaderTest, MainTest2) {
   MainTest2();
 }
 
-}  // namespace Veles
+}  // namespace veles
 
 #include "tests/google/src/gtest_main.cc"

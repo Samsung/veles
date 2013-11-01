@@ -43,7 +43,7 @@ class Node;
 
 }
 
-namespace Veles {
+namespace veles {
 
 class WorkflowExtractionFailedException : public std::exception {
  public:
@@ -248,7 +248,7 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
   std::string file_with_workflow_;
 };
 
-}  // namespace Veles
+}  // namespace veles
 
 #if __GNUC__ >= 4
 #pragma GCC visibility pop

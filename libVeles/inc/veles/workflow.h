@@ -25,7 +25,7 @@
 #pragma GCC visibility push(default)
 #endif
 
-namespace Veles {
+namespace veles {
 
 /** @brief VELES workflow */
 class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
@@ -95,7 +95,7 @@ class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
   std::vector<std::shared_ptr<Unit>> units_;
 };
 
-}  // namespace Veles
+}  // namespace veles
 
 #if __GNUC__ >= 4
 #pragma GCC visibility pop

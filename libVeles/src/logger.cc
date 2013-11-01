@@ -15,7 +15,7 @@
 #include <cxxabi.h>
 #include <string.h>
 
-namespace Veles {
+namespace veles {
 
 // The following defines must not be converted to static const members of Logger
 // due to the undefined order in which static constructors are invoked.

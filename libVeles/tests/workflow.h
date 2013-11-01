@@ -33,7 +33,7 @@ class WorkflowTest : public ::testing::TestWithParam<
    */
   void GetExpected(std::vector<size_t>* out);
 
-  Veles::Workflow workflow_;
+  veles::Workflow workflow_;
 };
 
 #endif  // TESTS_WORKFLOW_H_

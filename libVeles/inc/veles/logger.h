@@ -84,7 +84,7 @@
 #pragma GCC visibility push(default)
 #endif
 
-namespace Veles {
+namespace veles {
 
 /// @brief Enables logging with different levels and domains for inherited
 /// classes.
@@ -167,14 +167,14 @@ class DefaultLogger : public Logger {
   static std::string StripVelesNamespace(std::string&& symbol) noexcept {
     std::string res(std::forward<std::string>(symbol));
     size_t pos;
-    while ((pos = res.find("Veles::")) != std::string::npos) {
+    while ((pos = res.find("veles::")) != std::string::npos) {
       res = res.erase(pos, 7);
     }
     return res;
   }
 };
 
-}  // namespace Veles
+}  // namespace veles
 
 #if __GNUC__ >= 4
 #pragma GCC visibility pop

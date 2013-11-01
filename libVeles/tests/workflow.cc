@@ -20,13 +20,13 @@
 const size_t WorkflowTest::kCount = 3;
 
 TEST(Workflow, Construct) {
-  Veles::Workflow workflow;
+  veles::Workflow workflow;
   size_t kExpectedCount = 0;
   EXPECT_EQ(kExpectedCount, workflow.Size());
 }
 
 TEST(Workflow, Add) {
-  Veles::Workflow workflow;
+  veles::Workflow workflow;
   const size_t kCount = 100;
   const size_t kInputs = 3;
   const size_t kOutputs = 4;

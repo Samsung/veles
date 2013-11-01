@@ -1,5 +1,5 @@
 /*! @file unit_factory.cc
- *  @brief Implements Veles::UnitFactory class.
+ *  @brief Implements veles::UnitFactory class.
  *  @author markhor
  *  @version 1.0
  *
@@ -14,7 +14,7 @@
 #include <cstdio>
 #include <string>
 
-namespace Veles {
+namespace veles {
 
 UnitFactory::UnitFactory()
     : Logger("UnitFactory", GetColorByIndex(Logger::COLOR_LIGHTBLUE)) {
@@ -44,4 +44,4 @@ void UnitFactory::PrintRegisteredUnits() const {
   }
 }
 
-}  // namespace Veles
+}  // namespace veles

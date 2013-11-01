@@ -20,7 +20,7 @@
 #pragma GCC visibility push(default)
 #endif
 
-namespace Veles {
+namespace veles {
 
 /** @brief VELES neural network unit */
 class Unit {
@@ -48,7 +48,7 @@ class Unit {
   virtual size_t OutputCount() const noexcept = 0;
 };
 
-}  // namespace Veles
+}  // namespace veles
 
 #if __GNUC__ >= 4
 #pragma GCC visibility pop

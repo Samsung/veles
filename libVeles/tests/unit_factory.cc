@@ -1,5 +1,5 @@
 /*! @file unit_registry.cc
- *  @brief Tests for Veles::UnitRegistry and friends.
+ *  @brief Tests for veles::UnitRegistry and friends.
  *  @author markhor
  *  @version 1.0
  *
@@ -15,7 +15,7 @@
 #include <gtest/gtest.h>
 #include "inc/veles/unit_factory.h"
 
-namespace Veles {
+namespace veles {
 
 class DummyUnit : public Unit {
  public:
@@ -40,11 +40,11 @@ class DummyUnit : public Unit {
 };
   REGISTER_UNIT(DummyUnit);
 
-}  // namespace Veles
+}  // namespace veles
 
 
 TEST(UnitRegistry, DummyCreate) {
-  auto dummy = Veles::UnitFactory::Instance()["Dummy"]();
+  auto dummy = veles::UnitFactory::Instance()["Dummy"]();
   ASSERT_STREQ("Dummy", dummy->Name().c_str());
 }
 

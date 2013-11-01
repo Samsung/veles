@@ -16,7 +16,7 @@
 #include <stdexcept>
 #include "inc/veles/workflow.h"
 
-namespace Veles {
+namespace veles {
 
 void Workflow::Add(const std::shared_ptr<Unit>& unit) {
   units_.push_back(unit);
@@ -52,5 +52,5 @@ float* Workflow::mallocf(size_t length) {
       static_cast<float*>(ptr) : nullptr;
 }
 
-}  // namespace Veles
+}  // namespace veles
 

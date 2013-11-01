@@ -22,7 +22,7 @@
 #pragma GCC visibility push(default)
 #endif
 
-namespace Veles {
+namespace veles {
 
 /// @brief Unit factory class.
 /// @details Use it the following way:
@@ -92,7 +92,7 @@ class RegisterUnit : DefaultLogger<RegisterUnit<T>, Logger::COLOR_LIGHTBLUE> {
 /// @param T The type of your Unit-derived class.
 #define REGISTER_UNIT(T) RegisterUnit<T> T##RegistryInstance;
 
-}  // namespace Veles
+}  // namespace veles
 
 #if __GNUC__ >= 4
 #pragma GCC visibility pop

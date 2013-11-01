@@ -28,7 +28,7 @@ float* mallocf(size_t length) {
 
 /** @brief Dummy unit which passes doubled looped inputs to outputs.
  */
-class UnitMock : public Veles::Unit {
+class UnitMock : public veles::Unit {
  public:
   static const std::string kName;
 
