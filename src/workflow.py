@@ -27,7 +27,7 @@ class Workflow(units.Unit):
         In the child class:
             call the parent method at the end.
         """
-        retval = self.start_point.run_recursively()
+        retval = self.start_point.run_dependent()
         if retval:
             return retval
         self.end_point.wait()

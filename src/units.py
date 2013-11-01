@@ -11,6 +11,8 @@ import threading
 import thread_pool
 import config
 import pyopencl
+import sys
+import traceback
 
 
 class Pickleable(logger.Logger):
@@ -159,17 +161,18 @@ class Unit(Pickleable, Distributable):
              (not callvle(self.gate_skip_not[0]))) or
             ((not callvle(self.gate_skip[0])) and
              (callvle(self.gate_skip_not[0])))):
-            self.initialize_recursively()
+            self.initialize_dependent()
             return
         self.run_lock_.acquire()
         try:
             self.initialize()
             self.is_initialized = True
         except:
+            self.log_error(msg="initialize() failed", exc_info=sys.exc_info())
             return
         finally:
             self.run_lock_.release()
-        self.initialize_recursively()
+        self.initialize_dependent()
 
     def check_gate_and_run(self, src):
         """Check gate state and run if it is open.
@@ -181,7 +184,7 @@ class Unit(Pickleable, Distributable):
              (not callvle(self.gate_skip_not[0]))) or
             ((not callvle(self.gate_skip[0])) and
              callvle(self.gate_skip_not[0]))):
-            self.run_recursively()
+            self.run_dependent()
             return
         # If previous run has not yet finished, discard notification.
         if not self.run_lock_.acquire(blocking=False):
@@ -192,12 +195,13 @@ class Unit(Pickleable, Distributable):
                 self.is_initialized = True
             self.run()
         except:
+            self.log_error(msg="run() failed", exc_info=sys.exc_info())
             return
         finally:
             self.run_lock_.release()
-        self.run_recursively()
+        self.run_dependent()
 
-    def initialize_recursively(self):
+    def initialize_dependent(self):
         """Invokes initialize() on dependent units on the same thread.
         """
         for dst in self.links_to.keys():
@@ -210,7 +214,7 @@ class Unit(Pickleable, Distributable):
                 continue
             dst.check_gate_and_initialize(self)
 
-    def run_recursively(self):
+    def run_dependent(self):
         """Invokes run() on dependent units on different threads.
         """
         global pool
@@ -259,7 +263,7 @@ class Unit(Pickleable, Distributable):
         self.gate_lock_.release()
         return True
 
-    def unlink_all(self):
+    def unlink_from_all(self):
         """Unlinks self from other units.
         """
         self.gate_lock_.acquire()
@@ -282,31 +286,39 @@ class Unit(Pickleable, Distributable):
         self.gate_lock_.release()
 
     def generate_data_for_master_recursively(self):
+        """Do the depth search in the same order on master and slave.
+        """
         self.applied_data_from_master_recursively = False
         data = self.generate_data_for_master()
-        for dst in self.links_to.keys():
+        for dst in sorted(self.links_to.keys()):
             data = data + dst.generate_data_for_master_recursively()
 
     def generate_data_for_slave_recursively(self):
+        """Do the depth search in the same order on master and slave.
+        """
         self.applied_data_from_slave_recursively = False
         data = self.generate_data_for_slave()
-        for dst in self.links_to.keys():
+        for dst in sorted(self.links_to.keys()):
             data = data + dst.generate_data_for_slave_recursively()
 
     def apply_data_from_master_recursively(self, data):
+        """Do the depth search in the same order on master and slave.
+        """
         if not self.applied_data_from_master_recursively:
             self.apply_data_from_master(data[0])
             self.applied_data_from_master_recursively = True
             data = data[1:]
-        for dst in self.links_to.keys():
+        for dst in sorted(self.links_to.keys()):
             dst.apply_data_from_master_recursively(data)
 
     def apply_data_from_slave_recursively(self, data):
+        """Do the depth search in the same order on master and slave.
+        """
         if not self.applied_data_from_slave_recursively:
             self.apply_data_from_slave(data[0])
             self.applied_data_from_slave_recursively = True
             data = data[1:]
-        for dst in self.links_to.keys():
+        for dst in sorted(self.links_to.keys()):
             dst.apply_data_from_slave_recursively(data)
 
     def nothing(self, *args, **kwargs):
@@ -315,6 +327,15 @@ class Unit(Pickleable, Distributable):
         It may be used to overload some methods to do nothing.
         """
         pass
+
+    def log_error(self, **kwargs):
+        """Logs an error
+        """
+        if "msg" in kwargs.keys():
+            self.log().error(kwargs["msg"])
+        if "exc_info" in kwargs.keys():
+            exc_info = kwargs["exc_info"]
+            traceback.print_exception(exc_info[0], exc_info[1], exc_info[2])
 
 
 class OpenCLUnit(Unit):
