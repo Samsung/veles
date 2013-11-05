@@ -104,7 +104,7 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
                                                Logger::COLOR_YELLOW> {
  public:
   friend class WorkflowLoaderTest;
-  WorkflowLoader(): working_directory_(kWorkingDirectory) {}
+  WorkflowLoader();
   /// Destructor. Do nothing.
   virtual ~WorkflowLoader() = default;
   /// @brief Main function.
@@ -178,13 +178,14 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
   /// @brief Extract file archive.
   /**
    * @param[in] filename Name of the archive that should be extracted.
-   * @param[in] directory Name of the directory where will be extracted archive.
+   * @param[in] directory Name of the directory where the extracted archive will
+   * be.
    *
-   * Function that extract file archive (with name = \b filename) to directory with
-   * name = \b directory.
+   * Function that extract file archive (with name = \b filename) to directory
+   * with name = \b directory.
    **/
   void ExtractArchive(const std::string& filename,
-                      const std::string& directory = kWorkingDirectory);
+                      const std::string& directory = kDefaultWorkingDirectory);
 
   /**
    * @brief Extract workflow from yaml file.
@@ -239,7 +240,7 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
   /// Default name of decompressed yaml file.
   static const char* kWorkflowDecompressedFile;
 
-  static const char* kWorkingDirectory;
+  static const char* kDefaultWorkingDirectory;
 
   WorkflowDescription workflow_desc_;
   Workflow workflow_;

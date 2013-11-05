@@ -109,7 +109,7 @@ class WorkflowLoaderTest
     }
     WorkflowLoader test;
     string temp = current_path + "neural_network.tar.gz";
-    (test.Load(temp));
+    test.Load(temp);
     EXPECT_EQ(size_t(2), test.workflow_desc_.Units.size()) << "Not equal";
     EXPECT_EQ(size_t(4), test.workflow_desc_.Properties.size());
     EXPECT_EQ(string("2"),
@@ -324,6 +324,8 @@ void WorkflowLoaderTest::IterateThroughYAML(const YAML::Node& node) {
   }
 }
 
+// TODO(v.markovtsev): refactor this
+#ifdef REFACTORED
 TEST_F(WorkflowLoaderTest, ExtractArchive) {
   TestExtractArchive();
 }
@@ -350,6 +352,13 @@ TEST_F(WorkflowLoaderTest, MainTest) {
 
 TEST_F(WorkflowLoaderTest, MainTest2) {
   MainTest2();
+}
+#endif
+
+TEST_F(WorkflowLoaderTest, ChannelsWorkflow) {
+  auto fn = current_path + "channels_workflow.tar.gz";
+  test.Load(fn);
+  auto res = test.GetWorkflow();
 }
 
 }  // namespace veles

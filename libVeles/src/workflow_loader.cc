@@ -41,7 +41,11 @@ using veles::WorkflowExtractionError;
 const char* WorkflowLoader::kWorkflowDecompressedFile =
     "default.yaml";
 
-const char* WorkflowLoader::kWorkingDirectory = "/tmp/workflow_tmp/";
+const char* WorkflowLoader::kDefaultWorkingDirectory = "/tmp/workflow_tmp/";
+
+WorkflowLoader::WorkflowLoader()
+    : working_directory_(kDefaultWorkingDirectory) {
+}
 
 // TODO(EBulychev): delete fileWithWorkflow. fileWithWorkflow will always be
 // workflow.yaml
@@ -49,12 +53,13 @@ void WorkflowLoader::Load(const string& archive) {
   archive_name_ = archive;
   file_with_workflow_ = kWorkflowDecompressedFile;
 
-  //  1) Extract archive (using libarchive) to directory kWorkingDirectory.
-  WorkflowLoader::ExtractArchive(archive_name_);
-  DBG("Successfull archive extracting\n");
-  //  2) Read neural network structure from fileWithWorkflow
-  auto workflow_file = string(working_directory_) + file_with_workflow_;
+  //  1) Extract archive (using libarchive) to directory working_directory_.
+  WorkflowLoader::ExtractArchive(archive_name_, working_directory_);
+  DBG("Extracted %s to %s", archive_name_.c_str(), working_directory_.c_str());
+  //  2) Read neural network structure from file_with_workflow_
+  auto workflow_file = working_directory_ + file_with_workflow_;
   WorkflowLoader::GetWorkflow(workflow_file);
+  DBG("Loaded %s", file_with_workflow_.c_str());
   // Remove the working directory with all files
   WorkflowLoader::RemoveDirectory(working_directory_);
 }
@@ -62,14 +67,14 @@ void WorkflowLoader::Load(const string& archive) {
 void WorkflowLoader::GetWorkflow(const string& yaml_filename) {
   vector<YAML::Node> workflow = YAML::LoadAllFromFile(yaml_filename);
 
-  DBG("Number of extracted nodes from yaml: %zu\n", workflow.size());
+  DBG("Number of extracted nodes from yaml: %zu", workflow.size());
 
   if (workflow.size() == 1) {
-    //enum value { Undefined, Null, Scalar, Sequence, Map };
+    // enum value { Undefined, Null, Scalar, Sequence, Map };
     DBG("Node type %d", workflow.at(0).Type());
     CreateWorkflow(workflow.at(0));
   } else {
-    ERR("veles::WorkflowLoader::GetWorkflow: can't extract workflow");
+    ERR("Can't extract workflow");
     throw std::runtime_error(
         "veles::WorkflowLoader::GetWorkflow: can't extract workflow");
   }
@@ -176,8 +181,7 @@ std::shared_ptr<float> WorkflowLoader::GetArrayFromFile(const string& file,
                                                         size_t* arr_size) {
   string link_to_file = working_directory_ + file;
   // Open extracted files
-  ifstream fr(link_to_file, std::ios::in|std::ios::binary|
-                   std::ios::ate);
+  ifstream fr(link_to_file, std::ios::in | std::ios::binary | std::ios::ate);
   if (!fr.is_open()) {
     throw std::runtime_error
       ("veles::WorkflowLoader::GetArrayFromFile: Can't open file with array");
@@ -187,15 +191,17 @@ std::shared_ptr<float> WorkflowLoader::GetArrayFromFile(const string& file,
   int array_size = fr.tellg();
   fr.seekg (0, fr.beg);
 
-  *arr_size = array_size / sizeof(float);
+  if (arr_size) {
+    *arr_size = array_size / sizeof(float);
+  }
   // Read array
-  auto weight = shared_ptr<float>(mallocf(array_size), free);
-  fr.read(reinterpret_cast<char*>(weight.get()), array_size);
+  auto array = shared_ptr<float>(mallocf(array_size), free);
+  fr.read(reinterpret_cast<char*>(array.get()), array_size);
 
-  DBG("%s size = %d bytes, 1: %f 2: %f", file.c_str(),
-      array_size, weight.get()[0], weight.get()[1]);
+  DBG("%s size = %d bytes: %f, %f, ...", file.c_str(),
+      array_size, array.get()[0], array.get()[1]);
 
-  return weight;
+  return array;
 }
 
 void WorkflowLoader::InitializeWorkflow() {
@@ -285,14 +291,11 @@ void WorkflowLoader::ExtractArchive(const string& filename,
     while ((r = archive_read_next_header(input_archive.get(), &entry) !=
         ARCHIVE_EOF)) {
       if (r != ARCHIVE_OK) {
-        string error;
-        if (archive_error_string(input_archive.get()) != nullptr) {
-          error = archive_error_string(input_archive.get());
-        } else {
-          error = "empty string";
+        auto error = archive_error_string(input_archive.get());
+        if (error != nullptr) {
+          ERR("archive_read_next_header() : %s", error);
+          throw WorkflowExtractionFailedException(filename, error);
         }
-
-        DBG("archive_read_next_header() : %s", error.c_str());
       }
       auto path = directory + "/" + archive_entry_pathname(entry);
 
