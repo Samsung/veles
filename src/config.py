@@ -148,6 +148,10 @@ test_dataset_root = "/data/veles"
 plotters_disabled = False
 
 
+#: Will retest opencl devices if True
+retest_devices = False
+
+
 def get_itype_from_size(size, signed=True):
     """Get integer type from size.
     """
