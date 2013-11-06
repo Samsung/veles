@@ -100,7 +100,7 @@ class Graphics:
     def process_event(self, plotter):
         """Processes scheduled redraw event
         """
-        plotter.redraw()
+        plotter.redraw_internal()
 
     def update(self):
         """Processes all events scheduled for plotting
@@ -147,6 +147,13 @@ class Plotter(units.Unit):
     def init_unpickled(self):
         super(Plotter, self).init_unpickled()
         self.lock_ = threading.Lock()
+
+    def redraw_internal(self):
+        """For internal purposes
+        """
+        if not config.plotters_disabled:
+            return self.redraw()
+        self.lock_.release()
 
     def redraw(self):
         """ Do the actual drawing here

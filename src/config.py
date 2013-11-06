@@ -144,6 +144,10 @@ except OSError:
 test_dataset_root = "/data/veles"
 
 
+#: Disabled plotters or not (for benchmarking purposes)
+plotters_disabled = False
+
+
 def get_itype_from_size(size, signed=True):
     """Get integer type from size.
     """
