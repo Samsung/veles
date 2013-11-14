@@ -66,29 +66,6 @@ class Distributable():
         pass
 
 
-class Connector(Pickleable):
-    """Connects unit attributes (data flow).
-
-    Attributes:
-        mtime: time of the last modification.
-    """
-    def __init__(self):
-        super(Connector, self).__init__()
-        self.mtime = 0.0
-
-    def update(self):
-        """Marks data as updated (updates mtime).
-        """
-        mtime = time.time()
-        if mtime <= self.mtime:
-            dt = 0.000001
-            mtime = self.mtime + dt
-            while mtime <= self.mtime:
-                mtime += dt
-                dt += dt
-        self.mtime = mtime
-
-
 def callvle(var):
     return var() if callable(var) else var
 
