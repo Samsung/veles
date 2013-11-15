@@ -1,0 +1,10 @@
+[display]
+viewport=1280x720
+fullscreen=true
+multi-sampling=true
+
+[gource]
+seconds-per-day=1
+loop=true
+hide=filenames,dirnames
+path=history.log.fixed
