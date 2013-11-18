@@ -318,7 +318,7 @@ echo -e "  doxygen............: $(color_yes_no ${enable_doxygen:-yes})"
 echo -e "  lto................: $(color_yes_no ${enable_lto:-no})"
 echo -e "  fast_math..........: $(color_yes_no ${enable_fast_math:-no})"
 echo -e "  openmp.............: $(color_yes_no ${enable_openmp:-yes})"
-echo -e "  valgrind...........: $(color_yes_no ${enable_valgrind:-yes})"
+echo -e "  valgrind...........: $(color_yes_no ${enable_valgrind:-no})"
 echo -e "  tests..............: $(color_yes_no ${enable_tests:-yes})"
 echo -e "  test_coverage......: $(color_yes_no ${enable_test_coverage:-no})"
 ])
