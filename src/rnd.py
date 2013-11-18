@@ -7,6 +7,7 @@ Random generators.
 """
 import numpy
 import threading
+import formats
 
 
 _lock = threading.Lock()
@@ -42,7 +43,7 @@ class Rand(object):
         _lock.acquire()
         state = numpy.random.get_state()
         numpy.random.set_state(self.state)
-        arr = arr.reshape(arr.size)
+        arr = formats.ravel(arr)
         if arr.dtype in (numpy.complex64, numpy.complex128):
             # Fill the circle in case of complex numbers.
             r = numpy.random.rand(arr.size) * (vle_max - vle_min)

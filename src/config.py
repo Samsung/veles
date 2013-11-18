@@ -140,7 +140,7 @@ try:
 except OSError:
     pass
 
-#: Directory where functional tests large datasets reside.
+#: Directory where functional tests large datasets reside
 test_dataset_root = "/data/veles"
 
 
@@ -148,8 +148,9 @@ test_dataset_root = "/data/veles"
 plotters_disabled = False
 
 
-#: Will retest opencl devices if True
-retest_devices = False
+#: Test opencl device for optimal BLOCK_SIZE or not
+test_known_device = False
+test_unknown_device = True
 
 
 def get_itype_from_size(size, signed=True):
