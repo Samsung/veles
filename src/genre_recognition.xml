@@ -54,17 +54,14 @@
 		<transform name="Fork" parameters="factor=6">
 			<transform name="FrequencyBands" parameters="bands=200 400 800 1600 3200, filter=chebyshevII, lengths=48 64 96 96 128 128">
 				<transform name="Rectify">
-					<transform name="Window" parameters="type=rectangular, length=122253, step=61127, interleaved=true">
-						<transform name="Convolve" parameters="window=half-hanning-right, length=8820">
-							<!-- 122253 + 8820 - 1 = 131072 = 2^17 -->
-							<transform name="Diff" parameters="rectify=true, swt=11">
-								<transform name="Beat" parameters="bands=6">
-									<transform name="PeakAnalysis">
-										<feature name="Beats"/>
-									</transform>
-									<transform name="PeakDynamicProgramming" parameters="mind_values=true">
-										<feature name="MainBeat"/>
-									</transform>
+					<transform name="Window" parameters="type=rectangular, length=110250, step=55125, interleaved=true">
+						<transform name="Diff" parameters="rectify=true, swt=11">
+							<transform name="Beat" parameters="bands=6">
+								<transform name="PeakAnalysis">
+									<feature name="Beats"/>
+								</transform>
+								<transform name="PeakDynamicProgramming" parameters="mind_values=true">
+									<feature name="MainBeat"/>
 								</transform>
 							</transform>
 						</transform>
