@@ -49,7 +49,7 @@ class SndFileLoader(object):
         opened_data = SndFileLoader.open_file(file_name)
         handle = opened_data["handle"]
         info = opened_data["info"]
-        data = numpy.empty(info.frames, dtype=numpy.short)
+        data = numpy.empty(info.frames * info.channels, dtype=numpy.short)
         libsndfile().sf_readf_short(handle,
                                     data.ctypes.data_as(POINTER(c_short)),
                                     info.frames)
