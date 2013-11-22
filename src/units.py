@@ -380,6 +380,10 @@ class OpenCLUnit(Unit):
         s_mx_mul = fin.read()
         fin.close()
         s = s.replace("MX_MUL", s_mx_mul)
+        fin = open("%s/matrix_reduce.cl" % (config.cl_dir), "r")
+        s_mx_reduce = fin.read()
+        fin.close()
+        s = s.replace("MX_REDUCE", s_mx_reduce)
         if log_fnme != None:
             flog = open(log_fnme, "w")
             flog.write(s)

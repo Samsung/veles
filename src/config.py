@@ -54,19 +54,19 @@ dtype = dtype_map[c_dtype]
 #: CL defines
 cl_defines = {"float": "#define dtype float\n"
                        "#define c_dtype float\n"
+                       "#define sizeof_dtype 4\n"
                        "#define sizeof_c_dtype 4",
-              "double": "#pragma OPENCL EXTENSION cl_khr_fp64: enable\n"
-                        "#define dtype double\n"
+              "double": "#define dtype double\n"
                         "#define c_dtype double\n"
+                        "#define sizeof_dtype 8\n"
                         "#define sizeof_c_dtype 8",
-              "float2": "#define COMPLEX\n"
-                        "#define dtype float\n"
+              "float2": "#define dtype float\n"
                         "#define c_dtype float2\n"
+                        "#define sizeof_dtype 4\n"
                         "#define sizeof_c_dtype 8",
-              "double2": "#define COMPLEX\n"
-                         "#pragma OPENCL EXTENSION cl_khr_fp64: enable\n"
-                         "#define dtype double\n"
+              "double2": "#define dtype double\n"
                          "#define c_dtype double2\n"
+                         "#define sizeof_dtype 8\n"
                          "#define sizeof_c_dtype 16"}
 
 #: Supported int types as OpenCL => numpy dictionary.
