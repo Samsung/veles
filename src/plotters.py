@@ -455,8 +455,8 @@ class Weights2D(Plotter):
             sx = int(numpy.round(numpy.sqrt(value.shape[1])))
             sy = int(value.shape[1]) // sx
         elif type(self.get_shape_from) == list:
-            sx = self.get_shape_from[0][1]
-            sy = self.get_shape_from[0][0]
+            sx = self.get_shape_from[0]
+            sy = self.get_shape_from[1]
         elif "v" in self.get_shape_from.__dict__:
             if len(self.get_shape_from.v.shape) == 3:
                 sx = self.get_shape_from.v.shape[2]
