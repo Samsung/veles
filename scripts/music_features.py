@@ -181,11 +181,13 @@ USAGE
 
         start_timer = time.time()
 
+        # initialize Library
+        Library(library_path)
         # We can do work in parallel more effectively with multiprocessing
         if not single:
-            Library(library_path).set_omp_transforms_max_threads_num(1)
+            Library().set_omp_transforms_max_threads_num(1)
         if nosimd:
-            Library(library_path).set_use_simd(0)
+            Library().set_use_simd(0)
         features = FeaturesXml.parse(feature_file)
         logging.info("Read %d features", len(features))
 
