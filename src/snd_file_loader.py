@@ -56,7 +56,7 @@ class SndFileLoader(object):
         libsndfile().sf_close(handle)
         logging.info("Loaded " + file_name + ": " +
                      info.str_format() + ", " + str(info.frames) +
-                     " samples at " + str(info.samplerate) + " Hz in " +
+                     " samples at " + str(info.samplerate) + " Hz with " +
                      str(info.channels) + " channels")
         return {"data": data, "sampling_rate": info.samplerate,
                 "samples": info.frames, "channels": info.channels,

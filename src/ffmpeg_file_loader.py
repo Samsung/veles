@@ -13,8 +13,7 @@ from snd_file_loader import SndFileLoader
 
 class FFmpegFileLoader(object):
     """
-    Decodes the specified audio file to the raw signed PCM 16 bit format
-    using libfaad2.
+    Decodes audio files to the raw signed PCM 16 bit format using libav/ffmpeg.
     """
 
     def __init__(self):

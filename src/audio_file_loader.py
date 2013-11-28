@@ -41,7 +41,7 @@ class AudioFileLoader(object):
             logging.info("Checked " + fn + ": " +
                          self.backends[fn].file_format(opened_data) + ", " +
                          str(opened_data["samples"]) + " samples at " +
-                         str(opened_data["sampling_rate"]) + " Hz in " +
+                         str(opened_data["sampling_rate"]) + " Hz with " +
                          str(opened_data["channels"]) + " channels")
 
     def run(self):
