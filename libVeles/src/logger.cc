@@ -203,4 +203,4 @@ std::string Logger::GetColorByIndex(unsigned
 #endif
 }
 
-}  // namespace SoundFeatureExtraction
+}  // namespace sound_feature_extraction
