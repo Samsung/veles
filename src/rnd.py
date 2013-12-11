@@ -112,5 +112,6 @@ class Rand(object):
         return retval
 
 
-# Default global random instance.
+# Default global random instances.
 default = Rand()
+default2 = Rand()
