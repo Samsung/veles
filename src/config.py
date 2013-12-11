@@ -131,7 +131,8 @@ except OSError:
     pass
 
 #: Directory for OpenCL source files
-cl_dir = ("%s/../%s/cl" % (this_dir, os.environ.get("ZNICZ_HOME", "Znicz")))
+znicz_dir = os.environ.get("ZNICZ_HOME", "%s/../Znicz" % (this_dir))
+cl_dir = ("%s/cl" % (znicz_dir))
 
 #: Directory where to save snapshots
 snapshot_dir = ("%s/../snapshots" % (this_dir))
