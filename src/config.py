@@ -154,6 +154,10 @@ test_known_device = False
 test_unknown_device = True
 
 
+#: For debugging purposes
+unit_test = False
+
+
 def get_itype_from_size(size, signed=True):
     """Get integer type from size.
     """
