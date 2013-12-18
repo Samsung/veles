@@ -184,7 +184,7 @@ USAGE
         # initialize Library
         Library(library_path)
         # We can do work in parallel more effectively with multiprocessing
-        if single:
+        if not single:
             Library().set_omp_transforms_max_threads_num(1)
         if nosimd:
             Library().set_use_simd(0)
