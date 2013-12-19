@@ -30,10 +30,8 @@
 #pragma GCC visibility push(default)
 #endif
 
-namespace boost
-{
-namespace filesystem
-{
+namespace boost {
+namespace filesystem {
 class path;
 }  // namespace filesystem
 }  // namespace boost
@@ -113,8 +111,7 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
    * @param[in] archive Name of the archive that contain workflow.
    * @return Throw exception if can't extract workflow from archive.
    *
-   *
-   * 1) Extract archive (using libarchive) to directory kWorkDirectory.\n   *
+   * 1) Extract archive (using libarchive) to directory kWorkDirectory.\n
    * 2) Read WorkflowDescription from kWorkflowDecompressedFile\n
    * 3) Go through workflow units looking for links to files with weights&\n
    * biases. If find key that content "link_to_" -> extract files (using zlib)\n
@@ -122,31 +119,6 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
    * 6) Delete kWorkDirectory with all files.\n
    */
   void Load(const std::string& archive);
-  /**
-   * @brief Print structure of workflow (without float arrays).
-   *
-   * @param[in] workflow Structure of this workflow will be printed.
-   *
-   *  1) Go through unordered map of workflow properties.
-   *  @code
-   *    for (auto& x : workflow.Properties) {
-   *      std::cout << x.first << ": " << x.second << std::endl;
-     *    }
-   *  @endcode
-   *  2) Go through vector of unit and print unit name and properties.
-   *  @code
-   * for (unsigned i = 0; i < workflow.Units.size(); ++i)
-   * {
-   *   std::cout << "\nUnit name: " << workflow.Units.at(i).Name << std::endl;
-   *   for (auto& y : workflow.Units.at(i).Properties)
-   *   {
-   *    std::cout << y.first << ": " <<
-   *    static_cast<std::string*>(y.second.get())->c_str() << std::endl;
-   *   }
-   * }
-   *  @endcode
-   * */
-  std::string PrintWorkflowStructure();
   /**
    * @brief Get extracted workflow.
    *
@@ -159,9 +131,6 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
    * @return Return workflow description (type of description = WorkflowDescription).
    * */
   WorkflowDescription GetWorkflowDescription() const { return workflow_desc_; }
-
-  void InitializeWorkflow();
-
   /// @brief Changes the directory where the archives are unpacked to.
   /// @param[in] directory New path for working directory.
   void set_working_directory(const std::string& directory);
@@ -174,17 +143,19 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
   const WorkflowDescription& workflow_desc() const;
 
  private:
+  /// @brief Convert WorkflowDescription to Workflow.
+  void InitializeWorkflow();
   /// @brief Extract file archive.
   /**
    * @param[in] filename Name of the archive that should be extracted.
    * @param[in] directory Name of the directory where will be extracted archive.
    *
-   * Function that extract file archive (with name = \b filename) to directory with
-   * name = \b directory.
+   * Function that extract file archive (with name = \b filename) to directory
+   * with name = \b directory.
    **/
   void ExtractArchive(const std::string& filename,
                       const boost::filesystem::path& directory);
-  /// @brief Extract file archive.
+  /// @brief Extract file archive.l
   /**
    * @param[in] filename Name of the archive that should be extracted.
    *
@@ -192,7 +163,6 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
    * directory.
    **/
   void ExtractArchive(const std::string& filename);
-
   /**
    * @brief Extract workflow from yaml file.
    *

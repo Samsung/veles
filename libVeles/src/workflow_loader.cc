@@ -90,7 +90,8 @@ void WorkflowLoader::CreateWorkflow(const YAML::Node& doc) {
     string key, value;
 
     if (it.first.IsScalar() && it.second.IsScalar()) {
-      DBG("Scalar & scalar");
+      DBG("Scalar & scalar : %s & %s", it.first.as<string>().c_str(),
+                                       it.second.as<string>().c_str());
       key = it.first.as<string>();
       value = it.second.as<string>();
       shared_ptr<string> temp(new string(value));
@@ -99,7 +100,7 @@ void WorkflowLoader::CreateWorkflow(const YAML::Node& doc) {
       key.clear();
       value.clear();
     } else if (it.first.IsScalar() && it.second.IsMap()) {
-      DBG("Scalar & map");
+      DBG("Scalar & map : %s & map", it.first.as<string>().c_str());
       UnitDescription unit;
       unit.Name = it.first.as<string>();
       WorkflowLoader::GetUnit(it.second, &unit);
@@ -118,6 +119,8 @@ void WorkflowLoader::GetUnit(const YAML::Node& doc, UnitDescription* unit) {
     string key, value;
     // Add properties to UnitDescription
     if (it.first.IsScalar() && it.second.IsScalar()) {
+      DBG("GetUnit: Scalar & scalar : %s & %s", it.first.as<string>().c_str(),
+                                                it.second.as<string>().c_str());
       // Add properties
       key = it.first.as<string>();
       value = it.second.as<string>();
@@ -135,6 +138,8 @@ void WorkflowLoader::GetUnit(const YAML::Node& doc, UnitDescription* unit) {
       }
     } else if (it.first.IsScalar() && (it.second.IsMap() ||
         it.second.IsSequence())) {
+      DBG("GetUnit: Scalar & map(sequence) : %s & map(sequence)",
+          it.first.as<string>().c_str());
       // Recursive adding properties
       unit->Properties.insert({it.first.as<string>(),
         GetProperties(it.second)});
@@ -148,11 +153,13 @@ void WorkflowLoader::GetUnit(const YAML::Node& doc, UnitDescription* unit) {
 shared_ptr<void> WorkflowLoader::GetProperties(const YAML::Node& node) {
   if (node.IsScalar()) {
     // Simplest variant - return shared_ptr to string or to float array
+    DBG("GetProperties: Scalar : %s", node.as<string>().c_str());
     auto temp = std::make_shared<string>(node.as<string>());
     return temp;
   } else if (node.IsMap()) {
     auto props_map = std::make_shared<vector<PropertiesTable>>();
     for (const auto& it : node) {
+      DBG("GetProperties: Map : %s & second", it.first.as<string>().c_str());
       PropertiesTable props;
       props.insert({it.first.as<string>(), GetProperties(it.second)});
       props_map.get()->push_back(props);
@@ -234,24 +241,6 @@ veles::Workflow WorkflowLoader::GetWorkflow() {
   return workflow_;
 }
 
-string WorkflowLoader::PrintWorkflowStructure() {
-  // Workflow properties to string
-  string result = "\nWorkFlow properties:\n";
-
-  for (auto x : workflow_desc_.Properties) {
-    result += x.first + " : " + *std::static_pointer_cast<const string>(x.second) + "\n";
-  }
-  // Print units and their properties
-  for (unsigned i = 0; i < workflow_desc_.Units.size(); ++i) {
-    result += "\nUnit name: " + workflow_desc_.Units.at(i).Name + "\n";
-
-    for (auto y : workflow_desc_.Units.at(i).Properties) {
-      result += y.first + " : " + *std::static_pointer_cast<const string>(y.second) + "\n";
-    }
-  }
-  return result;
-}
-
 void WorkflowLoader::ExtractArchive(const string& filename,
                                     const boost::filesystem::path& directory) {
   auto temp_directory = directory;
@@ -293,6 +282,7 @@ void WorkflowLoader::ExtractArchive(const string& filename,
           ERR("archive_read_next_header() : %s", error);
           throw WorkflowExtractionFailedException(filename, error);
         }
+        DBG("archive_read_next_header() : %s", error);
       }
       auto path = temp_directory;
       path /= archive_entry_pathname(entry);
