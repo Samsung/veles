@@ -18,16 +18,9 @@
 
 namespace veles {
 
-void Workflow::Add(const std::shared_ptr<Unit>& unit) {
-  units_.push_back(unit);
-}
-
-void Workflow::Clear() {
-  units_.clear();
-}
-
-size_t Workflow::Size() const noexcept {
-  return units_.size();
+std::shared_ptr<const void> Workflow::GetParameter(const std::string& name) {
+  auto it = params_.find(name);
+  return it != params_.end() ? it->second : nullptr;
 }
 
 std::shared_ptr<Unit> Workflow::Get(size_t index) const {

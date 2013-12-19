@@ -13,6 +13,7 @@
 #ifndef INC_WORKFLOW_H_
 #define INC_WORKFLOW_H_
 
+#include <map>
 #include <vector>
 #include <string>
 #include <memory>
@@ -34,33 +35,45 @@ class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
   /** @brief Appends a unit to the end of workflow
    *  @param unit VELES unit
    */
-  void Add(const std::shared_ptr<Unit>& unit);
-
+  void Add(const std::shared_ptr<Unit>& unit) {
+    units_.push_back(unit);
+  }
   /** @brief Clears the Workflow
    */
-  void Clear();
-
-  /** @brief Returns a unit from workflow
-   *  @param index Unit position in workflow
-   */
-  std::shared_ptr<Unit> Get(size_t index) const;
-
+  void Clear() {
+    units_.clear();
+  }
   /** @brief Number of units
    */
-  size_t Size() const noexcept;
-
+  size_t Size() const noexcept {
+    return units_.size();
+  }
   /* @brief Number of workflow inputs
    */
   size_t InputCount() const noexcept {
     return Size() ? units_.front()->InputCount() : 0;
   }
-
   /* @brief Number of workflow outputs
    */
   size_t OutputCount() const noexcept {
     return Size() ? units_.back()->OutputCount() : 0;
   }
-
+  /** @brief Sets a parameter of the workflow
+   *  @param name Name of the parameter
+   *  @param value Pointer to the parameter value
+   */
+  void SetParameter(const std::string& name,
+                    std::shared_ptr<const void> value) {
+    params_[name] = value;
+  }
+  /** @brief Returns a parameter of the workflow
+   *  @param name Name of the parameter
+   */
+  std::shared_ptr<const void> GetParameter(const std::string& name);
+  /** @brief Returns a unit from workflow
+   *  @param index Unit position in workflow
+   */
+  std::shared_ptr<Unit> Get(size_t index) const;
   /** @brief Executes the workflow
    *  @param begin Iterator to the first element of initial data
    *  @param end Iterator to the end of initial data
@@ -93,6 +106,7 @@ class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
   static float* mallocf(size_t length);
 
   std::vector<std::shared_ptr<Unit>> units_;
+  std::map<std::string, std::shared_ptr<const void>> params_;
 };
 
 }  // namespace veles
