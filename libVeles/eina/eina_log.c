@@ -2241,7 +2241,7 @@ eina_log_timing(int domain,
         }
       case EINA_LOG_STATE_STOP:
         {
-           Eina_Nano_Time end;
+           Eina_Nano_Time end = { 0, 0 };
            long int r;
 
            _eina_time_get(&end);
