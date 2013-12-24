@@ -31,6 +31,19 @@ class Rand(object):
         numpy.random.set_state(state)
         _lock.release()
 
+    def normal(self, loc=0.0, scale=1.0, size=None):
+        """numpy.normal() with saving the random state.
+        """
+        global _lock
+        _lock.acquire()
+        state = numpy.random.get_state()
+        numpy.random.set_state(self.state)
+        retval = numpy.random.normal(loc=loc, scale=scale, size=size)
+        self.state = numpy.random.get_state()
+        numpy.random.set_state(state)
+        _lock.release()
+        return retval
+
     def fill(self, arr, vle_min=-1.0, vle_max=1.0):
         """Fills numpy array with random numbers.
 
@@ -50,14 +63,38 @@ class Rand(object):
             a = numpy.random.rand(arr.size) * numpy.pi * 2.0
             arr.real[:] = r * numpy.cos(a)
             arr.imag[:] = r * numpy.sin(a)
-
-            # Test version that fill imaginary part with zeros.
-            #arr.real[:] = (numpy.random.rand(arr.size) * (vle_max - vle_min) +
-            #               vle_min)[:]
-            #arr.imag[:] = 0
         else:
             arr[:] = (numpy.random.rand(arr.size) * (vle_max - vle_min) +
                       vle_min)[:]
+        self.state = numpy.random.get_state()
+        numpy.random.set_state(state)
+        _lock.release()
+
+    def fill_normal(self, arr, vle_min=-1.0, vle_max=1.0):
+        """Fills numpy array with random numbers with normal distribution.
+
+        Parameters:
+            arr: numpy array.
+            vle_min: minimum value in random distribution.
+            vle_max: maximum value in random distribution.
+        """
+        global _lock
+        _lock.acquire()
+        state = numpy.random.get_state()
+        numpy.random.set_state(self.state)
+        arr = formats.ravel(arr)
+        center = (vle_min + vle_max) * 0.5
+        radius = (vle_max - vle_min) * 0.5
+        if arr.dtype in (numpy.complex64, numpy.complex128):
+            # Fill the circle in case of complex numbers.
+            r = numpy.clip(numpy.random.normal(loc=center, scale=radius,
+                size=arr.size), vle_min, vle_max)
+            a = numpy.random.rand(arr.size) * numpy.pi * 2.0
+            arr.real[:] = r * numpy.cos(a)
+            arr.imag[:] = r * numpy.sin(a)
+        else:
+            arr[:] = numpy.clip(numpy.random.normal(loc=center, scale=radius,
+                size=arr.size), vle_min, vle_max)[:]
         self.state = numpy.random.get_state()
         numpy.random.set_state(state)
         _lock.release()
