@@ -85,19 +85,19 @@ class WorkflowLoaderTest
     EXPECT_EQ(string("All2All"), test.workflow_desc_.Units.at(
         second_unit).Name);
     EXPECT_EQ(string("unit0bias.bin"),
-                  *std::static_pointer_cast<string>(
+                  *std::static_pointer_cast<const string>(
                       test.workflow_desc_.Units.at(first_unit).Properties.at(
                           "link_to_bias")));
     EXPECT_EQ(string("unit1bias.bin"),
-                  *std::static_pointer_cast<string>(
+                  *std::static_pointer_cast<const string>(
                       test.workflow_desc_.Units.at(second_unit).Properties.at(
                           "link_to_bias")));
     EXPECT_EQ(string("unit0output.bin"),
-                  *std::static_pointer_cast<string>(
+                  *std::static_pointer_cast<const string>(
                       test.workflow_desc_.Units.at(first_unit).Properties.at(
                           "link_to_output")));
     EXPECT_EQ(string("unit1output.bin"),
-                  *std::static_pointer_cast<string>(
+                  *std::static_pointer_cast<const string>(
                       test.workflow_desc_.Units.at(second_unit).Properties.at(
                           "link_to_output")));
   }
@@ -113,17 +113,17 @@ class WorkflowLoaderTest
     EXPECT_EQ(size_t(2), test.workflow_desc_.Units.size()) << "Not equal";
     EXPECT_EQ(size_t(4), test.workflow_desc_.Properties.size());
     EXPECT_EQ(string("2"),
-              *std::static_pointer_cast<string>(
+              *std::static_pointer_cast<const string>(
                   test.workflow_desc_.Properties.at("layers_number")));
     EXPECT_EQ(string("0"),
-              *std::static_pointer_cast<string>(
+              *std::static_pointer_cast<const string>(
                   test.workflow_desc_.Properties.at("neural_network_type")));
     EXPECT_EQ(string("Feedforward neural network"),
-              *std::static_pointer_cast<string>(
+              *std::static_pointer_cast<const string>(
                   test.workflow_desc_.Properties.at(
                       "neural_network_type_desc")));
     EXPECT_EQ(string("SaverUnit2"),
-              *std::static_pointer_cast<string>(
+              *std::static_pointer_cast<const string>(
                   test.workflow_desc_.Properties.at("service_info")));
     int first_layer = 0, second_layer = 1;
     if (test.workflow_desc_.Units.at(0).Name == string("layer 0")) {
@@ -140,19 +140,19 @@ class WorkflowLoaderTest
     EXPECT_EQ(string("layer 1"), test.workflow_desc_.Units.at(
         second_layer).Name);
     EXPECT_EQ(string("tanh"),
-              *std::static_pointer_cast<string>(
+              *std::static_pointer_cast<const string>(
                   test.workflow_desc_.Units.at(first_layer).Properties.at(
                       "activation_function_descr")));
     EXPECT_EQ(string("softmax"),
-              *std::static_pointer_cast<string>(
+              *std::static_pointer_cast<const string>(
                   test.workflow_desc_.Units.at(second_layer).Properties.at(
                       "activation_function_descr")));
     EXPECT_EQ(string("layer0bias.bin"),
-              *std::static_pointer_cast<string>(
+              *std::static_pointer_cast<const string>(
                   test.workflow_desc_.Units.at(first_layer).Properties.at(
                       "link_to_bias")));
     EXPECT_EQ(string("layer1bias.bin"),
-              *std::static_pointer_cast<string>(
+              *std::static_pointer_cast<const string>(
                   test.workflow_desc_.Units.at(second_layer).Properties.at(
                       "link_to_bias")));
   }
@@ -163,7 +163,7 @@ class WorkflowLoaderTest
     testTable.insert({"testTable", testShare});
 
     EXPECT_EQ(string("Test shared"),
-              *static_cast<string*>(testTable.at("testTable").get()));
+              *std::static_pointer_cast<const string>(testTable.at("testTable")));
   }
 
   void GetUnitTest() {
@@ -176,8 +176,8 @@ class WorkflowLoaderTest
     test.GetUnit(node, &testUnit);
 
     EXPECT_EQ("Test Name", testUnit.Name);
-    EXPECT_EQ("Cool",
-              *static_cast<string*>(testUnit.Properties.at("Samsung").get()));
+    EXPECT_EQ("Cool", *std::static_pointer_cast<const string>(
+        testUnit.Properties.at("Samsung")));
   }
 
   void ComplexYamlTest1() {

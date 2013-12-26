@@ -24,7 +24,7 @@ class DummyUnit : public Unit {
   }
 
   virtual void SetParameter(const std::string&,
-                            std::shared_ptr<void>) override {
+                            std::shared_ptr<const void>) override {
   }
 
   virtual void Execute(const float*, float*) const override {
