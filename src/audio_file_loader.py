@@ -10,9 +10,10 @@ import os
 from itertools import repeat, chain
 from snd_file_loader import SndFileLoader
 from ffmpeg_file_loader import FFmpegFileLoader
+import units
 
 
-class AudioFileLoader(object):
+class AudioFileLoader(units.Unit):
     """
     Decodes the specified audio file to the raw signed PCM 16 bit format
     using the decoder based on the file extension.
