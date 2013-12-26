@@ -736,12 +736,12 @@ class MSEHistogram(Plotter):
             l.set_linewidth(1.5)
 
         for x, y in zip(N, self.val_mse):
-            if y > koef - l2:
-                pylab.text(x + l1, y - l2, '%.2f' % y,
+            if y > koef - l2 * 0.75:
+                pylab.text(x + l1, y - l2 * 0.75, '%.0f' % y,
                            ha='center', va='bottom',
                            fontsize=l3, rotation=90)
             else:
-                pylab.text(x + l1, t0, '%.2f' % y,
+                pylab.text(x + l1, t0, '%.0f' % y,
                            ha='center', va='bottom',
                            fontsize=l3, rotation=90)
 
