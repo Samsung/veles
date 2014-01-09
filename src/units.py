@@ -10,6 +10,7 @@ import logger
 import threading
 import thread_pool
 import config
+import os
 import pyopencl
 import sys
 import traceback
@@ -346,6 +347,20 @@ class OpenCLUnit(Unit):
             self.cpu_run()
         self.log().debug("%s in %.2f sec" % (self.__class__.__name__,
                                              time.time() - t1))
+                      
+    @staticmethod
+    def read_ocl_file(file_name):
+        fin = None
+        for path in config.ocl_dirs:
+            try:                
+                fin = open(os.path.join(path, file_name), "r")               
+            except:
+                continue
+            break
+        if not fin:
+            dirs = ", ".join(config.ocl_dirs)[2:]
+            raise Exception("\"%s\" was not found in any of the following paths: %s" % (file_name, dirs))
+        return fin.read()
 
     def build_program(self, defines, log_fnme=None, s_append=""):
         """Builds OpenCL program.
@@ -361,22 +376,14 @@ class OpenCLUnit(Unit):
             Built OpenCL program source code.
         """
         s = defines
-        fin = open("%s/defines.cl" % (config.cl_dir), "r")
-        s += fin.read()
-        fin.close()
+        s += OpenCLUnit.read_ocl_file("defines.cl")
         for src, define in self.cl_sources_.items():
             s += "\n" + define + "\n"
-            fin = open(src, "r")
-            s += fin.read()
-            fin.close()
+            s += OpenCLUnit.read_ocl_file(src)
         s += s_append
-        fin = open("%s/matrix_multiplication.cl" % (config.cl_dir), "r")
-        s_mx_mul = fin.read()
-        fin.close()
+        s_mx_mul = OpenCLUnit.read_ocl_file("matrix_multiplication.cl")
         s = s.replace("MX_MUL", s_mx_mul)
-        fin = open("%s/matrix_reduce.cl" % (config.cl_dir), "r")
-        s_mx_reduce = fin.read()
-        fin.close()
+        s_mx_reduce = OpenCLUnit.read_ocl_file("matrix_reduce.cl")
         s = s.replace("MX_REDUCE", s_mx_reduce)
         if log_fnme != None:
             flog = open(log_fnme, "w")

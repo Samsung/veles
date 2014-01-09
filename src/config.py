@@ -5,6 +5,13 @@ Global configuration variables.
 
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
+
+
+import numpy
+import error
+import os
+
+
 global sconfig
 global _sconfig_empty
 
@@ -29,9 +36,6 @@ def getConfig(value, default_value=None):
     if(value == _sconfig_empty):
         return default_value
     return value
-
-
-import numpy
 
 
 #: Supported float types as OpenCL => numpy dictionary.
@@ -83,9 +87,6 @@ convert_map = {numpy.float32: numpy.float64, numpy.float64: numpy.float32,
                numpy.complex128: numpy.complex64}
 
 
-import error
-
-
 #: Map between numpy types and opencl.
 def numpy_dtype_to_opencl(dtype):
     if dtype == numpy.float32:
@@ -116,7 +117,6 @@ def numpy_dtype_to_opencl(dtype):
 
 
 # Directories
-import os
 
 #: Directory with config.py itself
 this_dir = os.path.dirname(__file__)
@@ -124,18 +124,18 @@ if not this_dir:
     this_dir = "."
 
 #: Directory for cache
-cache_dir = ("%s/../cache" % (this_dir))
+cache_dir = os.path.join(this_dir, "../cache")
 try:
     os.mkdir(cache_dir)
 except OSError:
     pass
 
 #: Directory for OpenCL source files
-znicz_dir = os.environ.get("ZNICZ_HOME", "%s/../Znicz" % (this_dir))
-cl_dir = ("%s/cl" % (znicz_dir))
+ocl_dirs = os.environ.get("VELES_OPENCL_DIRS", "").split(":") + \
+           [os.path.join(this_dir, "../ocl")]
 
 #: Directory where to save snapshots
-snapshot_dir = ("%s/../snapshots" % (this_dir))
+snapshot_dir = os.path.join(this_dir, "../snapshots")
 try:
     os.mkdir(snapshot_dir)
 except OSError:
