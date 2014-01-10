@@ -48,6 +48,39 @@ TEST(Workflow, Add) {
   ASSERT_THROW(workflow.Get(kCount * 2), std::out_of_range);
 }
 
+TEST(Workflow, Parameters) {
+  veles::Workflow workflow;
+  std::string param1_name = "abc";
+  std::string param2_name = "def";
+  std::string value1_str = "one";
+  std::string value2_str = "two";
+  std::shared_ptr<const std::string> value1(new std::string(value1_str));
+  std::shared_ptr<const std::string> value2(new std::string(value2_str));
+  std::shared_ptr<const std::vector<int>> value3(
+      new std::vector<int>{1, 42, 99});
+  // initial value
+
+  EXPECT_EQ(nullptr, workflow.GetParameter(param1_name));
+
+  // setting string parameter
+  workflow.SetParameter(param1_name, value2);
+  EXPECT_EQ(value2_str, *std::static_pointer_cast<const std::string>(
+      workflow.GetParameter(param1_name)));
+  // resetting parameter
+
+  workflow.SetParameter(param1_name, value1);
+  EXPECT_EQ(value1_str, *std::static_pointer_cast<const std::string>(
+      workflow.GetParameter(param1_name)));
+
+  // initial value of other parameter
+  EXPECT_EQ(nullptr, workflow.GetParameter(param2_name));
+
+  // setting vector parameter
+  workflow.SetParameter(param2_name, value3);
+  EXPECT_EQ(42, (*std::static_pointer_cast<const std::vector<int>>(
+      workflow.GetParameter(param2_name)))[1]);
+}
+
 void WorkflowTest::SetUp() {
   size_t sizes[kCount + 1];
   std::tie(sizes[0], sizes[1], sizes[2], sizes[3]) = GetParam();

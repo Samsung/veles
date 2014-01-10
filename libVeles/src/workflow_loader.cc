@@ -212,16 +212,16 @@ void WorkflowLoader::InitializeWorkflow() {
       for (auto& it_unit : it.Properties) {
         if (string("bias_length") == it_unit.first) {
           INF("Properties: %s %zu", it_unit.first.c_str(),
-              *static_cast<size_t*>(it_unit.second.get()));
+              *std::static_pointer_cast<const size_t>(it_unit.second));
         } else if (string("input_length") == it_unit.first) {
           INF("Properties: %s %zu", it_unit.first.c_str(),
-              *static_cast<size_t*>(it_unit.second.get()));
+              *std::static_pointer_cast<const size_t>(it_unit.second));
         } else if (string("output_length") == it_unit.first) {
           INF("Properties: %s %zu", it_unit.first.c_str(),
-              *static_cast<size_t*>(it_unit.second.get()));
+              *std::static_pointer_cast<const size_t>(it_unit.second));
         } else if (string("weights_length") == it_unit.first) {
           INF("Properties: %s %zu", it_unit.first.c_str(),
-              *static_cast<size_t*>(it_unit.second.get()));
+              *std::static_pointer_cast<const size_t>(it_unit.second));
         } else {
           INF("Properties: %s", it_unit.first.c_str());
         }
@@ -244,14 +244,14 @@ string WorkflowLoader::PrintWorkflowStructure() {
   string result = "\nWorkFlow properties:\n";
 
   for (auto x : workflow_desc_.Properties) {
-    result += x.first + " : " + *(static_cast<string*>(x.second.get())) + "\n";
+    result += x.first + " : " + *std::static_pointer_cast<const string>(x.second) + "\n";
   }
   // Print units and their properties
   for (unsigned i = 0; i < workflow_desc_.Units.size(); ++i) {
     result += "\nUnit name: " + workflow_desc_.Units.at(i).Name + "\n";
 
     for (auto y : workflow_desc_.Units.at(i).Properties) {
-      result += y.first + " : " + *static_cast<string*>(y.second.get()) + "\n";
+      result += y.first + " : " + *std::static_pointer_cast<const string>(y.second) + "\n";
     }
   }
   return result;

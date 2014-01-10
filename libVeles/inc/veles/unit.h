@@ -34,7 +34,7 @@ class Unit {
    *  @param value Pointer to parameter data
    */
   virtual void SetParameter(const std::string& name,
-                            std::shared_ptr<void> value) = 0;
+                            std::shared_ptr<const void> value) = 0;
   /** @brief Executes this unit on input data
    *  @param in Input vector
    *  @param out Output vector

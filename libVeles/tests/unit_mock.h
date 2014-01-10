@@ -43,7 +43,7 @@ class UnitMock : public veles::Unit {
       return kName;
     }
   virtual void SetParameter(const std::string& /* name */,
-                            std::shared_ptr<void> /* value */) override {
+                            std::shared_ptr<const void> /* value */) override {
   }
   virtual void Execute(const float* in, float* out) const override {
     for (size_t i = 0; i < OutputCount(); ++i) {
