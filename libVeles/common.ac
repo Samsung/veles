@@ -27,6 +27,17 @@ AC_PREREQ(2.68)
 AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_HEADERS([src/config.h])
 
+AC_DEFINE([INLINE], [static __attribute__((always_inline)) inline],
+          [Set modifiers to always inline the code])
+AC_DEFINE([UNUSED], [__attribute__((unused))],
+          [Mark parameters as unused to avoid warnings])
+AC_DEFINE([MALLOC], [__attribute__ ((__malloc__))],
+          [malloc() function attribute])
+AC_DEFINE([WARN_UNUSED_RESULT], [__attribute__ ((__warn_unused_result__))],
+          [warn about unused result function attribute])
+AC_DEFINE([NOTNULL(...)], [__attribute__ ((__nonnull__ (__VA_ARGS__)))],
+          [Mark pointer parameters which must not be NULL])
+
 AC_ARG_ENABLE([android],
     AS_HELP_STRING([--enable-android], [generate Android.mk and Application.mk in \"android\" subdirectory])
 )
@@ -43,9 +54,10 @@ AC_ARG_ENABLE([debug], AS_HELP_STRING([--enable-debug], [use debug configuration
               [DEBUG_FLAGS="-O2 -D_FORTIFY_SOURCE=2" ANDROID_OPTIM="release"])
 AC_SUBST([ANDROID_OPTIM])
 
-AS_IF([test "x$enable_android" == "xyes"], [
+AS_IF([test "x$enable_android" == "xyes"], [    
 	AC_CONFIG_FILES(android/Android.mk android/Application.mk)	
 	AC_OUTPUT
+    rm -f android/jni
 	ln -s . android/jni
 	exit
 ])
@@ -93,16 +105,7 @@ passed
 passed
 #endif
 #endif
-], [
-    AC_MSG_RESULT([yes])
-    AC_DEFINE([INLINE], [static __attribute__((always_inline)) inline], [Set modifiers to always inline the code])
-    AC_DEFINE([UNUSED], [__attribute__((unused))], [Mark parameters as unused to avoid warnings])
-    AC_DEFINE([MALLOC], [__attribute__ ((__malloc__))], [malloc() function attribute])
-    AC_DEFINE([WARN_UNUSED_RESULT], [__attribute__ ((__warn_unused_result__))],
-              [warn about unused result function attribute])
-    AC_DEFINE([NOTNULL(...)], [__attribute__ ((__nonnull__ (__VA_ARGS__)))],
-              [Mark pointer parameters which must not be NULL])
-], [    
+], [AC_MSG_RESULT([yes])], [    
     AC_MSG_RESULT([no])
     AC_MSG_ERROR([Building this project requires GCC >= 4.6.0 or clang >= 3.1])
 ])
