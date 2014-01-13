@@ -24,6 +24,7 @@
 ##  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 include $(top_srcdir)/Makefile.common
+include Sources.make
 
 lib_LTLIBRARIES = libVeles.la
 
@@ -31,8 +32,7 @@ lib_LTLIBRARIES = libVeles.la
 # Build information for libVeles.la
 
 # Source files
-libVeles_la_SOURCES = unit.cc unit_factory.cc workflow.cc workflow_loader.cc \
-	logger.cc
+libVeles_la_SOURCES = $(SOURCES)
 
 # Compiler options
 libVeles_la_CPPFLAGS = $(AM_CPPFLAGS) @LIBARCHIVE_CFLAGS@ @YAMLCPP_CFLAGS@

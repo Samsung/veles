@@ -98,12 +98,13 @@ class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
     }
   }
 
+  static float* mallocf(size_t length);
+
  private:
   /** @brief Get maximum input and output size of containing units
    *  @return Maximum size
    */
   size_t MaxUnitSize() const noexcept;
-  static float* mallocf(size_t length);
 
   std::vector<std::shared_ptr<Unit>> units_;
   std::map<std::string, std::shared_ptr<const void>> params_;

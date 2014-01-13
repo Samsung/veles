@@ -25,12 +25,34 @@
 
 AC_PREREQ(2.68)
 AC_CONFIG_SRCDIR([configure.ac])
-AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_HEADERS([src/config.h])
+
+AC_ARG_ENABLE([android],
+    AS_HELP_STRING([--enable-android], [generate Android.mk and Application.mk in \"android\" subdirectory])
+)
+
+ANDROID_CFLAGS=
+ANDROID_CPPFLAGS=
+m4_include([android.ac])
+AC_SUBST([ANDROID_CFLAGS])
+AC_SUBST([ANDROID_CPPFLAGS])
+
+# Check for debug configuration
+AC_ARG_ENABLE([debug], AS_HELP_STRING([--enable-debug], [use debug configuration]),
+              [DEBUG_FLAGS="-g -O0 -DDEBUG -Wextra -Werror" ANDROID_OPTIM="debug"],
+              [DEBUG_FLAGS="-O2 -D_FORTIFY_SOURCE=2" ANDROID_OPTIM="release"])
+AC_SUBST([ANDROID_OPTIM])
+
+AS_IF([test "x$enable_android" == "xyes"], [
+	AC_CONFIG_FILES(android/Android.mk android/Application.mk)	
+	AC_OUTPUT
+	ln -s . android/jni
+	exit
+])
+
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 AC_CANONICAL_SYSTEM
-
-AC_CONFIG_HEADERS([src/config.h])
 
 AC_ARG_VAR(SYSROOT, [override your compiler's default sysroot (--sysroot)])
 AS_IF([test "x$SYSROOT" != "x" ],    
@@ -55,7 +77,7 @@ AM_SILENT_RULES([yes])
 # Rebuild everything be default
 AM_MAINTAINER_MODE([enable])
 
-# This allows us specify individual liking flags for each target
+# This allows us specify individual linker flags for each target
 AM_PROG_CC_C_O
 
 # Check for GCC/Clang version
@@ -158,10 +180,6 @@ AS_IF([test "x$enable_doxygen" != "xno"], [
 ])
 AC_SUBST([DOCS_DIR])
 
-# Check for debug configuration
-AC_ARG_ENABLE([debug], AS_HELP_STRING([--enable-debug], [build in debug configuration]),
-              [DEBUG_FLAGS="-g -O0 -DDEBUG -Wextra -Werror" enable_debug=yes],
-              [DEBUG_FLAGS="-O2 -D_FORTIFY_SOURCE=2" enable_debug=no])
 AM_CONDITIONAL(DEBUG, test "x$enable_debug" = "xyes")
 
 # Enable/disable LTO

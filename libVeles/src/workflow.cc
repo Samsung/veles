@@ -40,9 +40,13 @@ size_t Workflow::MaxUnitSize() const noexcept {
 }
 
 float* Workflow::mallocf(size_t length) {
+#ifndef __ANDROID__
   void *ptr;
   return posix_memalign(&ptr, 64, length * sizeof(float)) == 0 ?
       static_cast<float*>(ptr) : nullptr;
+#else
+  return reinterpret_cast<float*>(memalign(64, length * sizeof(float)));
+#endif
 }
 
 }  // namespace veles

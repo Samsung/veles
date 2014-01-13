@@ -21,3 +21,5 @@ missing
 __pycache__
 !Doxyfile.in
 !Veles.pc.in
+!Application.mk.in
+!Android.mk.in
