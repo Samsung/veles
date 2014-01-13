@@ -171,12 +171,6 @@ void delete_array(T* p) {
   delete[] p;
 }
 
-float* mallocf(size_t length) {
-  void *ptr;
-  return posix_memalign(&ptr, 64, length * sizeof(float)) == 0 ?
-      static_cast<float*>(ptr) : nullptr;
-}
-
 std::shared_ptr<float> WorkflowLoader::GetArrayFromFile(const string& file,
                                                         size_t* arr_size) {
   string link_to_file = working_directory_ + file;
@@ -195,7 +189,7 @@ std::shared_ptr<float> WorkflowLoader::GetArrayFromFile(const string& file,
     *arr_size = array_size / sizeof(float);
   }
   // Read array
-  auto array = shared_ptr<float>(mallocf(array_size), free);
+  auto array = shared_ptr<float>(Workflow::mallocf(array_size), free);
   fr.read(reinterpret_cast<char*>(array.get()), array_size);
 
   DBG("%s size = %d bytes: %f, %f, ...", file.c_str(),

@@ -1,0 +1,29 @@
+LOCAL_PATH := @abs_top_srcdir@/src
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := @PACKAGE_NAME@
+
+include @abs_top_srcdir@/src/Sources.make
+
+LOCAL_SRC_FILES := $(SOURCES)
+
+LOCAL_CPP_EXTENSION := .cc
+
+LOCAL_C_INCLUDES := @abs_top_srcdir@ @abs_top_srcdir@/inc @abs_top_builddir@ \
+	@abs_top_srcdir@/simd/inc @abs_top_srcdir@/libarchive/libarchive \
+	@abs_top_srcdir@/yaml-cpp/include
+
+LOCAL_CFLAGS := -fopenmp -Wall -Wextra -Wno-comment -Wformat-security \
+	@ANDROID_CFLAGS@
+
+LOCAL_CPPFLAGS := -std=c++0x -fno-deduce-init-list -Winvalid-pch \
+	-Wold-style-cast -Wnon-virtual-dtor @ANDROID_CPPFLAGS@
+
+LOCAL_LDFLAGS := -fopenmp
+
+LOCAL_CPP_FEATURES := rtti exceptions
+
+LOCAL_ARM_NEON := true
+
+include $(BUILD_SHARED_LIBRARY)
