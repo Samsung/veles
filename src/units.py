@@ -12,7 +12,7 @@ import thread_pool
 import config
 import os
 import pyopencl
-import sys
+import error
 import traceback
 
 
@@ -347,19 +347,20 @@ class OpenCLUnit(Unit):
             self.cpu_run()
         self.log().debug("%s in %.2f sec" % (self.__class__.__name__,
                                              time.time() - t1))
-                      
+
     @staticmethod
     def read_ocl_file(file_name):
         fin = None
         for path in config.ocl_dirs:
-            try:                
-                fin = open(os.path.join(path, file_name), "r")               
+            try:
+                fin = open(os.path.join(path, file_name), "r")
             except:
                 continue
             break
         if not fin:
-            dirs = ", ".join(config.ocl_dirs)[2:]
-            raise Exception("\"%s\" was not found in any of the following paths: %s" % (file_name, dirs))
+            raise error.VelesException(
+                "\"%s\" was not found in any of the following paths: %s" % (
+                                    file_name, ", ".join(config.ocl_dirs)[2:]))
         return fin.read()
 
     def build_program(self, defines, log_fnme=None, s_append=""):
