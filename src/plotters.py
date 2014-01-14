@@ -587,6 +587,8 @@ class Image(Plotter):
                     value = self.inputs[i][input_field]
             else:
                 value = self.inputs[i].__dict__[input_field]
+                if isinstance(self.inputs[i], formats.Vector):
+                    value = value[0]
             ax = figure.add_subplot(len(self.input_fields), 1, i + 1)
             ax.cla()
             self.draw_image(ax, value)
