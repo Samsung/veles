@@ -147,28 +147,23 @@ shared_ptr<void> WorkflowLoader::GetProperties(const YAML::Node& node) {
     auto temp = std::make_shared<string>(node.as<string>());
     return temp;
   } else if (node.IsMap()) {
-    auto tempVectorMap = std::make_shared<vector<PropertiesTable>>();
+    auto props_map = std::make_shared<vector<PropertiesTable>>();
     for (const auto& it : node) {
-      PropertiesTable tempProp;
-      tempProp.insert({it.first.as<string>(), GetProperties(it.second)});
-      tempVectorMap.get()->push_back(tempProp);
+      PropertiesTable props;
+      props.insert({it.first.as<string>(), GetProperties(it.second)});
+      props_map.get()->push_back(props);
     }
-    return tempVectorMap;
+    return props_map;
   } else if (node.IsSequence()) {
-    auto tempVectorSequence = std::make_shared<vector<shared_ptr<void>>>();
+    auto props_sequence = std::make_shared<vector<shared_ptr<void>>>();
     for (const auto& it : node) {
-      tempVectorSequence->push_back(GetProperties(it));
+      props_sequence->push_back(GetProperties(it));
     }
-    return tempVectorSequence;
+    return props_sequence;
   }
   ERR("veles::WorkflowLoader::GetProperties: bad YAML::Node");
-  throw std::runtime_error
-  ("veles::WorkflowLoader::GetProperties: bad YAML::Node");
-}
-
-template <typename T>
-void delete_array(T* p) {
-  delete[] p;
+  throw std::runtime_error("veles::WorkflowLoader::GetProperties: "
+                           "bad YAML::Node");
 }
 
 std::shared_ptr<float> WorkflowLoader::GetArrayFromFile(const string& file,
