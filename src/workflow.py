@@ -86,7 +86,12 @@ class NNWorkflow(units.OpenCLUnit, Workflow):
             if obj != None:
                 obj.device = self.device
         if self.ev != None:
-            self.ev.device = self.device
+            if type(self.ev) == list:
+                for ev in self.ev:
+                    if isinstance(ev, units.OpenCLUnit):
+                        ev.device = self.device
+            elif isinstance(self.ev, units.OpenCLUnit):
+                self.ev.device = self.device
         for obj in self.gd:
             if obj != None:
                 obj.device = self.device

@@ -129,26 +129,6 @@ class Unit(Pickleable, Distributable):
         self.links_from[src] = False
         src.links_to[self] = False
 
-    def check_gate_and_initialize(self, src):
-        """Check gate state and initialize if it is open.
-        """
-        if not self.open_gate(src):  # gate has a priority over skip
-            return
-        # Optionally skip the execution
-        if ((callvle(self.gate_skip[0]) and
-             (not callvle(self.gate_skip_not[0]))) or
-            ((not callvle(self.gate_skip[0])) and
-             (callvle(self.gate_skip_not[0])))):
-            self.initialize_dependent()
-            return
-        self.run_lock_.acquire()
-        try:
-            self.initialize()
-            self.is_initialized = True
-        finally:
-            self.run_lock_.release()
-        self.initialize_dependent()
-
     def check_gate_and_run(self, src):
         """Check gate state and run if it is open.
         """
@@ -179,12 +159,11 @@ class Unit(Pickleable, Distributable):
         for dst in self.links_to.keys():
             if dst.is_initialized:
                 continue
-            if ((callvle(dst.gate_block[0]) and
-                 (not callvle(dst.gate_block_not[0]))) or
-                ((not callvle(dst.gate_block[0])) and
-                 callvle(dst.gate_block_not[0]))):
+            if not dst.open_gate(self):
                 continue
-            dst.check_gate_and_initialize(self)
+            dst.initialize()
+            dst.is_initialized = True
+            dst.initialize_dependent()
 
     def run_dependent(self):
         """Invokes run() on dependent units on different threads.
