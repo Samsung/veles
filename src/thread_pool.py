@@ -20,8 +20,8 @@ class ThreadPool(threadpool.ThreadPool):
     Pool of threads.
     """
 
-    sysexit = sys.exit
-    sigint = None
+    sysexit_initial = None
+    sigint_initial = None
     pools = []
 
     def __init__(self, minthreads=5, maxthreads=20, name=None):
@@ -32,10 +32,15 @@ class ThreadPool(threadpool.ThreadPool):
         self.start()
         self.on_shutdowns = []
         if not ThreadPool.pools:
+            ThreadPool.sysexit_initial = sys.exit
             sys.exit = ThreadPool.exit
-            ThreadPool.sigint = signal.signal(signal.SIGINT,
-                                              ThreadPool.signal_handler)
+            ThreadPool.sigint_initial = \
+                signal.signal(signal.SIGINT, ThreadPool.sigint_handler)
         ThreadPool.pools.append(self)
+
+    def __fini__(self):
+        if not self.joined:
+            self.shutdown(False, True)
 
     def request(self, run, args=()):
         """
@@ -83,20 +88,21 @@ class ThreadPool(threadpool.ThreadPool):
                                     "since the timeout (%.2f sec) was " +
                                     "exceeded. It was killed.",
                                     thread.ident, timeout)
-        sys.exit = self.sysexit
+        ThreadPool.pools.remove(self)
 
     @staticmethod
     def exit(retcode=0):
         """
         Terminates the running program safely.
         """
-        for pool in ThreadPool.pools:
+        pools = copy.copy(ThreadPool.pools)
+        for pool in pools:
             pool.shutdown()
-        sys.exit = ThreadPool.sysexit
+        sys.exit = ThreadPool.sysexit_initial
         sys.exit(retcode)
 
     @staticmethod
-    def signal_handler(signal, frame):
+    def sigint_handler(signal, frame):
         for pool in ThreadPool.pools:
             pool.shutdown(False, True)
-        ThreadPool.sigint(signal, frame)
+        ThreadPool.sigint_initial(signal, frame)
