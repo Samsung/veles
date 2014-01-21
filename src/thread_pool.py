@@ -100,4 +100,3 @@ class ThreadPool(threadpool.ThreadPool):
         for pool in ThreadPool.pools:
             pool.shutdown(False, True)
         ThreadPool.sigint(signal, frame)
-        sys.exit()
