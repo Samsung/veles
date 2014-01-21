@@ -38,6 +38,7 @@ class Graphics:
             Singleton pattern for this class.
         root: TKinter graphics root.
         event_queue: Queue of all pending changes created by other threads.
+        run_lock: Lock to determine whether graphics window is running
         registered_plotters: List of registered plotters
         is_initialized: whether this class was already initialized.
     """
@@ -45,6 +46,7 @@ class Graphics:
     _instance = None
     root = None
     event_queue = None
+    run_lock = None
     registered_plotters = None
     is_initialized = False
 
@@ -59,6 +61,8 @@ class Graphics:
         if self.is_initialized:
             init_lock.release()
             return
+        self.run_lock = threading.Lock()
+        self.run_lock.acquire()
         self.is_initialized = True
         self.exiting = False
         self.event_queue = queue.Queue()
@@ -67,6 +71,7 @@ class Graphics:
         self.pool = thread_pool.ThreadPool()
         self.pool.request(self.run)
         self.pool.register_on_shutdown(self.on_shutdown)
+        init_lock.release()
 
     def run(self):
         """Creates and runs main graphics window.
@@ -91,6 +96,7 @@ class Graphics:
             while not self.exiting:
                 self.update()
                 time.sleep(0.1)
+        self.run_lock.release()
 
     def process_event(self, plotter):
         """Processes scheduled redraw event

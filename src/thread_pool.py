@@ -91,18 +91,27 @@ class ThreadPool(threadpool.ThreadPool):
         ThreadPool.pools.remove(self)
 
     @staticmethod
-    def exit(retcode=0):
+    def shutdown_pools():
         """
-        Terminates the running program safely.
+        Private method to shut down all the pools.
         """
         pools = copy.copy(ThreadPool.pools)
         for pool in pools:
             pool.shutdown()
+
+    @staticmethod
+    def exit(retcode=0):
+        """
+        Terminates the running program safely.
+        """
+        ThreadPool.shutdown_pools()
         sys.exit = ThreadPool.sysexit_initial
         sys.exit(retcode)
 
     @staticmethod
     def sigint_handler(signal, frame):
-        for pool in ThreadPool.pools:
-            pool.shutdown(False, True)
+        """
+        Private method - handler for SIGINT.
+        """
+        ThreadPool.shutdown_pools()
         ThreadPool.sigint_initial(signal, frame)
