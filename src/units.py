@@ -340,7 +340,9 @@ class OpenCLUnit(Unit):
             raise error.VelesException(
                 "\"%s\" was not found in any of the following paths: %s" % (
                                     file_name, ", ".join(config.ocl_dirs)[2:]))
-        return fin.read()
+        s = fin.read()
+        fin.close()
+        return s
 
     def build_program(self, defines, log_fnme=None, s_append=""):
         """Builds OpenCL program.
