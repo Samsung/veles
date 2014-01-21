@@ -1,122 +1,103 @@
 """
-Created on Jul 12, 2013
+Created on Jan 21, 2014
 
-@author: Kazantsev Alexey <a.kazantsev@samsung.com>
+@author: Kazantsev Alexey <a.kazantsev@samsung.com>,
+         Vadim Markovtsev <v.markovtsev@samsung.com>
 """
+
+
+import copy
+import logging
+from queue import Queue
+import signal
 import sys
-import threading
-import queue
-import traceback
+import types
+from twisted.python import threadpool
 
 
-global_lock = threading.Lock()
-
-
-class ThreadPool(object):
-    """Pool of threads.
-
-    Attributes:
-        sem_: semaphore.
-        queue: queue of requests.
-        total_threads: number of threads in the pool.
-        free_threads: number of free threads in the pool.
-        max_free_threads: maximum number of free threads in the pool.
-        max_threads: maximum number of executing threads in the pool.
-        max_enqueued_tasks: maximum number of tasks enqueued for execution,
-                            request() will block if that count is reached.
+class ThreadPool(threadpool.ThreadPool):
     """
-    def __init__(self, max_free_threads=32, max_threads=512,
-                 max_enqueued_tasks=2048):
-        self.lock_ = threading.Lock()
-        self.exit_lock_ = threading.Lock()
-        self.queue_ = queue.Queue(max_enqueued_tasks)
-        self.total_threads = 0
-        self.free_threads = 0
-        self.max_free_threads = max_free_threads
-        self.max_threads = max_threads
-        self.exit_lock_.acquire()
-        threading.Thread(target=self.pool_cleaner).start()
-        global_lock.acquire()
-        self.sysexit = sys.exit
-        sys.exit = self.exit
-        global_lock.release()
+    Pool of threads.
+    """
 
-    def exit(self, retcode=0):
-        self.shutdown()
-        self.sysexit(retcode)
+    sysexit = sys.exit
+    sigint = None
+    pools = []
 
-    def pool_cleaner(self):
-        """Monitors request queue and executes requests,
-            launching new threads if necessary.
+    def __init__(self, minthreads=5, maxthreads=20, name=None):
         """
-        self.lock_.acquire()
-        self.total_threads += 1
-        self.lock_.release()
-        while True:
-            self.lock_.acquire()
-            self.free_threads += 1
-            if self.free_threads > self.max_free_threads:
-                self.free_threads -= 1
-                self.total_threads -= 1
-                self.lock_.release()
-                return
-            self.lock_.release()
-            try:
-                (run, args) = self.queue_.get()
-                if self.queue_ == None:
-                    raise Exception()
-            except:  # return in case of broken queue
-                return self.broken_queue()
-            self.lock_.acquire()
-            self.free_threads -= 1
-            if (self.free_threads <= 0 and
-                self.total_threads < self.max_threads):
-                threading.Thread(target=self.pool_cleaner).start()
-            self.lock_.release()
-            try:
-                run(*args)
-            except:
-                # TODO(a.kazantsev): add good error handling here.
-                a, b, c = sys.exc_info()
-                traceback.print_exception(a, b, c)
-            try:
-                self.queue_.task_done()
-            except:
-                return self.broken_queue()
-
-    def broken_queue(self):
-        self.lock_.acquire()
-        self.free_threads -= 1
-        self.total_threads -= 1
-        if self.total_threads <= 0:
-            self.exit_lock_.release()
-        self.lock_.release()
+        Creates a new thread pool and starts it.
+        """
+        super(ThreadPool, self).__init__()
+        self.start()
+        self.on_shutdowns = []
+        if not ThreadPool.pools:
+            sys.exit = ThreadPool.exit
+            ThreadPool.sigint = signal.signal(signal.SIGINT,
+                                              ThreadPool.signal_handler)
+        ThreadPool.pools.append(self)
 
     def request(self, run, args=()):
-        """Adds request for execution to the queue.
         """
-        self.queue_.put((run, args))
+        Tuple version of callInThread().
+        """
+        self.callInThread(run, *args)
 
-    def shutdown(self, execute_remaining=False):
-        """Safely shutdowns thread pool.
+    def register_on_shutdown(self, func):
         """
-        self.lock_.acquire()
-        if self.queue_ == None:
-            self.lock_.release()
-            return
-        self.lock_.release()
-        if execute_remaining:
-            self.queue_.join()
-        queue_ = self.queue_
-        self.queue_ = None
-        self.lock_.acquire()
-        for i in range(0, self.free_threads):
-            queue_.put((None, None))
-        if self.total_threads <= 0:
-            self.lock_.release()
-            return
-        self.lock_.release()
-        self.exit_lock_.acquire()
-        global_lock.acquire()
+        Adds the specified function to the list of callbacks which are
+        executed before shutting down the thread pool.
+        It is useful when an infinite event loop is executed in a separate
+        thread and a graceful shutdown is desired. Then on_shutdown() function
+        shall terminate that loop using the corresponding foreign API.
+        """
+        self.on_shutdowns.append(func)
+
+    def _put(self, item):
+        """
+        Private method used by shutdown() to redefine Queue's _put().
+        """
+        self.queue.appendleft(item)
+
+    def shutdown(self, execute_remaining=False, force=False, timeout=0.25):
+        """Safely brings thread pool down.
+        """
+        for on_shutdown in self.on_shutdowns:
+            on_shutdown()
+        self.on_shutdowns.clear()
+        self.joined = True
+        threads = copy.copy(self.threads)
+        if not execute_remaining:
+            self.q._put = types.MethodType(ThreadPool._put, self.q)
+        while self.workers:
+            self.q.put(threadpool.WorkerStop)
+            self.workers -= 1
+        for thread in threads:
+            if not force:
+                thread.join()
+            else:
+                thread.join(timeout)
+                if thread.is_alive():
+                    thread._stop()
+                    logging.warning("Failed to join with thread #%d " +
+                                    "since the timeout (%.2f sec) was " +
+                                    "exceeded. It was killed.",
+                                    thread.ident, timeout)
         sys.exit = self.sysexit
-        global_lock.release()
+
+    @staticmethod
+    def exit(retcode=0):
+        """
+        Terminates the running program safely.
+        """
+        for pool in ThreadPool.pools:
+            pool.shutdown()
+        sys.exit = ThreadPool.sysexit
+        sys.exit(retcode)
+
+    @staticmethod
+    def signal_handler(signal, frame):
+        for pool in ThreadPool.pools:
+            pool.shutdown(False, True)
+        ThreadPool.sigint(signal, frame)
+        sys.exit()
