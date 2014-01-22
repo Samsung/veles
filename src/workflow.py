@@ -5,8 +5,16 @@ Base class for workflows.
 
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
-import units
+import numpy
+import os
 import pickle
+import shutil
+import tarfile
+import yaml
+
+import config
+import formats
+import units
 
 
 class Workflow(units.Unit):
@@ -47,15 +55,6 @@ class Workflow(units.Unit):
     def apply_data_from_slave(self, data):
         real_data = pickle.loads(data)
         self.apply_data_from_slave_recursively(real_data)
-
-
-import os
-import yaml
-import formats
-import config
-import tarfile
-import numpy
-import shutil
 
 
 class NNWorkflow(units.OpenCLUnit, Workflow):

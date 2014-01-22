@@ -1,7 +1,7 @@
 """
 Created on Mar 12, 2013
 
-Units in data stream neural network model.
+Units in data stream neural network_config model.
 
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
@@ -122,6 +122,9 @@ class Unit(Pickleable, Distributable):
         self.gate_lock_ = threading.Lock()
         self.run_lock_ = threading.Lock()
         self.is_initialized = False
+
+    def thread_pool(self):
+        return pool
 
     def link_from(self, src):
         """Adds notification link.
