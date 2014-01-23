@@ -9,46 +9,39 @@ from fysom import Fysom
 import logging
 from twisted.internet import reactor, threads
 from twisted.internet.protocol import ReconnectingClientFactory
-from twisted.protocols.basic import LineReceiver
-import network_config
+
+import network_common
 
 
-class VelesProtocol(LineReceiver):
+def onFSMStateChanged(e):
+        """
+        Logs the current state transition.
+        """
+        logging.info("slave state: %s, %s -> %s", e.event, e.src, e.dst)
+
+
+class VelesProtocol(network_common.StringLineReceiver):
     """A communication controller from client to server.
 
     Attributes:
         FSM_DESCRIPTION     The definition of the Finite State Machine of the
                             protocol.
     """
+
     FSM_DESCRIPTION = {
         'initial': 'INIT',
         'events': [
-            {'name': 'connect', 'src': 'INIT', 'dst': 'WAIT'},
-            {'name': 'receive_id', 'src': 'WAIT', 'dst': 'WORK'},
-            {'name': 'send_id', 'src': 'WAIT', 'dst': 'WORK'},
-            {'name': 'receive_error', 'src': '*', 'dst': 'ERROR'},
-            {'name': 'disconnect_on_error', 'src': 'ERROR', 'dst': 'INIT'},
-            {'name': 'reconnect', 'src': '*', 'dst': 'INIT'},
-            {'name': 'request_job', 'src': 'WORK', 'dst': 'GETTING_JOB'},
+            {'name': 'disconnect', 'src': '*', 'dst': 'ERROR'},
+            {'name': 'request_id', 'src': ['INIT', 'WAIT'], 'dst': 'WAIT'},
+            {'name': 'request_job', 'src': ['WAIT', 'GETTING_JOB', 'BUSY'],
+                                    'dst': 'GETTING_JOB'},
             {'name': 'obtain_job', 'src': 'GETTING_JOB', 'dst': 'BUSY'},
-            {'name': 'send_update', 'src': 'BUSY', 'dst': 'WORK'},
-            {'name': 'refuse_job', 'src': 'GETTING_JOB', 'dst': 'WORK'},
-            {'name': 'reconnect_busy', 'src': 'BUSY',
-                                       'dst': 'RECONNECT_UPDATE'},
-            {'name': 'wait_for_update_after_reconnection',
-             'src': 'RECONNECT_UPDATE', 'dst': 'BUSY'},
+            {'name': 'refuse_job', 'src': 'GETTING_JOB', 'dst': 'GETTING_JOB'},
         ],
-        'callbacks': [
-            {'onchangestate': VelesProtocol.onFSMStateChanged}
-        ]
+        'callbacks': {
+            'onchangestate': onFSMStateChanged
+        }
     }
-
-    @staticmethod
-    def onFSMStateChanged(e):
-        """
-        Logs the current state transition.
-        """
-        logging.info("state: %s, %s -> %s", e.event, e.src, e.dst)
 
     def __init__(self, addr, factory):
         """
@@ -61,112 +54,99 @@ class VelesProtocol(LineReceiver):
         super(VelesProtocol, self).__init__()
         self.addr = addr
         self.factory = factory
+        self.id = 'None'
         if not factory.state:
             factory.state = Fysom(VelesProtocol.FSM_DESCRIPTION)
         self.state = factory.state
 
     def connectionMade(self):
-        if self.state.current == "INIT":
-            if self.factory.id:
-                self.send_id()
-            else:
-                self.sendLine("{{'power': %s}}" %
-                              self.factory.host.get_computing_power())
-            self.state.connect()
-        elif self.state.current == "RECONNECT_UPDATE":
-            if self.factory.id:
-                self.send_id()
-            else:
-                logging.error("No id in RECONNECT_UPDATE state")
-                self.disconnectOnError(False)
-                return
-            self.state.wait_for_update_after_reconnection()
+        if self.state.current == "INIT" or self.state.current == "WAIT":
+            self.request_id()
             return
-        logging.error("New connection contradicts with the current state.")
+        if self.state.current == "GETTING_JOB":
+            self.send_id()
+            self.request_job()
+            return
+        if self.state.current == "BUSY":
+            self.send_id()
+            self.state.obtain_job()
+            return
 
     def connectionLost(self, reason):
         logging.debug("Connection was lost.")
-        if self.state.current == "ERROR":
-            self.factory.must_reconnect = False
-            self.state.disconnect_on_error()
-            return
-        if self.state.current == "BUSY":
-            self.state.reconnect_busy()
-            return
-        self.state.reconnect()
 
     def lineReceived(self, line):
-        logging.debug("%s:  %s", self.id, line)
+        logging.debug("lineReceived %s:  %s", self.id, line)
         msg = eval(line)
         if not isinstance(msg, dict):
             logging.error("Could not parse the received line, dropping it.")
             return
         error = msg.get("error")
         if error:
-            logging.error("Server returned error: '%s'.", error)
-            self.disconnectOnError()
+            self.disconnect("Server returned error: '%s'.", error)
             return
-        if self.state == "WAIT_ID":
+        if self.state.current == "WAIT":
             cid = msg.get("id")
             if not cid:
                 logging.error("No id is present.")
-                self.disconnectOnError()
+                self.request_id()
                 return
             self.factory.id = cid
-            self.state.receive_id()
+            self.request_job()
             return
-        if self.state == "WORK":
-            self.requestJob()
-            self.state.request_job()
-            return
-        if self.state == "GETTING_JOB":
+        if self.state.current == "GETTING_JOB":
             job = msg.get("job")
             if not job:
-                logging.error("No job is present.")
-                self.disconnectOnError()
+                self.disconnect("No job is present.")
                 return
             if job == "refuse":
                 logging.info("Job was refused.")
                 self.state.refuse_job()
-                self.requestJob()
+                self.request_job()
                 return
             if job != "offer":
-                logging.error("Unknown job value %s.", job)
-                self.disconnectOnError(False)
+                self.disconnect("Unknown job value %s.", job)
                 return
             self.setRawMode()
-        logging.error("Invalid state %s.", self.state.current)
+            return
+        self.disconnect("Invalid state %s.", self.state.current)
 
     def rawDataReceived(self, data):
         if self.state.current == 'GETTING_JOB':
             self.setLineMode()
             job = threads.deferToThreadPool(reactor,
-                                            self.host.thread_pool(),
+                                            self.factory.host.thread_pool(),
                                             self.factory.host.do_job,
                                             data)
-            job.addCallback(self.onJobFinished)
+            job.addCallback(self.jobFinished)
             self.state.obtain_job()
             return
-        logging.error("Invalid state %s.", self.state.current)
+        self.disconnect("Invalid state %s.", self.state.current)
 
-    def requestJob(self):
-        self.sendLine("{{'cmd': 'job'}}")
-
-    def disconnectOnError(self, reconnect=True):
-        self.factory.must_reconnect = reconnect
-        self.state.receive_error()
-        self.transport.loseConnection()
-
-    def onJobFinished(self, update):
+    def jobFinished(self, update):
         if self.state.current == "BUSY":
-            self.sendLine("{{'cmd': 'update'}}")
+            self.sendLine("{'cmd': 'update'}")
             self.transport.write(update)
-            self.state.send_update()
+            self.request_job()
             return
         logging.error("Invalid state %s.", self.state.current)
 
     def send_id(self):
-        self.sendLine("{{'id': %s}}" % self.factory.id)
+        self.sendLine("{'id': %s}" % self.factory.id)
+
+    def request_id(self):
+        self.sendLine("{'power': %s}" %
+                      self.factory.host.get_computing_power())
+        self.state.request_id()
+
+    def request_job(self):
+        self.sendLine("{'cmd': 'job'}")
+        self.state.request_job()
+
+    def disconnect(self, msg, *args, **kwargs):
+        logging.error(msg, *args, **kwargs)
+        self.state.disconnect()
+        self.transport.loseConnection()
 
 
 class VelesProtocolFactory(ReconnectingClientFactory):
@@ -174,7 +154,6 @@ class VelesProtocolFactory(ReconnectingClientFactory):
         super(VelesProtocolFactory, self).__init__()
         self.host = host
         self.id = None
-        self.must_reconnect = True
         self.state = None
 
     def startedConnecting(self, connector):
@@ -184,7 +163,7 @@ class VelesProtocolFactory(ReconnectingClientFactory):
         return VelesProtocol(addr, self)
 
     def clientConnectionLost(self, connector, reason):
-        if self.must_reconnect:
+        if self.state.current != 'ERROR':
             logging.warn("Disconnected, trying to reconnect...")
             connector.connect()
         else:
@@ -194,7 +173,7 @@ class VelesProtocolFactory(ReconnectingClientFactory):
         logging.warn('Connection failed. Reason: %s', reason)
 
 
-class Client(network_config.NetworkConfigurable):
+class Client(network_common.NetworkConfigurable):
     """
     UDT/TCP client operating on a single socket.
     """

@@ -1,7 +1,7 @@
 """
 Created on Mar 12, 2013
 
-Units in data stream neural network_config model.
+Units in data stream neural network_common model.
 
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
@@ -111,19 +111,20 @@ class Unit(Pickleable, Distributable):
 
     def init_unpickled(self):
         global global_lock
-        global pool
-        global_lock.acquire()
-        try:
-            if pool == None:
-                pool = thread_pool.ThreadPool()
-        finally:
-            global_lock.release()
         super(Unit, self).init_unpickled()
         self.gate_lock_ = threading.Lock()
         self.run_lock_ = threading.Lock()
         self.is_initialized = False
 
     def thread_pool(self):
+        global pool
+        global global_lock
+        global_lock.acquire()
+        try:
+            if pool == None:
+                pool = thread_pool.ThreadPool()
+        finally:
+            global_lock.release()
         return pool
 
     def link_from(self, src):
@@ -171,14 +172,13 @@ class Unit(Pickleable, Distributable):
     def run_dependent(self):
         """Invokes run() on dependent units on different threads.
         """
-        global pool
         for dst in self.links_to.keys():
             if ((callvle(dst.gate_block[0]) and
                  (not callvle(dst.gate_block_not[0]))) or
                 ((not callvle(dst.gate_block[0])) and
                  callvle(dst.gate_block_not[0]))):
                 continue
-            pool.request(dst.check_gate_and_run, (self,))
+            self.thread_pool().pool.callInThread(dst.check_gate_and_run, self)
 
     def initialize(self):
         """Allocate buffers here.

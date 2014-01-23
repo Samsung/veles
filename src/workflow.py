@@ -56,6 +56,18 @@ class Workflow(units.Unit):
         real_data = pickle.loads(data)
         self.apply_data_from_slave_recursively(real_data)
 
+    def request_job(self):
+        return None
+
+    def do_job(self):
+        pass
+
+    def apply_update(self):
+        pass
+
+    def get_computing_power(self):
+        return 100
+
 
 class NNWorkflow(units.OpenCLUnit, Workflow):
     """Base class for neural network workflows.

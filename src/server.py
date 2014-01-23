@@ -9,18 +9,30 @@ from fysom import Fysom
 import logging
 from twisted.internet import reactor, threads
 from twisted.internet.protocol import Factory
-from twisted.protocols.basic import LineReceiver
 import uuid
-import network_config
+
+import network_common
 
 
-class VelesProtocol(LineReceiver):
+def onFSMStateChanged(e):
+        """
+        Logs the current state transition.
+        """
+        owner_id = "None"
+        if hasattr(e.fsm, "protocol"):
+            owner_id = e.fsm.protocol.id
+        logging.info("master %s state: %s, %s -> %s",
+                     owner_id, e.event, e.src, e.dst)
+
+
+class VelesProtocol(network_common.StringLineReceiver):
     """A communication controller from server to client.
 
     Attributes:
         FSM_DESCRIPTION     The definition of the Finite State Machine of the
                             protocol.
     """
+
     FSM_DESCRIPTION = {
         'initial': 'INIT',
         'events': [
@@ -35,18 +47,10 @@ class VelesProtocol(LineReceiver):
             {'name': 'refuse_job', 'src': 'GETTING_JOB', 'dst': 'WORK'},
             {'name': 'drop', 'src': '*', 'dst': 'INIT'},
         ],
-        'callbacks': [
-            {'onchangestate': VelesProtocol.onFSMStateChanged}
-        ]
+        'callbacks': {
+            'onchangestate': onFSMStateChanged,
+        }
     }
-
-    @staticmethod
-    def onFSMStateChanged(e):
-        """
-        Logs the current state transition.
-        """
-        logging.info("%s state: %s, %s -> %s",
-                     e.fsm.protocol.id, e.event, e.src, e.dst)
 
     def __init__(self, addr, nodes, host):
         """
@@ -77,7 +81,7 @@ class VelesProtocol(LineReceiver):
         if not isinstance(msg, dict):
             logging.error("Could not parse the received line, dropping it.")
             return
-        if self.state == "WAIT":
+        if self.state.current == "WAIT":
             cid = msg.get("id")
             if not cid:
                 power = msg.get("power")
@@ -88,8 +92,8 @@ class VelesProtocol(LineReceiver):
                     self.sendError("I need your computing power.")
                     return
                 self.id = uuid.uuid4()
-                self.nodes[self.id] = {{'power': power}}
-                self.sendLine("{{'id': '%s'}}" % self.id)
+                self.nodes[self.id] = {'power': power}
+                self.sendLine("{'id': '%s'}" % self.id)
                 self.state.receive_description()
                 return
             if not self.nodes.get(cid):
@@ -98,7 +102,7 @@ class VelesProtocol(LineReceiver):
                 self.sendError("Your ID was not found.")
             self.id = cid
             self.state.receive_id()
-        if self.state == "WORK":
+        if self.state.current == "WORK":
             cmd = msg.get("cmd")
             if not cmd:
                 logging.error(("Client %s sent something which is not " +
@@ -117,12 +121,13 @@ class VelesProtocol(LineReceiver):
                 job = threads.deferToThreadPool(reactor,
                                                 self.host.thread_pool(),
                                                 self.host.request_job)
-                job.addCallback(self.onJobRequestFinished)
+                job.addCallback(self.jobRequestFinished)
                 self.state.request_job()
             else:
                 logging.error(("Unsupported %s command. Sending back the " +
                               "error message.") % cmd)
                 self.sendError("Unsupported command.")
+            return
         logging.error("Invalid state %s.", self.state.current)
         self.sendError("You sent me something which is not allowed in my " +
                        "current state %s." % self.state.current)
@@ -136,13 +141,13 @@ class VelesProtocol(LineReceiver):
             logging.error("Cannot receive raw data in %s state." %
                           self.state.current)
 
-    def onJobRequestFinished(self, data=None):
+    def jobRequestFinished(self, data=None):
         if data:
-            self.sendLine("{{'job': 'offer'}}")
+            self.sendLine("{'job': 'offer'}")
             self.transport.write(data)
             self.state.obtain_job()
         else:
-            self.sendLine("{{'job': 'refuse'}}")
+            self.sendLine("{'job': 'refuse'}")
             self.refuse_job()
 
     def sendError(self, err):
@@ -152,7 +157,7 @@ class VelesProtocol(LineReceiver):
         Parameters:
             err:    The error message.
         """
-        msg = "{{'error': '%s'}}" % err
+        msg = "{'error': '%s'}" % err
         logging.debug("Sending " + msg)
         self.sendLine(msg)
 
@@ -160,14 +165,14 @@ class VelesProtocol(LineReceiver):
 class VelesProtocolFactory(Factory):
     def __init__(self, host):
         super(VelesProtocolFactory, self).__init__()
-        self.nodes = []
+        self.nodes = {}
         self.host = host
 
     def buildProtocol(self, addr):
         return VelesProtocol(addr, self.nodes, self.host)
 
 
-class Server(network_config.NetworkConfigurable):
+class Server(network_common.NetworkConfigurable):
     """
     UDT/TCP server operating on a single socket
     """
