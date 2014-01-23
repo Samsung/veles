@@ -113,8 +113,8 @@ class VelesProtocol(network_common.StringLineReceiver):
             if cmd == "update":
                 logging.debug("Received UPDATE command. " +
                               "Expecting to receive a pickle.")
-                self.state.receive_update()
                 self.setRawMode()
+                self.state.receive_update()
             elif cmd == "job":
                 logging.debug("Received JOB command. " +
                               "Requesting a new job from the host.")
@@ -135,11 +135,25 @@ class VelesProtocol(network_common.StringLineReceiver):
     def rawDataReceived(self, data):
         if self.state.current == 'APPLYING_UPDATE':
             self.setLineMode()
-            self.host.apply_update(data)
-            self.state.apply_update()
+            upd = threads.deferToThreadPool(reactor,
+                                            self.host.thread_pool(),
+                                            self.host.apply_update,
+                                            data)
+            upd.addCallback(self.updateApplied)
+
         else:
             logging.error("Cannot receive raw data in %s state." %
                           self.state.current)
+
+    def updateApplied(self, result):
+        if self.state.current == 'APPLYING_UPDATE':
+            if result:
+                self.sendLine("{'update': 'ok'}")
+            else:
+                self.sendLine("{'update': 'deny'}")
+            self.state.apply_update()
+        else:
+            logging.error("Wrong state.")
 
     def jobRequestFinished(self, data=None):
         if data:

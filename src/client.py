@@ -33,10 +33,11 @@ class VelesProtocol(network_common.StringLineReceiver):
         'events': [
             {'name': 'disconnect', 'src': '*', 'dst': 'ERROR'},
             {'name': 'request_id', 'src': ['INIT', 'WAIT'], 'dst': 'WAIT'},
-            {'name': 'request_job', 'src': ['WAIT', 'GETTING_JOB', 'BUSY'],
+            {'name': 'request_job', 'src': ['WAIT', 'GETTING_JOB'],
                                     'dst': 'GETTING_JOB'},
             {'name': 'obtain_job', 'src': 'GETTING_JOB', 'dst': 'BUSY'},
             {'name': 'refuse_job', 'src': 'GETTING_JOB', 'dst': 'GETTING_JOB'},
+            {'name': 'wait_update_notification', 'src': 'BUSY', 'dst': 'WAIT'},
         ],
         'callbacks': {
             'onchangestate': onFSMStateChanged
@@ -86,12 +87,14 @@ class VelesProtocol(network_common.StringLineReceiver):
             self.disconnect("Server returned error: '%s'.", error)
             return
         if self.state.current == "WAIT":
-            cid = msg.get("id")
-            if not cid:
-                logging.error("No id is present.")
-                self.request_id()
-                return
-            self.factory.id = cid
+            update = msg.get("update")
+            if not update:
+                cid = msg.get("id")
+                if not cid:
+                    logging.error("No id is present.")
+                    self.request_id()
+                    return
+                self.factory.id = cid
             self.request_job()
             return
         if self.state.current == "GETTING_JOB":
@@ -127,7 +130,7 @@ class VelesProtocol(network_common.StringLineReceiver):
         if self.state.current == "BUSY":
             self.sendLine("{'cmd': 'update'}")
             self.transport.write(update)
-            self.request_job()
+            self.state.wait_update_notification()
             return
         logging.error("Invalid state %s.", self.state.current)
 
@@ -164,7 +167,7 @@ class VelesProtocolFactory(ReconnectingClientFactory):
 
     def clientConnectionLost(self, connector, reason):
         if self.state.current != 'ERROR':
-            logging.warn("Disconnected, trying to reconnect...")
+            logging.warning("Disconnected, trying to reconnect...")
             connector.connect()
         else:
             logging.info("Disconnected.")
