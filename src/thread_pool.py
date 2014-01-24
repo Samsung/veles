@@ -24,11 +24,14 @@ class ThreadPool(threadpool.ThreadPool):
     sigint_initial = None
     pools = []
 
-    def __init__(self, minthreads=5, maxthreads=20, name=None):
+    def __init__(self, minthreads=3, maxthreads=1024, queue_size=2048,
+                 name=None):
         """
         Creates a new thread pool and starts it.
         """
-        super(ThreadPool, self).__init__()
+        super(ThreadPool, self).__init__(minthreads=minthreads,
+            maxthreads=maxthreads, name=name)
+        self.q = Queue(queue_size)
         self.start()
         self.on_shutdowns = []
         if not ThreadPool.pools:
@@ -67,6 +70,8 @@ class ThreadPool(threadpool.ThreadPool):
     def shutdown(self, execute_remaining=False, force=False, timeout=0.25):
         """Safely brings thread pool down.
         """
+        if self not in ThreadPool.pools:
+            return
         for on_shutdown in self.on_shutdowns:
             on_shutdown()
         self.on_shutdowns.clear()

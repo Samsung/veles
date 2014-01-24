@@ -178,7 +178,7 @@ class Unit(Pickleable, Distributable):
                 ((not callvle(dst.gate_block[0])) and
                  callvle(dst.gate_block_not[0]))):
                 continue
-            self.thread_pool().pool.callInThread(dst.check_gate_and_run, self)
+            self.thread_pool().callInThread(dst.check_gate_and_run, self)
 
     def initialize(self):
         """Allocate buffers here.
