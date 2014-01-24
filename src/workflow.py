@@ -57,15 +57,30 @@ class Workflow(units.Unit):
         self.apply_data_from_slave_recursively(real_data)
 
     def request_job(self):
-        return None
+        """
+        Produces a new job, when a slave asks for it. Run by a master.
+        """
+        return self.generate_data_for_slave()
 
-    def do_job(self):
-        pass
+    def do_job(self, data):
+        """
+        Executes this workflow on the given source data. Run by a slave.
+        """
+        self.apply_data_from_master(data)
+        self.run()
+        return self.generate_data_for_master()
 
-    def apply_update(self):
-        pass
+    def apply_update(self, data):
+        """
+        Harness the results of a slave's job. Run by a master.
+        """
+        self.apply_data_from_slave(data)
 
     def get_computing_power(self):
+        """
+        Estimates this slave's computing power for initial perfect balancing.
+        Run by a slave.
+        """
         return 100
 
 
