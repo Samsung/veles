@@ -119,6 +119,22 @@ AS_IF([test "x$enable_eina_logging" != "xno"], [
 ])
 AC_SUBST([EINA_DIR])
 
+# Check whether to use the built-in Boost
+AC_ARG_WITH([built-in-boost],
+    AS_HELP_STRING([--with-built-in-boost], [use statically linked embedded Boost parts]), [
+    BOOST_DIR="boost"
+    LDFLAGS="$LDFLAGS -L\$(abs_top_builddir)/src/boost/stage/lib"
+    # Set path to bjam
+    AC_ARG_VAR(BJAM, path to bjam Boost builder)
+
+    AC_PATH_PROG(BJAM, [bjam], "")
+
+    AS_IF([test -z "$BJAM"],
+        AC_MSG_ERROR([Building Boost requires a working bjam. You can obtain it via bootstrapping the Boost package.])
+    )]
+)
+AC_SUBST([BOOST_DIR])
+
 AC_CONFIG_COMMANDS([Creating docs directory in build], 
     [mkdir -p docs])
     
@@ -133,7 +149,11 @@ AM_COND_IF([TESTS], [
                      tests/workflow_files/channels_workflow.tar.gz:tests/workflow_files/channels_workflow.tar.gz])    
 ])
 
-AC_CONFIG_FILES(eina/Makefile)
+# Link with Makefile.am in additional source directories
+AC_CONFIG_FILES(eina/Makefile
+                src/boost/Makefile
+                src/boost/user-config.jam
+                )
 
 AC_OUTPUT
 
@@ -144,6 +164,7 @@ echo "  built_in_libarchive.....: $(color_yes_no ${with_built_in_libarchive:-no}
 echo "  built_in_yaml_cpp.......: $(color_yes_no ${with_built_in_yaml_cpp:-no})"
 echo "  eina_logging............: $(color_yes_no ${enable_eina_logging:-yes})"
 echo "  built_in_eina_logging...: $(color_yes_no ${with_built_in_eina_logging:-no})"
+echo "  built_in_boost..........: $(color_yes_no ${with_built_in_boost:-no})"
 echo
 ])
 
