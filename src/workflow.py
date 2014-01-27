@@ -5,8 +5,16 @@ Base class for workflows.
 
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
-import units
+import numpy
+import os
 import pickle
+import shutil
+import tarfile
+import yaml
+
+import config
+import formats
+import units
 
 
 class Workflow(units.Unit):
@@ -48,14 +56,32 @@ class Workflow(units.Unit):
         real_data = pickle.loads(data)
         self.apply_data_from_slave_recursively(real_data)
 
+    def request_job(self):
+        """
+        Produces a new job, when a slave asks for it. Run by a master.
+        """
+        return self.generate_data_for_slave()
 
-import os
-import yaml
-import formats
-import config
-import tarfile
-import numpy
-import shutil
+    def do_job(self, data):
+        """
+        Executes this workflow on the given source data. Run by a slave.
+        """
+        self.apply_data_from_master(data)
+        self.run()
+        return self.generate_data_for_master()
+
+    def apply_update(self, data):
+        """
+        Harness the results of a slave's job. Run by a master.
+        """
+        self.apply_data_from_slave(data)
+
+    def get_computing_power(self):
+        """
+        Estimates this slave's computing power for initial perfect balancing.
+        Run by a slave.
+        """
+        return 100
 
 
 class NNWorkflow(units.OpenCLUnit, Workflow):
@@ -86,7 +112,12 @@ class NNWorkflow(units.OpenCLUnit, Workflow):
             if obj != None:
                 obj.device = self.device
         if self.ev != None:
-            self.ev.device = self.device
+            if type(self.ev) == list:
+                for ev in self.ev:
+                    if isinstance(ev, units.OpenCLUnit):
+                        ev.device = self.device
+            elif isinstance(self.ev, units.OpenCLUnit):
+                self.ev.device = self.device
         for obj in self.gd:
             if obj != None:
                 obj.device = self.device

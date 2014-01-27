@@ -1,16 +1,19 @@
 """
 Created on Mar 12, 2013
 
-Units in data stream neural network model.
+Units in data stream neural network_common model.
 
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
+from copy import copy
 import time
 import logger
 import threading
 import thread_pool
 import config
 import os
+from ply import lex
+import cpp
 import pyopencl
 import error
 import traceback
@@ -111,43 +114,27 @@ class Unit(Pickleable, Distributable):
 
     def init_unpickled(self):
         global global_lock
+        super(Unit, self).init_unpickled()
+        self.gate_lock_ = threading.Lock()
+        self.run_lock_ = threading.Lock()
+        self.is_initialized = False
+
+    def thread_pool(self):
         global pool
+        global global_lock
         global_lock.acquire()
         try:
             if pool == None:
                 pool = thread_pool.ThreadPool()
         finally:
             global_lock.release()
-        super(Unit, self).init_unpickled()
-        self.gate_lock_ = threading.Lock()
-        self.run_lock_ = threading.Lock()
-        self.is_initialized = False
+        return pool
 
     def link_from(self, src):
         """Adds notification link.
         """
         self.links_from[src] = False
         src.links_to[self] = False
-
-    def check_gate_and_initialize(self, src):
-        """Check gate state and initialize if it is open.
-        """
-        if not self.open_gate(src):  # gate has a priority over skip
-            return
-        # Optionally skip the execution
-        if ((callvle(self.gate_skip[0]) and
-             (not callvle(self.gate_skip_not[0]))) or
-            ((not callvle(self.gate_skip[0])) and
-             (callvle(self.gate_skip_not[0])))):
-            self.initialize_dependent()
-            return
-        self.run_lock_.acquire()
-        try:
-            self.initialize()
-            self.is_initialized = True
-        finally:
-            self.run_lock_.release()
-        self.initialize_dependent()
 
     def check_gate_and_run(self, src):
         """Check gate state and run if it is open.
@@ -179,24 +166,22 @@ class Unit(Pickleable, Distributable):
         for dst in self.links_to.keys():
             if dst.is_initialized:
                 continue
-            if ((callvle(dst.gate_block[0]) and
-                 (not callvle(dst.gate_block_not[0]))) or
-                ((not callvle(dst.gate_block[0])) and
-                 callvle(dst.gate_block_not[0]))):
+            if not dst.open_gate(self):
                 continue
-            dst.check_gate_and_initialize(self)
+            dst.initialize()
+            dst.is_initialized = True
+            dst.initialize_dependent()
 
     def run_dependent(self):
         """Invokes run() on dependent units on different threads.
         """
-        global pool
         for dst in self.links_to.keys():
             if ((callvle(dst.gate_block[0]) and
                  (not callvle(dst.gate_block_not[0]))) or
                 ((not callvle(dst.gate_block[0])) and
                  callvle(dst.gate_block_not[0]))):
                 continue
-            pool.request(dst.check_gate_and_run, (self,))
+            self.thread_pool().callInThread(dst.check_gate_and_run, self)
 
     def initialize(self):
         """Allocate buffers here.
@@ -361,9 +346,11 @@ class OpenCLUnit(Unit):
             raise error.VelesException(
                 "\"%s\" was not found in any of the following paths: %s" % (
                                     file_name, ", ".join(config.ocl_dirs)[2:]))
-        return fin.read()
+        s = fin.read()
+        fin.close()
+        return s
 
-    def build_program(self, defines, log_fnme=None, s_append=""):
+    def build_program(self, defines, dump_preprocessed=None):
         """Builds OpenCL program.
 
         _prg will be is_initialized with built program.
@@ -376,26 +363,84 @@ class OpenCLUnit(Unit):
         Returns:
             Built OpenCL program source code.
         """
-        s = defines
-        s += OpenCLUnit.read_ocl_file("defines.cl")
-        for src, define in self.cl_sources_.items():
-            s += "\n" + define + "\n"
-            s += OpenCLUnit.read_ocl_file(src)
-        s += s_append
-        s_mx_mul = OpenCLUnit.read_ocl_file("matrix_multiplication.cl")
-        s = s.replace("MX_MUL", s_mx_mul)
-        s_mx_reduce = OpenCLUnit.read_ocl_file("matrix_reduce.cl")
-        s = s.replace("MX_REDUCE", s_mx_reduce)
-        if log_fnme != None:
-            flog = open(log_fnme, "w")
-            flog.write(s)
+        # write the skeleton
+        source = ""
+        my_defines = copy(defines)
+        for file, defs in self.cl_sources_.items():
+            source += '#include "%s"\n' % file
+            my_defines.update(defs)
+        my_defines.update(config.cl_defines[config.c_dtype])
+
+        # initialize C preprocessor
+        lexer = lex.lex(cpp)
+        cprep = cpp.Preprocessor(lexer)
+        if not isinstance(defines, dict):
+            raise RuntimeError("defines must be a dictionary")
+        for name, value in my_defines.items():
+            cprep.define("%s %s" % (name, value))
+        cprep.path = copy(config.ocl_dirs)
+        cprep.parse(source, "opencl")
+
+        # record includes
+        files_list = [('opencl', 0)]
+        while True:
+            token = cprep.token()
+            if not token:
+                break
+            if files_list[-1][0] != cprep.source:
+                lineno = 1
+                if token.lineno >= 3:
+                    lineno = token.lineno - 1
+                files_list.append((cprep.source, lineno))
+
+        # bake the inclusion plan
+        flatten_plan = []
+        file_bottoms = {}
+        for file in reversed(files_list[1:-1]):
+            if file[0] == 'opencl':
+                continue
+            bottom = file_bottoms.get(file[0])
+            if not bottom:
+                flatten_plan.insert(0, (file[0], -1))
+            else:
+                lines = bottom - file[1]
+                flatten_plan.insert(0, (file[0], lines))
+            file_bottoms[file[0]] = file[1] - 1
+
+        # execute the plan
+        preprocessed_source = ''.join('#define {} {}\n'.format(key, val)
+                                      for key, val in my_defines.items())
+        opened_files = {}
+        for incl in flatten_plan:
+            file = opened_files.get(incl[0])
+            if not file:
+                file = open(incl[0])
+                opened_files[incl[0]] = file
+            if incl[1] == -1:
+                preprocessed_source += file.read()
+                file.seek(0)
+            else:
+                for _ in range(0, incl[1]):
+                    preprocessed_source += file.readline()
+                file.readline()  # skip the #include line
+        for key, val in opened_files.items():
+            val.close()
+
+        # debug the merged sources
+        if dump_preprocessed != None:
+            flog = open(dump_preprocessed, "w")
+            flog.write(preprocessed_source)
             flog.close()
-        self.prg_src = s
-        self.prg_ = pyopencl.Program(self.device.context_, s).build()
+
+        # compile OpenCL program from the merged sources
+        self.prg_src = preprocessed_source
+        self.prg_ = pyopencl.Program(self.device.context_,
+                                     self.prg_src).build()
 
 
 class Repeater(Unit):
     """Repeater.
+    TODO(v.markovtsev): add more detailed description
     """
     def open_gate(self, src):
         """Gate is always open.

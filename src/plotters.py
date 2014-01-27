@@ -70,6 +70,7 @@ class Graphics:
         self.registered_plotters = {}
         self.pool = thread_pool.ThreadPool()
         self.pool.request(self.run)
+        self.pool.register_on_shutdown(self.on_shutdown)
         init_lock.release()
 
     def run(self):
@@ -118,18 +119,20 @@ class Graphics:
             if not self.exiting:
                 self.root.after(100, self.update)
             else:
+                logging.debug("Terminating the main loop.")
                 self.root.destroy()
         if pp.get_backend() == "Qt4Agg" and self.exiting:
             self.timer.stop()
+            logging.debug("Terminating the main loop.")
             self.root.quit()
+
+    def on_shutdown(self):
+        self.exiting = True
+        logging.debug("Shutdown flag was raised.")
 
     def wait_finish(self):
         """Waits for user to close the window.
         """
-        self.exiting = True
-        if self.run_lock:
-            self.run_lock.acquire()
-            self.run_lock.release()
         self.pool.shutdown()
         logging.info("Done")
 

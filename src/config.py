@@ -23,10 +23,10 @@ class Config(object):
         return _sconfig_empty
 
 
-#: Global config
+# : Global config
 sconfig = Config()
 
-#: Default config value
+# : Default config value
 _sconfig_empty = Config()
 
 
@@ -38,56 +38,56 @@ def getConfig(value, default_value=None):
     return value
 
 
-#: Supported float types as OpenCL => numpy dictionary.
+# : Supported float types as OpenCL => numpy dictionary.
 dtypes = {"float": numpy.float32, "double": numpy.float64,
           "float2": numpy.complex64, "double2": numpy.complex128}
 
-#: Complex type
-#c_dtype = "float"  # for real single precision numbers
+# : Complex type
+# c_dtype = "float"  # for real single precision numbers
 c_dtype = "double"  # for real numbers
-#c_dtype = "double2"  # for complex numbers
-#c_dtype = "double4"  # for quad numbers (not implemented)
+# c_dtype = "double2"  # for complex numbers
+# c_dtype = "double4"  # for quad numbers (not implemented)
 
-#: Complex type to real type mapping
+# : Complex type to real type mapping
 dtype_map = {"float": "float", "double": "double",
              "float2": "float", "double2": "double"}
 
-#: Real type
+# : Real type
 dtype = dtype_map[c_dtype]
 
-#: CL defines
-cl_defines = {"float": "#define dtype float\n"
-                       "#define c_dtype float\n"
-                       "#define sizeof_dtype 4\n"
-                       "#define sizeof_c_dtype 4",
-              "double": "#define dtype double\n"
-                        "#define c_dtype double\n"
-                        "#define sizeof_dtype 8\n"
-                        "#define sizeof_c_dtype 8",
-              "float2": "#define dtype float\n"
-                        "#define c_dtype float2\n"
-                        "#define sizeof_dtype 4\n"
-                        "#define sizeof_c_dtype 8",
-              "double2": "#define dtype double\n"
-                         "#define c_dtype double2\n"
-                         "#define sizeof_dtype 8\n"
-                         "#define sizeof_c_dtype 16"}
+# : CL defines
+cl_defines = {"float":      {"dtype": "float",
+                             "c_dtype": "float",
+                             "sizeof_dtype": 4,
+                             "sizeof_c_dtype": 4},
+              "double":     {"dtype": "double",
+                             "c_dtype": "double",
+                             "sizeof_dtype": 8,
+                             "sizeof_c_dtype": 8},
+              "float2":     {"dtype": "float",
+                             "c_dtype": "float2",
+                             "sizeof_dtype": 4,
+                             "sizeof_c_dtype": 8},
+              "double2":    {"dtype": "double",
+                             "c_dtype": "double2",
+                             "sizeof_dtype": 8,
+                             "sizeof_c_dtype": 16}}
 
-#: Supported int types as OpenCL => numpy dictionary.
+# : Supported int types as OpenCL => numpy dictionary.
 itypes = {"char": numpy.int8, "short": numpy.int16, "int": numpy.int32,
           "long": numpy.int64,
           "uchar": numpy.uint8, "ushort": numpy.uint16, "uint": numpy.uint32,
           "ulong": numpy.uint64}
 
 
-#: Allowable types for automatic conversion for use in OpenCL
+# : Allowable types for automatic conversion for use in OpenCL
 # (automatic conversion implemeted in formats.py).
 convert_map = {numpy.float32: numpy.float64, numpy.float64: numpy.float32,
                numpy.complex64: numpy.complex128,
                numpy.complex128: numpy.complex64}
 
 
-#: Map between numpy types and opencl.
+# : Map between numpy types and opencl.
 def numpy_dtype_to_opencl(dtype):
     if dtype == numpy.float32:
         return "float"
@@ -118,43 +118,43 @@ def numpy_dtype_to_opencl(dtype):
 
 # Directories
 
-#: Directory with config.py itself
+# : Directory with config.py itself
 this_dir = os.path.dirname(__file__)
 if not this_dir:
     this_dir = "."
 
-#: Directory for cache
+# : Directory for cache
 cache_dir = os.path.join(this_dir, "../cache")
 try:
     os.mkdir(cache_dir)
 except OSError:
     pass
 
-#: Directory for OpenCL source files
+# : Directory for OpenCL source files
 ocl_dirs = os.environ.get("VELES_OPENCL_DIRS", "").split(":") + \
            [os.path.join(this_dir, "../ocl")]
 
-#: Directory where to save snapshots
+# : Directory where to save snapshots
 snapshot_dir = os.path.join(this_dir, "../snapshots")
 try:
     os.mkdir(snapshot_dir)
 except OSError:
     pass
 
-#: Directory where functional tests large datasets reside
+# : Directory where functional tests large datasets reside
 test_dataset_root = "/data/veles"
 
 
-#: Disabled plotters or not (for benchmarking purposes)
+# : Disabled plotters or not (for benchmarking purposes)
 plotters_disabled = False
 
 
-#: Test opencl device for optimal BLOCK_SIZE or not
+# : Test opencl device for optimal BLOCK_SIZE or not
 test_known_device = False
 test_unknown_device = True
 
 
-#: For debugging purposes
+# : For debugging purposes
 unit_test = False
 
 
