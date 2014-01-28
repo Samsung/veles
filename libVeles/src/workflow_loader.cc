@@ -9,8 +9,7 @@
  *  @section Copyright
  *  Copyright 2013 Samsung R&D Institute Russia
  */
-
-#include "inc/veles/workflow_loader.h"
+#include <veles/workflow_loader.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
@@ -25,7 +24,6 @@
 #pragma GCC diagnostic pop
 #include "inc/veles/unit_factory.h"
 
-
 using std::string;
 using std::vector;
 using std::shared_ptr;
@@ -38,30 +36,27 @@ using veles::WorkflowDescription;
 using veles::WorkflowExtractionError;
 
 /// Default name of decompressed yaml file.
-const char* WorkflowLoader::kWorkflowDecompressedFile =
-    "default.yaml";
+const char* WorkflowLoader::kWorkflowDecompressedFile = "default.yaml";
+/// Default path for archive's decompressing.
+const char* WorkflowLoader::kWorkingDirectory = "/tmp/workflow_tmp";
 
-const char* WorkflowLoader::kDefaultWorkingDirectory = "/tmp/workflow_tmp/";
-
-WorkflowLoader::WorkflowLoader()
-    : working_directory_(kDefaultWorkingDirectory) {
+WorkflowLoader::WorkflowLoader() : working_directory_path_(kWorkingDirectory) {
 }
 
-// TODO(EBulychev): delete fileWithWorkflow. fileWithWorkflow will always be
-// workflow.yaml
 void WorkflowLoader::Load(const string& archive) {
-  archive_name_ = archive;
-  file_with_workflow_ = kWorkflowDecompressedFile;
-
-  //  1) Extract archive (using libarchive) to directory working_directory_.
-  WorkflowLoader::ExtractArchive(archive_name_, working_directory_);
-  DBG("Extracted %s to %s", archive_name_.c_str(), working_directory_.c_str());
-  //  2) Read neural network structure from file_with_workflow_
-  auto workflow_file = working_directory_ + file_with_workflow_;
-  WorkflowLoader::GetWorkflow(workflow_file);
-  DBG("Loaded %s", file_with_workflow_.c_str());
+  //  1) Extract archive (using libarchive) to directory kWorkingDirectory.
+  WorkflowLoader::ExtractArchive(archive);
+  DBG("Successful archive extracting\n");
+  //  2) Read neural network structure from fileWithWorkflow
+  auto workflow_file = working_directory_path_;
+  workflow_file /= boost::filesystem::path(kWorkflowDecompressedFile);
+//  *workflow_file /= file_with_workflow_;
+  DBG("File with workflow: %s\n", workflow_file.string().c_str());
+  WorkflowLoader::GetWorkflow(workflow_file.string());
+  DBG("Successful reading workflow from yaml\n");
   // Remove the working directory with all files
-  WorkflowLoader::RemoveDirectory(working_directory_);
+  WorkflowLoader::RemoveDirectory(working_directory_path_.string());
+  DBG("Successful removing directory\n");
 }
 
 void WorkflowLoader::GetWorkflow(const string& yaml_filename) {
@@ -74,7 +69,7 @@ void WorkflowLoader::GetWorkflow(const string& yaml_filename) {
     DBG("Node type %d", workflow.at(0).Type());
     CreateWorkflow(workflow.at(0));
   } else {
-    ERR("Can't extract workflow");
+    ERR("veles::WorkflowLoader::GetWorkflow: can't extract workflow");
     throw std::runtime_error(
         "veles::WorkflowLoader::GetWorkflow: can't extract workflow");
   }
@@ -82,20 +77,13 @@ void WorkflowLoader::GetWorkflow(const string& yaml_filename) {
 
 void WorkflowLoader::CreateWorkflow(const YAML::Node& doc) {
   for (auto& it : doc) {
-    DBG("inside");
-    string key, value;
-
-    if (it.first.IsScalar() && it.second.IsScalar()) {
-      DBG("Scalar & scalar");
-      key = it.first.as<string>();
-      value = it.second.as<string>();
-      shared_ptr<string> temp(new string(value));
-
-      workflow_desc_.Properties.insert({key, temp});
-      key.clear();
-      value.clear();
+    DBG("Examining %s", it.first.as<string>().c_str());
+    if (it.first.as<string>() == "Loader") {
+      DBG("Converting Loader unit parameters to workflow properties");
+      auto params = GetProperties(it.second);
+      workflow_desc_.Properties = *reinterpret_cast<PropertiesTable*>(
+          params.get());
     } else if (it.first.IsScalar() && it.second.IsMap()) {
-      DBG("Scalar & map");
       UnitDescription unit;
       unit.Name = it.first.as<string>();
       WorkflowLoader::GetUnit(it.second, &unit);
@@ -114,6 +102,8 @@ void WorkflowLoader::GetUnit(const YAML::Node& doc, UnitDescription* unit) {
     string key, value;
     // Add properties to UnitDescription
     if (it.first.IsScalar() && it.second.IsScalar()) {
+      DBG("Scalar & scalar : %s & %s", it.first.as<string>().c_str(),
+                                       it.second.as<string>().c_str());
       // Add properties
       key = it.first.as<string>();
       value = it.second.as<string>();
@@ -131,46 +121,55 @@ void WorkflowLoader::GetUnit(const YAML::Node& doc, UnitDescription* unit) {
       }
     } else if (it.first.IsScalar() && (it.second.IsMap() ||
         it.second.IsSequence())) {
+      DBG("Scalar & map(sequence) : %s & map(sequence)",
+          it.first.as<string>().c_str());
       // Recursive adding properties
       unit->Properties.insert({it.first.as<string>(),
         GetProperties(it.second)});
     } else {
       throw std::runtime_error(
-                    "veles::WorkflowLoader::GetUnit: bad YAML::Node");
+          "veles::WorkflowLoader::GetUnit: bad YAML::Node");
     }
   }
 }
 
 shared_ptr<void> WorkflowLoader::GetProperties(const YAML::Node& node) {
-  if (node.IsScalar()) {
-    // Simplest variant - return shared_ptr to string or to float array
-    auto temp = std::make_shared<string>(node.as<string>());
-    return temp;
-  } else if (node.IsMap()) {
-    auto props_map = std::make_shared<vector<PropertiesTable>>();
-    for (const auto& it : node) {
-      PropertiesTable props;
-      props.insert({it.first.as<string>(), GetProperties(it.second)});
-      props_map.get()->push_back(props);
+  switch (node.Type()) {
+    case YAML::NodeType::Scalar: {
+      // Simplest variant - return shared_ptr to string or to float array
+      DBG("Scalar : %s", node.as<string>().c_str());
+      auto temp = std::make_shared<string>(node.as<string>());
+      return temp;
     }
-    return props_map;
-  } else if (node.IsSequence()) {
-    auto props_sequence = std::make_shared<vector<shared_ptr<void>>>();
-    for (const auto& it : node) {
-      props_sequence->push_back(GetProperties(it));
+    case YAML::NodeType::Map: {
+      auto props = std::make_shared<PropertiesTable>();
+      for (const auto& it : node) {
+        DBG("Map : %s & second", it.first.as<string>().c_str());
+        (*props)[it.first.as<string>()] = GetProperties(it.second);
+      }
+      return props;
     }
-    return props_sequence;
+    case YAML::NodeType::Sequence: {
+      auto props_sequence = std::make_shared<PropertiesSequence>();
+      for (const auto& it : node) {
+        props_sequence->push_back(GetProperties(it));
+      }
+      return props_sequence;
+    }
+    default:
+      ERR("veles::WorkflowLoader::GetProperties: bad YAML::Node");
+      throw std::runtime_error(
+          "veles::WorkflowLoader::GetProperties: bad YAML::Node");
   }
-  ERR("veles::WorkflowLoader::GetProperties: bad YAML::Node");
-  throw std::runtime_error("veles::WorkflowLoader::GetProperties: "
-                           "bad YAML::Node");
 }
 
 std::shared_ptr<float> WorkflowLoader::GetArrayFromFile(const string& file,
                                                         size_t* arr_size) {
-  string link_to_file = working_directory_ + file;
+  auto link_to_file = working_directory_path_;
+  link_to_file /= file;
   // Open extracted files
-  ifstream fr(link_to_file, std::ios::in | std::ios::binary | std::ios::ate);
+  ifstream fr(link_to_file.string(), std::ios::in | std::ios::binary |
+              std::ios::ate);
   if (!fr.is_open()) {
     throw std::runtime_error
       ("veles::WorkflowLoader::GetArrayFromFile: Can't open file with array");
@@ -219,6 +218,7 @@ void WorkflowLoader::InitializeWorkflow() {
       workflow_.Add(unit);
     }
   }
+  workflow_.SetProperties(workflow_desc_.Properties);
 }
 
 veles::Workflow WorkflowLoader::GetWorkflow() {
@@ -228,26 +228,8 @@ veles::Workflow WorkflowLoader::GetWorkflow() {
   return workflow_;
 }
 
-string WorkflowLoader::PrintWorkflowStructure() {
-  // Workflow properties to string
-  string result = "\nWorkFlow properties:\n";
-
-  for (auto x : workflow_desc_.Properties) {
-    result += x.first + " : " + *std::static_pointer_cast<const string>(x.second) + "\n";
-  }
-  // Print units and their properties
-  for (unsigned i = 0; i < workflow_desc_.Units.size(); ++i) {
-    result += "\nUnit name: " + workflow_desc_.Units.at(i).Name + "\n";
-
-    for (auto y : workflow_desc_.Units.at(i).Properties) {
-      result += y.first + " : " + *std::static_pointer_cast<const string>(y.second) + "\n";
-    }
-  }
-  return result;
-}
-
 void WorkflowLoader::ExtractArchive(const string& filename,
-                                    const string& directory) {
+                                    const boost::filesystem::path& directory) {
   static const size_t kBlockSize = 10240;
 
   auto destroy_read_archive = [](archive* ptr) {
@@ -285,9 +267,11 @@ void WorkflowLoader::ExtractArchive(const string& filename,
           ERR("archive_read_next_header() : %s", error);
           throw WorkflowExtractionFailedException(filename, error);
         }
+        DBG("archive_read_next_header() : %s", error);
       }
-      auto path = directory + "/" + archive_entry_pathname(entry);
-
+      auto path = directory;
+      path /= archive_entry_pathname(entry);
+      DBG("Extracted file: %s", path.c_str());
       archive_entry_set_pathname(entry, path.c_str());
 
       r = archive_write_header(ext.get(), entry);
@@ -311,13 +295,17 @@ void WorkflowLoader::ExtractArchive(const string& filename,
   }
 }
 
-void WorkflowLoader::RemoveDirectory(const string& path) {
+void WorkflowLoader::RemoveDirectory(const boost::filesystem::path& path) {
+  auto tmp_path = path;
   {
-    auto dir = std::uniquify(opendir(path.c_str()), closedir);
+    DBG("Try to delete %s", tmp_path.c_str());
+    auto dir = std::uniquify(opendir(tmp_path.c_str()), closedir);
 
     if (!dir) {  // if dir wasn't initialized correctly
+      ERR("Can't open directory to delete (%s),\ncheck path + permissions",
+          tmp_path.c_str());
       throw std::runtime_error
-        ("Can't open directory to delete, check path + permissions\n");
+        ("Can't open directory to delete, check path + permissions");
     }  // end if
 
     dirent *pent = nullptr;
@@ -326,13 +314,22 @@ void WorkflowLoader::RemoveDirectory(const string& path) {
     while ((pent = readdir(dir.get()))) {
       // while there is still something in the directory to list
       if (pent->d_type == isFile) {
-        string path_to_del = (path + "/" + pent->d_name);
+        auto path_to_del = tmp_path;
+        path_to_del /= pent->d_name;
+        DBG("Try to delete file: %s", path_to_del.c_str());
 
         remove(path_to_del.c_str());
+      } else if (pent->d_type == DT_DIR){
+        if (!strcmp(pent->d_name, ".") || !strcmp(pent->d_name, "..")) {
+           continue;
+        }
+        auto path_to_del = tmp_path;
+        path_to_del /= pent->d_name;
+        RemoveDirectory(path_to_del);
       }
     }
   }
-  if (rmdir(path.c_str()) != 0) {
+  if (rmdir(tmp_path.c_str()) != 0) {
     throw std::runtime_error
             ("Can't delete directory, check path + permissions\n");
   }
@@ -360,6 +357,21 @@ int WorkflowLoader::CopyData(const archive& ar, archive *aw) {
   return res;
 }
 
-const WorkflowDescription& WorkflowLoader::workflow_desc() const {
-  return workflow_desc_;
+void WorkflowLoader::set_working_directory(const std::string& directory) {
+  working_directory_path_ = directory;
+}
+
+const std::string& WorkflowLoader::working_directory() {
+  return working_directory_path_.string();
+}
+
+void WorkflowLoader::InitWorkflow() {
+  auto temp = working_directory_path_;
+  temp /= kWorkflowDecompressedFile;
+  DBG("InitWorkflow path to workflow file: %s", temp.c_str());
+  GetWorkflow(temp.string());
+}
+
+void WorkflowLoader::ExtractArchive(const std::string& filename) {
+  ExtractArchive(filename, working_directory_path_);
 }

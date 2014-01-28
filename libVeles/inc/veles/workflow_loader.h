@@ -17,11 +17,15 @@
  */
 #ifndef INC_VELES_WORKFLOW_LOADER_H_
 #define INC_VELES_WORKFLOW_LOADER_H_
-
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#include <boost/filesystem/path.hpp>  // NOLINT(*)
+#pragma GCC diagnostic pop
 
 #include <veles/logger.h>  // NOLINT(*)
 #include <veles/workflow.h>  // NOLINT(*)
@@ -33,15 +37,9 @@
 
 struct archive;
 namespace YAML {
-struct Node;
+class Node;
 }  // namespace YAML
 
-
-namespace YAML {
-
-class Node;
-
-}
 
 namespace veles {
 
@@ -61,8 +59,6 @@ class WorkflowExtractionFailedException : public std::exception {
   std::string message_;
 };
 
-/// Type that contains Unit properties
-typedef std::unordered_map<std::string, std::shared_ptr<void>> PropertiesTable;
 /**
  * Structure that contains all required information about unit to construct it
  */
@@ -77,7 +73,7 @@ struct UnitDescription {
  */
 struct WorkflowDescription {
   /** Unordered map of workflow properties.
-   * Key = std::string, value = std::string*/
+   * Key = std::string, value = smart pointer to anything*/
   PropertiesTable Properties;
   /** Vector that contain all workflow units.*/
   std::vector<UnitDescription> Units;
@@ -110,10 +106,9 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
   /// @brief Main function.
   /**
    * @param[in] archive Name of the archive that contain workflow.
-   * @return Return \b false if can't extract workflow from archive.
+   * @return Throw exception if can't extract workflow from archive.
    *
-   *
-   * 1) Extract archive (using libarchive) to directory kWorkDirectory.\n   *
+   * 1) Extract archive (using libarchive) to directory kWorkDirectory.\n
    * 2) Read WorkflowDescription from kWorkflowDecompressedFile\n
    * 3) Go through workflow units looking for links to files with weights&\n
    * biases. If find key that content "link_to_" -> extract files (using zlib)\n
@@ -122,71 +117,41 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
    */
   void Load(const std::string& archive);
   /**
-   * @brief Print structure of workflow (without float arrays).
-   *
-   * @param[in] workflow Structure of this workflow will be printed.
-   *
-   *  1) Go through unordered map of workflow properties.
-   *  @code
-   *    for (auto& x : workflow.Properties) {
-   *      std::cout << x.first << ": " << x.second << std::endl;
-     *    }
-   *  @endcode
-   *  2) Go through vector of unit and print unit name and properties.
-   *  @code
-   * for (unsigned i = 0; i < workflow.Units.size(); ++i)
-   * {
-   *   std::cout << "\nUnit name: " << workflow.Units.at(i).Name << std::endl;
-   *   for (auto& y : workflow.Units.at(i).Properties)
-   *   {
-   *    std::cout << y.first << ": " <<
-   *    static_cast<std::string*>(y.second.get())->c_str() << std::endl;
-   *   }
-   * }
-   *  @endcode
-   * */
-  std::string PrintWorkflowStructure();
-  /**
    * @brief Get extracted workflow.
    *
    * @return Return extracted workflow.
    * */
   Workflow GetWorkflow();
-  /**
-   * @brief Get workflow description (type of description = WorkflowDescription).
-   *
-   * @return Return workflow description (type of description = WorkflowDescription).
-   * */
-  WorkflowDescription GetWorkflowDescription() const { return workflow_desc_; }
-
-  void InitializeWorkflow();
 
   /// @brief Changes the directory where the archives are unpacked to.
-  void set_working_directory(const std::string directory) {
-    working_directory_ = directory;
-  }
+  /// @param[in] directory New path for working directory.
+  void set_working_directory(const std::string& directory);
 
   /// @brief Returns the directory where the archives are unpacked to.
-  const std::string& working_directory() {
-    return working_directory_;
-  }
-
- protected:
-  const WorkflowDescription& workflow_desc() const;
+  /// @return Return path to working directory.
+  const std::string& working_directory();
 
  private:
+  /// @brief Convert WorkflowDescription to Workflow.
+  void InitializeWorkflow();
   /// @brief Extract file archive.
   /**
    * @param[in] filename Name of the archive that should be extracted.
-   * @param[in] directory Name of the directory where the extracted archive will
-   * be.
+   * @param[in] directory Name of the directory where will be extracted archive.
    *
    * Function that extract file archive (with name = \b filename) to directory
    * with name = \b directory.
    **/
   void ExtractArchive(const std::string& filename,
-                      const std::string& directory = kDefaultWorkingDirectory);
-
+                      const boost::filesystem::path& directory);
+  /// @brief Extract file archive.l
+  /**
+   * @param[in] filename Name of the archive that should be extracted.
+   *
+   * Function that extract file archive (with name = \b filename) to  default
+   * directory.
+   **/
+  void ExtractArchive(const std::string& filename);
   /**
    * @brief Extract workflow from yaml file.
    *
@@ -196,10 +161,7 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
    *
    * Open yaml file (or print error if it not possible)
    * */
-  void InitWorkflow() {
-    auto temp = std::string(working_directory_) + kWorkflowDecompressedFile;
-    GetWorkflow(temp);
-  }
+  void InitWorkflow();
 
   void GetWorkflow(const std::string& yaml_filename);
   /// @brief Extract structure of workflow from YAML::Node
@@ -230,26 +192,22 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
    * @return Return \b false if directory can't be deleted because of bad path
    * or permissions or directory inside.
    */
-  void RemoveDirectory(const std::string& path);
+  void RemoveDirectory(const boost::filesystem::path& path);
 
   /// @brief Some function for ExtractArchive
   int CopyData(const archive& ar, archive *aw);
 
-  /// Default path to working directory.
-  std::string working_directory_;
   /// Default name of decompressed yaml file.
   static const char* kWorkflowDecompressedFile;
 
-  static const char* kDefaultWorkingDirectory;
+  static const char* kWorkingDirectory;
 
   WorkflowDescription workflow_desc_;
   Workflow workflow_;
-  // Variable to save path + name of archive with info about workflow
-  std::string archive_name_;
-  std::string file_with_workflow_;
+  boost::filesystem::path working_directory_path_;
 };
 
-}  // namespace veles
+}  // namespace Veles
 
 #if __GNUC__ >= 4
 #pragma GCC visibility pop

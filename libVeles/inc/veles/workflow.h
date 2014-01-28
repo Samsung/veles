@@ -13,10 +13,10 @@
 #ifndef INC_WORKFLOW_H_
 #define INC_WORKFLOW_H_
 
-#include <map>
-#include <vector>
-#include <string>
 #include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 #include <algorithm>
 #include <veles/logger.h>
 #include <veles/unit.h>
@@ -27,6 +27,12 @@
 #endif
 
 namespace veles {
+
+/// Type that contains Unit properties
+typedef std::unordered_map<std::string, std::shared_ptr<void>> PropertiesTable;
+
+/// Properties sequence.
+typedef std::vector<std::shared_ptr<void>> PropertiesSequence;
 
 /** @brief VELES workflow */
 class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
@@ -62,14 +68,12 @@ class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
    *  @param name Name of the parameter
    *  @param value Pointer to the parameter value
    */
-  void SetParameter(const std::string& name,
-                    std::shared_ptr<const void> value) {
-    params_[name] = value;
-  }
+  void SetProperty(const std::string& name,
+                    std::shared_ptr<void> value);
   /** @brief Returns a parameter of the workflow
    *  @param name Name of the parameter
    */
-  std::shared_ptr<const void> GetParameter(const std::string& name);
+  std::shared_ptr<void> GetProperty(const std::string& name);
   /** @brief Returns a unit from workflow
    *  @param index Unit position in workflow
    */
@@ -101,13 +105,15 @@ class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
   static float* mallocf(size_t length);
 
  private:
+  friend class WorkflowLoader;
   /** @brief Get maximum input and output size of containing units
    *  @return Maximum size
    */
   size_t MaxUnitSize() const noexcept;
+  void SetProperties(const PropertiesTable& table);
 
   std::vector<std::shared_ptr<Unit>> units_;
-  std::map<std::string, std::shared_ptr<const void>> params_;
+  PropertiesTable props_;
 };
 
 }  // namespace veles
