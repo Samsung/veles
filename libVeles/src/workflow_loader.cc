@@ -9,11 +9,7 @@
  *  @section Copyright
  *  Copyright 2013 Samsung R&D Institute Russia
  */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#include <boost/filesystem.hpp>  // NOLINT(*)
-#pragma GCC diagnostic pop
-#include <inc/veles/workflow_loader.h>
+#include <veles/workflow_loader.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
@@ -43,28 +39,23 @@ using veles::WorkflowExtractionError;
 const char* WorkflowLoader::kWorkflowDecompressedFile = "default.yaml";
 /// Default path for archive's decompressing.
 const char* WorkflowLoader::kWorkingDirectory = "/tmp/workflow_tmp";
-/// Default path to working directory.
-std::unique_ptr<boost::filesystem::path> working_directory_path_;
 
-WorkflowLoader::WorkflowLoader() {
-  working_directory_path_ = std::unique_ptr<boost::filesystem::path>
-                            (new boost::filesystem::path(kWorkingDirectory));
+WorkflowLoader::WorkflowLoader() : working_directory_path_(kWorkingDirectory) {
 }
 
 void WorkflowLoader::Load(const string& archive) {
-  archive_name_ = archive;
   //  1) Extract archive (using libarchive) to directory kWorkingDirectory.
-  WorkflowLoader::ExtractArchive(archive_name_);
+  WorkflowLoader::ExtractArchive(archive);
   DBG("Successful archive extracting\n");
   //  2) Read neural network structure from fileWithWorkflow
-  auto workflow_file = *working_directory_path_;
+  auto workflow_file = working_directory_path_;
   workflow_file /= boost::filesystem::path(kWorkflowDecompressedFile);
 //  *workflow_file /= file_with_workflow_;
   DBG("File with workflow: %s\n", workflow_file.string().c_str());
   WorkflowLoader::GetWorkflow(workflow_file.string());
   DBG("Successful reading workflow from yaml\n");
   // Remove the working directory with all files
-  WorkflowLoader::RemoveDirectory(working_directory_path_->string());
+  WorkflowLoader::RemoveDirectory(working_directory_path_.string());
   DBG("Successful removing directory\n");
 }
 
@@ -179,7 +170,7 @@ shared_ptr<void> WorkflowLoader::GetProperties(const YAML::Node& node) {
 
 std::shared_ptr<float> WorkflowLoader::GetArrayFromFile(const string& file,
                                                         size_t* arr_size) {
-  auto link_to_file = *working_directory_path_;
+  auto link_to_file = working_directory_path_;
   link_to_file /= file;
   // Open extracted files
   ifstream fr(link_to_file.string(), std::ios::in | std::ios::binary |
@@ -243,8 +234,6 @@ veles::Workflow WorkflowLoader::GetWorkflow() {
 
 void WorkflowLoader::ExtractArchive(const string& filename,
                                     const boost::filesystem::path& directory) {
-  auto temp_directory = directory;
-
   static const size_t kBlockSize = 10240;
 
   auto destroy_read_archive = [](archive* ptr) {
@@ -284,7 +273,7 @@ void WorkflowLoader::ExtractArchive(const string& filename,
         }
         DBG("archive_read_next_header() : %s", error);
       }
-      auto path = temp_directory;
+      auto path = directory;
       path /= archive_entry_pathname(entry);
       DBG("Extracted file: %s", path.c_str());
       archive_entry_set_pathname(entry, path.c_str());
@@ -377,20 +366,20 @@ const WorkflowDescription& WorkflowLoader::workflow_desc() const {
 }
 
 void WorkflowLoader::set_working_directory(const std::string& directory) {
-  *working_directory_path_ = directory;
+  working_directory_path_ = directory;
 }
 
 const std::string& WorkflowLoader::working_directory() {
-  return working_directory_path_->string();
+  return working_directory_path_.string();
 }
 
 void WorkflowLoader::InitWorkflow() {
-  auto temp = *working_directory_path_;
+  auto temp = working_directory_path_;
   temp /= kWorkflowDecompressedFile;
   DBG("InitWorkflow path to workflow file: %s", temp.c_str());
   GetWorkflow(temp.string());
 }
 
 void WorkflowLoader::ExtractArchive(const std::string& filename) {
-  ExtractArchive(filename, kWorkingDirectory);
+  ExtractArchive(filename, working_directory_path_);
 }

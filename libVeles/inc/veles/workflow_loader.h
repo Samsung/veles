@@ -22,6 +22,11 @@
 #include <unordered_map>
 #include <vector>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#include <boost/filesystem/path.hpp>  // NOLINT(*)
+#pragma GCC diagnostic pop
+
 #include <veles/logger.h>  // NOLINT(*)
 #include <veles/workflow.h>  // NOLINT(*)
 #include <veles/poison.h>  // NOLINT(*)
@@ -29,12 +34,6 @@
 #if __GNUC__ >= 4
 #pragma GCC visibility push(default)
 #endif
-
-namespace boost {
-namespace filesystem {
-class path;
-}  // namespace filesystem
-}  // namespace boost
 
 struct archive;
 namespace YAML {
@@ -215,8 +214,7 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
 
   WorkflowDescription workflow_desc_;
   Workflow workflow_;
-  // Variable to save path + name of archive with info about workflow
-  std::string archive_name_;
+  boost::filesystem::path working_directory_path_;
 };
 
 }  // namespace Veles
