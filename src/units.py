@@ -350,7 +350,7 @@ class OpenCLUnit(Unit):
         fin.close()
         return s
 
-    def build_program(self, defines, dump_preprocessed=None):
+    def build_program(self, defines=None, dump_preprocessed=None):
         """Builds OpenCL program.
 
         _prg will be is_initialized with built program.
@@ -365,7 +365,9 @@ class OpenCLUnit(Unit):
         """
         # write the skeleton
         source = ""
-        my_defines = copy(defines)
+        if defines and not isinstance(defines, dict):
+            raise RuntimeError("defines must be a dictionary")
+        my_defines = copy(defines) if defines else {}
         for file, defs in self.cl_sources_.items():
             source += '#include "%s"\n' % file
             my_defines.update(defs)
@@ -374,8 +376,6 @@ class OpenCLUnit(Unit):
         # initialize C preprocessor
         lexer = lex.lex(cpp)
         cprep = cpp.Preprocessor(lexer)
-        if not isinstance(defines, dict):
-            raise RuntimeError("defines must be a dictionary")
         for name, value in my_defines.items():
             cprep.define("%s %s" % (name, value))
         cprep.path = copy(config.ocl_dirs)
@@ -437,6 +437,9 @@ class OpenCLUnit(Unit):
         self.prg_ = pyopencl.Program(self.device.context_,
                                      self.prg_src).build()
 
+    def get_kernel(self, name):
+        return pyopencl.Kernel(self.prg_, name)
+
 
 class Repeater(Unit):
     """Repeater.
@@ -463,44 +466,3 @@ class EndPoint(Unit):
 
     def wait(self):
         self.sem_.acquire()
-
-
-class Forward(OpenCLUnit):
-    """Base class for forward propagation units.
-
-    Attributes:
-        input: input layer values.
-        output: output layer values.
-        weights: weights.
-        bias: bias.
-    """
-    def __init__(self, device=None):
-        super(Forward, self).__init__(device=device)
-        self.input = None
-        self.output = None
-        self.weights = None
-        self.bias = None
-        self.exports = ["weights", "bias"]
-
-
-class GD(OpenCLUnit):
-    """Base class for gradient descent units.
-
-    Attributes:
-        h: input layer values.
-        y: output layer values.
-        err_y: error to backpropagate.
-        err_h: backpropagated error.
-        weights: weights.
-        bias: bias.
-        batch_size: current minibatch size.
-    """
-    def __init__(self, device=None):
-        super(GD, self).__init__(device=device)
-        self.h = None
-        self.y = None
-        self.err_y = None
-        self.err_h = None
-        self.weights = None
-        self.bias = None
-        self.batch_size = None
