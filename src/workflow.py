@@ -15,6 +15,7 @@ import yaml
 import config
 import formats
 import units
+import benchmark
 
 
 class Workflow(units.Unit):
@@ -81,10 +82,10 @@ class Workflow(units.Unit):
         Estimates this slave's computing power for initial perfect balancing.
         Run by a slave.
         """
-        return 100
+        return 0
 
 
-class NNWorkflow(units.OpenCLUnit, Workflow):
+class OpenCLWorkflow(units.OpenCLUnit, Workflow):
     """Base class for neural network workflows.
 
     Attributes:
@@ -96,16 +97,17 @@ class NNWorkflow(units.OpenCLUnit, Workflow):
         gd: list of the gradient descent units.
     """
     def __init__(self, device=None):
-        super(NNWorkflow, self).__init__(device=device)
+        super(OpenCLWorkflow, self).__init__(device=device)
         self.rpt = units.Repeater()
         self.loader = None
         self.forward = []
         self.ev = None
         self.decision = None
         self.gd = []
+        self.power = None
 
     def initialize(self, device=None):
-        super(NNWorkflow, self).initialize()
+        super(OpenCLWorkflow, self).initialize()
         if device != None:
             self.device = device
         for obj in self.forward:
@@ -213,3 +215,13 @@ class NNWorkflow(units.OpenCLUnit, Workflow):
         f.write(array_to_save)
         f.close()
         return numpy_vector_name
+
+    def get_computing_power(self):
+        """
+        Estimates this slave's computing power for initial perfect balancing.
+        Run by a slave.
+        """
+        if not self.power:
+            bench = benchmark.OpenCLBenchmark()
+            self.power = bench.estimate()
+        return self.power
