@@ -59,8 +59,6 @@ class WorkflowExtractionFailedException : public std::exception {
   std::string message_;
 };
 
-/// Type that contains Unit properties
-typedef std::unordered_map<std::string, std::shared_ptr<void>> PropertiesTable;
 /**
  * Structure that contains all required information about unit to construct it
  */
@@ -75,7 +73,7 @@ struct UnitDescription {
  */
 struct WorkflowDescription {
   /** Unordered map of workflow properties.
-   * Key = std::string, value = std::string*/
+   * Key = std::string, value = smart pointer to anything*/
   PropertiesTable Properties;
   /** Vector that contain all workflow units.*/
   std::vector<UnitDescription> Units;
@@ -124,12 +122,7 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
    * @return Return extracted workflow.
    * */
   Workflow GetWorkflow();
-  /**
-   * @brief Get workflow description (type of description = WorkflowDescription).
-   *
-   * @return Return workflow description (type of description = WorkflowDescription).
-   * */
-  WorkflowDescription GetWorkflowDescription() const { return workflow_desc_; }
+
   /// @brief Changes the directory where the archives are unpacked to.
   /// @param[in] directory New path for working directory.
   void set_working_directory(const std::string& directory);
@@ -137,9 +130,6 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
   /// @brief Returns the directory where the archives are unpacked to.
   /// @return Return path to working directory.
   const std::string& working_directory();
-
- protected:
-  const WorkflowDescription& workflow_desc() const;
 
  private:
   /// @brief Convert WorkflowDescription to Workflow.

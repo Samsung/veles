@@ -18,9 +18,18 @@
 
 namespace veles {
 
-std::shared_ptr<const void> Workflow::GetParameter(const std::string& name) {
-  auto it = params_.find(name);
-  return it != params_.end() ? it->second : nullptr;
+void Workflow::SetProperty(const std::string& name,
+                           std::shared_ptr<void> value) {
+  props_[name] = value;
+}
+
+std::shared_ptr<void> Workflow::GetProperty(const std::string& name) {
+  auto it = props_.find(name);
+  return it != props_.end() ? it->second : nullptr;
+}
+
+void Workflow::SetProperties(const PropertiesTable& table) {
+  props_ = table;
 }
 
 std::shared_ptr<Unit> Workflow::Get(size_t index) const {

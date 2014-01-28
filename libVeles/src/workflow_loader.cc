@@ -77,21 +77,13 @@ void WorkflowLoader::GetWorkflow(const string& yaml_filename) {
 
 void WorkflowLoader::CreateWorkflow(const YAML::Node& doc) {
   for (auto& it : doc) {
-    DBG("inside");
-    string key, value;
-
-    if (it.first.IsScalar() && it.second.IsScalar()) {
-      DBG("Scalar & scalar : %s & %s", it.first.as<string>().c_str(),
-                                       it.second.as<string>().c_str());
-      key = it.first.as<string>();
-      value = it.second.as<string>();
-      shared_ptr<string> temp(new string(value));
-
-      workflow_desc_.Properties.insert({key, temp});
-      key.clear();
-      value.clear();
+    DBG("Examining %s", it.first.as<string>().c_str());
+    if (it.first.as<string>() == "Loader") {
+      DBG("Converting Loader unit parameters to workflow properties");
+      auto params = GetProperties(it.second);
+      workflow_desc_.Properties = *reinterpret_cast<PropertiesTable*>(
+          params.get());
     } else if (it.first.IsScalar() && it.second.IsMap()) {
-      DBG("Scalar & map : %s & map", it.first.as<string>().c_str());
       UnitDescription unit;
       unit.Name = it.first.as<string>();
       WorkflowLoader::GetUnit(it.second, &unit);
@@ -110,8 +102,8 @@ void WorkflowLoader::GetUnit(const YAML::Node& doc, UnitDescription* unit) {
     string key, value;
     // Add properties to UnitDescription
     if (it.first.IsScalar() && it.second.IsScalar()) {
-      DBG("GetUnit: Scalar & scalar : %s & %s", it.first.as<string>().c_str(),
-                                                it.second.as<string>().c_str());
+      DBG("Scalar & scalar : %s & %s", it.first.as<string>().c_str(),
+                                       it.second.as<string>().c_str());
       // Add properties
       key = it.first.as<string>();
       value = it.second.as<string>();
@@ -129,43 +121,46 @@ void WorkflowLoader::GetUnit(const YAML::Node& doc, UnitDescription* unit) {
       }
     } else if (it.first.IsScalar() && (it.second.IsMap() ||
         it.second.IsSequence())) {
-      DBG("GetUnit: Scalar & map(sequence) : %s & map(sequence)",
+      DBG("Scalar & map(sequence) : %s & map(sequence)",
           it.first.as<string>().c_str());
       // Recursive adding properties
       unit->Properties.insert({it.first.as<string>(),
         GetProperties(it.second)});
     } else {
       throw std::runtime_error(
-                    "veles::WorkflowLoader::GetUnit: bad YAML::Node");
+          "veles::WorkflowLoader::GetUnit: bad YAML::Node");
     }
   }
 }
 
 shared_ptr<void> WorkflowLoader::GetProperties(const YAML::Node& node) {
-  if (node.IsScalar()) {
-    // Simplest variant - return shared_ptr to string or to float array
-    DBG("GetProperties: Scalar : %s", node.as<string>().c_str());
-    auto temp = std::make_shared<string>(node.as<string>());
-    return temp;
-  } else if (node.IsMap()) {
-    auto props_map = std::make_shared<vector<PropertiesTable>>();
-    for (const auto& it : node) {
-      DBG("GetProperties: Map : %s & second", it.first.as<string>().c_str());
-      PropertiesTable props;
-      props.insert({it.first.as<string>(), GetProperties(it.second)});
-      props_map.get()->push_back(props);
+  switch (node.Type()) {
+    case YAML::NodeType::Scalar: {
+      // Simplest variant - return shared_ptr to string or to float array
+      DBG("Scalar : %s", node.as<string>().c_str());
+      auto temp = std::make_shared<string>(node.as<string>());
+      return temp;
     }
-    return props_map;
-  } else if (node.IsSequence()) {
-    auto props_sequence = std::make_shared<vector<shared_ptr<void>>>();
-    for (const auto& it : node) {
-      props_sequence->push_back(GetProperties(it));
+    case YAML::NodeType::Map: {
+      auto props = std::make_shared<PropertiesTable>();
+      for (const auto& it : node) {
+        DBG("Map : %s & second", it.first.as<string>().c_str());
+        (*props)[it.first.as<string>()] = GetProperties(it.second);
+      }
+      return props;
     }
-    return props_sequence;
+    case YAML::NodeType::Sequence: {
+      auto props_sequence = std::make_shared<PropertiesSequence>();
+      for (const auto& it : node) {
+        props_sequence->push_back(GetProperties(it));
+      }
+      return props_sequence;
+    }
+    default:
+      ERR("veles::WorkflowLoader::GetProperties: bad YAML::Node");
+      throw std::runtime_error(
+          "veles::WorkflowLoader::GetProperties: bad YAML::Node");
   }
-  ERR("veles::WorkflowLoader::GetProperties: bad YAML::Node");
-  throw std::runtime_error
-  ("veles::WorkflowLoader::GetProperties: bad YAML::Node");
 }
 
 std::shared_ptr<float> WorkflowLoader::GetArrayFromFile(const string& file,
@@ -223,6 +218,7 @@ void WorkflowLoader::InitializeWorkflow() {
       workflow_.Add(unit);
     }
   }
+  workflow_.SetProperties(workflow_desc_.Properties);
 }
 
 veles::Workflow WorkflowLoader::GetWorkflow() {
@@ -359,10 +355,6 @@ int WorkflowLoader::CopyData(const archive& ar, archive *aw) {
   } while (res == ARCHIVE_OK);
 
   return res;
-}
-
-const WorkflowDescription& WorkflowLoader::workflow_desc() const {
-  return workflow_desc_;
 }
 
 void WorkflowLoader::set_working_directory(const std::string& directory) {
