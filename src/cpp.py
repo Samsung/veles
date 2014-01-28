@@ -769,7 +769,7 @@ class Preprocessor(object):
             except IOError:
                 pass
         else:
-            print("Couldn't find '%s'" % filename)
+            raise FileNotFoundError(filename)
 
     # ----------------------------------------------------------------------
     # define()
