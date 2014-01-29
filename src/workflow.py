@@ -10,16 +10,15 @@ import os
 import pickle
 import shutil
 import tarfile
+import tempfile
 import yaml
 
+import benchmark
 import config
 import formats
-import units
-import benchmark
 import pydot
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
-import tempfile
+import units
+
 
 class Workflow(units.Unit):
     """Base class for workflows.
@@ -110,6 +109,7 @@ class Workflow(units.Unit):
         if not filename:
             (_, filename) = tempfile.mkstemp(".png", "workflow_")
         g.write(filename, format='png')
+        self.log().info("Saved the workflow graph to %s", filename)
         return g.to_string()
 
 
