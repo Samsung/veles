@@ -110,6 +110,7 @@ class Unit(Pickleable, Distributable):
         self.gate_skip_not = [0]
         self.exports = None
         self.individual_name = name
+        self.view_group = None
         self.applied_data_from_master_recursively = False
         self.applied_data_from_slave_recursively = False
 

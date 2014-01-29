@@ -101,6 +101,21 @@ class Workflow(units.Unit):
             node.set("label", unit.name())
             node.set("shape", "rect")
             node.add_style("rounded")
+            node.add_style("filled")
+            if unit.view_group == "PLOTTER":
+                node.set("fillcolor", "gold")
+            elif unit.view_group == "WORKER":
+                node.set("fillcolor", "greenyellow")
+            elif unit.view_group == "LOADER":
+                node.set("fillcolor", "cyan")
+            elif unit.view_group == "TRAINER":
+                node.set("fillcolor", "coral")
+            elif unit.view_group == "EVALUATOR":
+                node.set("fillcolor", "plum")
+            elif unit == self.start_point or unit == self.end_point:
+                node.set("fillcolor", "lightgrey")
+            else:
+                node.set("fillcolor", "white")
             g.add_node(node)
             for link in unit.links_to.keys():
                 g.add_edge(pydot.Edge(hex(id(unit)), hex(id(link))))

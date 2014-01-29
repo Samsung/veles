@@ -145,6 +145,7 @@ class Plotter(units.Unit):
     """
     def __init__(self, device=None, name=None):
         super(Plotter, self).__init__(name)
+        self.view_group = "PLOTTER"
         self.lock_.acquire()
 
     def init_unpickled(self):
