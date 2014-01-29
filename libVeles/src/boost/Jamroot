@@ -128,7 +128,7 @@ import sequence ;
 import xsltproc ;
 import set ;
 import path ;
-import link ;
+#import link ;
 
 path-constant BOOST_ROOT : . ;
 constant BOOST_VERSION : 1.55.0 ;
