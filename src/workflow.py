@@ -16,7 +16,10 @@ import config
 import formats
 import units
 import benchmark
-
+import pydot
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+import tempfile
 
 class Workflow(units.Unit):
     """Base class for workflows.
@@ -36,6 +39,7 @@ class Workflow(units.Unit):
         In the child class:
             call the parent method at the end.
         """
+        self.generate_graph()
         retval = self.start_point.run_dependent()
         if retval:
             return retval
@@ -83,6 +87,30 @@ class Workflow(units.Unit):
         Run by a slave.
         """
         return 0
+
+    def generate_graph(self, filename=None):
+        g = pydot.Dot(graph_name="Workflow",
+                      graph_type="digraph",
+                      mindist="0.1")
+        g.set_prog("circo")
+        visited_units = set()
+        boilerplate = set([self.start_point])
+        while len(boilerplate) > 0:
+            unit = boilerplate.pop()
+            visited_units.add(unit)
+            node = pydot.Node(hex(id(unit)))
+            node.set("label", unit.name())
+            node.set("shape", "rect")
+            node.add_style("rounded")
+            g.add_node(node)
+            for link in unit.links_to.keys():
+                g.add_edge(pydot.Edge(hex(id(unit)), hex(id(link))))
+                if link not in visited_units and link not in boilerplate:
+                    boilerplate.add(link)
+        if not filename:
+            (_, filename) = tempfile.mkstemp(".png", "workflow_")
+        g.write(filename, format='png')
+        return g.to_string()
 
 
 class OpenCLWorkflow(units.OpenCLUnit, Workflow):

@@ -143,8 +143,8 @@ class Plotter(units.Unit):
     Attributes:
         lock_: lock.
     """
-    def __init__(self, device=None):
-        super(Plotter, self).__init__()
+    def __init__(self, device=None, name=None):
+        super(Plotter, self).__init__(name)
         self.lock_.acquire()
 
     def init_unpickled(self):
@@ -197,7 +197,7 @@ class SimplePlotter(Plotter):
                  clear_plot=False,
                  redraw_plot=False,
                  ylim=None):
-        super(SimplePlotter, self).__init__()
+        super(SimplePlotter, self).__init__(name=figure_label)
         self.values = []
         self.input = None  # Connector
         self.input_field = None
@@ -250,7 +250,7 @@ class MatrixPlotter(Plotter):
 
     """
     def __init__(self, figure_label="Matrix"):
-        super(MatrixPlotter, self).__init__()
+        super(MatrixPlotter, self).__init__(name=figure_label)
         self.input = None  # Connector
         self.input_field = None
         self.figure_label = figure_label

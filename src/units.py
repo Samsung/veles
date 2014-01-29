@@ -100,7 +100,7 @@ class Unit(Pickleable, Distributable):
         exports: list of attribute names to export
                  (None - unit is not exportable).
     """
-    def __init__(self):
+    def __init__(self, name=None):
         super(Unit, self).__init__()
         self.links_from = {}
         self.links_to = {}
@@ -109,6 +109,7 @@ class Unit(Pickleable, Distributable):
         self.gate_block_not = [0]
         self.gate_skip_not = [0]
         self.exports = None
+        self.individual_name = name
         self.applied_data_from_master_recursively = False
         self.applied_data_from_slave_recursively = False
 
@@ -286,13 +287,23 @@ class Unit(Pickleable, Distributable):
         pass
 
     def log_error(self, **kwargs):
-        """Logs an error
+        """Logs any errors.
         """
         if "msg" in kwargs.keys():
             self.log().error(kwargs["msg"])
         if "exc_info" in kwargs.keys():
             exc_info = kwargs["exc_info"]
             traceback.print_exception(exc_info[0], exc_info[1], exc_info[2])
+
+    def name(self):
+        if self.individual_name:
+            return self.individual_name
+        return self.__class__.__name__
+
+    def set_name(self, value):
+        if not isinstance(value, str):
+            raise ValueError("Unit name must be a string")
+        self.individual_name = value
 
 
 class OpenCLUnit(Unit):
