@@ -88,8 +88,6 @@ class Unit(Pickleable, Distributable):
                    ([0] can be a function).
         gate_skip_not: if [0] is true, inverses conditions for gate_skip
                    ([0] can be a function).
-        exports: list of attribute names to export
-                 (None - unit is not exportable).
     """
 
     pool_ = None
@@ -106,7 +104,7 @@ class Unit(Pickleable, Distributable):
 
         return wrapped
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, view_group=None, workflow=None):
         super(Unit, self).__init__()
         self.links_from = {}
         self.links_to = {}
@@ -114,9 +112,9 @@ class Unit(Pickleable, Distributable):
         self.gate_skip = [0]
         self.gate_block_not = [0]
         self.gate_skip_not = [0]
-        self.exports = None
         self.individual_name = name
-        self.view_group = None
+        self.view_group = view_group
+        self.workflow = workflow
         self.applied_data_from_master_recursively = False
         self.applied_data_from_slave_recursively = False
         setattr(self, "run", Unit.measure_time(getattr(self, "run"),
@@ -478,20 +476,3 @@ class Repeater(Unit):
         """Gate is always open.
         """
         return 1
-
-
-class EndPoint(Unit):
-    """End point with semaphore.
-
-    Attributes:
-        sem_: semaphore.
-    """
-    def init_unpickled(self):
-        super(EndPoint, self).init_unpickled()
-        self.sem_ = threading.Semaphore(0)
-
-    def run(self):
-        self.sem_.release()
-
-    def wait(self):
-        self.sem_.acquire()

@@ -17,7 +17,41 @@ import benchmark
 import config
 import formats
 import pydot
+import threading
 import units
+
+
+class UttermostPoint(units.Unit):
+    def __init__(self, name, workflow):
+        super(UttermostPoint, self).__init__(name=name, view_group="START_END",
+                                             workflow=workflow)
+
+
+class StartPoint(UttermostPoint):
+    """Start point of a workflow execution.
+    """
+    def __init__(self, workflow):
+        super(StartPoint, self).__init__(name="Start", workflow=workflow)
+
+
+class EndPoint(UttermostPoint):
+    """End point with semaphore.
+
+    Attributes:
+        sem_: semaphore.
+    """
+    def __init__(self, workflow):
+        super(EndPoint, self).__init__(name="End", workflow=workflow)
+
+    def init_unpickled(self):
+        super(EndPoint, self).init_unpickled()
+        self.sem_ = threading.Semaphore(0)
+
+    def run(self):
+        self.sem_.release()
+
+    def wait(self):
+        self.sem_.acquire()
 
 
 class Workflow(units.Unit):
@@ -29,8 +63,8 @@ class Workflow(units.Unit):
     """
     def __init__(self):
         super(Workflow, self).__init__()
-        self.start_point = units.Unit()
-        self.end_point = units.EndPoint()
+        self.start_point = StartPoint(self)
+        self.end_point = EndPoint(self)
 
     def initialize(self):
         return self.start_point.initialize_dependent()
@@ -104,20 +138,9 @@ class Workflow(units.Unit):
             node.set("shape", "rect")
             node.add_style("rounded")
             node.add_style("filled")
-            if unit.view_group == "PLOTTER":
-                node.set("fillcolor", "gold")
-            elif unit.view_group == "WORKER":
-                node.set("fillcolor", "greenyellow")
-            elif unit.view_group == "LOADER":
-                node.set("fillcolor", "cyan")
-            elif unit.view_group == "TRAINER":
-                node.set("fillcolor", "coral")
-            elif unit.view_group == "EVALUATOR":
-                node.set("fillcolor", "plum")
-            elif unit == self.start_point or unit == self.end_point:
-                node.set("fillcolor", "lightgrey")
-            else:
-                node.set("fillcolor", "white")
+            color = Workflow.unit_group_colors.get(unit.view_group, "white")
+            node.set("fillcolor", color)
+            node.set("gradientangle", "90")
             g.add_node(node)
             for link in unit.links_to.keys():
                 g.add_edge(pydot.Edge(hex(id(unit)), hex(id(link))))
@@ -127,6 +150,7 @@ class Workflow(units.Unit):
             (_, filename) = tempfile.mkstemp(".png", "workflow_")
         self.log().info("Saving the workflow graph to %s", filename)
         g.write(filename, format='png')
+        self.log().info(g.to_string())
         return g.to_string()
 
     def print_stats(self, by_name=False, top_number=5):
@@ -142,6 +166,13 @@ class Workflow(units.Unit):
         for i in range(1, min(top_number, len(stats)) + 1):
             self.log().info("%d.  %s (%d%%)", i, stats[i - 1][0],
                             stats[i - 1][1] * 100 / time_all)
+
+    unit_group_colors = {"PLOTTER": "gold",
+                         "WORKER": "greenyellow",
+                         "LOADER": "cyan",
+                         "TRAINER": "coral",
+                         "EVALUATOR": "plum",
+                         "START_END": "lightgrey"}
 
 
 class OpenCLWorkflow(units.OpenCLUnit, Workflow):
