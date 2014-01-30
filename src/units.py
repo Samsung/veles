@@ -104,7 +104,7 @@ class Unit(Pickleable, Distributable):
 
         return wrapped
 
-    def __init__(self, name=None, view_group=None, workflow=None):
+    def __init__(self, workflow=None, name=None, view_group=None):
         super(Unit, self).__init__()
         self.links_from = {}
         self.links_to = {}
@@ -114,7 +114,14 @@ class Unit(Pickleable, Distributable):
         self.gate_skip_not = [0]
         self.individual_name = name
         self.view_group = view_group
-        self.workflow = workflow
+        if not hasattr(self, "workflow"):
+            if workflow and isinstance(workflow, Unit):
+                self.workflow = workflow
+                workflow.add_ref(self)
+            else:
+                self.workflow = None
+                self.log().warning("FIXME: workflow is not passed into "
+                                   "__init__")
         self.applied_data_from_master_recursively = False
         self.applied_data_from_slave_recursively = False
         setattr(self, "run", Unit.measure_time(getattr(self, "run"),
@@ -331,8 +338,9 @@ class OpenCLUnit(Unit):
         cl_sources: OpenCL source files: file => defines.
         prg_src: last built OpenCL program source code text.
     """
-    def __init__(self, device=None):
-        super(OpenCLUnit, self).__init__()
+    def __init__(self, workflow=None, device=None, name=None, view_group=None):
+        super(OpenCLUnit, self).__init__(workflow=workflow,
+                                         name=name, view_group=view_group)
         self.device = device
         self.prg_src = None
 
@@ -472,7 +480,12 @@ class Repeater(Unit):
     """Repeater.
     TODO(v.markovtsev): add more detailed description
     """
+
+    def __init__(self, workflow, name=None):
+        super(Repeater, self).__init__(workflow=workflow,
+                                       name=name, view_group="PLUMBING")
+
     def open_gate(self, src):
         """Gate is always open.
         """
-        return 1
+        return True

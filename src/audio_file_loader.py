@@ -23,8 +23,9 @@ class AudioFileLoader(units.Unit):
         zip(SndFileLoader.supported_extensions, repeat(SndFileLoader)),
         zip(FFmpegFileLoader.supported_extensions, repeat(FFmpegFileLoader))))
 
-    def __init__(self):
-        super(AudioFileLoader, self).__init__()
+    def __init__(self, workflow, name=None):
+        super(AudioFileLoader, self).__init__(workflow=workflow,
+                                              name=name, view_group="LOADER")
         self.outputs = []
         self.files_list = []
         self.backends = {}

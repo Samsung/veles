@@ -20,8 +20,9 @@ class SoundFeatures(units.Unit):
     Extracts features from raw audio data.
     """
 
-    def __init__(self, report_path):
-        super(SoundFeatures, self).__init__()
+    def __init__(self, report_path, workflow, name=None):
+        super(SoundFeatures, self).__init__(workflow=workflow, name=name,
+                                            view_group="WORKER")
         self.features = []
         self.inputs = []
         self.outputs = []

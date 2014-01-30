@@ -143,9 +143,9 @@ class Plotter(units.Unit):
     Attributes:
         lock_: lock.
     """
-    def __init__(self, device=None, name=None):
-        super(Plotter, self).__init__(name)
-        self.view_group = "PLOTTER"
+    def __init__(self, workflow, device=None, name=None):
+        super(Plotter, self).__init__(workflow=workflow, name=name,
+                                      view_group="PLOTTER")
         self.lock_.acquire()
 
     def init_unpickled(self):
@@ -184,8 +184,8 @@ class SimplePlotter(Plotter):
         values: history of all parameter values given to plotter.
         input: connector to take values from.
         input_field: name of field in input we want to plot.
-        figure_label: label of figure used for drawing. If two ploters share
-            the same figure_label, their plots will appear together.
+        name(): label of figure used for drawing. If two ploters share
+            the same name(), their plots will appear together.
         plot_style: Style of lines used for plotting. See
             http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.plot
             for reference.
@@ -193,16 +193,16 @@ class SimplePlotter(Plotter):
         redraw_plot: will redraw plot at the end of redraw().
         ylim: bounds of plot y-axis.
     """
-    def __init__(self, figure_label="num errors",
+    def __init__(self, workflow,
+                 name="Errors number",
                  plot_style="k-",
                  clear_plot=False,
                  redraw_plot=False,
                  ylim=None):
-        super(SimplePlotter, self).__init__(name=figure_label)
+        super(SimplePlotter, self).__init__(workflow=workflow, name=name)
         self.values = []
         self.input = None  # Connector
         self.input_field = None
-        self.figure_label = figure_label
         self.plot_style = plot_style
         self.input_offs = 0
         self.clear_plot = clear_plot
@@ -210,8 +210,7 @@ class SimplePlotter(Plotter):
         self.ylim = ylim
 
     def redraw(self):
-        figure_label = self.figure_label
-        figure = pp.figure(figure_label)
+        figure = pp.figure(self.name())
         if self.clear_plot:
             figure.clf()
         axes = figure.add_subplot(111)  # Main axes
@@ -250,11 +249,10 @@ class MatrixPlotter(Plotter):
     Creates within initialize():
 
     """
-    def __init__(self, figure_label="Matrix"):
-        super(MatrixPlotter, self).__init__(name=figure_label)
+    def __init__(self, workflow, name="Matrix"):
+        super(MatrixPlotter, self).__init__(workflow=workflow, name=name)
         self.input = None  # Connector
         self.input_field = None
-        self.figure_label = figure_label
 
     def redraw(self):
         if type(self.input_field) == int:
@@ -264,8 +262,7 @@ class MatrixPlotter(Plotter):
         else:
             value = self.input.__dict__[self.input_field]
 
-        figure_label = self.figure_label
-        figure = pp.figure(figure_label)
+        figure = pp.figure(self.name())
         figure.clf()
         num_rows = len(value) + 2
         num_columns = len(value[0]) + 2
@@ -423,11 +420,10 @@ class Weights2D(Plotter):
     Creates within initialize():
 
     """
-    def __init__(self, figure_label="Weights", limit=64, yuv=False):
-        super(Weights2D, self).__init__()
+    def __init__(self, workflow, name="Weights", limit=64, yuv=False):
+        super(Weights2D, self).__init__(workflow=workflow, name=name)
         self.input = None  # Connector
         self.input_field = None
-        self.figure_label = figure_label
         self.get_shape_from = None
         self.limit = limit
         self.transposed = False
@@ -450,8 +446,7 @@ class Weights2D(Plotter):
         if value.shape[0] > self.limit:
             value = value[:self.limit]
 
-        figure_label = self.figure_label
-        figure = pp.figure(figure_label)
+        figure = pp.figure(self.name())
         figure.clf()
 
         color = False
@@ -526,11 +521,10 @@ class Image(Plotter):
     Creates within initialize():
 
     """
-    def __init__(self, figure_label="Image", yuv=False):
-        super(Image, self).__init__()
+    def __init__(self, workflow, name="Image", yuv=False):
+        super(Image, self).__init__(workflow=workflow, name=name)
         self.inputs = []
         self.input_fields = []
-        self.figure_label = figure_label
         self.yuv = [1 if yuv else 0]
 
     def draw_image(self, ax, value):
@@ -580,8 +574,7 @@ class Image(Plotter):
                       interpolation="nearest", cmap=cm.gray)
 
     def redraw(self):
-        figure_label = self.figure_label
-        figure = pp.figure(figure_label)
+        figure = pp.figure(self.name())
         figure.clf()
 
         for i, input_field in enumerate(self.input_fields):
@@ -620,17 +613,15 @@ class Plot(Plotter):
         input_styles: pyplot line styles for corresponding input.
         ylim: bounds of the plot y-axis.
     """
-    def __init__(self, figure_label="Plot", ylim=None):
-        super(Plot, self).__init__()
+    def __init__(self, workflow, name=None, ylim=None):
+        super(Plot, self).__init__(workflow=workflow, name=name)
         self.inputs = []
         self.input_fields = []
         self.input_styles = []
-        self.figure_label = figure_label
         self.ylim = ylim
 
     def redraw(self):
-        figure_label = self.figure_label
-        figure = pp.figure(figure_label)
+        figure = pp.figure(self.name())
         figure.clf()
         ax = figure.add_subplot(111)
         ax.cla()
@@ -663,9 +654,8 @@ class MSEHistogram(Plotter):
     Creates within initialize():
 
     """
-    def __init__(self, figure_label="Histogram", n_bars=35):
-        super(MSEHistogram, self).__init__()
-        self.figure_label = figure_label
+    def __init__(self, workflow, name="Histogram", n_bars=35):
+        super(MSEHistogram, self).__init__(workflow=workflow, name=name)
         self.val_mse = None
         self.mse_min = None
         self.mse_max = None
@@ -677,7 +667,7 @@ class MSEHistogram(Plotter):
                                    dtype=config.dtypes[config.dtype])
 
     def redraw(self):
-        fig = pp.figure(self.figure_label)
+        fig = pp.figure(self.name())
         fig.clf()
         fig.patch.set_facecolor('#E8D6BB')
         # fig.patch.set_alpha(0.45)
@@ -732,7 +722,7 @@ class MSEHistogram(Plotter):
         ax.set_title('Histogram', fontsize=25)
         ax.axis([xmin, xmax + ((xmax - xmin) / self.n_bars), ymin, ymax])
         ax.grid(True)
-        leg = ax.legend((self.figure_label.replace("Histogram ", "")))
+        leg = ax.legend((self.name().replace("Histogram ", "")))
                         # 'upper center')
         frame = leg.get_frame()
         frame.set_facecolor('#E8D6BB')

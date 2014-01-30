@@ -61,8 +61,13 @@ class Workflow(units.Unit):
         start_point: start point.
         end_point: end point.
     """
-    def __init__(self):
-        super(Workflow, self).__init__()
+    def __init__(self, workflow=None, name=None, view_group=None):
+        self.workflow = workflow
+        if workflow:
+            workflow.add_ref(self)
+        super(Workflow, self).__init__(workflow=workflow, name=name,
+                                       view_group=view_group)
+        self.units = []
         self.start_point = StartPoint(self)
         self.end_point = EndPoint(self)
 
@@ -81,6 +86,11 @@ class Workflow(units.Unit):
             return retval
         self.end_point.wait()
         self.print_stats()
+
+    def add_ref(self, unit):
+        self.units.append(unit)
+        if self.workflow:
+            self.workflow.add_ref(unit)
 
     def generate_data_for_master(self):
         return self.start_point.generate_data_for_master_recursively()
@@ -150,7 +160,6 @@ class Workflow(units.Unit):
             (_, filename) = tempfile.mkstemp(".png", "workflow_")
         self.log().info("Saving the workflow graph to %s", filename)
         g.write(filename, format='png')
-        self.log().info(g.to_string())
         return g.to_string()
 
     def print_stats(self, by_name=False, top_number=5):
@@ -186,9 +195,10 @@ class OpenCLWorkflow(units.OpenCLUnit, Workflow):
         decision: decision unit.
         gd: list of the gradient descent units.
     """
-    def __init__(self, device=None):
-        super(OpenCLWorkflow, self).__init__(device=device)
-        self.rpt = units.Repeater()
+    def __init__(self, workflow=None, device=None, name=None, view_group=None):
+        super(OpenCLWorkflow, self).__init__(workflow=workflow, device=device,
+                                             name=name, view_group=view_group)
+        self.rpt = units.Repeater(workflow=self)
         self.loader = None
         self.forward = []
         self.ev = None
