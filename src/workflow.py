@@ -32,6 +32,9 @@ class Workflow(units.Unit):
         self.start_point = units.Unit()
         self.end_point = units.EndPoint()
 
+    def initialize(self):
+        return self.start_point.initialize_dependent()
+
     def run(self):
         """Do the job here.
 
@@ -148,7 +151,6 @@ class OpenCLWorkflow(units.OpenCLUnit, Workflow):
         self.power = None
 
     def initialize(self, device=None):
-        super(OpenCLWorkflow, self).initialize()
         if device != None:
             self.device = device
         for obj in self.forward:
@@ -164,6 +166,7 @@ class OpenCLWorkflow(units.OpenCLUnit, Workflow):
         for obj in self.gd:
             if obj != None:
                 obj.device = self.device
+        return super(OpenCLWorkflow, self).initialize()
 
     def export(self, filename):
         """Exports workflow for use on DTV.
