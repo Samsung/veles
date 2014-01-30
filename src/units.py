@@ -248,17 +248,19 @@ class Unit(Pickleable, Distributable):
         """Do the depth search in the same order on master and slave.
         """
         self.applied_data_from_master_recursively = False
-        data = self.generate_data_for_master()
+        data = [self.generate_data_for_master()]
         for dst in sorted(self.links_to.keys()):
             data = data + dst.generate_data_for_master_recursively()
+        return data
 
     def generate_data_for_slave_recursively(self):
         """Do the depth search in the same order on master and slave.
         """
         self.applied_data_from_slave_recursively = False
-        data = self.generate_data_for_slave()
+        data = [self.generate_data_for_slave()]
         for dst in sorted(self.links_to.keys()):
             data = data + dst.generate_data_for_slave_recursively()
+        return data
 
     def apply_data_from_master_recursively(self, data):
         """Do the depth search in the same order on master and slave.

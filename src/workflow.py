@@ -45,40 +45,38 @@ class Workflow(units.Unit):
         self.end_point.wait()
 
     def generate_data_for_master(self):
-        data = self.start_point.generate_data_for_master_recursively()
-        return pickle.dumps(data)
+        return self.start_point.generate_data_for_master_recursively()
 
     def generate_data_for_slave(self):
-        data = self.start_point.generate_data_for_slave_recursively()
-        return pickle.dumps(data)
+        return self.start_point.generate_data_for_slave_recursively()
 
     def apply_data_from_master(self, data):
-        real_data = pickle.loads(data)
-        self.start_point.apply_data_from_master_recursively(real_data)
+        self.start_point.apply_data_from_master_recursively(data)
 
     def apply_data_from_slave(self, data):
-        real_data = pickle.loads(data)
-        self.apply_data_from_slave_recursively(real_data)
+        self.apply_data_from_slave_recursively(data)
 
     def request_job(self):
         """
         Produces a new job, when a slave asks for it. Run by a master.
         """
-        return self.generate_data_for_slave()
+        return pickle.dumps(self.generate_data_for_slave())
 
     def do_job(self, data):
         """
         Executes this workflow on the given source data. Run by a slave.
         """
-        self.apply_data_from_master(data)
+        real_data = pickle.loads(data)
+        self.apply_data_from_master(real_data)
         self.run()
-        return self.generate_data_for_master()
+        return pickle.dumps(self.generate_data_for_master())
 
     def apply_update(self, data):
         """
         Harness the results of a slave's job. Run by a master.
         """
-        self.apply_data_from_slave(data)
+        real_data = pickle.loads(data)
+        self.apply_data_from_slave(real_data)
 
     def get_computing_power(self):
         """
