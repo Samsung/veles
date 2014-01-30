@@ -92,17 +92,34 @@ class Workflow(units.Unit):
         if self.workflow:
             self.workflow.add_ref(unit)
 
+    def del_ref(self, unit):
+        self.units.remove(unit)
+        if self.workflow:
+            self.workflow.del_ref(unit)
+
     def generate_data_for_master(self):
-        return self.start_point.generate_data_for_master_recursively()
+        data = []
+        for unit in self.units:
+            data.append(unit.generate_data_for_master())
+        return data
 
     def generate_data_for_slave(self):
-        return self.start_point.generate_data_for_slave_recursively()
+        data = []
+        for unit in self.units:
+            data.append(unit.generate_data_for_slave())
+        return data
 
     def apply_data_from_master(self, data):
-        self.start_point.apply_data_from_master_recursively(data)
+        if not isinstance(data, list):
+            raise ValueError("data must be a list")
+        for i in range(0, len(data)):
+            self.units[i].apply_data_from_master(data[i])
 
     def apply_data_from_slave(self, data):
-        self.apply_data_from_slave_recursively(data)
+        if not isinstance(data, list):
+            raise ValueError("data must be a list")
+        for i in range(0, len(data)):
+            self.units[i].apply_data_from_slave(data[i])
 
     def request_job(self):
         """

@@ -127,6 +127,10 @@ class Unit(Pickleable, Distributable):
         setattr(self, "run", Unit.measure_time(getattr(self, "run"),
                                                Unit.timers, self))
 
+    def __fini__(self):
+        if self.workflow:
+            self.workflow.del_ref(self)
+
     def __hash__(self):
         return id(self)
 
@@ -263,44 +267,6 @@ class Unit(Pickleable, Distributable):
         if src in self.links_from:
             del self.links_from[src]
         self.gate_lock_.release()
-
-    def generate_data_for_master_recursively(self):
-        """Do the depth search in the same order on master and slave.
-        """
-        self.applied_data_from_master_recursively = False
-        data = [self.generate_data_for_master()]
-        for dst in sorted(self.links_to.keys()):
-            data = data + dst.generate_data_for_master_recursively()
-        return data
-
-    def generate_data_for_slave_recursively(self):
-        """Do the depth search in the same order on master and slave.
-        """
-        self.applied_data_from_slave_recursively = False
-        data = [self.generate_data_for_slave()]
-        for dst in sorted(self.links_to.keys()):
-            data = data + dst.generate_data_for_slave_recursively()
-        return data
-
-    def apply_data_from_master_recursively(self, data):
-        """Do the depth search in the same order on master and slave.
-        """
-        if not self.applied_data_from_master_recursively:
-            self.apply_data_from_master(data[0])
-            self.applied_data_from_master_recursively = True
-            data = data[1:]
-        for dst in sorted(self.links_to.keys()):
-            dst.apply_data_from_master_recursively(data)
-
-    def apply_data_from_slave_recursively(self, data):
-        """Do the depth search in the same order on master and slave.
-        """
-        if not self.applied_data_from_slave_recursively:
-            self.apply_data_from_slave(data[0])
-            self.applied_data_from_slave_recursively = True
-            data = data[1:]
-        for dst in sorted(self.links_to.keys()):
-            dst.apply_data_from_slave_recursively(data)
 
     def nothing(self, *args, **kwargs):
         """Function that do nothing.
