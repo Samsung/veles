@@ -70,14 +70,6 @@ class Distributable():
         pass
 
 
-def callvle(var):
-    return var() if callable(var) else var
-
-
-global_lock = threading.Lock()
-pool = None
-
-
 class Unit(Pickleable, Distributable):
     """General unit in data stream model.
 
@@ -100,6 +92,10 @@ class Unit(Pickleable, Distributable):
         exports: list of attribute names to export
                  (None - unit is not exportable).
     """
+
+    pool = None
+    pool_lock = threading.Lock()
+
     def __init__(self, name=None):
         super(Unit, self).__init__()
         self.links_from = {}
@@ -115,22 +111,19 @@ class Unit(Pickleable, Distributable):
         self.applied_data_from_slave_recursively = False
 
     def init_unpickled(self):
-        global global_lock
         super(Unit, self).init_unpickled()
         self.gate_lock_ = threading.Lock()
         self.run_lock_ = threading.Lock()
         self.is_initialized = False
 
     def thread_pool(self):
-        global pool
-        global global_lock
-        global_lock.acquire()
+        Unit.pool_lock.acquire()
         try:
-            if pool == None:
-                pool = thread_pool.ThreadPool()
+            if Unit.pool == None:
+                Unit.pool = thread_pool.ThreadPool()
         finally:
-            global_lock.release()
-        return pool
+            Unit.pool_lock.release()
+        return Unit.pool
 
     def link_from(self, src):
         """Adds notification link.
@@ -138,16 +131,20 @@ class Unit(Pickleable, Distributable):
         self.links_from[src] = False
         src.links_to[self] = False
 
+    @staticmethod
+    def callvle(var):
+        return var() if callable(var) else var
+
     def check_gate_and_run(self, src):
         """Check gate state and run if it is open.
         """
         if not self.open_gate(src):  # gate has a priority over skip
             return
         # Optionally skip the execution
-        if ((callvle(self.gate_skip[0]) and
-             (not callvle(self.gate_skip_not[0]))) or
-            ((not callvle(self.gate_skip[0])) and
-             callvle(self.gate_skip_not[0]))):
+        if ((Unit.callvle(self.gate_skip[0]) and
+             (not Unit.callvle(self.gate_skip_not[0]))) or
+            ((not Unit.callvle(self.gate_skip[0])) and
+             Unit.callvle(self.gate_skip_not[0]))):
             self.run_dependent()
             return
         # If previous run has not yet finished, discard notification.
@@ -178,10 +175,10 @@ class Unit(Pickleable, Distributable):
         """Invokes run() on dependent units on different threads.
         """
         for dst in self.links_to.keys():
-            if ((callvle(dst.gate_block[0]) and
-                 (not callvle(dst.gate_block_not[0]))) or
-                ((not callvle(dst.gate_block[0])) and
-                 callvle(dst.gate_block_not[0]))):
+            if ((Unit.callvle(dst.gate_block[0]) and
+                 (not Unit.callvle(dst.gate_block_not[0]))) or
+                ((not Unit.callvle(dst.gate_block[0])) and
+                 Unit.callvle(dst.gate_block_not[0]))):
                 continue
             self.thread_pool().callInThread(dst.check_gate_and_run, self)
 
