@@ -104,7 +104,7 @@ class Unit(Pickleable, Distributable):
 
         return wrapped
 
-    def __init__(self, workflow=None, name=None, view_group=None):
+    def __init__(self, workflow, name=None, view_group=None):
         super(Unit, self).__init__()
         self.links_from = {}
         self.links_to = {}
@@ -338,7 +338,7 @@ class OpenCLUnit(Unit):
         cl_sources: OpenCL source files: file => defines.
         prg_src: last built OpenCL program source code text.
     """
-    def __init__(self, workflow=None, device=None, name=None, view_group=None):
+    def __init__(self, workflow, device=None, name=None, view_group=None):
         super(OpenCLUnit, self).__init__(workflow=workflow,
                                          name=name, view_group=view_group)
         self.device = device
