@@ -6,17 +6,18 @@ Units in data stream neural network_common model.
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
 from copy import copy
-import time
-import logger
-import threading
-import thread_pool
-import config
 import os
 from ply import lex
-import cpp
 import pyopencl
-import error
+import threading
+import time
 import traceback
+
+import config
+import cpp
+import error
+import logger
+import thread_pool
 
 
 class Pickleable(logger.Logger):
@@ -41,10 +42,8 @@ class Pickleable(logger.Logger):
         """
         state = {}
         for k, v in self.__dict__.items():
-            w = [None] if type(v) == list and len(v) == 1 and callable(v[0]) \
-                else v
-            if k[len(k) - 1] != "_":
-                state[k] = w
+            if k[len(k) - 1] != "_" and not callable(v):
+                state[k] = v
             else:
                 state[k] = None
         return state
@@ -93,8 +92,19 @@ class Unit(Pickleable, Distributable):
                  (None - unit is not exportable).
     """
 
-    pool = None
-    pool_lock = threading.Lock()
+    pool_ = None
+    pool_lock_ = threading.Lock()
+    timers = {}
+
+    @staticmethod
+    def measure_time(fn, storage, key):
+        def wrapped():
+            sp = time.time()
+            fn()
+            fp = time.time()
+            storage[key] += fp - sp
+
+        return wrapped
 
     def __init__(self, name=None):
         super(Unit, self).__init__()
@@ -109,21 +119,27 @@ class Unit(Pickleable, Distributable):
         self.view_group = None
         self.applied_data_from_master_recursively = False
         self.applied_data_from_slave_recursively = False
+        setattr(self, "run", Unit.measure_time(getattr(self, "run"),
+                                               Unit.timers, self))
+
+    def __hash__(self):
+        return id(self)
 
     def init_unpickled(self):
         super(Unit, self).init_unpickled()
         self.gate_lock_ = threading.Lock()
         self.run_lock_ = threading.Lock()
         self.is_initialized = False
+        Unit.timers[self] = 0
 
     def thread_pool(self):
-        Unit.pool_lock.acquire()
+        Unit.pool_lock_.acquire()
         try:
-            if Unit.pool == None:
-                Unit.pool = thread_pool.ThreadPool()
+            if Unit.pool_ == None:
+                Unit.pool_ = thread_pool.ThreadPool()
         finally:
-            Unit.pool_lock.release()
-        return Unit.pool
+            Unit.pool_lock_.release()
+        return Unit.pool_
 
     def link_from(self, src):
         """Adds notification link.
@@ -153,6 +169,8 @@ class Unit(Pickleable, Distributable):
         try:
             if not self.is_initialized:
                 self.initialize()
+                self.log().warning("%s is not initialized, performed the "
+                                   "initialization", self.name())
                 self.is_initialized = True
             self.run()
         finally:

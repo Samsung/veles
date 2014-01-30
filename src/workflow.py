@@ -46,6 +46,7 @@ class Workflow(units.Unit):
         if retval:
             return retval
         self.end_point.wait()
+        self.print_stats()
 
     def generate_data_for_master(self):
         return self.start_point.generate_data_for_master_recursively()
@@ -124,9 +125,23 @@ class Workflow(units.Unit):
                     boilerplate.add(link)
         if not filename:
             (_, filename) = tempfile.mkstemp(".png", "workflow_")
+        self.log().info("Saving the workflow graph to %s", filename)
         g.write(filename, format='png')
-        self.log().info("Saved the workflow graph to %s", filename)
         return g.to_string()
+
+    def print_stats(self, by_name=False, top_number=5):
+        timers = {}
+        for key, value in units.Unit.timers.items():
+            uid = key.__class__.__name__ if not by_name else key.name()
+            if id not in timers:
+                timers[uid] = 0
+            timers[uid] += value
+        stats = sorted(timers.items(), key=lambda x: x[1], reverse=True)
+        time_all = sum(timers.values())
+        self.log().info("Unit run time statistics top:")
+        for i in range(1, min(top_number, len(stats)) + 1):
+            self.log().info("%d.  %s (%d%%)", i, stats[i - 1][0],
+                            stats[i - 1][1] * 100 / time_all)
 
 
 class OpenCLWorkflow(units.OpenCLUnit, Workflow):
