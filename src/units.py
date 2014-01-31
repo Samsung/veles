@@ -117,7 +117,7 @@ class Unit(Pickleable, Distributable):
         if not hasattr(self, "workflow"):
             if workflow and isinstance(workflow, Unit):
                 self.workflow = workflow
-                workflow.add_ref(self)
+                self.workflow.add_ref(self)
             else:
                 self.workflow = None
                 self.log().warning("FIXME: workflow is not passed into "
