@@ -1,5 +1,3 @@
-#include "defines.cl"
-
 /// @brief Define for matrix multiplication.
 /// @author Kazantsev Alexey <a.kazantsev@samsung.com>
 /// @details Example of how to use:
@@ -36,16 +34,6 @@
 ///          The resulting sum will be in "sum[0]",
 ///          index in the resulting matrix will be in "idx",
 ///          "valid" will be set to true if "idx" is valid.
-#ifdef PREPROCESSOR
-#define BLOCK_SIZE 16
-#define A_WIDTH 512
-#define B_WIDTH 256
-#define AB_COMMON 131072
-#define A err_y
-#define B h
-#define C weights
-#endif
-
 
 #ifdef ALIGNED
 #undef ALIGNED
