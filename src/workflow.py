@@ -67,7 +67,7 @@ class Workflow(units.Unit):
             workflow.add_ref(self)
         super(Workflow, self).__init__(workflow=workflow, name=name,
                                        view_group=view_group)
-        self.units = []
+        self.units = set()
         self.start_point = StartPoint(self)
         self.end_point = EndPoint(self)
 
@@ -88,7 +88,7 @@ class Workflow(units.Unit):
         self.print_stats()
 
     def add_ref(self, unit):
-        self.units.append(unit)
+        self.units.add(unit)
         if self.workflow:
             self.workflow.add_ref(unit)
 
