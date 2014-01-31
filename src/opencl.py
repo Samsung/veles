@@ -5,18 +5,20 @@ OpenCL helper classes.
 
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
-import pyopencl
-import time
 import numpy
-import pickle
-import units
 import os
-import config
-import formats
-import rnd
-import traceback
+import pickle
+import pyopencl
 import sys
+import time
+import traceback
+
+import config
 import error
+import formats
+import graphics
+import rnd
+import units
 
 
 class DeviceInfo(object):
@@ -63,6 +65,8 @@ class Device(units.Pickleable):
     """
     def __init__(self):
         super(Device, self).__init__()
+        # Spawn new processes BEFORE any OpenCL initialization
+        graphics.Graphics.initialize()
         self._get_some_device()
         self._fill_device_info_performance_values()
         self.log().info("Will use the following device "

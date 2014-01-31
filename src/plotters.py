@@ -3,138 +3,17 @@ Created on May 17, 2013
 
 @author: Kumok Akim <a.kumok@samsung.com>
 """
-import matplotlib
-import matplotlib.pyplot as pp
-import matplotlib.patches as patches
-import matplotlib.lines as lines
-import matplotlib.cm as cm
-import pylab
-import units
-import tkinter
-from PyQt4 import QtGui, QtCore
-import queue
-import threading
 import numpy
-import logging
+import pylab
+
 import config
-import time
-import thread_pool
 import formats
-
-
-pp.ion()
-
-
-init_lock = threading.Lock()
-
-
-class Graphics:
-    """ Class handling all interaction with main graphics window
-        NOTE: This class should be created ONLY within one thread
-        (preferably main)
-
-    Attributes:
-        _instance: instance of MainGraphicsData class. Used for implementing
-            Singleton pattern for this class.
-        root: TKinter graphics root.
-        event_queue: Queue of all pending changes created by other threads.
-        run_lock: Lock to determine whether graphics window is running
-        registered_plotters: List of registered plotters
-        is_initialized: whether this class was already initialized.
-    """
-
-    _instance = None
-    root = None
-    event_queue = None
-    run_lock = None
-    registered_plotters = None
-    is_initialized = False
-
-    def __new__(cls):
-        if not cls._instance:
-            cls._instance = super(Graphics, cls).__new__(cls)
-        return cls._instance
-
-    def __init__(self):
-        global init_lock
-        init_lock.acquire()
-        if self.is_initialized:
-            init_lock.release()
-            return
-        self.run_lock = threading.Lock()
-        self.run_lock.acquire()
-        self.is_initialized = True
-        self.exiting = False
-        self.event_queue = queue.Queue()
-        self.initialize_lock = threading.Lock()
-        self.registered_plotters = {}
-        self.pool = thread_pool.ThreadPool()
-        self.pool.request(self.run)
-        self.pool.register_on_shutdown(self.on_shutdown)
-        init_lock.release()
-
-    def run(self):
-        """Creates and runs main graphics window.
-        Note that this function should be called only by __init__()
-        """
-        if pp.get_backend() == "TkAgg":
-            self.root = tkinter.Tk()
-            self.root.withdraw()
-            self.root.after(100, self.update)
-            tkinter.mainloop()  # Wait for user to close the window
-        elif pp.get_backend() == "Qt4Agg":
-            self.root = QtGui.QApplication([])
-            self.timer = QtCore.QTimer(self.root)
-            self.timer.timeout.connect(self.update)
-            self.timer.start(100)
-            self.root.exec_()
-        elif pp.get_backend() == "WebAgg":
-            self.exiting = False
-            self.showed = False
-            matplotlib.rcParams['webagg.port'] = 8888
-            matplotlib.rcParams['webagg.open_in_browser'] = 'False'
-            while not self.exiting:
-                self.update()
-                time.sleep(0.1)
-        self.run_lock.release()
-
-    def process_event(self, plotter):
-        """Processes scheduled redraw event
-        """
-        plotter.redraw_internal()
-
-    def update(self):
-        """Processes all events scheduled for plotting
-        """
-        try:
-            while True:
-                plotter = self.event_queue.get_nowait()
-                self.process_event(plotter)
-                if self.__dict__.get("showed") == False:
-                    self.showed = True
-                    self.pool.request(pp.show)
-        except queue.Empty:
-            pass
-        if pp.get_backend() == "TkAgg":
-            if not self.exiting:
-                self.root.after(100, self.update)
-            else:
-                logging.debug("Terminating the main loop.")
-                self.root.destroy()
-        if pp.get_backend() == "Qt4Agg" and self.exiting:
-            self.timer.stop()
-            logging.debug("Terminating the main loop.")
-            self.root.quit()
-
-    def on_shutdown(self):
-        self.exiting = True
-        logging.debug("Shutdown flag was raised.")
-
-    def wait_finish(self):
-        """Waits for user to close the window.
-        """
-        self.pool.shutdown()
-        logging.info("Done")
+from graphics import Graphics
+import matplotlib.cm as cm
+import matplotlib.lines as lines
+import matplotlib.patches as patches
+import matplotlib.pyplot as pp
+import units
 
 
 class Plotter(units.Unit):
@@ -143,30 +22,37 @@ class Plotter(units.Unit):
     Attributes:
         lock_: lock.
     """
+    server_shutdown_registered = False
+
     def __init__(self, workflow, device=None, name=None):
         super(Plotter, self).__init__(workflow=workflow, name=name,
                                       view_group="PLOTTER")
-        self.lock_.acquire()
-
-    def init_unpickled(self):
-        super(Plotter, self).init_unpickled()
-        self.lock_ = threading.Lock()
-
-    def redraw_internal(self):
-        """For internal purposes
-        """
-        if not config.plotters_disabled:
-            return self.redraw()
-        self.lock_.release()
+        if not Plotter.server_shutdown_registered:
+            self.thread_pool().register_on_shutdown(self.on_shutdown)
+            Plotter.server_shutdown_registered = True
 
     def redraw(self):
         """ Do the actual drawing here
         """
-        self.lock_.release()
+        pass
 
     def run(self):
-        Graphics().event_queue.put(self, block=True)
-        self.lock_.acquire()
+        if not config.plotters_disabled:
+            # strip the unit, removing any connections from the outside
+            backup_from = self.links_from
+            backup_to = self.links_to
+            backup_workflow = self.workflow
+            self.links_from = None
+            self.links_to = None
+            self.workflow = None
+            Graphics.enqueue(self)
+            self.links_from = backup_from
+            self.links_to = backup_to
+            self.workflow = backup_workflow
+
+    def on_shutdown(self):
+        self.log().debug("Waiting for the graphics server process to finish")
+        Graphics.shutdown()
 
 
 class SimplePlotter(Plotter):
@@ -477,8 +363,8 @@ class Weights2D(Plotter):
         n_rows = int(numpy.ceil(value.shape[0] / n_cols))
 
         i = 0
-        for row in range(0, n_rows):
-            for col in range(0, n_cols):
+        for _ in range(0, n_rows):
+            for _ in range(0, n_cols):
                 ax = figure.add_subplot(n_rows, n_cols, i + 1)
                 ax.cla()
                 ax.axis('off')
