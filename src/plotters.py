@@ -125,7 +125,7 @@ class Graphics(object):
         Note that this function should be called only by __init__()
         """
         self.logger.info("Plotters process is running")
-        self.event_queue = queue.Queue(2)
+        self.event_queue = queue.Queue(3)
         self.unpickler_thread = threading.Thread(target=self.unpickler)
         self.unpickler_thread.start()
         if pp.get_backend() == "TkAgg":
