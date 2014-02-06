@@ -148,6 +148,8 @@ test_dataset_root = "/data/veles"
 # : Disabled plotters or not (for benchmarking purposes)
 plotters_disabled = False
 
+# : If plotters.py is in server mode
+plotters_in_server_mode = False
 
 # : If the program has been run in slave mode
 is_slave = False
