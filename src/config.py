@@ -149,6 +149,10 @@ test_dataset_root = "/data/veles"
 plotters_disabled = False
 
 
+# : If the program has been run in slave mode
+is_slave = False
+
+
 # : Test opencl device for optimal BLOCK_SIZE or not
 test_known_device = False
 test_unknown_device = True

@@ -35,7 +35,7 @@ class Graphics(object):
     @staticmethod
     def initialize():
         if not Graphics.process:
-            Graphics.event_queue = mp.Queue()
+            Graphics.event_queue = mp.Queue(100)  # to prevent infinite queue
             """ TODO(v.markovtsev): solve the problem with matplotlib, ssh and
             multiprocessing - hangs on figure.show()
             """

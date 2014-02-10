@@ -22,16 +22,17 @@ import units
 
 
 class UttermostPoint(units.Unit):
-    def __init__(self, name, workflow):
-        super(UttermostPoint, self).__init__(name=name, view_group="START_END",
-                                             workflow=workflow)
+    def __init__(self, workflow, **kwargs):
+        kwargs["view_group"] = kwargs.get("view_group", "START_END")
+        super(UttermostPoint, self).__init__(workflow, **kwargs)
 
 
 class StartPoint(UttermostPoint):
     """Start point of a workflow execution.
     """
-    def __init__(self, workflow):
-        super(StartPoint, self).__init__(name="Start", workflow=workflow)
+    def __init__(self, workflow, **kwargs):
+        kwargs["name"] = kwargs.get("name", "Start")
+        super(StartPoint, self).__init__(workflow, **kwargs)
 
 
 class EndPoint(UttermostPoint):
@@ -40,8 +41,9 @@ class EndPoint(UttermostPoint):
     Attributes:
         sem_: semaphore.
     """
-    def __init__(self, workflow):
-        super(EndPoint, self).__init__(name="End", workflow=workflow)
+    def __init__(self, workflow, **kwargs):
+        kwargs["name"] = kwargs.get("name", "End")
+        super(EndPoint, self).__init__(workflow, **kwargs)
 
     def init_unpickled(self):
         super(EndPoint, self).init_unpickled()
@@ -61,12 +63,11 @@ class Workflow(units.Unit):
         start_point: start point.
         end_point: end point.
     """
-    def __init__(self, workflow=None, name=None, view_group=None):
+    def __init__(self, workflow, **kwargs):
         self.workflow = workflow
         if workflow:
             workflow.add_ref(self)
-        super(Workflow, self).__init__(workflow=workflow, name=name,
-                                       view_group=view_group)
+        super(Workflow, self).__init__(workflow, **kwargs)
         self.units = set()
         self.start_point = StartPoint(self)
         self.end_point = EndPoint(self)
@@ -212,10 +213,9 @@ class OpenCLWorkflow(units.OpenCLUnit, Workflow):
         decision: decision unit.
         gd: list of the gradient descent units.
     """
-    def __init__(self, workflow=None, device=None, name=None, view_group=None):
-        super(OpenCLWorkflow, self).__init__(workflow=workflow, device=device,
-                                             name=name, view_group=view_group)
-        self.rpt = units.Repeater(workflow=self)
+    def __init__(self, workflow, **kwargs):
+        super(OpenCLWorkflow, self).__init__(workflow, **kwargs)
+        self.rpt = units.Repeater(self)
         self.loader = None
         self.forward = []
         self.ev = None

@@ -12,38 +12,43 @@ import units
 
 
 class Plotter(units.Unit):
-    """Base class for all plotters
-
-    Attributes:
-        lock_: lock.
+    """Base class for all plotters.
     """
     server_shutdown_registered = False
 
-    def __init__(self, workflow, device=None, name=None):
-        super(Plotter, self).__init__(workflow=workflow, name=name,
-                                      view_group="PLOTTER")
-        if not Plotter.server_shutdown_registered:
+    def __init__(self, workflow, **kwargs):
+        device = kwargs.get("device")
+        name = kwargs.get("name")
+        view_group = kwargs.get("view_group", "PLOTTER")
+        kwargs["device"] = device
+        kwargs["name"] = name
+        kwargs["view_group"] = view_group
+        self.stripped_pickle = False
+        super(Plotter, self).__init__(workflow, **kwargs)
+        if (not config.plotters_disabled and
+            not Plotter.server_shutdown_registered):
             self.thread_pool().register_on_shutdown(self.on_shutdown)
             Plotter.server_shutdown_registered = True
+            Graphics.initialize()
 
     def redraw(self):
         """ Do the actual drawing here
         """
         pass
 
+    def __getstate__(self):
+        kv = super(Plotter, self).__getstate__()
+        if self.stripped_pickle:
+            kv["links_from"] = {}
+            kv["links_to"] = {}
+            kv["workflow"] = None
+        return kv
+
     def run(self):
         if not config.plotters_disabled:
-            # strip the unit, removing any connections from the outside
-            backup_from = self.links_from
-            backup_to = self.links_to
-            backup_workflow = self.workflow
-            self.links_from = None
-            self.links_to = None
-            self.workflow = None
+            self.stripped_pickle = True
             Graphics.enqueue(self)
-            self.links_from = backup_from
-            self.links_to = backup_to
-            self.workflow = backup_workflow
+            self.stripped_pickle = False
 
     def on_shutdown(self):
         self.log().debug("Waiting for the graphics server process to finish")
@@ -74,13 +79,18 @@ class SimplePlotter(Plotter):
         redraw_plot: will redraw plot at the end of redraw().
         ylim: bounds of plot y-axis.
     """
-    def __init__(self, workflow,
-                 name="Errors number",
-                 plot_style="k-",
-                 clear_plot=False,
-                 redraw_plot=False,
-                 ylim=None):
-        super(SimplePlotter, self).__init__(workflow=workflow, name=name)
+    def __init__(self, workflow, **kwargs):
+        name = kwargs.get("name", "Errors number")
+        plot_style = kwargs.get("plot_style", "k-")
+        clear_plot = kwargs.get("clear_plot", False)
+        redraw_plot = kwargs.get("redraw_plot", False)
+        ylim = kwargs.get("ylim")
+        kwargs["name"] = name
+        kwargs["plot_style"] = plot_style
+        kwargs["clear_plot"] = clear_plot
+        kwargs["redraw_plot"] = redraw_plot
+        kwargs["ylim"] = ylim
+        super(SimplePlotter, self).__init__(workflow, **kwargs)
         self.values = []
         self.input = None  # Connector
         self.input_field = None
@@ -132,8 +142,10 @@ class MatrixPlotter(Plotter):
     Creates within initialize():
 
     """
-    def __init__(self, workflow, name="Matrix"):
-        super(MatrixPlotter, self).__init__(workflow=workflow, name=name)
+    def __init__(self, workflow, **kwargs):
+        name = kwargs.get("name", "Matrix")
+        kwargs["name"] = name
+        super(MatrixPlotter, self).__init__(workflow, **kwargs)
         self.input = None  # Connector
         self.input_field = None
 
@@ -303,9 +315,15 @@ class Weights2D(Plotter):
     Creates within initialize():
 
     """
-    def __init__(self, workflow, name="Weights", limit=64, yuv=False):
-        super(Weights2D, self).__init__(workflow=workflow, name=name)
-        self.input = None  # Connector
+    def __init__(self, workflow, **kwargs):
+        name = kwargs.get("name", "Weights")
+        limit = kwargs.get("limit", 64)
+        yuv = kwargs.get("yuv", False)
+        kwargs["name"] = name
+        kwargs["limit"] = limit
+        kwargs["yuv"] = yuv
+        super(Weights2D, self).__init__(workflow, **kwargs)
+        self.input = None
         self.input_field = None
         self.get_shape_from = None
         self.limit = limit
@@ -404,8 +422,12 @@ class Image(Plotter):
     Creates within initialize():
 
     """
-    def __init__(self, workflow, name="Image", yuv=False):
-        super(Image, self).__init__(workflow=workflow, name=name)
+    def __init__(self, workflow, **kwargs):
+        name = kwargs.get("name", "Image")
+        yuv = kwargs.get("yuv", False)
+        kwargs["name"] = name
+        kwargs["yuv"] = yuv
+        super(Image, self).__init__(workflow, **kwargs)
         self.inputs = []
         self.input_fields = []
         self.yuv = [1 if yuv else 0]
@@ -496,8 +518,12 @@ class Plot(Plotter):
         input_styles: pyplot line styles for corresponding input.
         ylim: bounds of the plot y-axis.
     """
-    def __init__(self, workflow, name=None, ylim=None):
-        super(Plot, self).__init__(workflow=workflow, name=name)
+    def __init__(self, workflow, **kwargs):
+        name = kwargs.get("name")
+        ylim = kwargs.get("yuv")
+        kwargs["name"] = name
+        kwargs["ylim"] = ylim
+        super(Plot, self).__init__(workflow, **kwargs)
         self.inputs = []
         self.input_fields = []
         self.input_styles = []
@@ -537,8 +563,12 @@ class MSEHistogram(Plotter):
     Creates within initialize():
 
     """
-    def __init__(self, workflow, name="Histogram", n_bars=35):
-        super(MSEHistogram, self).__init__(workflow=workflow, name=name)
+    def __init__(self, workflow, **kwargs):
+        name = kwargs.get("name", "Histogram")
+        n_bars = kwargs.get("n_bars", 35)
+        kwargs["name"] = name
+        kwargs["n_bars"] = n_bars
+        super(MSEHistogram, self).__init__(workflow, **kwargs)
         self.val_mse = None
         self.mse_min = None
         self.mse_max = None
