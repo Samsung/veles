@@ -1,25 +1,8 @@
-#!/usr/bin/python3.3 -O
 """
 Created on May 17, 2013
 
 @author: Kumok Akim <a.kumok@samsung.com>
 """
-import sys
-import os
-
-
-def add_path(path):
-    if path not in sys.path:
-        sys.path.append(path)
-
-
-this_dir = os.path.dirname(__file__)
-if not this_dir:
-    this_dir = "."
-add_path(this_dir)
-add_path("%s/../Znicz" % (this_dir))
-
-
 import numpy
 import pylab
 import config
@@ -36,7 +19,9 @@ import matplotlib
 import queue
 import time
 import tkinter
+import os
 import threading
+import sys
 
 
 class Graphics(object):
@@ -57,7 +42,8 @@ class Graphics(object):
     _instance = None
     lock_pickle = threading.Lock()
     lock_unpickle = threading.Lock()
-    pipe = None
+    pipe_read = None
+    pipe_write = None
     child_pid = 0
 
     @staticmethod
@@ -65,16 +51,15 @@ class Graphics(object):
         if Graphics.child_pid != 0:
             return
         pipe_read, pipe_write = os.pipe()
+        Graphics.pipe_read = os.fdopen(pipe_read, "rb")
+        Graphics.pipe_write = os.fdopen(pipe_write, "wb")
         pid = os.fork()
         if pid == -1:
             raise Exception("fork() failed")
         if pid == 0:
-            os.close(pipe_write)
             pp.ion()
-            Graphics.server_entry(pipe_read)
+            Graphics.server_entry()
             return
-        os.close(pipe_read)
-        Graphics.pipe = os.fdopen(pipe_write, "wb")
         Graphics.child_pid = pid
 
     @staticmethod
@@ -82,27 +67,23 @@ class Graphics(object):
         if Graphics.child_pid == 0:
             raise RuntimeError("Graphics is not initialized")
         Graphics.lock_pickle.acquire()
-        pickle.dump(obj, Graphics.pipe)
+        pickle.dump(obj, Graphics.pipe_write)
         Graphics.lock_pickle.release()
 
     @staticmethod
-    def server_entry(pipe_read):
-        os.execlp(__file__, __file__, "-pipe_read", "%d" % (pipe_read))
-        logging.error("execlp() failed")
-        os._exit(1)
-
-    @staticmethod
-    def client_entry(pipe_read):
-        Graphics.pipe = os.fdopen(pipe_read, "rb")
+    def server_entry():
         Graphics().run()
 
     @staticmethod
     def shutdown():
-        if Graphics.pipe == None:
+        if Graphics.pipe_read == None:
             return
-        pipe = Graphics.pipe
-        Graphics.pipe = None
-        pipe.close()
+        Graphics.enqueue(None)
+        pipe_read = Graphics.pipe_read
+        Graphics.pipe_read = None
+        pipe_read.close()
+        Graphics.pipe_write.close()
+        Graphics.pipe_write = None
         if Graphics.child_pid != 0:
             logging.info("Waiting for plotters process to exit (pid=%d)" % (
                                                         Graphics.child_pid))
@@ -124,10 +105,9 @@ class Graphics(object):
         """Creates and runs main graphics window.
         Note that this function should be called only by __init__()
         """
-        self.logger.info("Plotters process is running")
+        self.logger.info("Server is running")
         self.event_queue = queue.Queue(2)
-        self.unpickler_thread = threading.Thread(target=self.unpickler)
-        self.unpickler_thread.start()
+        threading.Thread(target=self.unpickler).start()
         if pp.get_backend() == "TkAgg":
             self.root = tkinter.Tk()
             self.root.withdraw()
@@ -145,21 +125,24 @@ class Graphics(object):
             while not self.exiting:
                 self.update()
                 time.sleep(0.1)
+        os._exit(0)
 
     def unpickler(self):
         try:
             while not self.exiting:
                 Graphics.lock_unpickle.acquire()
-                plotter = pickle.load(Graphics.pipe)
+                plotter = pickle.load(Graphics.pipe_read)
                 Graphics.lock_unpickle.release()
                 self.event_queue.put(plotter)
-        except EOFError:
+        except OSError:
             Graphics.lock_unpickle.release()
             self.exiting = True
-        if Graphics.pipe != None:
-            pipe = Graphics.pipe
-            Graphics.pipe = None
-            pipe.close()
+        if Graphics.pipe_read != None:
+            pipe_read = Graphics.pipe_read
+            Graphics.pipe_read = None
+            pipe_read.close()
+            Graphics.pipe_write.close()
+            Graphics.pipe_write = None
 
     def update(self):
         """Processes all events scheduled for plotting
@@ -168,6 +151,9 @@ class Graphics(object):
             processed = set()
             while True:
                 plotter = self.event_queue.get_nowait()
+                if plotter == None:
+                    self.exiting = True
+                    break
                 if plotter in processed:
                     continue
                 processed.add(plotter)
@@ -181,22 +167,22 @@ class Graphics(object):
             if not self.exiting:
                 self.root.after(100, self.update)
             else:
-                self.logger.info("Ending TkAgg loop")
+                os._exit(0)
+                self.logger.debug("Terminating the main loop.")
                 self.root.destroy()
-                self.logger.info("TkAgg loop has ended")
         if pp.get_backend() == "Qt4Agg" and self.exiting:
-            self.logger.info("Ending Qt4Agg loop")
+            os._exit(0)
             self.timer.stop()
+            self.logger.debug("Terminating the main loop.")
             self.root.quit()
-            self.logger.info("Qt4Agg loop has ended")
         if self.exiting:
-            if Graphics.pipe != None:
-                pipe = Graphics.pipe
-                Graphics.pipe = None
-                pipe.close()
-            self.logger.info("Waiting for unpickler thread to exit")
-            self.unpickler_thread.join()
-            self.logger.info("Unpickler thread has exited")
+            if Graphics.pipe_read != None:
+                pipe_read = Graphics.pipe_read
+                Graphics.pipe_read = None
+                pipe_read.close()
+                Graphics.pipe_write.close()
+                Graphics.pipe_write = None
+                os._exit(0)
 
 
 class Plotter(units.Unit):
@@ -857,21 +843,7 @@ class MSEHistogram(Plotter):
         super(MSEHistogram, self).run()
 
 
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-pipe_read", type=int, default=-1,
-        help="System file number of the read's end of the pipe.")
-    args = parser.parse_args()
-    logging.basicConfig(level=logging.DEBUG)
-
-    # To prevent double import upon unpickle
-    config.plotters_in_server_mode = True
-
-    Graphics.client_entry(args.pipe_read)
-    sys.exit(0)
-elif not config.plotters_in_server_mode:
-    # Spawn the new process on import
-    Graphics.initialize()
-    # Register shutdown on thread pool by creating dummy Plotter object
-    Plotter(None)
+# Spawn the new process on import
+Graphics.initialize()
+# Register shutdown on thread pool by creating dummy Plotter object
+dummy = Plotter(None)
