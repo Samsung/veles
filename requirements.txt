@@ -7,3 +7,4 @@ PyQt4>=4.10.3
 Pillow>=2.0.0
 twisted>=13.0.0
 ply>=3.4
+paramiko>=1.11.0

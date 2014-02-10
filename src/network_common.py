@@ -23,12 +23,12 @@ class NetworkConfigurable(object):
         cf = open(config_file, "r")
         txt = cf.read()
         cf.close()
-        options = eval(txt)
-        if not isinstance(options, dict):
+        self.options = eval(txt)
+        if not isinstance(self.options, dict):
             raise RuntimeError("Corrupted network configuration file %s." %
                                config_file)
-        self.address = options[NetworkConfigurable.CONFIG_ADDRESS]
-        self.port = options[NetworkConfigurable.CONFIG_PORT]
+        self.address = self.options[NetworkConfigurable.CONFIG_ADDRESS]
+        self.port = self.options[NetworkConfigurable.CONFIG_PORT]
         logging.info("Network configuration:    %s:%d",
                      self.address, self.port)
 

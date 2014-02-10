@@ -10,8 +10,10 @@ import logging
 from twisted.internet import reactor, threads
 from twisted.internet.protocol import Factory
 import uuid
+import sys
 
 import network_common
+import node_launcher
 
 
 def onFSMStateChanged(e):
@@ -195,6 +197,10 @@ class Server(network_common.NetworkConfigurable):
         super(Server, self).__init__(config_file)
         self.factory = VelesProtocolFactory(host)
         reactor.listenTCP(self.port, self.factory)
+
+    def launch_nodes(self):
+        for node in self.options["nodes"]:
+            node_launcher.launch_node(node, " ".join(sys.argv))
 
     def run(self):
         reactor.run()
