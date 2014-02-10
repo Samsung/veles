@@ -16,12 +16,46 @@ import traceback
 import config
 import cpp
 import error
+import logger
 import thread_pool
 
-from logger import Pickleable
+
+class Pickleable(logger.Logger):
+    """Will save attributes ending with _ as None when pickling and will call
+    constructor upon unpickling.
+    """
+    def __init__(self):
+        """Calls init_unpickled() to initialize the attributes which are not
+        pickled.
+        """
+        super(Pickleable, self).__init__()
+        # self.init_unpickled()  # already called in Logger()
+
+    """This function is called if the object has just been unpickled.
+    """
+    def init_unpickled(self):
+        if hasattr(super(Pickleable, self), "init_unpickled"):
+            super(Pickleable, self).init_unpickled()
+
+    def __getstate__(self):
+        """Selects the attributes to pickle.
+        """
+        state = {}
+        for k, v in self.__dict__.items():
+            if k[len(k) - 1] != "_" and not callable(v):
+                state[k] = v
+            else:
+                state[k] = None
+        return state
+
+    def __setstate__(self, state):
+        """Recovers the object after unpickling.
+        """
+        self.__dict__.update(state)
+        self.init_unpickled()
 
 
-class Distributable(object):
+class Distributable():
     def generate_data_for_master(self):
         return None
 
@@ -70,12 +104,7 @@ class Unit(Pickleable, Distributable):
 
         return wrapped
 
-    def __init__(self, workflow, **kwargs):
-        if workflow != None and not isinstance(workflow, Unit):
-            raise error.VelesException(
-                "workflow parameter is not a Unit object")
-        name = kwargs.get("name")
-        view_group = kwargs.get("view_group")
+    def __init__(self, workflow, name=None, view_group=None):
         super(Unit, self).__init__()
         self.links_from = {}
         self.links_to = {}
@@ -85,16 +114,21 @@ class Unit(Pickleable, Distributable):
         self.gate_skip_not = [0]
         self.individual_name = name
         self.view_group = view_group
-        self.workflow = workflow
-        if self.workflow != None:
-            self.workflow.add_ref(self)
+        if not hasattr(self, "workflow"):
+            if workflow and isinstance(workflow, Unit):
+                self.workflow = workflow
+                self.workflow.add_ref(self)
+            else:
+                self.workflow = None
+                self.log().warning("FIXME: workflow is not passed into "
+                                   "__init__")
         self.applied_data_from_master_recursively = False
         self.applied_data_from_slave_recursively = False
         setattr(self, "run", Unit.measure_time(getattr(self, "run"),
                                                Unit.timers, self))
 
     def __fini__(self):
-        if self.workflow != None:
+        if self.workflow:
             self.workflow.del_ref(self)
 
     def __hash__(self):
@@ -270,10 +304,9 @@ class OpenCLUnit(Unit):
         cl_sources: OpenCL source files: file => defines.
         prg_src: last built OpenCL program source code text.
     """
-    def __init__(self, workflow, **kwargs):
-        device = kwargs.get("device")
-        kwargs["device"] = device
-        super(OpenCLUnit, self).__init__(workflow, **kwargs)
+    def __init__(self, workflow, device=None, name=None, view_group=None):
+        super(OpenCLUnit, self).__init__(workflow=workflow,
+                                         name=name, view_group=view_group)
         self.device = device
         self.prg_src = None
 
@@ -414,9 +447,9 @@ class Repeater(Unit):
     TODO(v.markovtsev): add more detailed description
     """
 
-    def __init__(self, workflow, **kwargs):
-        kwargs["view_group"] = kwargs.get("view_group", "PLUMBING")
-        super(Repeater, self).__init__(workflow, **kwargs)
+    def __init__(self, workflow, name=None):
+        super(Repeater, self).__init__(workflow=workflow,
+                                       name=name, view_group="PLUMBING")
 
     def open_gate(self, src):
         """Gate is always open.

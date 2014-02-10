@@ -5,195 +5,28 @@ Created on May 17, 2013
 """
 import numpy
 import pylab
+
 import config
 import formats
+from graphics import Graphics
 import matplotlib.cm as cm
 import matplotlib.lines as lines
 import matplotlib.patches as patches
 import matplotlib.pyplot as pp
 import units
-import pickle
-from PyQt4 import QtGui, QtCore
-import logging
-import matplotlib
-import queue
-import time
-import tkinter
-import os
-import threading
-import sys
-
-
-class Graphics(object):
-    """ Class handling all interaction with main graphics window
-        NOTE: This class should be created ONLY within one thread
-        (preferably main)
-
-    Attributes:
-        _instance: instance of Graphics class. Used for implementing
-            Singleton pattern for this class.
-        root: TKinter graphics root.
-        event_queue: Queue of all pending changes created by other threads.
-        run_lock: Lock to determine whether graphics window is running
-        registered_plotters: List of registered plotters
-        is_initialized: whether this class was already initialized.
-    """
-
-    _instance = None
-    lock_pickle = threading.Lock()
-    lock_unpickle = threading.Lock()
-    pipe_read = None
-    pipe_write = None
-    child_pid = 0
-
-    @staticmethod
-    def initialize():
-        if Graphics.child_pid != 0:
-            return
-        pipe_read, pipe_write = os.pipe()
-        Graphics.pipe_read = os.fdopen(pipe_read, "rb")
-        Graphics.pipe_write = os.fdopen(pipe_write, "wb")
-        pid = os.fork()
-        if pid == -1:
-            raise Exception("fork() failed")
-        if pid == 0:
-            pp.ion()
-            Graphics.server_entry()
-            return
-        Graphics.child_pid = pid
-
-    @staticmethod
-    def enqueue(obj):
-        if Graphics.child_pid == 0:
-            raise RuntimeError("Graphics is not initialized")
-        Graphics.lock_pickle.acquire()
-        pickle.dump(obj, Graphics.pipe_write)
-        Graphics.lock_pickle.release()
-
-    @staticmethod
-    def server_entry():
-        Graphics().run()
-
-    @staticmethod
-    def shutdown():
-        if Graphics.pipe_read == None:
-            return
-        Graphics.enqueue(None)
-        pipe_read = Graphics.pipe_read
-        Graphics.pipe_read = None
-        pipe_read.close()
-        Graphics.pipe_write.close()
-        Graphics.pipe_write = None
-        if Graphics.child_pid != 0:
-            logging.info("Waiting for plotters process to exit (pid=%d)" % (
-                                                        Graphics.child_pid))
-            os.waitpid(Graphics.child_pid, 0)
-            logging.info("Plotters process has exited")
-
-    def __new__(cls):
-        if not cls._instance:
-            cls._instance = super(Graphics, cls).__new__(cls)
-        return cls._instance
-
-    def __init__(self):
-        self.exiting = False
-        self.showed = False
-        self.root = None
-        self.logger = logging.getLogger(self.__class__.__name__)
-
-    def run(self):
-        """Creates and runs main graphics window.
-        Note that this function should be called only by __init__()
-        """
-        self.logger.info("Server is running")
-        self.event_queue = queue.Queue(2)
-        threading.Thread(target=self.unpickler).start()
-        if pp.get_backend() == "TkAgg":
-            self.root = tkinter.Tk()
-            self.root.withdraw()
-            self.root.after(100, self.update)
-            tkinter.mainloop()
-        elif pp.get_backend() == "Qt4Agg":
-            self.root = QtGui.QApplication([])
-            self.timer = QtCore.QTimer(self.root)
-            self.timer.timeout.connect(self.update)
-            self.timer.start(100)
-            self.root.exec_()
-        elif pp.get_backend() == "WebAgg":
-            matplotlib.rcParams['webagg.port'] = 8888
-            matplotlib.rcParams['webagg.open_in_browser'] = 'False'
-            while not self.exiting:
-                self.update()
-                time.sleep(0.1)
-        os._exit(0)
-
-    def unpickler(self):
-        try:
-            while not self.exiting:
-                Graphics.lock_unpickle.acquire()
-                plotter = pickle.load(Graphics.pipe_read)
-                Graphics.lock_unpickle.release()
-                self.event_queue.put(plotter)
-        except OSError:
-            Graphics.lock_unpickle.release()
-            self.exiting = True
-        if Graphics.pipe_read != None:
-            pipe_read = Graphics.pipe_read
-            Graphics.pipe_read = None
-            pipe_read.close()
-            Graphics.pipe_write.close()
-            Graphics.pipe_write = None
-
-    def update(self):
-        """Processes all events scheduled for plotting
-        """
-        try:
-            processed = set()
-            while True:
-                plotter = self.event_queue.get_nowait()
-                if plotter == None:
-                    self.exiting = True
-                    break
-                if plotter in processed:
-                    continue
-                processed.add(plotter)
-                plotter.redraw()
-                if pp.get_backend() == "WebAgg" and not self.showed:
-                    self.showed = True
-                    pp.show()
-        except queue.Empty:
-            pass
-        if pp.get_backend() == "TkAgg":
-            if not self.exiting:
-                self.root.after(100, self.update)
-            else:
-                os._exit(0)
-                self.logger.debug("Terminating the main loop.")
-                self.root.destroy()
-        if pp.get_backend() == "Qt4Agg" and self.exiting:
-            os._exit(0)
-            self.timer.stop()
-            self.logger.debug("Terminating the main loop.")
-            self.root.quit()
-        if self.exiting:
-            if Graphics.pipe_read != None:
-                pipe_read = Graphics.pipe_read
-                Graphics.pipe_read = None
-                pipe_read.close()
-                Graphics.pipe_write.close()
-                Graphics.pipe_write = None
-                os._exit(0)
 
 
 class Plotter(units.Unit):
     """Base class for all plotters
+
+    Attributes:
+        lock_: lock.
     """
     server_shutdown_registered = False
 
-    def __init__(self, workflow, **kwargs):
-        kwargs["view_group"] = kwargs.get("view_group", "PLOTTER")
-        super(Plotter, self).__init__(workflow, **kwargs)
-        self.stripped_pickle = False
+    def __init__(self, workflow, device=None, name=None):
+        super(Plotter, self).__init__(workflow=workflow, name=name,
+                                      view_group="PLOTTER")
         if not Plotter.server_shutdown_registered:
             self.thread_pool().register_on_shutdown(self.on_shutdown)
             Plotter.server_shutdown_registered = True
@@ -203,19 +36,19 @@ class Plotter(units.Unit):
         """
         pass
 
-    def __getstate__(self):
-        kv = super(Plotter, self).__getstate__()
-        if self.stripped_pickle:
-            kv["links_from"] = {}
-            kv["links_to"] = {}
-            kv["workflow"] = None
-        return kv
-
     def run(self):
         if not config.plotters_disabled:
-            self.stripped_pickle = True
+            # strip the unit, removing any connections from the outside
+            backup_from = self.links_from
+            backup_to = self.links_to
+            backup_workflow = self.workflow
+            self.links_from = None
+            self.links_to = None
+            self.workflow = None
             Graphics.enqueue(self)
-            self.stripped_pickle = False
+            self.links_from = backup_from
+            self.links_to = backup_to
+            self.workflow = backup_workflow
 
     def on_shutdown(self):
         self.log().debug("Waiting for the graphics server process to finish")
@@ -246,18 +79,13 @@ class SimplePlotter(Plotter):
         redraw_plot: will redraw plot at the end of redraw().
         ylim: bounds of plot y-axis.
     """
-    def __init__(self, workflow, **kwargs):
-        name = kwargs.get("name", "Errors number")
-        plot_style = kwargs.get("plot_style", "k-")
-        clear_plot = kwargs.get("clear_plot", False)
-        redraw_plot = kwargs.get("redraw_plot", False)
-        ylim = kwargs.get("ylim")
-        kwargs["name"] = name
-        kwargs["plot_style"] = plot_style
-        kwargs["clear_plot"] = clear_plot
-        kwargs["redraw_plot"] = redraw_plot
-        kwargs["ylim"] = ylim
-        super(SimplePlotter, self).__init__(workflow, **kwargs)
+    def __init__(self, workflow,
+                 name="Errors number",
+                 plot_style="k-",
+                 clear_plot=False,
+                 redraw_plot=False,
+                 ylim=None):
+        super(SimplePlotter, self).__init__(workflow=workflow, name=name)
         self.values = []
         self.input = None  # Connector
         self.input_field = None
@@ -307,10 +135,8 @@ class MatrixPlotter(Plotter):
     Creates within initialize():
 
     """
-    def __init__(self, workflow, **kwargs):
-        name = kwargs.get("name", "Matrix")
-        kwargs["name"] = name
-        super(MatrixPlotter, self).__init__(workflow, **kwargs)
+    def __init__(self, workflow, name="Matrix"):
+        super(MatrixPlotter, self).__init__(workflow=workflow, name=name)
         self.input = None  # Connector
         self.input_field = None
 
@@ -480,14 +306,8 @@ class Weights2D(Plotter):
     Creates within initialize():
 
     """
-    def __init__(self, workflow, **kwargs):
-        name = kwargs.get("name", "Weights")
-        limit = kwargs.get("limit", 64)
-        yuv = kwargs.get("yuv", False)
-        kwargs["name"] = name
-        kwargs["limit"] = limit
-        kwargs["yuv"] = yuv
-        super(Weights2D, self).__init__(workflow, **kwargs)
+    def __init__(self, workflow, name="Weights", limit=64, yuv=False):
+        super(Weights2D, self).__init__(workflow=workflow, name=name)
         self.input = None  # Connector
         self.input_field = None
         self.get_shape_from = None
@@ -587,12 +407,8 @@ class Image(Plotter):
     Creates within initialize():
 
     """
-    def __init__(self, workflow, **kwargs):
-        name = kwargs.get("name", "Image")
-        yuv = kwargs.get("yuv", False)
-        kwargs["name"] = name
-        kwargs["yuv"] = yuv
-        super(Image, self).__init__(workflow, **kwargs)
+    def __init__(self, workflow, name="Image", yuv=False):
+        super(Image, self).__init__(workflow=workflow, name=name)
         self.inputs = []
         self.input_fields = []
         self.yuv = [1 if yuv else 0]
@@ -683,12 +499,8 @@ class Plot(Plotter):
         input_styles: pyplot line styles for corresponding input.
         ylim: bounds of the plot y-axis.
     """
-    def __init__(self, workflow, **kwargs):
-        name = kwargs.get("name")
-        ylim = kwargs.get("yuv")
-        kwargs["name"] = name
-        kwargs["ylim"] = ylim
-        super(Plot, self).__init__(workflow, **kwargs)
+    def __init__(self, workflow, name=None, ylim=None):
+        super(Plot, self).__init__(workflow=workflow, name=name)
         self.inputs = []
         self.input_fields = []
         self.input_styles = []
@@ -728,12 +540,8 @@ class MSEHistogram(Plotter):
     Creates within initialize():
 
     """
-    def __init__(self, workflow, **kwargs):
-        name = kwargs.get("name", "Histogram")
-        n_bars = kwargs.get("n_bars", 35)
-        kwargs["name"] = name
-        kwargs["n_bars"] = n_bars
-        super(MSEHistogram, self).__init__(workflow, **kwargs)
+    def __init__(self, workflow, name="Histogram", n_bars=35):
+        super(MSEHistogram, self).__init__(workflow=workflow, name=name)
         self.val_mse = None
         self.mse_min = None
         self.mse_max = None
@@ -841,9 +649,3 @@ class MSEHistogram(Plotter):
         self.val_min = self.val_mse.min()
 
         super(MSEHistogram, self).run()
-
-
-# Spawn the new process on import
-Graphics.initialize()
-# Register shutdown on thread pool by creating dummy Plotter object
-dummy = Plotter(None)

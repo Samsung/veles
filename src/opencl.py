@@ -16,6 +16,7 @@ import traceback
 import config
 import error
 import formats
+import graphics
 import rnd
 import units
 
@@ -64,6 +65,8 @@ class Device(units.Pickleable):
     """
     def __init__(self):
         super(Device, self).__init__()
+        # Spawn new processes BEFORE any OpenCL initialization
+        graphics.Graphics.initialize()
         self._get_some_device()
         self._fill_device_info_performance_values()
         self.log().info("Will use the following device "
