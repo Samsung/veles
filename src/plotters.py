@@ -4,15 +4,10 @@ Created on May 17, 2013
 @author: Kumok Akim <a.kumok@samsung.com>
 """
 import numpy
-import pylab
 
 import config
 import formats
 from graphics import Graphics
-import matplotlib.cm as cm
-import matplotlib.lines as lines
-import matplotlib.patches as patches
-import matplotlib.pyplot as pp
 import units
 
 
@@ -96,7 +91,8 @@ class SimplePlotter(Plotter):
         self.ylim = ylim
 
     def redraw(self):
-        figure = pp.figure(self.name())
+        Graphics().pp.ioff()
+        figure = Graphics().pp.figure(self.name())
         if self.clear_plot:
             figure.clf()
         axes = figure.add_subplot(111)  # Main axes
@@ -105,6 +101,7 @@ class SimplePlotter(Plotter):
         if self.ylim != None:
             axes.set_ylim(self.ylim[0], self.ylim[1])
         axes.plot(self.values, self.plot_style)
+        Graphics().pp.ion()
         figure.show()
         if self.redraw_plot:
             figure.canvas.draw()
@@ -141,6 +138,7 @@ class MatrixPlotter(Plotter):
         self.input_field = None
 
     def redraw(self):
+        Graphics().pp.ioff()
         if type(self.input_field) == int:
             if self.input_field < 0 or self.input_field >= len(self.input):
                 return
@@ -148,31 +146,30 @@ class MatrixPlotter(Plotter):
         else:
             value = self.input.__dict__[self.input_field]
 
-        figure = pp.figure(self.name())
+        figure = Graphics().pp.figure(self.name())
         figure.clf()
         num_rows = len(value) + 2
         num_columns = len(value[0]) + 2
 
         main_axes = figure.add_axes([0, 0, 1, 1])
         main_axes.cla()
-
         # First cell color
-        rc = patches.Rectangle(
+        rc = Graphics().patches.Rectangle(
             (0, (num_rows - 1) / num_rows),
             1.0 / num_rows, 1.0 / num_columns, color='gray')
         main_axes.add_patch(rc)
         # First row last cell color
-        rc = patches.Rectangle(
+        rc = Graphics().patches.Rectangle(
             ((num_columns - 1) / num_columns, (num_rows - 1) / num_rows),
             1.0 / num_rows, 1.0 / num_columns, color='gray')
         main_axes.add_patch(rc)
         # First column last cell color
-        rc = patches.Rectangle(
+        rc = Graphics().patches.Rectangle(
             (0, 0),
             1.0 / num_rows, 1.0 / num_columns, color='gray')
         main_axes.add_patch(rc)
         # Last cell color
-        rc = patches.Rectangle(
+        rc = Graphics().patches.Rectangle(
             ((num_columns - 1) / num_columns, 0),
             1.0 / num_rows, 1.0 / num_columns, color='silver')
         main_axes.add_patch(rc)
@@ -202,47 +199,46 @@ class MatrixPlotter(Plotter):
                         color = "#FF%02X%02X" % (v, v)
                     else:
                         color = 'green'
-                rc = patches.Rectangle(
+                rc = Graphics().patches.Rectangle(
                     (column / num_columns, (num_rows - row - 1) / num_rows),
                     1.0 / num_rows, 1.0 / num_columns, color=color)
                 main_axes.add_patch(rc)
 
         for row in range(num_rows):
             y = row / num_rows
-            main_axes.add_line(lines.Line2D([0, 1], [y, y]))
+            main_axes.add_line(Graphics().lines.Line2D([0, 1], [y, y]))
         for column in range(num_columns):
             x = column / num_columns
-            main_axes.add_line(lines.Line2D([x, x], [0, 1]))
+            main_axes.add_line(Graphics().lines.Line2D([x, x], [0, 1]))
 
         # First cell
         column = 0
         row = 0
-        pp.figtext(label="0",
+        Graphics().pp.figtext(label="0",
             s="target",
             x=(column + 0.9) / num_columns,
             y=(num_rows - row - 0.33) / num_rows,
             verticalalignment="center",
             horizontalalignment="right")
-        pp.figtext(label="0",
+        Graphics().pp.figtext(label="0",
             s="value",
             x=(column + 0.1) / num_columns,
             y=(num_rows - row - 0.66) / num_rows,
             verticalalignment="center",
             horizontalalignment="left")
-
         # Headers in first row
         row = 0
         for column in range(1, num_columns - 1):
-            pp.figtext(label=("C%d" % (column - 1)),
+            Graphics().pp.figtext(label=("C%d" % (column - 1)),
                             s=(column - 1),
                             x=(column + 0.5) / num_columns,
                             y=(num_rows - row - 0.5) / num_rows,
                             verticalalignment="center",
                             horizontalalignment="center")
-        # Headers in first column
+                # Headers in first column
         column = 0
         for row in range(1, num_rows - 1):
-            pp.figtext(label=("R%d" % (row - 1)),
+            Graphics().pp.figtext(label=("R%d" % (row - 1)),
                             s=(row - 1),
                             x=(column + 0.5) / num_columns,
                             y=(num_rows - row - 0.5) / num_rows,
@@ -255,14 +251,14 @@ class MatrixPlotter(Plotter):
                 n = sum_total
                 pt_total = 100.0 * n_elem / n if n else 0
                 label = "%d as %d" % (column - 1, row - 1)
-                pp.figtext(
+                Graphics().pp.figtext(
                     label=label,
                     s=n_elem,
                     x=(column + 0.5) / num_columns,
                     y=(num_rows - row - 0.33) / num_rows,
                     verticalalignment="center",
                     horizontalalignment="center")
-                pp.figtext(
+                Graphics().pp.figtext(
                     label=label,
                     s=("%.2f%%" % (pt_total)),
                     x=(column + 0.5) / num_columns,
@@ -275,20 +271,21 @@ class MatrixPlotter(Plotter):
         label = "Totals"
         row = num_rows - 1
         column = num_columns - 1
-        pp.figtext(
+        Graphics().pp.figtext(
             label=label,
             s=sum_ok,
             x=(column + 0.5) / num_columns,
             y=(num_rows - row - 0.33) / num_rows,
             verticalalignment="center",
             horizontalalignment="center")
-        pp.figtext(
+        Graphics().pp.figtext(
             label=label,
             s=("%.2f%%" % (pt_total)),
             x=(column + 0.5) / num_columns,
             y=(num_rows - row - 0.66) / num_rows,
             verticalalignment="center",
             horizontalalignment="center")
+        Graphics().pp.ion()
         figure.show()
         figure.canvas.draw()
         super(MatrixPlotter, self).redraw()
@@ -332,7 +329,7 @@ class Weights2D(Plotter):
         if value.shape[0] > self.limit:
             value = value[:self.limit]
 
-        figure = pp.figure(self.name())
+        figure = Graphics().pp.figure(self.name())
         figure.clf()
 
         color = False
@@ -382,7 +379,7 @@ class Weights2D(Plotter):
                 else:
                     ax.imshow(formats.norm_image(v.reshape(sy, sx),
                                                  self.yuv[0]),
-                              interpolation="nearest", cmap=cm.gray)
+                              interpolation="nearest", cmap=Graphics().cm.gray)
                 i += 1
                 if i >= value.shape[0]:
                     break
@@ -457,10 +454,10 @@ class Image(Plotter):
                       interpolation="nearest")
         else:
             ax.imshow(formats.norm_image(w, self.yuv[0]),
-                      interpolation="nearest", cmap=cm.gray)
+                      interpolation="nearest", cmap=dgray)
 
     def redraw(self):
-        figure = pp.figure(self.name())
+        figure = Graphics().pp.figure(self.name())
         figure.clf()
 
         for i, input_field in enumerate(self.input_fields):
@@ -507,7 +504,7 @@ class Plot(Plotter):
         self.ylim = ylim
 
     def redraw(self):
-        figure = pp.figure(self.name())
+        figure = Graphics().pp.figure(self.name())
         figure.clf()
         ax = figure.add_subplot(111)
         ax.cla()
@@ -553,7 +550,7 @@ class MSEHistogram(Plotter):
                                    dtype=config.dtypes[config.dtype])
 
     def redraw(self):
-        fig = pp.figure(self.name())
+        fig = Graphics().pp.figure(self.name())
         fig.clf()
         fig.patch.set_facecolor('#E8D6BB')
         # fig.patch.set_alpha(0.45)
@@ -619,13 +616,13 @@ class MSEHistogram(Plotter):
 
         for x, y in zip(N, self.val_mse):
             if y > koef - l2 * 0.75:
-                pylab.text(x + l1, y - l2 * 0.75, '%.0f' % y,
-                           ha='center', va='bottom',
-                           fontsize=l3, rotation=90)
+                Graphics().pp.text(x + l1, y - l2 * 0.75, '%.0f' % y,
+                                   ha='center', va='bottom',
+                                   fontsize=l3, rotation=90)
             else:
-                pylab.text(x + l1, t0, '%.0f' % y,
-                           ha='center', va='bottom',
-                           fontsize=l3, rotation=90)
+                Graphics().pp.text(x + l1, t0, '%.0f' % y,
+                                   ha='center', va='bottom',
+                                   fontsize=l3, rotation=90)
 
         fig.show()
         fig.canvas.draw()

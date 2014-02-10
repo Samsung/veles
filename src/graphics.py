@@ -5,14 +5,11 @@ Created on Jan 31, 2014
 """
 
 
-from PyQt4 import QtGui, QtCore
 import logging
-import matplotlib
+import os
 import queue
 import time
-import tkinter
 
-import matplotlib.pyplot as pp
 import multiprocessing as mp
 
 
@@ -38,9 +35,16 @@ class Graphics(object):
     @staticmethod
     def initialize():
         if not Graphics.process:
-            pp.ion()
             Graphics.event_queue = mp.Queue()
-            Graphics.process = mp.Process(target=Graphics.server_entry)
+            """ TODO(v.markovtsev): solve the problem with matplotlib, ssh and
+            multiprocessing - hangs on figure.show()
+            """
+            import socket
+            if socket.gethostname() == "smaug":
+                import threading as thr
+                Graphics.process = thr.Thread(target=Graphics.server_entry)
+            else:
+                Graphics.process = mp.Process(target=Graphics.server_entry)
             Graphics.process.start()
 
     @staticmethod
@@ -65,22 +69,41 @@ class Graphics(object):
         return cls._instance
 
     def __init__(self):
+        if hasattr(self, "initialized"):
+            return
+        self.initialized = True
+        if not Graphics.process:
+            raise RuntimeError("Graphics server must be launched before "
+                               "the initialization")
         self.exiting = False
         self.showed = False
         self.root = None
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def run(self):
+        import matplotlib
+        import matplotlib.cm as cm
+        import matplotlib.lines as lines
+        import matplotlib.patches as patches
+        import matplotlib.pyplot as pp
+        pp.ion()
+        self.matplotlib = matplotlib
+        self.cm = cm
+        self.lines = lines
+        self.patches = patches
+        self.pp = pp
         """Creates and runs main graphics window.
         Note that this function should be called only by __init__()
         """
-        self.logger.info("Server is running")
+        self.logger.info("Server is running in process %d", os.getpid())
         if pp.get_backend() == "TkAgg":
+            import tkinter
             self.root = tkinter.Tk()
             self.root.withdraw()
             self.root.after(100, self.update)
             tkinter.mainloop()
         elif pp.get_backend() == "Qt4Agg":
+            from PyQt4 import QtGui, QtCore
             self.root = QtGui.QApplication([])
             self.timer = QtCore.QTimer(self.root)
             self.timer.timeout.connect(self.update)
@@ -107,18 +130,18 @@ class Graphics(object):
                     continue
                 processed.add(plotter)
                 plotter.redraw()
-                if pp.get_backend() == "WebAgg" and not self.showed:
+                if self.pp.get_backend() == "WebAgg" and not self.showed:
                     self.showed = True
-                    pp.show()
+                    self.pp.show()
         except queue.Empty:
             pass
-        if pp.get_backend() == "TkAgg":
+        if self.pp.get_backend() == "TkAgg":
             if not self.exiting:
                 self.root.after(100, self.update)
             else:
-                self.logger.debug("Terminating the main loop.")
+                self.logger.debug("Terminating the main loop")
                 self.root.destroy()
-        if pp.get_backend() == "Qt4Agg" and self.exiting:
+        if self.pp.get_backend() == "Qt4Agg" and self.exiting:
             self.timer.stop()
-            self.logger.debug("Terminating the main loop.")
+            self.logger.debug("Terminating the main loop")
             self.root.quit()
