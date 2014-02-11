@@ -6,11 +6,12 @@ Created on Jan 31, 2014
 
 
 import logging
+import multiprocessing as mp
 import os
 import queue
 import time
 
-import multiprocessing as mp
+import config
 
 
 class Graphics(object):
@@ -111,7 +112,7 @@ class Graphics(object):
             self.timer.start(Graphics.interval * 1000)
             self.root.exec_()
         elif pp.get_backend() == "WebAgg":
-            matplotlib.rcParams['webagg.port'] = 8888
+            matplotlib.rcParams['webagg.port'] = config.webagg_port
             matplotlib.rcParams['webagg.open_in_browser'] = 'False'
             while not self.exiting:
                 self.update()
