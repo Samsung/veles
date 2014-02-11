@@ -57,7 +57,8 @@ class EndPoint(UttermostPoint):
 
 
 class Workflow(units.Unit):
-    """Base class for workflows.
+    """Base class for unit sets which are logically connected and belong to
+    the same host.
 
     Attributes:
         start_point: start point.
