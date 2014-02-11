@@ -31,6 +31,7 @@ class Graphics(object):
     _instance = None
     event_queue = None
     process = None
+    interval = 0.1  # secs in event loop
 
     @staticmethod
     def initialize():
@@ -107,14 +108,14 @@ class Graphics(object):
             self.root = QtGui.QApplication([])
             self.timer = QtCore.QTimer(self.root)
             self.timer.timeout.connect(self.update)
-            self.timer.start(100)
+            self.timer.start(Graphics.interval * 1000)
             self.root.exec_()
         elif pp.get_backend() == "WebAgg":
             matplotlib.rcParams['webagg.port'] = 8888
             matplotlib.rcParams['webagg.open_in_browser'] = 'False'
             while not self.exiting:
                 self.update()
-                time.sleep(0.1)
+                time.sleep(Graphics.interval)
 
     def update(self):
         """Processes all events scheduled for plotting
@@ -137,7 +138,7 @@ class Graphics(object):
             pass
         if self.pp.get_backend() == "TkAgg":
             if not self.exiting:
-                self.root.after(100, self.update)
+                self.root.after(Graphics.interval * 1000, self.update)
             else:
                 self.logger.debug("Terminating the main loop")
                 self.root.destroy()
