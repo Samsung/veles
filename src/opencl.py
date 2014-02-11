@@ -16,6 +16,7 @@ import traceback
 import config
 import error
 import formats
+import opencl_types
 import rnd
 import units
 
@@ -40,16 +41,16 @@ class DeviceInfo(object):
         self.memalign = memalign
         self.version = version
         self.rating = {}
-        for dtype in config.dtypes.keys():
+        for dtype in opencl_types.dtypes.keys():
             self.rating[dtype] = 0.0
         self.dt = {}
-        for dtype in config.dtypes.keys():
+        for dtype in opencl_types.dtypes.keys():
             self.dt[dtype] = 86400
         self.min_dt = {}
-        for dtype in config.dtypes.keys():
+        for dtype in opencl_types.dtypes.keys():
             self.min_dt[dtype] = 86400
         self.BLOCK_SIZE = {}
-        for dtype in config.dtypes.keys():
+        for dtype in opencl_types.dtypes.keys():
             self.BLOCK_SIZE[dtype] = 16
 
 
@@ -71,7 +72,7 @@ class Device(units.Pickleable):
         self._fill_device_info_performance_values()
         self.log().info("Will use the following device "
                         "(guid: dtype, rating, BLOCK_SIZE, memalign):")
-        for dtype in sorted(config.dtypes.keys()):
+        for dtype in sorted(opencl_types.dtypes.keys()):
             self.log().info("%s: %s, %.2f, %d, %d" % (
                 self.info.guid, dtype, self.info.rating[dtype],
                 self.info.BLOCK_SIZE[dtype], self.info.memalign))
@@ -139,7 +140,7 @@ class Device(units.Pickleable):
             "so this is one time process usually." % (config.cache_dir))
 
         min_dt = {}
-        for dtype in config.dtypes.keys():
+        for dtype in opencl_types.dtypes.keys():
             min_dt[dtype] = 86400
         dt_numpy = 86400
         for info in device_infos.values():
@@ -151,7 +152,7 @@ class Device(units.Pickleable):
         for dtype in self.info.dt.keys():
             self.info.dt[dtype] = 86400
         for BLOCK_SIZE in range(32, 3, -1):
-            for dtype in sorted(config.dtypes.keys()):
+            for dtype in sorted(opencl_types.dtypes.keys()):
                 try:
                     self._prepare_tests(BLOCK_SIZE, dtype)
                     key = "%s_%d_%d_%d" % (
@@ -197,7 +198,7 @@ class Device(units.Pickleable):
         self.log().info("\nRating(numpy double precision): %.4f" % (
             min_dt[config.dtype] / dt_numpy))
         for info in device_infos.values():
-            for dtype in sorted(config.dtypes.keys()):
+            for dtype in sorted(opencl_types.dtypes.keys()):
                 self.log().info("================")
                 self.log().info(dtype)
                 rating = min_dt[dtype] / info.dt[dtype]
@@ -229,22 +230,22 @@ class Device(units.Pickleable):
 
         self.a = formats.Vector()
         self.a.v = numpy.zeros([self.A_HEIGHT, self.AB_WIDTH],
-                               dtype=config.dtypes[dtype])
+                               dtype=opencl_types.dtypes[dtype])
         rnd.default.fill(self.a.v, -0.1, 0.1)
 
         self.b = formats.Vector()
         self.b.v = numpy.zeros([self.B_HEIGHT, self.AB_WIDTH],
-                               dtype=config.dtypes[dtype])
+                               dtype=opencl_types.dtypes[dtype])
         rnd.default.fill(self.b.v, -0.1, 0.1)
 
         self.bias = formats.Vector()
         self.bias.v = numpy.zeros(self.B_HEIGHT,
-                                  dtype=config.dtypes[dtype])
+                                  dtype=opencl_types.dtypes[dtype])
         rnd.default.fill(self.bias.v, -0.1, 0.1)
 
         self.c = formats.Vector()
         self.c.v = numpy.zeros([self.A_HEIGHT, self.B_HEIGHT],
-                               dtype=config.dtypes[dtype])
+                               dtype=opencl_types.dtypes[dtype])
 
     def _cleanup_after_tests(self):
         del(self.c)

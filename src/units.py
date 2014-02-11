@@ -16,9 +16,9 @@ import traceback
 import config
 import cpp
 import error
-import thread_pool
-
 from logger import Pickleable
+import opencl_types
+import thread_pool
 
 
 class Distributable(object):
@@ -339,7 +339,7 @@ class OpenCLUnit(Unit):
         for file, defs in self.cl_sources_.items():
             source += '#include "%s"\n' % file
             my_defines.update(defs)
-        my_defines.update(config.cl_defines[config.c_dtype])
+        my_defines.update(opencl_types.cl_defines[config.c_dtype])
 
         # initialize C preprocessor
         lexer = lex.lex(cpp)
