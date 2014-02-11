@@ -13,7 +13,7 @@ import uuid
 import sys
 
 import network_common
-import node_launcher
+from launcher import Launcher
 
 
 def onFSMStateChanged(e):
@@ -200,7 +200,7 @@ class Server(network_common.NetworkConfigurable):
 
     def launch_nodes(self):
         for node in self.options["nodes"]:
-            node_launcher.launch_node(node, " ".join(sys.argv))
+            Launcher.launch_node(node, " ".join(sys.argv))
 
     def run(self):
         reactor.run()

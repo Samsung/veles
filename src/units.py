@@ -86,7 +86,7 @@ class Unit(Pickleable, Distributable):
         self.individual_name = name
         self.view_group = view_group
         self.workflow = workflow
-        if self.workflow != None:
+        if self.workflow != None and hasattr(self.workflow, "add_ref"):
             self.workflow.add_ref(self)
         self.applied_data_from_master_recursively = False
         self.applied_data_from_slave_recursively = False
@@ -94,7 +94,7 @@ class Unit(Pickleable, Distributable):
                                                Unit.timers, self))
 
     def __fini__(self):
-        if self.workflow != None:
+        if self.workflow != None and hasattr(self.workflow, "del_ref"):
             self.workflow.del_ref(self)
 
     def __hash__(self):
