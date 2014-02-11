@@ -30,25 +30,25 @@ class Launcher(units.Unit):
             "and will accept client connections at the specified address.")
         args = parser.parse_args()
         if len(args.server_address):
-            self.factory = client.Client(args.server_address, workflow)
+            self.agent = client.Client(args.server_address, workflow)
         elif len(args.listen_address):
-            self.factory = server.Server(args.server_address, workflow)
+            self.agent = server.Server(args.server_address, workflow)
         else:
-            self.factory = workflow
+            self.agent = workflow
         self.web_status = None
         # Launch the status server if it's not been running yet
         self.launch_status(True)
 
     def initialize(self, **kwargs):
-        return self.factory.initialize(**kwargs)
+        return self.agent.initialize(**kwargs)
 
     def run(self):
-        return self.factory.run()
+        return self.agent.run()
 
     def stop(self):
         if self.web_status:
             self.web_status.stop()
-        self.factory.stop()
+        self.agent.stop()
 
     def launch_status(self, check=False):
         if check:
@@ -56,7 +56,7 @@ class Launcher(units.Unit):
             result = sock.connect_ex(("localhost", config.web_status_port))
         if not check or result == 0:
             self.log().info("Launching the web status server")
-            self.web_status = web_status.WebStatus(self.factory)
+            self.web_status = web_status.WebStatus(self.agent)
             self.web_status.run()
 
     @staticmethod
