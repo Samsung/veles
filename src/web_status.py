@@ -7,7 +7,6 @@ Created on Feb 10, 2014
 
 import logging
 import multiprocessing as mp
-import queue
 import threading
 import tornado.escape
 import tornado.ioloop as ioloop
@@ -64,6 +63,7 @@ class WebStatusServer:
         while True:
             cmd = self.cmd_queue_in.get()
             if cmd == "exit":
+                self.cmd_queue_out.put_nowait(None)
                 ioloop.IOLoop.instance().stop()
                 break
             request_id = cmd["request"]
@@ -112,22 +112,9 @@ class WebStatus:
 
     def cmd_loop(self):
         while not self.exiting:
-            try:
-                while True:
-                    cmd = self.cmd_queue_in.get_nowait()
-                    ret = self.master_server.fulfill_request(cmd["body"])
-                    self.cmd_queue_out.put_nowait({"request": cmd["request"],
-                                                   "result": ret})
-            except queue.Empty:
-                pass
-
-
-class Dummy:
-    def fulfill_request(self, data):
-        print(str(data))
-        return "AJAX WORKS!"
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    ws = WebStatus(Dummy())
-    ws.run()
+            cmd = self.cmd_queue_in.get()
+            if not cmd:
+                break
+            ret = self.master_server.fulfill_request(cmd["body"])
+            self.cmd_queue_out.put_nowait({"request": cmd["request"],
+                                           "result": ret})
