@@ -5,12 +5,15 @@ Workflow launcher (server/client/standalone).
 
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
-import units
-import server
-import client
 import argparse
-import socket
 import paramiko
+import socket
+
+import client
+import config
+import server
+import units
+import web_status
 
 
 class Launcher(units.Unit):
@@ -19,10 +22,10 @@ class Launcher(units.Unit):
     def __init__(self, workflow, **kwargs):
         super(Launcher, self).__init__(workflow, **kwargs)
         parser = argparse.ArgumentParser()
-        parser.add_argument("-server_address", type=str, default="",
+        parser.add_argument("-s", "--server_address", type=str, default="",
             help="Workflow will be launched in client mode "
             "and connected to the server at the specified address.")
-        parser.add_argument("-listen_address", type=str, default="",
+        parser.add_argument("-l", "--listen_address", type=str, default="",
             help="Workflow will be launched in server mode "
             "and will accept client connections at the specified address.")
         args = parser.parse_args()
@@ -32,12 +35,29 @@ class Launcher(units.Unit):
             self.factory = server.Server(args.server_address, workflow)
         else:
             self.factory = workflow
+        self.web_status = None
+        # Launch the status server if it's not been running yet
+        self.launch_status(True)
 
     def initialize(self, **kwargs):
         return self.factory.initialize(**kwargs)
 
     def run(self):
         return self.factory.run()
+
+    def stop(self):
+        if self.web_status:
+            self.web_status.stop()
+        self.factory.stop()
+
+    def launch_status(self, check=False):
+        if check:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            result = sock.connect_ex(("localhost", config.web_status_port))
+        if not check or result == 0:
+            self.log().info("Launching the web status server")
+            self.web_status = web_status.WebStatus(self.factory)
+            self.web_status.run()
 
     @staticmethod
     def launch_node(node, script, server_address=socket.gethostname()):
