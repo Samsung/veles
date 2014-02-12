@@ -14,17 +14,17 @@ import unittest
 import client
 import network_common
 import server
-import workflow
+import workflows
 
 
-class TestWorkflow(workflow.Workflow):
+class TestWorkflow(workflows.Workflow):
     job_requested = False
     job_done = False
     update_applied = False
     power_requested = False
 
-    def __init__(self):
-        super(TestWorkflow, self).__init__()
+    def __init__(self, workflow, **kwargs):
+        super(TestWorkflow, self).__init__(workflow, **kwargs)
 
     def request_job(self):
         TestWorkflow.job_requested = True
@@ -57,8 +57,8 @@ class Test(unittest.TestCase):
                    (network_common.NetworkConfigurable.CONFIG_ADDRESS,
                     network_common.NetworkConfigurable.CONFIG_PORT))
         conf.close()
-        self.master = TestWorkflow()
-        self.slave = TestWorkflow()
+        self.master = TestWorkflow(None)
+        self.slave = TestWorkflow(None)
         self.server = server.Server(Test.CONFIG_FILE_NAME, self.master)
         self.client = client.Client(Test.CONFIG_FILE_NAME, self.slave)
         reactor.callLater(0.1, reactor.stop)
