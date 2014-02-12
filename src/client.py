@@ -6,6 +6,7 @@ Created on Jan 22, 2014
 
 
 from fysom import Fysom
+import json
 import logging
 from twisted.internet import reactor, threads
 from twisted.internet.protocol import ReconnectingClientFactory
@@ -78,7 +79,7 @@ class VelesProtocol(network_common.StringLineReceiver):
 
     def lineReceived(self, line):
         logging.debug("lineReceived %s:  %s", self.id, line)
-        msg = eval(line)
+        msg = json.loads(line.decode("utf-8"))
         if not isinstance(msg, dict):
             logging.error("Could not parse the received line, dropping it.")
             return
@@ -128,22 +129,24 @@ class VelesProtocol(network_common.StringLineReceiver):
 
     def jobFinished(self, update):
         if self.state.current == "BUSY":
-            self.sendLine("{'cmd': 'update'}")
+            self.sendLine({'cmd': 'update'})
             self.transport.write(update)
             self.state.wait_update_notification()
             return
         logging.error("Invalid state %s.", self.state.current)
 
+    def sendLine(self, line):
+        super(VelesProtocol, self).sendLine(json.dumps(line))
+
     def send_id(self):
-        self.sendLine("{'id': %s}" % self.factory.id)
+        self.sendLine({'id': self.factory.id})
 
     def request_id(self):
-        self.sendLine("{'power': %s}" %
-                      self.factory.host.get_computing_power())
+        self.sendLine({'power': self.factory.host.get_computing_power()})
         self.state.request_id()
 
     def request_job(self):
-        self.sendLine("{'cmd': 'job'}")
+        self.sendLine({'cmd': 'job'})
         self.state.request_job()
 
     def disconnect(self, msg, *args, **kwargs):
@@ -160,7 +163,7 @@ class VelesProtocolFactory(ReconnectingClientFactory):
         self.state = None
 
     def startedConnecting(self, connector):
-        logging.info('Connecting')
+        logging.info('Connecting...')
 
     def buildProtocol(self, addr):
         return VelesProtocol(addr, self)

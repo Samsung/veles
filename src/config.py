@@ -95,4 +95,5 @@ unit_test = False
 web_status_root = os.path.join(this_dir, "../web_status")
 web_status_host = "smaug"
 web_status_port = 8080
+web_status_notification_interval = 1
 webagg_port = 8081

@@ -5,13 +5,17 @@ Created on Jan 14, 2014
 """
 
 
+import json
 from fysom import Fysom
 import logging
-from twisted.internet import reactor, threads
+from tornado.httpclient import AsyncHTTPClient
+from twisted.internet import reactor, threads, task
 from twisted.internet.protocol import Factory
 import uuid
+import socket
 import sys
 
+import config
 import network_common
 
 
@@ -78,7 +82,7 @@ class VelesProtocol(network_common.StringLineReceiver):
 
     def lineReceived(self, line):
         logging.debug("lineReceived %s:  %s", self.id, line)
-        msg = eval(line)
+        msg = json.loads(line.decode("utf-8"))
         if not isinstance(msg, dict):
             logging.error("Could not parse the received line, dropping it.")
             return
@@ -92,9 +96,10 @@ class VelesProtocol(network_common.StringLineReceiver):
                                   " error message.")
                     self.sendError("I need your computing power.")
                     return
-                self.id = uuid.uuid4()
+                self.id = str(uuid.uuid4())
                 self.nodes[self.id] = {'power': power}
-                self.sendLine("{'id': '%s'}" % self.id)
+                reactor.callLater(0, self.resolveAddr, self.addr)
+                self.sendLine({'id': self.id})
                 self.state.receive_description()
                 return
             if not self.nodes.get(cid):
@@ -149,21 +154,29 @@ class VelesProtocol(network_common.StringLineReceiver):
     def updateApplied(self, result):
         if self.state.current == 'APPLYING_UPDATE':
             if result:
-                self.sendLine("{'update': 'ok'}")
+                self.sendLine({'update': 'ok'})
             else:
-                self.sendLine("{'update': 'deny'}")
+                self.sendLine({'update': 'deny'})
             self.state.apply_update()
         else:
             logging.error("Wrong state.")
 
     def jobRequestFinished(self, data=None):
         if data:
-            self.sendLine("{'job': 'offer'}")
+            self.sendLine({'job': 'offer'})
             self.transport.write(data)
             self.state.obtain_job()
         else:
-            self.sendLine("{'job': 'refuse'}")
+            self.sendLine({'job': 'refuse'})
             self.refuse_job()
+
+    def resolveAddr(self, addr):
+        host, _, _ = socket.gethostbyaddr(addr.host)
+        logging.debug("Address %s was resolved to %s", addr.host, host)
+        self.nodes[self.id]['host'] = host
+
+    def sendLine(self, line):
+        super(VelesProtocol, self).sendLine(json.dumps(line))
 
     def sendError(self, err):
         """
@@ -172,9 +185,8 @@ class VelesProtocol(network_common.StringLineReceiver):
         Parameters:
             err:    The error message.
         """
-        msg = "{'error': '%s'}" % err
-        logging.debug("Sending " + msg)
-        self.sendLine(msg)
+        logging.error(err)
+        self.sendLine({'error': err})
 
 
 class VelesProtocolFactory(Factory):
@@ -194,8 +206,12 @@ class Server(network_common.NetworkConfigurable):
 
     def __init__(self, config_file, host):
         super(Server, self).__init__(config_file)
+        self.workflow = host
+        self.workflow_graph = self.workflow.generate_graph(write_on_disk=False)
         self.factory = VelesProtocolFactory(host)
         reactor.listenTCP(self.port, self.factory)
+        self.notify_task = task.LoopingCall(self.notify_status)
+        self.notify_agent = AsyncHTTPClient()
 
     def launch_nodes(self):
         import launcher
@@ -203,13 +219,27 @@ class Server(network_common.NetworkConfigurable):
             launcher.Launcher.launch_node(node, " ".join(sys.argv))
 
     def run(self):
+        self.notify_task.start(config.web_status_notification_interval,
+                               now=False)
         reactor.run()
 
     def stop(self):
+        self.notify_task.stop()
         reactor.stop()
 
-    def fulfill_status_request(self, data):
-        """
-        Returns the result of a web status server query.
-        """
-        pass
+    def handle_notify_request(self, response):
+        if response.error:
+            logging.warn("Failed to upload the status update to %s:%s",
+                         config.web_status_host, config.web_status_port)
+
+    def notify_status(self):
+        ret = {'nodes': {}, 'workflow': {}}
+        ret['workflow']['graph'] = self.workflow_graph
+        for nid, node in self.factory.nodes.items():
+            ret['nodes'][nid] = {'host': node["host"]}
+        self.notify_agent.fetch("http://%s:%d" % (config.web_status_host,
+                                                  config.web_status_port),
+                                self.handle_notify_request,
+                                method='POST', headers=None,
+                                connect_timeout=0.2,
+                                body=json.dumps(ret))
