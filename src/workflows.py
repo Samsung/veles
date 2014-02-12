@@ -152,7 +152,7 @@ class Workflow(units.Unit):
         """
         return 0
 
-    def generate_graph(self, filename=None):
+    def generate_graph(self, filename=None, write_on_disk=True):
         g = pydot.Dot(graph_name="Workflow",
                       graph_type="digraph",
                       mindist="0.1")
@@ -175,10 +175,11 @@ class Workflow(units.Unit):
                 g.add_edge(pydot.Edge(hex(id(unit)), hex(id(link))))
                 if link not in visited_units and link not in boilerplate:
                     boilerplate.add(link)
-        if not filename:
-            (_, filename) = tempfile.mkstemp(".png", "workflow_")
-        self.log().info("Saving the workflow graph to %s", filename)
-        g.write(filename, format='png')
+        if write_on_disk:
+            if not filename:
+                (_, filename) = tempfile.mkstemp(".png", "workflow_")
+            self.log().info("Saving the workflow graph to %s", filename)
+            g.write(filename, format='png')
         return g.to_string()
 
     def print_stats(self, by_name=False, top_number=5):
