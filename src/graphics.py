@@ -37,7 +37,7 @@ class Graphics(object):
     @staticmethod
     def initialize():
         if not Graphics.process:
-            Graphics.event_queue = mp.Queue(100)  # to prevent infinite queue
+            Graphics.event_queue = mp.Queue(20)  # cache only 20 drawing events
             """ TODO(v.markovtsev): solve the problem with matplotlib, ssh and
             multiprocessing - hangs on figure.show()
             """
@@ -53,7 +53,10 @@ class Graphics(object):
     def enqueue(obj):
         if not Graphics.process:
             raise RuntimeError("Graphics is not initialized")
-        Graphics.event_queue.put_nowait(obj)
+        try:
+            Graphics.event_queue.put_nowait(obj)
+        except queue.Full:
+            pass
 
     @staticmethod
     def server_entry():

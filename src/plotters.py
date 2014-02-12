@@ -6,6 +6,7 @@ Created on May 17, 2013
 import numpy
 
 import config
+import opencl_types
 import formats
 from graphics import Graphics
 import units
@@ -476,7 +477,7 @@ class Image(Plotter):
                       interpolation="nearest")
         else:
             ax.imshow(formats.norm_image(w, self.yuv[0]),
-                      interpolation="nearest", cmap=dgray)
+                      interpolation="nearest", cmap=Graphics().cm.gray)
 
     def redraw(self):
         figure = Graphics().pp.figure(self.name())
@@ -577,7 +578,7 @@ class MSEHistogram(Plotter):
 
     def initialize(self):
         self.val_mse = numpy.zeros(self.n_bars,
-                                   dtype=config.dtypes[config.dtype])
+                                   dtype=opencl_types.dtypes[config.dtype])
 
     def redraw(self):
         fig = Graphics().pp.figure(self.name())

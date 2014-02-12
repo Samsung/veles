@@ -32,7 +32,7 @@ class Launcher(units.Unit):
         if len(args.server_address):
             self.agent = client.Client(args.server_address, workflow)
         elif len(args.listen_address):
-            self.agent = server.Server(args.server_address, workflow)
+            self.agent = server.Server(args.listen_address, workflow)
         else:
             self.agent = workflow
         # Launch the status server if it's not been running yet
