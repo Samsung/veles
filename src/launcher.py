@@ -69,5 +69,5 @@ class Launcher(units.Unit):
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         client.connect(host, look_for_keys=True)
-        client.exec_command("nohup %s" % prog)
+        client.exec_command(prog)
         client.close()
