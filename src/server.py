@@ -208,7 +208,7 @@ class Server(network_common.NetworkConfigurable):
     def stop(self):
         reactor.stop()
 
-    def fulfill_request(self, data):
+    def fulfill_status_request(self, data):
         """
         Returns the result of a web status server query.
         """

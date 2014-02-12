@@ -1,3 +1,6 @@
 eclipse.preferences.version=1
 encoding//scripts/music_features.py=utf-8
+encoding//src/daemon/__init__.py=utf-8
+encoding//src/daemon/daemon.py=utf-8
+encoding//src/daemon/version/__init__.py=utf-8
 encoding//src/pydot.py=latin1

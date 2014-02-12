@@ -5,7 +5,7 @@ Created on Feb 10, 2014
 """
 
 
-import logging
+import daemon
 import multiprocessing as mp
 import threading
 import tornado.escape
@@ -91,10 +91,10 @@ class WebStatus:
     def start_web_server(cmd_queue_in, cmd_queue_out):
         WebStatusServer(cmd_queue_in, cmd_queue_out).run()
 
-    def __init__(self, master_server):
+    def __init__(self):
         super(WebStatus, self).__init__()
         self.exiting = False
-        self.master_server = master_server
+        self.masters = []
         self.cmd_queue_in = mp.Queue()
         self.cmd_queue_out = mp.Queue()
         self.cmd_thread = threading.Thread(target=self.cmd_loop)
@@ -115,6 +115,14 @@ class WebStatus:
             cmd = self.cmd_queue_in.get()
             if not cmd:
                 break
-            ret = self.master_server.fulfill_request(cmd["body"])
+            ret = {}
+            for master in self.masters:
+                for item in cmd["body"]:
+                    ret[master["id"]] = master[item]
             self.cmd_queue_out.put_nowait({"request": cmd["request"],
                                            "result": ret})
+
+if __name__ == "__main__":
+    with daemon.DaemonContext():
+        ws = WebStatus()
+        ws.run()

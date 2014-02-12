@@ -6,6 +6,7 @@ Workflow launcher (server/client/standalone).
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
 import argparse
+import os
 import paramiko
 import socket
 
@@ -13,7 +14,6 @@ import client
 import config
 import server
 import units
-import web_status
 
 
 class Launcher(units.Unit):
@@ -35,9 +35,8 @@ class Launcher(units.Unit):
             self.agent = server.Server(args.server_address, workflow)
         else:
             self.agent = workflow
-        self.web_status = None
         # Launch the status server if it's not been running yet
-        self.launch_status(True)
+        self.launch_status()
 
     def initialize(self, **kwargs):
         return self.agent.initialize(**kwargs)
@@ -50,20 +49,25 @@ class Launcher(units.Unit):
             self.web_status.stop()
         self.agent.stop()
 
-    def launch_status(self, check=False):
-        if check:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            result = sock.connect_ex(("localhost", config.web_status_port))
-        if not check or result == 0:
+    def launch_status(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = sock.connect_ex((config.web_status_host,
+                                  config.web_status_port))
+        if result == 0:
             self.log().info("Launching the web status server")
-            self.web_status = web_status.WebStatus(self.agent)
-            self.web_status.run()
+            Launcher.launch_remote_program(config.web_status_host,
+                                           os.path.join(config.this_dir,
+                                                        "web_status.py"))
 
     @staticmethod
     def launch_node(node, script, server_address=socket.gethostname()):
+        Launcher.launch_remote_program(
+            node, "%s --server_address %s" % (script, server_address))
+
+    @staticmethod
+    def launch_remote_program(host, prog):
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(node, look_for_keys=True)
-        client.exec_command("nohup %s --server_address %s" % (
-                                        script, server_address))
+        client.connect(host, look_for_keys=True)
+        client.exec_command("nohup %s" % prog)
         client.close()

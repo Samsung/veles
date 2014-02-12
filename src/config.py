@@ -93,5 +93,6 @@ test_unknown_device = True
 unit_test = False
 
 web_status_root = os.path.join(this_dir, "../web_status")
+web_status_host = "smaug"
 web_status_port = 8080
 webagg_port = 8081
