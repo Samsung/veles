@@ -1,10 +1,13 @@
 eclipse.preferences.version=1
 encoding//scripts/music_features.py=utf-8
+<<<<<<< HEAD
 encoding//src/daemon/__init__.py=utf-8
 encoding//src/daemon/daemon.py=utf-8
 encoding//src/daemon/version/__init__.py=utf-8
+=======
 encoding//src/freetype/__init__.py=utf-8
 encoding//src/freetype/ft_enums/__init__.py=utf-8
 encoding//src/freetype/ft_enums/ft_load_targets.py=utf-8
 encoding//src/freetype/ft_structs.py=utf-8
+>>>>>>> Added freetype module
 encoding//src/pydot.py=latin1
