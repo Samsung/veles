@@ -7,6 +7,7 @@ Created on Feb 10, 2014
 
 import daemon
 import multiprocessing as mp
+import socket
 import threading
 import tornado.escape
 import tornado.ioloop as ioloop
@@ -29,10 +30,20 @@ class ServiceHandler(web.RequestHandler):
         self.finish(result)
 
 
+class UpdateHandler(web.RequestHandler):
+    def initialize(self, server):
+        self.server = server
+
+    def post(self):
+        data = tornado.escape.json_decode(self.request.body)
+        self.server.receive_update(self.request.remote_ip, data)
+
+
 class WebStatusServer:
     def __init__(self, cmd_queue_in, cmd_queue_out):
         self.application = web.Application([
             (r"/service", ServiceHandler, {"server": self}),
+            (r"/update", UpdateHandler, {"server": self}),
             (r"/(js/.*)", web.StaticFileHandler, {'path':
                                                   config.web_status_root}),
             (r"/(css/.*)", web.StaticFileHandler, {'path':
@@ -58,6 +69,9 @@ class WebStatusServer:
         request_id = uuid.uuid4()
         self.pending_requests[request_id] = handler
         self.cmd_queue_out.put_nowait({"request": request_id, "body": cmd})
+
+    def receive_update(self, addr, update):
+        self.cmd_queue_out.put_nowait({"update": addr, "body": update})
 
     def cmd_loop(self):
         while True:
@@ -94,7 +108,7 @@ class WebStatus:
     def __init__(self):
         super(WebStatus, self).__init__()
         self.exiting = False
-        self.masters = []
+        self.masters = {}
         self.cmd_queue_in = mp.Queue()
         self.cmd_queue_out = mp.Queue()
         self.cmd_thread = threading.Thread(target=self.cmd_loop)
@@ -115,12 +129,18 @@ class WebStatus:
             cmd = self.cmd_queue_in.get()
             if not cmd:
                 break
-            ret = {}
-            for master in self.masters:
-                for item in cmd["body"]:
-                    ret[master["id"]] = master[item]
-            self.cmd_queue_out.put_nowait({"request": cmd["request"],
-                                           "result": ret})
+            if "update" in cmd.keys():
+                host = socket.gethostbyaddr(cmd["update"])
+                self.masters[host] = cmd["body"]
+            elif "request" in cmd.keys():
+                ret = {}
+                for mid, master in self.masters.items():
+                    for item in cmd["body"]:
+                        ret[mid] = master[item]
+                self.cmd_queue_out.put_nowait({"request": cmd["request"],
+                                               "result": ret})
+            elif "stop" in cmd.keys():
+                self.stop()
 
 if __name__ == "__main__":
     with daemon.DaemonContext():
