@@ -204,19 +204,14 @@ class Server(network_common.NetworkConfigurable):
     UDT/TCP server operating on a single socket
     """
 
-    def __init__(self, config_file, host):
-        super(Server, self).__init__(config_file)
-        self.workflow = host
+    def __init__(self, configuration, workflow):
+        super(Server, self).__init__(configuration)
+        self.workflow = workflow
         self.workflow_graph = self.workflow.generate_graph(write_on_disk=False)
-        self.factory = VelesProtocolFactory(host)
-        reactor.listenTCP(self.port, self.factory)
+        self.factory = VelesProtocolFactory(workflow)
+        reactor.listenTCP(self.port, self.factory, interface=self.address)
         self.notify_task = task.LoopingCall(self.notify_status)
         self.notify_agent = AsyncHTTPClient()
-
-    def launch_nodes(self):
-        import launcher
-        for node in self.options["nodes"]:
-            launcher.Launcher.launch_node(node, " ".join(sys.argv))
 
     def run(self):
         self.notify_task.start(config.web_status_notification_interval,

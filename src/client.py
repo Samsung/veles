@@ -184,9 +184,9 @@ class Client(network_common.NetworkConfigurable):
     UDT/TCP client operating on a single socket.
     """
 
-    def __init__(self, config_file, host):
-        super(Client, self).__init__(config_file)
-        self.factory = VelesProtocolFactory(host)
+    def __init__(self, configuration, workflow):
+        super(Client, self).__init__(configuration)
+        self.factory = VelesProtocolFactory(workflow)
         reactor.connectTCP(self.address, self.port, self.factory)
 
     def run(self):
