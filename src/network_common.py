@@ -16,21 +16,25 @@ class NetworkConfigurable(object):
     CONFIG_ADDRESS = "address"
     CONFIG_PORT = "port"
 
-    def __init__(self, config_file):
+    def __init__(self, configuration):
         """
         Parses the configuration file and loads CONFIG_ADDRESS and CONFIG_PORT
         """
-        cf = open(config_file, "r")
-        txt = cf.read()
-        cf.close()
-        self.options = eval(txt)
-        if not isinstance(self.options, dict):
-            raise RuntimeError("Corrupted network configuration file %s." %
-                               config_file)
-        self.address = self.options[NetworkConfigurable.CONFIG_ADDRESS]
-        self.port = self.options[NetworkConfigurable.CONFIG_PORT]
-        logging.info("Network configuration:    %s:%d",
-                     self.address, self.port)
+        idx_semicolon = configuration.find(":")
+        if idx_semicolon == -1:  # assume configuration file
+            cf = open(configuration, "r")
+            txt = cf.read()
+            cf.close()
+            self.options = eval(txt)
+            if not isinstance(self.options, dict):
+                raise RuntimeError("Corrupted network configuration file %s." %
+                                   configuration)
+            self.address = self.options[NetworkConfigurable.CONFIG_ADDRESS]
+            self.port = self.options[NetworkConfigurable.CONFIG_PORT]
+        else:  # assume tcp
+            self.address = configuration[:idx_semicolon]
+            self.port = int(configuration[idx_semicolon + 1:])
+        logging.info("Network configuration: %s:%d", self.address, self.port)
 
 
 class StringLineReceiver(LineReceiver):

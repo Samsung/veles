@@ -7,7 +7,6 @@ Created on Jan 23, 2014
 
 import logging
 import pickle
-from time import sleep
 from twisted.internet import reactor
 import unittest
 
