@@ -155,7 +155,8 @@ class Workflow(units.Unit):
     def generate_graph(self, filename=None, write_on_disk=True):
         g = pydot.Dot(graph_name="Workflow",
                       graph_type="digraph",
-                      mindist="0.1")
+                      mindist="0.1",
+                      bgcolor="transparent")
         g.set_prog("circo")
         visited_units = set()
         boilerplate = set([self.start_point])
