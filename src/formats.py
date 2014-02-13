@@ -244,10 +244,11 @@ class Vector(units.Pickleable):
         if self.device == None:
             return
         if (self.v.dtype in opencl_types.convert_map.keys() and
-            opencl_types.convert_map[self.v.dtype] in [
-                opencl_types.dtypes[config.dtype], opencl_types.dtypes[config.c_dtype]]):
+            opencl_types.convert_map[self.v.dtype] in (
+                opencl_types.dtypes[config.dtype],
+                opencl_types.dtypes[config.c_dtype])):
             self.v = self.v.astype(opencl_types.convert_map[self.v.dtype])
-        self.v = realign(self.v, self.device.info.memalign)
+        self.v = realign(self.v, self.device.device_info.memalign)
         mf = pyopencl.mem_flags
         self.v_ = pyopencl.Buffer(self.device.context_,
             mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=ravel(self.v))
@@ -265,7 +266,8 @@ class Vector(units.Pickleable):
             if self.map_flags != MAP_READ or flags == MAP_READ:
                 return
             self._unmap()
-        if flags == MAP_INVALIDATE and self.device.info.version < 1.1999:
+        if (flags == MAP_INVALIDATE and
+            self.device.device_info.version < 1.1999):
             flags = MAP_WRITE  # 'cause available only starting with 1.2
         self.map_arr_, event = pyopencl.enqueue_map_buffer(
             queue=self.device.queue_, buf=self.v_, flags=flags, offset=0,

@@ -58,7 +58,7 @@ class Device(units.Pickleable):
     """OpenCL device helper class.
 
     Attributes:
-        info: DeviceInfo object.
+        device_info: DeviceInfo object.
         context_: OpenCL context handle.
         queue_: OpenCL device queue.
         pid_: process id.
@@ -74,8 +74,8 @@ class Device(units.Pickleable):
                         "(guid: dtype, rating, BLOCK_SIZE, memalign):")
         for dtype in sorted(opencl_types.dtypes.keys()):
             self.info("%s: %s, %.2f, %d, %d" % (
-                self.info.guid, dtype, self.info.rating[dtype],
-                self.info.BLOCK_SIZE[dtype], self.info.memalign))
+                self.device_info.guid, dtype, self.device_info.rating[dtype],
+                self.device_info.BLOCK_SIZE[dtype], self.device_info.memalign))
 
     def init_unpickled(self):
         super(Device, self).init_unpickled()
@@ -93,7 +93,7 @@ class Device(units.Pickleable):
         s = device.get_info(pyopencl.device_info.VERSION)
         n = s.find(" ") + 1
         m = s.find(" ", n)
-        self.info = DeviceInfo(guid="%s/%s/%s" % (
+        self.device_info = DeviceInfo(guid="%s/%s/%s" % (
             device.get_info(pyopencl.device_info.VENDOR).strip(),
             device.get_info(pyopencl.device_info.NAME).strip(),
             str(device.get_info(pyopencl.device_info.VENDOR_ID))),
@@ -114,12 +114,12 @@ class Device(units.Pickleable):
             self.info("%s/device_infos.pickle was not found" % (
                                                         config.cache_dir))
         if (not config.test_known_device and
-            self.info.guid in device_infos.keys()):
-            info = device_infos[self.info.guid]
-            self.info.rating.update(info.rating)
-            self.info.BLOCK_SIZE.update(info.BLOCK_SIZE)
-            self.info.dt.update(info.dt)
-            self.info.min_dt.update(info.min_dt)
+            self.device_info.guid in device_infos.keys()):
+            device_info = device_infos[self.device_info.guid]
+            self.device_info.rating.update(device_info.rating)
+            self.device_info.BLOCK_SIZE.update(device_info.BLOCK_SIZE)
+            self.device_info.dt.update(device_info.dt)
+            self.device_info.min_dt.update(device_info.min_dt)
             return
         if not config.test_unknown_device:
             return
@@ -143,14 +143,14 @@ class Device(units.Pickleable):
         for dtype in opencl_types.dtypes.keys():
             min_dt[dtype] = 86400
         dt_numpy = 86400
-        for info in device_infos.values():
-            for dtype in info.min_dt.keys():
-                min_dt[dtype] = info.min_dt[dtype]
+        for device_info in device_infos.values():
+            for dtype in device_info.min_dt.keys():
+                min_dt[dtype] = device_info.min_dt[dtype]
             break
 
         cc = {}
-        for dtype in self.info.dt.keys():
-            self.info.dt[dtype] = 86400
+        for dtype in self.device_info.dt.keys():
+            self.device_info.dt[dtype] = 86400
         for BLOCK_SIZE in range(32, 3, -1):
             for dtype in sorted(opencl_types.dtypes.keys()):
                 try:
@@ -169,11 +169,12 @@ class Device(units.Pickleable):
                         if dt_numpy < min_dt[dtype]:
                             min_dt[dtype] = dt_numpy
                     self.info("Testing %s with BLOCK_SIZE = %d "
-                        "and dtype = %s" % (self.info.guid, BLOCK_SIZE, dtype))
+                        "and dtype = %s" % (self.device_info.guid, BLOCK_SIZE,
+                                            dtype))
                     dt = self._do_test(BLOCK_SIZE, dtype, 3)
-                    if dt < self.info.dt[dtype]:
-                        self.info.dt[dtype] = dt
-                        self.info.BLOCK_SIZE[dtype] = BLOCK_SIZE
+                    if dt < self.device_info.dt[dtype]:
+                        self.device_info.dt[dtype] = dt
+                        self.device_info.BLOCK_SIZE[dtype] = BLOCK_SIZE
                     if dt < min_dt[dtype]:
                         min_dt[dtype] = dt
                     c = cc[key].copy()
@@ -197,22 +198,22 @@ class Device(units.Pickleable):
 
         self.info("\nRating(numpy double precision): %.4f" % (
             min_dt[config.dtype] / dt_numpy))
-        for info in device_infos.values():
+        for device_info in device_infos.values():
             for dtype in sorted(opencl_types.dtypes.keys()):
                 self.info("================")
                 self.info(dtype)
                 rating = min_dt[dtype] / info.dt[dtype]
-                if info.rating[dtype] != rating:
-                    if info.rating[dtype]:
-                        self.info("UPD Rating(%s): %.4f" % (info.guid,
+                if device_info.rating[dtype] != rating:
+                    if device_info.rating[dtype]:
+                        self.info("UPD Rating(%s): %.4f" % (device_info.guid,
                                                                   rating))
                     else:
-                        self.info("NEW Rating(%s): %.4f" % (info.guid,
+                        self.info("NEW Rating(%s): %.4f" % (device_info.guid,
                                                                   rating))
                 else:
-                    self.info("Rating(%s): %.4f" % (info.guid, rating))
-                info.rating[dtype] = rating
-                info.min_dt[dtype] = min_dt[dtype]
+                    self.info("Rating(%s): %.4f" % (device_info.guid, rating))
+                device_info.rating[dtype] = rating
+                device_info.min_dt[dtype] = min_dt[dtype]
         self.info("================")
 
     def _prepare_tests(self, BLOCK_SIZE, dtype):
@@ -284,30 +285,23 @@ class Device(units.Pickleable):
     def _do_test(self, BLOCK_SIZE, dtype, iters):
         """Do test for specific context
         """
-        defines = ("%s\n"
-        "#define ACTIVATION_TANH\n"
-        "#define BLOCK_SIZE %d\n"
-        "#define H %d\n"
-        "#define Y %d\n"
-        "#define BATCH %d\n\n" % (config.cl_defines[dtype], BLOCK_SIZE,
-                                  self.AB_WIDTH, self.B_HEIGHT, self.A_HEIGHT))
-        s = defines
-        s += units.OpenCLUnit.read_ocl_file("defines.cl")
-        s_mx_mul = units.OpenCLUnit.read_ocl_file("matrix_multiplication.cl")
-        s += units.OpenCLUnit.read_ocl_file("forward.cl")
-        s = s.replace("MX_MUL", s_mx_mul)
-        fout = open(os.path.join(config.cache_dir, "test.cl"), "w")
-        fout.write(s)
-        fout.close()
+        obj = units.OpenCLUnit(None, device=self)
+        obj.cl_sources_["forward.cl"] = {}
+        defines = {
+            "ACTIVATION_TANH": 1,
+            "BLOCK_SIZE": BLOCK_SIZE,
+            "H": self.AB_WIDTH,
+            "Y": self.B_HEIGHT,
+            "BATCH": self.A_HEIGHT}
+        obj.build_program(defines, os.path.join(config.cache_dir, "test.cl"))
+
+        krn = obj.get_kernel("feed_layer")
 
         self.a.initialize(self)
         self.b.initialize(self)
         self.c.initialize(self)
         self.bias.initialize(self)
 
-        prg = pyopencl.Program(self.context_, s).build()
-
-        krn = pyopencl.Kernel(prg, "feed_layer")
         krn.set_arg(0, self.a.v_)
         krn.set_arg(1, self.b.v_)
         krn.set_arg(2, self.c.v_)
