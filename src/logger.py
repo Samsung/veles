@@ -3,7 +3,10 @@ Created on Jul 12, 2013
 
 @author: Markovtsev Vadim <v.markovtsev@samsung.com>
 """
+
+
 import logging
+import logging.handlers
 
 
 class Logger(object):
@@ -27,6 +30,9 @@ class Logger(object):
         handler = logging.handlers.RotatingFileHandler(
             file_name, max_bytes, backups
         )
+        formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: "
+                                      "%(message)s", "%Y-%m-%d %H:%M:%S")
+        handler.setFormatter(formatter)
         self.logger_.info("Redirecting output to %s", file_name)
         self.logger_.addHandler(handler)
 
