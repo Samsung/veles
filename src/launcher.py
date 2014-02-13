@@ -54,7 +54,7 @@ class Launcher(units.Unit):
         result = sock.connect_ex((config.web_status_host,
                                   config.web_status_port))
         if result == 0:
-            self.log().info("Launching the web status server")
+            self.info("Launching the web status server")
             Launcher.launch_remote_program(config.web_status_host,
                                            os.path.join(config.this_dir,
                                                         "web_status.py"))

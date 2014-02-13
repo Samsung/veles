@@ -70,10 +70,10 @@ class Device(units.Pickleable):
             plotters.Plotter(None)  # will register on shutdown method
         self._get_some_device()
         self._fill_device_info_performance_values()
-        self.log().info("Will use the following device "
+        self.info("Will use the following device "
                         "(guid: dtype, rating, BLOCK_SIZE, memalign):")
         for dtype in sorted(opencl_types.dtypes.keys()):
-            self.log().info("%s: %s, %.2f, %d, %d" % (
+            self.info("%s: %s, %.2f, %d, %d" % (
                 self.info.guid, dtype, self.info.rating[dtype],
                 self.info.BLOCK_SIZE[dtype], self.info.memalign))
 
@@ -111,7 +111,7 @@ class Device(units.Pickleable):
             device_infos = pickle.load(fin)
             fin.close()
         except IOError:
-            self.log().info("%s/device_infos.pickle was not found" % (
+            self.info("%s/device_infos.pickle was not found" % (
                                                         config.cache_dir))
         if (not config.test_known_device and
             self.info.guid in device_infos.keys()):
@@ -125,17 +125,17 @@ class Device(units.Pickleable):
             return
         self._do_tests(device_infos)
         device_infos[self.info.guid] = self.info
-        self.log().info("Saving found device performance values into "
+        self.info("Saving found device performance values into "
                         "%s/device_infos.pickle" % (config.cache_dir))
         fout = open("%s/device_infos.pickle" % (config.cache_dir), "wb")
         pickle.dump(device_infos, fout)
         fout.close()
-        self.log().info("Saved")
+        self.info("Saved")
 
     def _do_tests(self, device_infos):
         """Measure relative device performance.
         """
-        self.log().info("Will test device performance.\n"
+        self.info("Will test device performance.\n"
             "Results of the test will be saved to %s/device_infos.pickle, "
             "so this is one time process usually." % (config.cache_dir))
 
@@ -160,15 +160,15 @@ class Device(units.Pickleable):
                         else "double", self.AB_WIDTH,
                         self.B_HEIGHT, self.A_HEIGHT)
                     if not key in cc.keys():
-                        self.log().info("Numpy double precision "
+                        self.info("Numpy double precision "
                                         "for dtype=%s" % (dtype))
                         dt = self._do_cpu_test(cc, key)
-                        self.log().info("Done in %.2f seconds" % (dt))
+                        self.info("Done in %.2f seconds" % (dt))
                         if dt < dt_numpy:
                             dt_numpy = dt
                         if dt_numpy < min_dt[dtype]:
                             min_dt[dtype] = dt_numpy
-                    self.log().info("Testing %s with BLOCK_SIZE = %d "
+                    self.info("Testing %s with BLOCK_SIZE = %d "
                         "and dtype = %s" % (self.info.guid, BLOCK_SIZE, dtype))
                     dt = self._do_test(BLOCK_SIZE, dtype, 3)
                     if dt < self.info.dt[dtype]:
@@ -180,14 +180,14 @@ class Device(units.Pickleable):
                     c -= self.c.v
                     c = numpy.sqrt(numpy.square(numpy.real(c)) +
                                    numpy.square(numpy.imag(c)))
-                    self.log().info("Avg is %.2f seconds, MSE = %.6f, "
+                    self.info("Avg is %.2f seconds, MSE = %.6f, "
                                     "max_diff = %.6f" % (
                                     dt, numpy.sum(c) / c.size, c.max()))
                     self._cleanup_after_tests()
                 except (pyopencl.LogicError, pyopencl.RuntimeError,
                         pyopencl.MemoryError):
                     a, b, c = sys.exc_info()
-                    self.log().info("Program compilation or run failed for "
+                    self.info("Program compilation or run failed for "
                         "BLOCK_SIZE = %d and dtype = %s "
                         "(details in stderr)" % (BLOCK_SIZE, dtype))
                     traceback.print_exception(a, b, c)
@@ -195,25 +195,25 @@ class Device(units.Pickleable):
 
         del cc
 
-        self.log().info("\nRating(numpy double precision): %.4f" % (
+        self.info("\nRating(numpy double precision): %.4f" % (
             min_dt[config.dtype] / dt_numpy))
         for info in device_infos.values():
             for dtype in sorted(opencl_types.dtypes.keys()):
-                self.log().info("================")
-                self.log().info(dtype)
+                self.info("================")
+                self.info(dtype)
                 rating = min_dt[dtype] / info.dt[dtype]
                 if info.rating[dtype] != rating:
                     if info.rating[dtype]:
-                        self.log().info("UPD Rating(%s): %.4f" % (info.guid,
+                        self.info("UPD Rating(%s): %.4f" % (info.guid,
                                                                   rating))
                     else:
-                        self.log().info("NEW Rating(%s): %.4f" % (info.guid,
+                        self.info("NEW Rating(%s): %.4f" % (info.guid,
                                                                   rating))
                 else:
-                    self.log().info("Rating(%s): %.4f" % (info.guid, rating))
+                    self.info("Rating(%s): %.4f" % (info.guid, rating))
                 info.rating[dtype] = rating
                 info.min_dt[dtype] = min_dt[dtype]
-        self.log().info("================")
+        self.info("================")
 
     def _prepare_tests(self, BLOCK_SIZE, dtype):
         self.AB_WIDTH = 65537
@@ -223,7 +223,7 @@ class Device(units.Pickleable):
             self.AB_WIDTH = formats.roundup(self.AB_WIDTH, BLOCK_SIZE)
             self.B_HEIGHT = formats.roundup(self.B_HEIGHT, BLOCK_SIZE)
             self.A_HEIGHT = formats.roundup(self.A_HEIGHT, BLOCK_SIZE)
-        self.log().info("Matricies are: [%d, %d] * [%d, %d] = [%d, %d]" % (
+        self.info("Matricies are: [%d, %d] * [%d, %d] = [%d, %d]" % (
             self.AB_WIDTH, self.A_HEIGHT, self.B_HEIGHT, self.AB_WIDTH,
             self.A_HEIGHT, self.B_HEIGHT))
         self.rnd_state = rnd.default.state

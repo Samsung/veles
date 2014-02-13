@@ -179,7 +179,7 @@ class Unit(Pickleable, Distributable):
         try:
             if not self.is_initialized:
                 self.initialize()
-                self.log().warning("%s is not initialized, performed the "
+                self.warning("%s is not initialized, performed the "
                                    "initialization", self.name())
                 self.is_initialized = True
             self.run()
@@ -280,7 +280,7 @@ class Unit(Pickleable, Distributable):
         """Logs any errors.
         """
         if "msg" in kwargs.keys():
-            self.log().error(kwargs["msg"])
+            self.error(kwargs["msg"])
         if "exc_info" in kwargs.keys():
             exc_info = kwargs["exc_info"]
             traceback.print_exception(exc_info[0], exc_info[1], exc_info[2])
@@ -333,7 +333,7 @@ class OpenCLUnit(Unit):
             self.gpu_run()
         else:
             self.cpu_run()
-        self.log().debug("%s in %.2f sec" % (self.__class__.__name__,
+        self.debug("%s in %.2f sec" % (self.__class__.__name__,
                                              time.time() - t1))
 
     @staticmethod

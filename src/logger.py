@@ -21,3 +21,29 @@ class Logger(object):
         """Returns the logger associated with this object.
         """
         return self.logger_
+
+    def redirect_logging_to_file(self, file_name, max_bytes=1024 * 1024,
+                                 backups=9):
+        handler = logging.handlers.RotatingFileHandler(
+            file_name, max_bytes, backups
+        )
+        self.logger_.info("Redirecting output to %s", file_name)
+        self.logger_.addHandler(handler)
+
+    def debug(self, msg, *args, **kwargs):
+        self.logger_.debug(msg, *args, **kwargs)
+
+    def info(self, msg, *args, **kwargs):
+        self.logger_.info(msg, *args, **kwargs)
+
+    def warn(self, msg, *args, **kwargs):
+        self.logger_.warn(msg, *args, **kwargs)
+
+    def error(self, msg, *args, **kwargs):
+        self.logger_.error(msg, *args, **kwargs)
+
+    def exception(self, msg, *args, **kwargs):
+        self.logger_.exception(msg, *args, **kwargs)
+
+    def critical(self, msg, *args, **kwargs):
+        self.logger_.critical(msg, *args, **kwargs)

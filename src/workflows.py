@@ -178,7 +178,7 @@ class Workflow(units.Unit):
         if write_on_disk:
             if not filename:
                 (_, filename) = tempfile.mkstemp(".png", "workflow_")
-            self.log().info("Saving the workflow graph to %s", filename)
+            self.info("Saving the workflow graph to %s", filename)
             g.write(filename, format='png')
         return g.to_string()
 
@@ -191,9 +191,9 @@ class Workflow(units.Unit):
             timers[uid] += value
         stats = sorted(timers.items(), key=lambda x: x[1], reverse=True)
         time_all = sum(timers.values())
-        self.log().info("Unit run time statistics top:")
+        self.info("Unit run time statistics top:")
         for i in range(1, min(top_number, len(stats)) + 1):
-            self.log().info("%d.  %s (%d%%)", i, stats[i - 1][0],
+            self.info("%d.  %s (%d%%)", i, stats[i - 1][0],
                             stats[i - 1][1] * 100 / time_all)
 
     unit_group_colors = {"PLOTTER": "gold",
@@ -259,17 +259,17 @@ class OpenCLWorkflow(units.OpenCLUnit, Workflow):
         for i in range(len(units_to_export)):
             u = units_to_export[i]
             if u.exports == None:
-                self.log().debug("%s continue" % u.__class__.__name__)
+                self.debug("%s continue" % u.__class__.__name__)
                 continue
             variables = u.__getstate__()
             for key in variables:
                 if key in u.exports:
-                    self.log().debug("%s in attributes to export" % (key))
+                    self.debug("%s in attributes to export" % (key))
                     # Save numpy array to binary file
                     if type(getattr(u, key)) == formats.Vector and i >= 1:
                         for j in range(len(getattr(u, key).v.shape)):
                             name = key + "_shape_" + str(j)
-                            self.log().info(name)
+                            self.info(name)
                             dict_temp[name] = getattr(u, key).v.shape[j]
 
                         link_to_numpy = "unit" + str(i - 1) + key + ".bin"

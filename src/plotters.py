@@ -52,7 +52,7 @@ class Plotter(units.Unit):
             self.stripped_pickle = False
 
     def on_shutdown(self):
-        self.log().debug("Waiting for the graphics server process to finish")
+        self.debug("Waiting for the graphics server process to finish")
         Graphics.shutdown()
 
 
