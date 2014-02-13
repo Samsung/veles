@@ -60,7 +60,7 @@ class Distributable(object):
     def generate_data_for_master(self):
         return None
 
-    def generate_data_for_slave(self):
+    def generate_data_for_slave(self, slave=None):
         return None
 
     def apply_data_from_master(self, data):

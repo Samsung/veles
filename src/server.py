@@ -13,7 +13,6 @@ from twisted.internet import reactor, threads, task
 from twisted.internet.protocol import Factory
 import uuid
 import socket
-import sys
 
 import config
 import network_common
