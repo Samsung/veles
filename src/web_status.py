@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 """
 Created on Feb 10, 2014
 
@@ -15,6 +17,7 @@ import tornado.web as web
 import uuid
 
 import config
+import logger
 
 
 class ServiceHandler(web.RequestHandler):
@@ -39,8 +42,10 @@ class UpdateHandler(web.RequestHandler):
         self.server.receive_update(self.request.remote_ip, data)
 
 
-class WebStatusServer:
+class WebStatusServer(logger.Logger):
     def __init__(self, cmd_queue_in, cmd_queue_out):
+        super(WebStatusServer, self).__init__()
+        self.redirect_logging_to_file(config.web_status_log_file)
         self.application = web.Application([
             ("/service", ServiceHandler, {"server": self}),
             ("/" + config.web_status_update, UpdateHandler, {"server": self}),
@@ -64,6 +69,8 @@ class WebStatusServer:
         self.cmd_queue_out = cmd_queue_out
         self.cmd_thread = threading.Thread(target=self.cmd_loop)
         self.pending_requests = {}
+        self.info("Wen server is listening on %s:%s", config.web_status_host,
+                  config.web_status_port)
 
     def send_command(self, handler, cmd):
         request_id = uuid.uuid4()
@@ -90,7 +97,7 @@ class WebStatusServer:
         self.cmd_thread.join()
 
 
-class WebStatus:
+class WebStatus(logger.Logger):
     """
     Operates a web server based on Tornado to show various runtime information.
 
@@ -107,6 +114,7 @@ class WebStatus:
 
     def __init__(self):
         super(WebStatus, self).__init__()
+        self.redirect_logging_to_file(config.web_status_log_file)
         self.exiting = False
         self.masters = {}
         self.cmd_queue_in = mp.Queue()
@@ -130,7 +138,7 @@ class WebStatus:
             if not cmd:
                 break
             if "update" in cmd.keys():
-                host = socket.gethostbyaddr(cmd["update"])
+                host, _, _ = socket.gethostbyaddr(cmd["update"])
                 self.masters[host] = cmd["body"]
             elif "request" in cmd.keys():
                 ret = {}

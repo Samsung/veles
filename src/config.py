@@ -97,4 +97,5 @@ web_status_host = "smaug"
 web_status_update = "update"
 web_status_port = 8080
 web_status_notification_interval = 1
+web_status_log_file = "/var/log/veles_web_status.log"
 webagg_port = 8081
