@@ -232,8 +232,9 @@ class Server(network_common.NetworkConfigurable):
         ret['workflow']['graph'] = self.workflow_graph
         for nid, node in self.factory.nodes.items():
             ret['nodes'][nid] = {'host': node["host"]}
-        self.notify_agent.fetch("http://%s:%d" % (config.web_status_host,
-                                                  config.web_status_port),
+        self.notify_agent.fetch("http://%s/%s:%d" % (config.web_status_host,
+                                                     config.web_status_update,
+                                                     config.web_status_port),
                                 self.handle_notify_request,
                                 method='POST', headers=None,
                                 connect_timeout=0.2,

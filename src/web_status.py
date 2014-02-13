@@ -42,8 +42,8 @@ class UpdateHandler(web.RequestHandler):
 class WebStatusServer:
     def __init__(self, cmd_queue_in, cmd_queue_out):
         self.application = web.Application([
-            (r"/service", ServiceHandler, {"server": self}),
-            (r"/update", UpdateHandler, {"server": self}),
+            ("/service", ServiceHandler, {"server": self}),
+            ("/" + config.web_status_update, UpdateHandler, {"server": self}),
             (r"/(js/.*)", web.StaticFileHandler, {'path':
                                                   config.web_status_root}),
             (r"/(css/.*)", web.StaticFileHandler, {'path':
@@ -52,11 +52,11 @@ class WebStatusServer:
                                                      config.web_status_root}),
             (r"/(.+\.html)", web.StaticFileHandler, {'path':
                                                      config.web_status_root}),
-            (r"/(veles.png)", web.StaticFileHandler, {'path':
-                                                      config.web_status_root}),
-            (r"/", web.RedirectHandler, {"url": "/status.html",
+            ("/(veles.png)", web.StaticFileHandler, {'path':
+                                                     config.web_status_root}),
+            ("/", web.RedirectHandler, {"url": "/status.html",
                                         "permanent": True}),
-            (r"", web.RedirectHandler, {"url": "/status.html",
+            ("", web.RedirectHandler, {"url": "/status.html",
                                        "permanent": True})
         ])
         self.application.listen(config.web_status_port)
