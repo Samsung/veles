@@ -8,6 +8,7 @@ Created on Feb 10, 2014
 
 
 import daemon
+import logging
 import multiprocessing as mp
 import socket
 import threading
@@ -26,8 +27,13 @@ class ServiceHandler(web.RequestHandler):
 
     @tornado.web.asynchronous
     def post(self):
-        data = tornado.escape.json_decode(self.request.body)
-        self.server.send_command(self, data)
+        self.server.info("service POST from %s: %s", self.request.remote_ip,
+                         self.request.body)
+        try:
+            data = tornado.escape.json_decode(self.request.body)
+            self.server.send_command(self, data)
+        except:
+            self.server.exception()
 
     def finish_post(self, result):
         self.finish(result)
@@ -38,8 +44,13 @@ class UpdateHandler(web.RequestHandler):
         self.server = server
 
     def post(self):
-        data = tornado.escape.json_decode(self.request.body)
-        self.server.receive_update(self.request.remote_ip, data)
+        self.server.info("update POST from %s: %s", self.request.remote_ip,
+                         self.request.body)
+        try:
+            data = tornado.escape.json_decode(self.request.body)
+            self.server.receive_update(self.request.remote_ip, data)
+        except:
+            self.server.exception()
 
 
 class WebStatusServer(logger.Logger):
@@ -69,8 +80,8 @@ class WebStatusServer(logger.Logger):
         self.cmd_queue_out = cmd_queue_out
         self.cmd_thread = threading.Thread(target=self.cmd_loop)
         self.pending_requests = {}
-        self.info("Wen server is listening on %s:%s", config.web_status_host,
-                  config.web_status_port)
+        self.info("Status server is listening on %s:%s",
+                  config.web_status_host, config.web_status_port)
 
     def send_command(self, handler, cmd):
         request_id = uuid.uuid4()
@@ -92,6 +103,7 @@ class WebStatusServer(logger.Logger):
             del(self.pending_requests[request_id])
 
     def run(self):
+        self.info("HTTP server is running")
         self.cmd_thread.start()
         ioloop.IOLoop.instance().start()
         self.cmd_thread.join()
@@ -137,20 +149,27 @@ class WebStatus(logger.Logger):
             cmd = self.cmd_queue_in.get()
             if not cmd:
                 break
-            if "update" in cmd.keys():
-                host, _, _ = socket.gethostbyaddr(cmd["update"])
-                self.masters[host] = cmd["body"]
-            elif "request" in cmd.keys():
-                ret = {}
-                for mid, master in self.masters.items():
-                    for item in cmd["body"]:
-                        ret[mid] = master[item]
-                self.cmd_queue_out.put_nowait({"request": cmd["request"],
-                                               "result": ret})
-            elif "stop" in cmd.keys():
-                self.stop()
+            try:
+                if "update" in cmd.keys():
+                    host, _, _ = socket.gethostbyaddr(cmd["update"])
+                    self.debug("Master %s yielded %s", host, str(cmd["body"]))
+                    self.masters[host] = cmd["body"]
+                elif "request" in cmd.keys():
+                    ret = {}
+                    for mid, master in self.masters.items():
+                        for item in cmd["body"]:
+                            ret[mid] = master[item]
+                    self.debug("Request %s: %s", cmd["request"], str(ret))
+                    self.cmd_queue_out.put_nowait({"request": cmd["request"],
+                                                   "result": ret})
+                elif "stop" in cmd.keys():
+                    self.info("Stopping everything")
+                    self.stop()
+            except:
+                self.exception()
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
     with daemon.DaemonContext():
         ws = WebStatus()
         ws.run()
