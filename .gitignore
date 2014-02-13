@@ -3,6 +3,7 @@
 .libs
 *.log
 *.in
+*.pickle
 aclocal.m4
 autom4te.cache
 test-driver
@@ -19,6 +20,7 @@ install-sh
 ltmain.sh
 missing
 __pycache__
+cache
 !Doxyfile.in
 !Veles.pc.in
 !Application.mk.in
