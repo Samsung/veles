@@ -9,10 +9,10 @@ import config
 import opencl_types
 import formats
 from graphics import Graphics
-import units
+from units import Unit
 
 
-class Plotter(units.Unit):
+class Plotter(Unit):
     """Base class for all plotters.
     """
     server_shutdown_registered = False
@@ -59,7 +59,15 @@ class Plotter(units.Unit):
         return 1
 
     def apply_data_from_slave(self, data, slave=None):
-        self.check_gate_and_run(None)
+        if (((Unit.callvle(self.gate_block[0]) and
+              (not Unit.callvle(self.gate_block_not[0]))) or
+             ((not Unit.callvle(self.gate_block[0])) and
+              Unit.callvle(self.gate_block_not[0]))) and
+            (((not Unit.callvle(self.gate_skip[0])) and
+             (not Unit.callvle(self.gate_skip_not[0]))) or
+            ((Unit.callvle(self.gate_skip[0]) and
+              Unit.callvle(self.gate_skip_not[0]))))):
+            self.run()
 
 
 class SimplePlotter(Plotter):

@@ -54,6 +54,9 @@ class Launcher(logger.Logger):
         self.args.skip_web_status = kwargs.get("skip_web_status", False)
         self.args.slaves = kwargs.get("slaves")
 
+        if self.args.server_address:
+            config.is_slave = True
+
     def initialize(self, workflow):
         if self.args.server_address:
             self.agent = client.Client(self.args.server_address, workflow)

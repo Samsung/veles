@@ -18,10 +18,10 @@ import config
 import formats
 import pydot
 import threading
-import units
+from units import Unit, OpenCLUnit, Repeater
 
 
-class UttermostPoint(units.Unit):
+class UttermostPoint(Unit):
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = kwargs.get("view_group", "START_END")
         super(UttermostPoint, self).__init__(workflow, **kwargs)
@@ -58,17 +58,19 @@ class EndPoint(UttermostPoint):
     def generate_data_for_master(self):
         return 1
 
-    def opened_gate(self):
-        return True
-
     def apply_data_from_slave(self, data, slave=None):
-        gate = self.gate
-        self.gate = self.opened_gate
-        self.check_gate_and_run(None)
-        self.gate = gate
+        if (((Unit.callvle(self.gate_block[0]) and
+              (not Unit.callvle(self.gate_block_not[0]))) or
+             ((not Unit.callvle(self.gate_block[0])) and
+              Unit.callvle(self.gate_block_not[0]))) and
+            (((not Unit.callvle(self.gate_skip[0])) and
+             (not Unit.callvle(self.gate_skip_not[0]))) or
+            ((Unit.callvle(self.gate_skip[0]) and
+              Unit.callvle(self.gate_skip_not[0]))))):
+            self.run()
 
 
-class Workflow(units.Unit):
+class Workflow(Unit):
     """Base class for unit sets which are logically connected and belong to
     the same host.
 
@@ -166,7 +168,7 @@ class Workflow(units.Unit):
         Harness the results of a slave's job. Run by a master.
         """
         real_data = pickle.loads(data)
-        self.apply_data_from_slave(real_data, self, slave)
+        self.apply_data_from_slave(real_data, slave)
 
     def get_computing_power(self):
         """
@@ -210,7 +212,7 @@ class Workflow(units.Unit):
 
     def print_stats(self, by_name=False, top_number=5):
         timers = {}
-        for key, value in units.Unit.timers.items():
+        for key, value in Unit.timers.items():
             uid = key.__class__.__name__ if not by_name else key.name()
             if id not in timers:
                 timers[uid] = 0
@@ -230,7 +232,7 @@ class Workflow(units.Unit):
                          "START_END": "lightgrey"}
 
 
-class OpenCLWorkflow(units.OpenCLUnit, Workflow):
+class OpenCLWorkflow(OpenCLUnit, Workflow):
     """Base class for neural network workflows.
 
     Attributes:
@@ -243,7 +245,7 @@ class OpenCLWorkflow(units.OpenCLUnit, Workflow):
     """
     def __init__(self, workflow, **kwargs):
         super(OpenCLWorkflow, self).__init__(workflow, **kwargs)
-        self.rpt = units.Repeater(self)
+        self.rpt = Repeater(self)
         self.loader = None
         self.forward = []
         self.ev = None
@@ -260,9 +262,9 @@ class OpenCLWorkflow(units.OpenCLUnit, Workflow):
         if self.ev != None:
             if type(self.ev) == list:
                 for ev in self.ev:
-                    if isinstance(ev, units.OpenCLUnit):
+                    if isinstance(ev, OpenCLUnit):
                         ev.device = self.device
-            elif isinstance(self.ev, units.OpenCLUnit):
+            elif isinstance(self.ev, OpenCLUnit):
                 self.ev.device = self.device
         for obj in self.gd:
             if obj != None:

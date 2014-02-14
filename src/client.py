@@ -112,25 +112,35 @@ class VelesProtocol(network_common.StringLineReceiver):
             if job != "offer":
                 self.disconnect("Unknown job value %s.", job)
                 return
+            self.size = msg.get("size")
+            if self.size == None:
+                self.disconnect("Job size was not specified.")
+                return
+            self.job = bytearray()
             self.setRawMode()
             return
         self.disconnect("Invalid state %s.", self.state.current)
 
     def rawDataReceived(self, data):
         if self.state.current == 'GETTING_JOB':
-            self.setLineMode()
-            job = threads.deferToThreadPool(reactor,
+            self.job += data
+            if len(self.job) == self.size:
+                self.setLineMode()
+                job = threads.deferToThreadPool(reactor,
                                             self.factory.host.thread_pool(),
                                             self.factory.host.do_job,
-                                            data)
-            job.addCallback(self.jobFinished)
-            self.state.obtain_job()
+                                            self.job)
+                job.addCallback(self.jobFinished)
+                self.state.obtain_job()
+            if len(self.job) > self.size:
+                self.disconnect("Received job size %d exceeded the expected "
+                                "length (%d)", len(self.job), self.size)
             return
         self.disconnect("Invalid state %s.", self.state.current)
 
     def jobFinished(self, update):
         if self.state.current == "BUSY":
-            self.sendLine({'cmd': 'update'})
+            self.sendLine({'cmd': 'update', 'size': len(update)})
             self.transport.write(update)
             self.state.wait_update_notification()
             return
