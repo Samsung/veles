@@ -64,23 +64,23 @@ class Launcher(units.Unit):
     def initialize(self, **kwargs):
         return self.agent.initialize(**kwargs)
 
-    def run(self):
-        return self.agent.run(daemon=True)
+    def run(self, daemonize=False):
+        return self.agent.run(daemonize=daemonize)
 
     def stop(self):
-        if self.web_status:
-            self.web_status.stop()
         self.agent.stop()
 
     def launch_status(self):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        result = sock.connect_ex((config.web_status_host,
-                                  config.web_status_port))
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            result = sock.connect_ex((config.web_status_host,
+                                      config.web_status_port))
         if result == 0:
             self.info("Launching the web status server")
             self.launch_remote_program(config.web_status_host,
                                        os.path.join(config.this_dir,
                                                     "web_status.py"))
+        else:
+            self.info("Discovered an already running web status server")
 
     def launch_nodes(self, nodes):
         if not "nodes" in self.options:
@@ -110,10 +110,9 @@ class Launcher(units.Unit):
     def launch_remote_program(self, host, prog):
         self.debug("Launching \"%s\" on %s", prog, host)
         try:
-            client = paramiko.SSHClient()
-            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            client.connect(host, look_for_keys=True, timeout=0.1)
-            client.exec_command(prog)
-            client.close()
+            with paramiko.SSHClient() as client
+                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                client.connect(host, look_for_keys=True, timeout=0.1)
+                client.exec_command(prog)
         except:
             self.exception()
