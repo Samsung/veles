@@ -15,6 +15,7 @@ import uuid
 import socket
 
 import config
+import daemon
 import network_common
 
 
@@ -212,10 +213,11 @@ class Server(network_common.NetworkConfigurable):
         self.notify_task = task.LoopingCall(self.notify_status)
         self.notify_agent = AsyncHTTPClient()
 
-    def run(self):
-        self.notify_task.start(config.web_status_notification_interval,
-                               now=False)
-        reactor.run()
+    def run(self, daemon=False):
+        with daemon.DaemonContext() if daemon else None:
+            self.notify_task.start(config.web_status_notification_interval,
+                                   now=False)
+            reactor.run()
 
     def stop(self):
         self.notify_task.stop()
