@@ -7,6 +7,7 @@ Created on Feb 14, 2014
 """
 
 
+import logging
 import pickle
 import socket
 import time
@@ -64,12 +65,15 @@ class Test(unittest.TestCase):
         pass
 
     def testConnectivity(self):
-        reactor.callLater(0.1, reactor.stop)
+        reactor.callLater(0.5, reactor.stop)
         reactor.run()
-        time.sleep(1)
-        reactor.stop()
+        self.assertTrue(TestWorkflow.job_requested, "Job was not requested.")
+        self.assertTrue(TestWorkflow.job_done, "Job was not done.")
+        self.assertTrue(TestWorkflow.update_applied, "Update was not applied.")
+        self.assertTrue(TestWorkflow.power_requested,
+                        "Power was not requested.")
 
 
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'Test.testConnectivity']
+    logging.basicConfig(level=logging.DEBUG)
     unittest.main()

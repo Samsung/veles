@@ -110,9 +110,10 @@ class Launcher(units.Unit):
     def launch_remote_program(self, host, prog):
         self.debug("Launching \"%s\" on %s", prog, host)
         try:
-            with paramiko.SSHClient() as client:
-                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                client.connect(host, look_for_keys=True, timeout=0.1)
-                client.exec_command(prog)
+            client = paramiko.SSHClient()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(host, look_for_keys=True, timeout=0.1)
+            client.exec_command(prog)
+            client.close()
         except:
             self.exception()
