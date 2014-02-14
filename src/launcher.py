@@ -9,6 +9,7 @@ import argparse
 import os
 import paramiko
 import socket
+import sys
 
 import client
 import config
@@ -18,6 +19,12 @@ import units
 
 class Launcher(units.Unit):
     """Workflow launcher.
+
+    Parameters:
+    mode                  The operation mode ("slave" or "master").
+    skip_web_status       If set to True, do not launch the status server.
+                          It will not start if already running, anyway.
+    slaves                The list of slaves to launch remotely.
     """
     def __init__(self, workflow, **kwargs):
         super(Launcher, self).__init__(workflow, **kwargs)
@@ -28,21 +35,29 @@ class Launcher(units.Unit):
         parser.add_argument("-l", "--listen_address", type=str, default="",
             help="Workflow will be launched in server mode "
             "and will accept client connections at the specified address.")
-        args = parser.parse_args()
-        if len(args.server_address):
-            self.agent = client.Client(args.server_address, workflow)
-        elif len(args.listen_address):
-            self.agent = server.Server(args.listen_address, workflow)
+        self.args = parser.parse_args()
+
+        if len(self.args.server_address) or \
+           ("mode" in kwargs and kwargs["mode"] == "slave"):
+            self.agent = client.Client(self.args.server_address, workflow)
+        elif len(self.args.listen_address) or \
+           ("mode" in kwargs and kwargs["mode"] == "master"):
+            self.agent = server.Server(self.args.listen_address, workflow)
+            # Launch the status server if it's not been running yet
+            if not kwargs.get("skip_web_status"):
+                self.launch_status()
+            # Launch the nodes described in the configuration file/string
+            nodes = kwargs.get("slaves")
+            if nodes:
+                self.launch_nodes(nodes)
         else:
             self.agent = workflow
-        # Launch the status server if it's not been running yet
-        self.launch_status()
 
     def initialize(self, **kwargs):
         return self.agent.initialize(**kwargs)
 
     def run(self):
-        return self.agent.run()
+        return self.agent.run(daemon=True)
 
     def stop(self):
         if self.web_status:
@@ -55,19 +70,42 @@ class Launcher(units.Unit):
                                   config.web_status_port))
         if result == 0:
             self.info("Launching the web status server")
-            Launcher.launch_remote_program(config.web_status_host,
-                                           os.path.join(config.this_dir,
-                                                        "web_status.py"))
+            self.launch_remote_program(config.web_status_host,
+                                       os.path.join(config.this_dir,
+                                                    "web_status.py"))
 
-    @staticmethod
-    def launch_node(node, script, server_address=socket.gethostname()):
-        Launcher.launch_remote_program(
-            node, "%s --server_address %s" % (script, server_address))
+    def launch_nodes(self, nodes):
+        if not "nodes" in self.options:
+            return
+        filtered_argv = []
+        skip = False
+        for i in range(1, len(sys.argv)):
+            if filtered_argv[i] == "-l" or \
+               filtered_argv[i] == "--listen_address":
+                skip = True
+            elif not skip:
+                filtered_argv.append(sys.argv[i])
+            else:
+                skip = False
+        filtered_argv.append("-s")
+        host = self.args.listen_address[0:self.args.listen_address.index(':')]
+        port = self.args.listen_address[len(host) + 1:]
+        if host == "localhost" or host == "127.0.0.1":
+            host = socket.gethostname()
+        filtered_argv.append("%s:%s", (host, port))
+        slave_args = " ".join(filtered_argv)
+        self.debug("Slave args: %s", slave_args)
+        for node in nodes:
+            self.launch_remote_program(node, "%s %s" % (sys.argv[0],
+                                                        slave_args))
 
-    @staticmethod
-    def launch_remote_program(host, prog):
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(host, look_for_keys=True)
-        client.exec_command(prog)
-        client.close()
+    def launch_remote_program(self, host, prog):
+        self.debug("Launching \"%s\" on %s", prog, host)
+        try:
+            client = paramiko.SSHClient()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(host, look_for_keys=True, timeout=0.1)
+            client.exec_command(prog)
+            client.close()
+        except:
+            self.exception()
