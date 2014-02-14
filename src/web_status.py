@@ -81,7 +81,7 @@ class WebStatusServer(logger.Logger):
         self.cmd_thread = threading.Thread(target=self.cmd_loop)
         self.pending_requests = {}
         self.info("Status server is listening on %s:%s",
-                  config.web_status_host, config.web_status_port)
+                  socket.gethostname(), config.web_status_port)
 
     def send_command(self, handler, cmd):
         request_id = uuid.uuid4()

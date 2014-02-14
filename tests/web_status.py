@@ -9,20 +9,14 @@ import logging
 import time
 import unittest
 
-import web_status
-
-
-class Dummy:
-    def fulfill_request(self, data):
-        print(str(data))
-        return "AJAX WORKS!"
+from veles.web_status import WebStatus
 
 
 class Test(unittest.TestCase):
 
     def setUp(self):
         logging.basicConfig(level=logging.INFO)
-        self.ws = web_status.WebStatus(Dummy())
+        self.ws = WebStatus()
         self.ws.run()
 
     def tearDown(self):
