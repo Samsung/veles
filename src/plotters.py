@@ -55,6 +55,12 @@ class Plotter(units.Unit):
         self.debug("Waiting for the graphics server process to finish")
         Graphics.shutdown()
 
+    def generate_data_for_master(self):
+        return 1
+
+    def apply_data_from_slave(self, data, slave=None):
+        self.check_gate_and_run(None)
+
 
 class SimplePlotter(Plotter):
     """Accumulates supplied value and draws the accumulated plot.

@@ -19,10 +19,12 @@ class OpenCLBenchmark(units.OpenCLUnit):
     Executes an OpenCL benchmark to estimate the computing power.
     """
 
-    def __init__(self, device=None):
+    def __init__(self, workflow, **kwargs):
+        device = kwargs.get("device")
         if device == None:
             device = opencl.Device()
-        super(OpenCLBenchmark, self).__init__(device=device)
+        kwargs["device"] = device
+        super(OpenCLBenchmark, self).__init__(workflow, **kwargs)
         self.block_size = 30
         self.size = 3000
         self.cl_sources_ = {"benchmark.cl": {

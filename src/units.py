@@ -57,16 +57,48 @@ class Pickleable(logger.Logger):
 
 
 class Distributable(object):
+    """Callbacks for working in distributed environment.
+    """
     def generate_data_for_master(self):
+        """Here, you should generate data to be sent from slave to master.
+
+        Returns:
+            data of any type or None if there is nothing to send.
+        """
         return None
 
     def generate_data_for_slave(self, slave=None):
+        """Here, the data for slave should be generated.
+
+        Parameters:
+            slave: some information about the slave (may be None).
+
+        Returns:
+            data of any type or None if there is nothing to send.
+        """
         return None
 
     def apply_data_from_master(self, data):
+        """Here, you should apply received data from master.
+
+        Parameters:
+            data - exactly the same value that was returned by
+                   generate_data_for_slave at the master's side.
+
+        Returns:
+            None.
+        """
         pass
 
-    def apply_data_from_slave(self, data):
+    def apply_data_from_slave(self, data, slave=None):
+        """Here, the data from slave should be applied.
+
+        Parameters:
+            slave: some information about the slave (may be None).
+
+        Returns:
+            None.
+        """
         pass
 
 
@@ -131,9 +163,6 @@ class Unit(Pickleable, Distributable):
     def __fini__(self):
         if self.workflow != None and hasattr(self.workflow, "del_ref"):
             self.workflow.del_ref(self)
-
-    def __hash__(self):
-        return id(self)
 
     def init_unpickled(self):
         super(Unit, self).init_unpickled()
@@ -304,6 +333,7 @@ class OpenCLUnit(Unit):
         prg_: OpenCL program.
         cl_sources: OpenCL source files: file => defines.
         prg_src: last built OpenCL program source code text.
+        run_executed: sets to True at the end of run.
     """
     def __init__(self, workflow, **kwargs):
         device = kwargs.get("device")
@@ -311,6 +341,7 @@ class OpenCLUnit(Unit):
         super(OpenCLUnit, self).__init__(workflow, **kwargs)
         self.device = device
         self.prg_src = None
+        self.run_executed = False
 
     def init_unpickled(self):
         super(OpenCLUnit, self).init_unpickled()
@@ -333,6 +364,7 @@ class OpenCLUnit(Unit):
             self.gpu_run()
         else:
             self.cpu_run()
+        self.run_executed = True
         self.debug("%s in %.2f sec" % (self.__class__.__name__,
                                              time.time() - t1))
 

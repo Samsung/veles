@@ -55,6 +55,18 @@ class EndPoint(UttermostPoint):
     def wait(self):
         self.sem_.acquire()
 
+    def generate_data_for_master(self):
+        return 1
+
+    def opened_gate(self):
+        return True
+
+    def apply_data_from_slave(self, data, slave=None):
+        gate = self.gate
+        self.gate = self.opened_gate
+        self.check_gate_and_run(None)
+        self.gate = gate
+
 
 class Workflow(units.Unit):
     """Base class for unit sets which are logically connected and belong to
@@ -69,9 +81,13 @@ class Workflow(units.Unit):
         if workflow:
             workflow.add_ref(self)
         super(Workflow, self).__init__(workflow, **kwargs)
-        self.units = set()
+        self.units = []
         self.start_point = StartPoint(self)
         self.end_point = EndPoint(self)
+
+    def init_unpickled(self):
+        super(Workflow, self).init_unpickled()
+        self.pipeline_lock_ = threading.Lock()
 
     def initialize(self):
         return self.start_point.initialize_dependent()
@@ -90,14 +106,18 @@ class Workflow(units.Unit):
         self.print_stats()
 
     def add_ref(self, unit):
-        self.units.add(unit)
-        if self.workflow:
+        if unit not in self.units:
+            self.units.append(unit)
+        if self.workflow != None:
             self.workflow.add_ref(unit)
 
     def del_ref(self, unit):
         self.units.remove(unit)
-        if self.workflow:
+        if self.workflow != None:
             self.workflow.del_ref(unit)
+
+    def unlock_pipeline(self):
+        self.pipeline_lock_.release()
 
     def generate_data_for_master(self):
         data = []
@@ -105,29 +125,32 @@ class Workflow(units.Unit):
             data.append(unit.generate_data_for_master())
         return data
 
-    def generate_data_for_slave(self):
+    def generate_data_for_slave(self, slave=None):
+        self.pipeline_lock_.acquire()
         data = []
         for unit in self.units:
-            data.append(unit.generate_data_for_slave())
+            data.append(unit.generate_data_for_slave(slave))
         return data
 
     def apply_data_from_master(self, data):
         if not isinstance(data, list):
             raise ValueError("data must be a list")
         for i in range(0, len(data)):
-            self.units[i].apply_data_from_master(data[i])
+            if data[i] != None:
+                self.units[i].apply_data_from_master(data[i])
 
-    def apply_data_from_slave(self, data):
+    def apply_data_from_slave(self, data, slave=None):
         if not isinstance(data, list):
             raise ValueError("data must be a list")
         for i in range(0, len(data)):
-            self.units[i].apply_data_from_slave(data[i])
+            if data[i] != None:
+                self.units[i].apply_data_from_slave(data[i], slave)
 
-    def request_job(self):
+    def request_job(self, slave=None):
         """
         Produces a new job, when a slave asks for it. Run by a master.
         """
-        return pickle.dumps(self.generate_data_for_slave())
+        return pickle.dumps(self.generate_data_for_slave(slave))
 
     def do_job(self, data):
         """
@@ -138,12 +161,12 @@ class Workflow(units.Unit):
         self.run()
         return pickle.dumps(self.generate_data_for_master())
 
-    def apply_update(self, data):
+    def apply_update(self, data, slave=None):
         """
         Harness the results of a slave's job. Run by a master.
         """
         real_data = pickle.loads(data)
-        self.apply_data_from_slave(real_data)
+        self.apply_data_from_slave(real_data, self, slave)
 
     def get_computing_power(self):
         """
@@ -344,6 +367,6 @@ class OpenCLWorkflow(units.OpenCLUnit, Workflow):
         Run by a slave.
         """
         if not self.power:
-            bench = benchmark.OpenCLBenchmark()
+            bench = benchmark.OpenCLBenchmark(None, device=self.device)
             self.power = bench.estimate()
         return self.power

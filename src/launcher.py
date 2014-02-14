@@ -17,7 +17,7 @@ import server
 import units
 
 
-class Launcher(units.Unit):
+class Launcher(object):
     """Workflow launcher.
 
     Parameters:
@@ -29,7 +29,7 @@ class Launcher(units.Unit):
                           It will not start if already running, anyway.
     slaves                The list of slaves to launch remotely.
     """
-    def __init__(self, workflow, **kwargs):
+    def __init__(self, **kwargs):
         super(Launcher, self).__init__(workflow, **kwargs)
         parser = argparse.ArgumentParser()
         parser.add_argument("-s", "--server_address", type=str, default="",
@@ -47,6 +47,7 @@ class Launcher(units.Unit):
            "mode" in kwargs and kwargs["mode"] == "master":
             self.args.listen_address = kwargs["addr"]
 
+    def initialize(self, workflow, **kwargs):
         if self.args.server_address:
             self.agent = client.Client(self.args.server_address, workflow)
         elif self.args.listen_address:
@@ -60,8 +61,8 @@ class Launcher(units.Unit):
                 self.launch_nodes(nodes)
         else:
             self.agent = workflow
-
-    def initialize(self, **kwargs):
+        # Launch the status server if it's not been running yet
+        self.launch_status()
         return self.agent.initialize(**kwargs)
 
     def run(self, daemonize=False):
