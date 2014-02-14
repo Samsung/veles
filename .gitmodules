@@ -15,5 +15,5 @@
   branch = master
   url = https://github.com/madler/zlib
 [submodule "web_status/viz.js"]
-	path = web_status/viz.js
-	url = https://github.com/mdaines/viz.js
+  path = web_status/viz.js
+  url = https://github.com/vmarkovtsev/viz.js
