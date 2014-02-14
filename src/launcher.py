@@ -22,6 +22,9 @@ class Launcher(units.Unit):
 
     Parameters:
     mode                  The operation mode ("slave" or "master").
+    addr                  The partner's address (host:port).
+                          These two parameters are used in case of empty
+                          command line args.
     skip_web_status       If set to True, do not launch the status server.
                           It will not start if already running, anyway.
     slaves                The list of slaves to launch remotely.
@@ -37,11 +40,16 @@ class Launcher(units.Unit):
             "and will accept client connections at the specified address.")
         self.args = parser.parse_args()
 
-        if len(self.args.server_address) or \
-           ("mode" in kwargs and kwargs["mode"] == "slave"):
+        if not self.args.server_address and \
+           "mode" in kwargs and kwargs["mode"] == "slave":
+            self.args.server_address = kwargs["addr"]
+        if not self.args.listen_address and \
+           "mode" in kwargs and kwargs["mode"] == "master":
+            self.args.listen_address = kwargs["addr"]
+
+        if self.args.server_address:
             self.agent = client.Client(self.args.server_address, workflow)
-        elif len(self.args.listen_address) or \
-           ("mode" in kwargs and kwargs["mode"] == "master"):
+        elif self.args.listen_address:
             self.agent = server.Server(self.args.listen_address, workflow)
             # Launch the status server if it's not been running yet
             if not kwargs.get("skip_web_status"):
