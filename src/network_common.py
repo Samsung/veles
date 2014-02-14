@@ -33,6 +33,8 @@ class NetworkConfigurable(object):
             self.port = self.options[NetworkConfigurable.CONFIG_PORT]
         else:  # assume tcp
             self.address = configuration[:idx_semicolon]
+            if not self.address:
+                self.address = "0.0.0.0"
             self.port = int(configuration[idx_semicolon + 1:])
         logging.info("Network configuration: %s:%d", self.address, self.port)
 

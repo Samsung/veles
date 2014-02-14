@@ -14,9 +14,11 @@ import sys
 import client
 import config
 import server
+import logger
+import units
 
 
-class Launcher(object):
+class Launcher(logger.Logger):
     """Workflow launcher.
 
     Parameters:
@@ -29,6 +31,7 @@ class Launcher(object):
     slaves                The list of slaves to launch remotely.
     """
     def __init__(self, **kwargs):
+        super(Launcher, self).__init__()
         parser = argparse.ArgumentParser()
         parser.add_argument("-s", "--server_address", type=str, default="",
             help="Workflow will be launched in client mode "
@@ -38,33 +41,39 @@ class Launcher(object):
             "and will accept client connections at the specified address.")
         self.args = parser.parse_args()
 
-        if not self.args.server_address and \
-           "mode" in kwargs and kwargs["mode"] == "slave":
+        self.args.server_address = self.args.server_address.strip()
+        self.args.listen_address = self.args.listen_address.strip()
+
+        if (not self.args.server_address and
+           "mode" in kwargs and kwargs["mode"] == "slave"):
             self.args.server_address = kwargs["addr"]
-        if not self.args.listen_address and \
-           "mode" in kwargs and kwargs["mode"] == "master":
+        if (not self.args.listen_address and
+           "mode" in kwargs and kwargs["mode"] == "master"):
             self.args.listen_address = kwargs["addr"]
 
-    def initialize(self, workflow, **kwargs):
+        self.args.skip_web_status = kwargs.get("skip_web_status", False)
+        self.args.slaves = kwargs.get("slaves")
+
+    def initialize(self, workflow):
         if self.args.server_address:
             self.agent = client.Client(self.args.server_address, workflow)
         elif self.args.listen_address:
             self.agent = server.Server(self.args.listen_address, workflow)
             # Launch the status server if it's not been running yet
-            if not kwargs.get("skip_web_status"):
+            if not self.args.skip_web_status:
                 self.launch_status()
             # Launch the nodes described in the configuration file/string
-            nodes = kwargs.get("slaves")
-            if nodes:
+            nodes = self.args.slaves
+            if nodes != None:
                 self.launch_nodes(nodes)
         else:
             self.agent = workflow
         # Launch the status server if it's not been running yet
         self.launch_status()
-        return self.agent.initialize(**kwargs)
 
     def run(self, daemonize=False):
-        return self.agent.run(daemonize=daemonize)
+        return (self.agent.run() if isinstance(self.agent, units.Unit)
+                else self.agent.run(daemonize=daemonize))
 
     def stop(self):
         self.agent.stop()
@@ -97,7 +106,7 @@ class Launcher(object):
         filtered_argv.append("-s")
         host = self.args.listen_address[0:self.args.listen_address.index(':')]
         port = self.args.listen_address[len(host) + 1:]
-        if host == "localhost" or host == "127.0.0.1":
+        if not host or host == "0.0.0.0":
             host = socket.gethostname()
         filtered_argv.append("%s:%s", (host, port))
         slave_args = " ".join(filtered_argv)
