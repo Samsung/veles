@@ -38,7 +38,7 @@
     """
 
 import daemon.version as version
-from daemon.daemon import DaemonContext
+from daemon.daemon import DaemonContext, daemonize
 
 _version = version.version
 _copyright = version.copyright

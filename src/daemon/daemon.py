@@ -18,6 +18,7 @@
 """ Daemon process behaviour.
     """
 
+import copy
 import os
 import sys
 import resource
@@ -774,3 +775,21 @@ def register_atexit_function(func):
 
         """
     atexit.register(func)
+
+
+def daemonize(fn):
+    parameter_name = "daemonize"
+
+    def wrapped(*args, **kwargs):
+        fwdkwargs = copy.copy(kwargs)
+        go_daemon = fwdkwargs.get(parameter_name)
+        if go_daemon != None:
+            del(fwdkwargs[parameter_name])
+        else:
+            go_daemon = True
+        if go_daemon:
+            with DaemonContext():
+                return fn(*args, **fwdkwargs)
+        else:
+            return fn(*args, **fwdkwargs)
+    return wrapped

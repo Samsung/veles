@@ -11,7 +11,7 @@ import logging
 from twisted.internet import reactor, threads
 from twisted.internet.protocol import ReconnectingClientFactory
 
-import daemon
+from daemon import daemonize
 import network_common
 
 
@@ -190,9 +190,15 @@ class Client(network_common.NetworkConfigurable):
         self.factory = VelesProtocolFactory(workflow)
         reactor.connectTCP(self.address, self.port, self.factory)
 
-    def run(self, daemon=False):
-        with daemon.DaemonContext() if daemon else None:
+    @daemonize
+    def run(self):
+        try:
             reactor.run()
+        except:
+            logging.exception()
 
     def stop(self):
-        reactor.stop()
+        try:
+            reactor.stop()
+        except:
+            logging.exception()
