@@ -14,7 +14,6 @@ import sys
 import client
 import config
 import server
-import units
 
 
 class Launcher(object):
@@ -30,7 +29,6 @@ class Launcher(object):
     slaves                The list of slaves to launch remotely.
     """
     def __init__(self, **kwargs):
-        super(Launcher, self).__init__(workflow, **kwargs)
         parser = argparse.ArgumentParser()
         parser.add_argument("-s", "--server_address", type=str, default="",
             help="Workflow will be launched in client mode "
