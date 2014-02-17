@@ -109,7 +109,9 @@ class Launcher(logger.Logger):
         filtered_argv.append("-s")
         host = self.args.listen_address[0:self.args.listen_address.index(':')]
         port = self.args.listen_address[len(host) + 1:]
-        if not host or host == "0.0.0.0":
+        # No way we can send 'localhost' or empty host name to a slave.
+        if not host or host == "0.0.0.0" or host == "localhost" or \
+           host == "127.0.0.1":
             host = socket.gethostname()
         filtered_argv.append("%s:%s", (host, port))
         slave_args = " ".join(filtered_argv)
