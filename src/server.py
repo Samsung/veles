@@ -5,14 +5,17 @@ Created on Jan 14, 2014
 """
 
 
-import json
 from fysom import Fysom
+import getpass
+import json
 import logging
+import socket
+import time
 from tornado.httpclient import AsyncHTTPClient
 from twisted.internet import reactor, threads, task
 from twisted.internet.protocol import Factory
+from twisted.web.html import escape
 import uuid
-import socket
 
 import config
 from daemon import daemonize
@@ -20,14 +23,26 @@ import network_common
 
 
 def onFSMStateChanged(e):
-        """
-        Logs the current state transition.
-        """
-        owner_id = "None"
-        if hasattr(e.fsm, "protocol"):
-            owner_id = e.fsm.protocol.id
-        logging.debug("master %s state: %s, %s -> %s",
-                      owner_id, e.event, e.src, e.dst)
+    """
+    Logs the current state transition.
+    """
+    owner_id = "None"
+    if hasattr(e.fsm, "protocol"):
+        owner_id = e.fsm.protocol.id
+    logging.debug("master %s state: %s, %s -> %s",
+                 owner_id, e.event, e.src, e.dst)
+
+
+def onJobObtained(e):
+    e.fsm.protocol.nodes[e.fsm.protocol.id]["state"] = "Working"
+
+
+def setWaiting(e):
+    e.fsm.protocol.nodes[e.fsm.protocol.id]["state"] = "Waiting"
+
+
+def onDropped(e):
+    e.fsm.protocol.nodes[e.fsm.protocol.id]["state"] = "Offline"
 
 
 class VelesProtocol(network_common.StringLineReceiver):
@@ -54,6 +69,10 @@ class VelesProtocol(network_common.StringLineReceiver):
         ],
         'callbacks': {
             'onchangestate': onFSMStateChanged,
+            'onobtain_job': onJobObtained,
+            'onreceive_update': setWaiting,
+            'onWORK': setWaiting,
+            'ondrop': onDropped
         }
     }
 
@@ -219,6 +238,7 @@ class Server(network_common.NetworkConfigurable):
 
     def __init__(self, configuration, workflow):
         super(Server, self).__init__(configuration)
+        self.id = str(uuid.uuid4())
         self.workflow = workflow
         self.workflow_graph = self.workflow.generate_graph(write_on_disk=False)
         self.factory = VelesProtocolFactory(self)
@@ -228,6 +248,7 @@ class Server(network_common.NetworkConfigurable):
 
     @daemonize
     def run(self):
+        self.start_time = time.time()
         self.notify_task.start(config.web_status_notification_interval,
                                now=False)
         try:
@@ -248,11 +269,17 @@ class Server(network_common.NetworkConfigurable):
                          config.web_status_host, config.web_status_port)
 
     def notify_status(self):
-        ret = {'nodes': {}, 'workflow': {}}
-        ret['workflow']['graph'] = self.workflow_graph
-        for nid, node in self.factory.nodes.items():
-            ret['nodes'][nid] = {'host': node["host"]}
-        return
+        mins, secs = divmod(time.time() - self.start_time, 60)
+        hours, mins = divmod(mins, 60)
+        ret = {'id': self.id,
+               'name': self.workflow.name(),
+               'master': socket.gethostname(),
+               'time': "%02d:%02d:%02d" % (hours, mins, secs),
+               'user': getpass.getuser(),
+               'graph': self.workflow_graph,
+               'slaves': self.factory.nodes,
+               'description': escape("<br />".join(
+                                  self.workflow.__doc__.split("\n")))}
         self.notify_agent.fetch("http://%s/%s:%d" % (config.web_status_host,
                                                      config.web_status_update,
                                                      config.web_status_port),
