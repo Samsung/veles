@@ -57,6 +57,9 @@ class Launcher(logger.Logger):
         if self.args.server_address:
             config.is_slave = True
 
+    def is_master(self):
+        return True if self.args.listen_address else False
+
     def initialize(self, workflow):
         if self.args.server_address:
             self.agent = client.Client(self.args.server_address, workflow)

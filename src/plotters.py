@@ -59,12 +59,12 @@ class Plotter(Unit):
         return None
 
     def apply_data_from_slave(self, data, slave=None):
-        if (((Unit.callvle(self.gate_block[0]) and
-              (not Unit.callvle(self.gate_block_not[0]))) or
-             ((not Unit.callvle(self.gate_block[0])) and
+        if (((not Unit.callvle(self.gate_block[0]) and
+             (not Unit.callvle(self.gate_block_not[0]))) or
+             (Unit.callvle(self.gate_block[0]) and
               Unit.callvle(self.gate_block_not[0]))) and
             (((not Unit.callvle(self.gate_skip[0])) and
-             (not Unit.callvle(self.gate_skip_not[0]))) or
+              (not Unit.callvle(self.gate_skip_not[0]))) or
             ((Unit.callvle(self.gate_skip[0]) and
               Unit.callvle(self.gate_skip_not[0]))))):
             self.run()

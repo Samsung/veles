@@ -89,7 +89,8 @@ class Workflow(Unit):
 
     def init_unpickled(self):
         super(Workflow, self).init_unpickled()
-        self.pipeline_lock_ = threading.Lock()
+        self.master_pipeline_lock_ = threading.Lock()
+        self.master_data_lock_ = threading.Lock()
 
     def initialize(self):
         return self.start_point.initialize_dependent()
@@ -118,8 +119,29 @@ class Workflow(Unit):
         if self.workflow != None:
             self.workflow.del_ref(unit)
 
+    def lock_pipeline(self):
+        """Locks master=>slave pipeline execution.
+        """
+        self.master_pipeline_lock_.acquire()
+
     def unlock_pipeline(self):
-        self.pipeline_lock_.release()
+        """Unlocks master=>slave pipeline execution.
+        """
+        self.master_pipeline_lock_.release()
+
+    def lock_data(self):
+        """Locks master-slave data update.
+
+        Read weights, apply gradients for example.
+        """
+        self.master_data_lock_.acquire()
+
+    def unlock_data(self):
+        """Unlocks master-slave data update.
+
+        Read weights, apply gradients for example.
+        """
+        self.master_data_lock_.release()
 
     def generate_data_for_master(self):
         data = []
@@ -128,7 +150,7 @@ class Workflow(Unit):
         return data
 
     def generate_data_for_slave(self, slave=None):
-        self.pipeline_lock_.acquire()
+        self.lock_pipeline()
         data = []
         for unit in self.units:
             data.append(unit.generate_data_for_slave(slave))
@@ -178,6 +200,8 @@ class Workflow(Unit):
         return 0
 
     def generate_graph(self, filename=None, write_on_disk=True):
+        if config.is_slave:
+            return
         g = pydot.Dot(graph_name="Workflow",
                       graph_type="digraph",
                       mindist="0.1",

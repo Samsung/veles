@@ -19,7 +19,7 @@ def onFSMStateChanged(e):
         """
         Logs the current state transition.
         """
-        logging.info("slave state: %s, %s -> %s", e.event, e.src, e.dst)
+        logging.debug("slave state: %s, %s -> %s", e.event, e.src, e.dst)
 
 
 class VelesProtocol(network_common.StringLineReceiver):

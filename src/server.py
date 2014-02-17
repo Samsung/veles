@@ -26,8 +26,8 @@ def onFSMStateChanged(e):
         owner_id = "None"
         if hasattr(e.fsm, "protocol"):
             owner_id = e.fsm.protocol.id
-        logging.info("master %s state: %s, %s -> %s",
-                     owner_id, e.event, e.src, e.dst)
+        logging.debug("master %s state: %s, %s -> %s",
+                      owner_id, e.event, e.src, e.dst)
 
 
 class VelesProtocol(network_common.StringLineReceiver):
@@ -119,6 +119,11 @@ class VelesProtocol(network_common.StringLineReceiver):
             if cmd == "update":
                 logging.debug("Received UPDATE command. " +
                               "Expecting to receive a pickle.")
+                self.size = msg.get("size")
+                if self.size == None:
+                    self.disconnect("Update size was not specified.")
+                    return
+                self.update = bytearray()
                 self.setRawMode()
                 self.state.receive_update()
             elif cmd == "job":
@@ -140,13 +145,17 @@ class VelesProtocol(network_common.StringLineReceiver):
 
     def rawDataReceived(self, data):
         if self.state.current == 'APPLYING_UPDATE':
-            self.setLineMode()
-            upd = threads.deferToThreadPool(reactor,
-                                            self.host.thread_pool(),
-                                            self.host.apply_update,
-                                            data)
-            upd.addCallback(self.updateApplied)
-
+            self.update += data
+            if len(self.update) == self.size:
+                self.setLineMode()
+                upd = threads.deferToThreadPool(reactor,
+                                                self.host.thread_pool(),
+                                                self.host.apply_update,
+                                                self.update)
+                upd.addCallback(self.updateApplied)
+            if len(self.update) > self.size:
+                self.disconnect("Received update size %d exceeded the expected"
+                                " length (%d)", len(self.update), self.size)
         else:
             logging.error("Cannot receive raw data in %s state." %
                           self.state.current)
@@ -163,7 +172,7 @@ class VelesProtocol(network_common.StringLineReceiver):
 
     def jobRequestFinished(self, data=None):
         if data:
-            self.sendLine({'job': 'offer'})
+            self.sendLine({'job': 'offer', 'size': len(data)})
             self.transport.write(data)
             self.state.obtain_job()
         else:
@@ -239,6 +248,7 @@ class Server(network_common.NetworkConfigurable):
         ret['workflow']['graph'] = self.workflow_graph
         for nid, node in self.factory.nodes.items():
             ret['nodes'][nid] = {'host': node["host"]}
+        return
         self.notify_agent.fetch("http://%s/%s:%d" % (config.web_status_host,
                                                      config.web_status_update,
                                                      config.web_status_port),
