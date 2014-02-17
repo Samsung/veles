@@ -219,7 +219,6 @@ class Workflow(Unit):
             return
         g = pydot.Dot(graph_name="Workflow",
                       graph_type="digraph",
-                      mindist="0.1",
                       bgcolor="transparent")
         g.set_prog("circo")
         visited_units = set()
