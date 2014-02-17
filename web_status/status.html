@@ -5,6 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="/veles.png" />
+    <link href='css/audiowide.css' rel='stylesheet' type='text/css'>
     <title>VELES Cloud Status</title>
 
     <!-- Bootstrap -->
@@ -16,16 +17,379 @@
       <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
       <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
     <![endif]-->
-  </head>
-  <body>
-    <h1>Hello, world!</h1>
     
-    <a id="test_json" href="status.html">Click me!</a>
+    <style type="text/css">
+      body {
+        padding-top: 20px;
+        padding-bottom: 40px;
+        /* Margin bottom by footer height */
+        margin-bottom: 40px;
+      }
+
+      .navbar {
+        margin-bottom: 20px;
+      }      
+      
+      .navbar-default {
+        background-color: #ffffff;
+        border-color: #888888;
+      }
+      .navbar-default .navbar-brand {
+        color: #000000;
+        font-family: 'Audiowide', cursive;
+      }
+      .navbar-default .navbar-brand:hover, .navbar-default .navbar-brand:focus {
+        color: #000000;
+      }
+      .navbar-default .navbar-text {
+        color: #888888;
+      }
+      .navbar-default .navbar-nav > li > a {
+        color: #888888;
+      }
+      .navbar-default .navbar-nav > li > a:hover, .navbar-default .navbar-nav > li > a:focus {
+        color: #ffffff;
+        background-color: #888888;
+        /*border-radius: 4px;*/
+      }
+      .navbar-default .navbar-nav > .active > a, .navbar-default .navbar-nav > .active > a:hover, .navbar-default .navbar-nav > .active > a:focus {
+        color: #ffffff;
+        background-color: #428bca;
+        /*border-radius: 4px;*/
+        font-weight: bold;
+      }
+      .navbar-default .navbar-nav > .open > a, .navbar-default .navbar-nav > .open > a:hover, .navbar-default .navbar-nav > .open > a:focus {
+        color: #ffffff;
+        background-color: #428bca;
+        /*border-radius: 4px;*/
+        font-weight: bold;
+      }
+      .navbar-default .navbar-toggle {
+        border-color: #428bca;
+      }
+      .navbar-default .navbar-toggle:hover, .navbar-default .navbar-toggle:focus {
+        background-color: #428bca;
+      }
+      .navbar-default .navbar-toggle .icon-bar {
+        background-color: #888888;
+      }
+      .navbar-default .navbar-collapse,
+      .navbar-default .navbar-form {
+        border-color: #888888;
+      }
+      .navbar-default .navbar-link {
+        color: #888888;
+      }
+      .navbar-default .navbar-link:hover {
+        color: #ffffff;
+      }
+
+      @media (max-width: 80%) {
+        .navbar-default .navbar-nav .open .dropdown-menu > li > a {
+          color: #888888;
+        }
+        .navbar-default .navbar-nav .open .dropdown-menu > li > a:hover, .navbar-default .navbar-nav .open .dropdown-menu > li > a:focus {
+          color: #ffffff;
+        }
+        .navbar-default .navbar-nav .open .dropdown-menu > .active > a, .navbar-default .navbar-nav .open .dropdown-menu > .active > a:hover, .navbar-default .navbar-nav .open .dropdown-menu > .active > a:focus {
+          color: #ffffff;
+          background-color: #428bca;
+        }        
+      }
+
+      /* Custom container */
+      .container-narrow {
+        margin: 0 auto;
+        /*padding-left: 100px;*/
+        max-width: 80%;
+        min-width: 800px;
+      }
+      .container-narrow > hr {
+        margin: 30px 0;
+      }
+      
+      #footer {
+        position: absolute;
+        bottom: 0;
+        width: 100%;
+        /* Set the fixed height of the footer here */
+        height: 40px;
+        background-color: #ffffff;
+      }
+      
+      .pull-center {
+          display: table;
+          margin-left: auto;
+          margin-right: auto;
+          float: none;
+      }
+      
+      .left-list {
+        width: 25%;
+        min-width: 300px;
+        float: left;
+      }
+      
+      .details {
+        padding: 0;
+        padding-left: 20px;
+        margin-left: 25%;
+      }
+      
+      .no-padding {
+        padding: 0;
+      }
+      
+      .list-group-item.media > li {
+        padding-left: 10px;
+      }
+      
+      .list-group-item.media {
+        padding-left: 10px;
+        margin-bottom: 0px;
+        margin-top: 0px;
+      }
+      
+      .list-group-item.media.active {
+        background-color: #428bca;
+      }
+      
+      .graceful-overflow {
+        overflow: hidden;
+        text-overflow:
+        ellipsis;
+        white-space: nowrap;
+      }
+      
+      .detailed-image {
+        float: left;
+      }
+      
+      .detailed-description {
+        margin-left: 266px;
+        padding: 0;
+      }
+      
+      .active > div, .active > div > a, .active > div > h4 > a,
+      .active > div > .list-group-item-text > a,
+      .active > div > .list-group-item-text > i > a {
+        color: #ffffff;
+      }
+      
+      .list-group-item-heading {
+        display: inline;
+      }
+      
+      .view-plots {
+        float: right;
+        font-size: small;
+      }
+      
+      .list-group-item-text {
+        font-size: small;
+      }
+      
+      .slave-action {
+        vertical-align: text-top;
+        font-size: small;
+      }
+      
+      table tr td:empty {
+        width: 50px;
+      }
+      
+      .details-panel-heading {
+        text-align: center;
+        font-size: large;
+        font-weight: bold;
+      }
+      
+      .active > div > span > .badge {
+        color: #428bca;
+        background-color: #ffffff;
+      }
+      
+      .center-cell {
+        text-align: center;
+      }
+      
+    </style>
+    
+    </head>
+    <body>
+      <div class="container-narrow">
+        <div class="navbar navbar-default" role="navigation">
+          <div class="container-fluid">
+            <div class="navbar-header">            
+              <span class="navbar-brand">VELES Distributed Machine Learning Platform</span>
+            </div>        
+            <ul class="nav navbar-nav pull-center">
+              <li class="active"><a href="#">Workflows</a></li>
+              <li><a href="#">Nodes</a></li>
+              <li><a href="#">Users</a></li>
+            </ul>      
+          </div>
+        </div>
+        <div class="container-fluid no-padding">
+          <div class="left-list no-padding">
+            <ul class="list-group">
+              <li class="list-group-item media active">
+                <svg class="media-object pull-left" width="100" height="100" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                  <title>HTML5 Logo</title>
+                  <polygon fill="#E44D26" points="107.644,470.877 74.633,100.62 437.367,100.62 404.321,470.819 255.778,512"/>
+                  <polygon fill="#F16529" points="256,480.523 376.03,447.246 404.27,130.894 256,130.894"/>
+                  <polygon fill="#EBEBEB" points="256,268.217 195.91,268.217 191.76,221.716 256,221.716 256,176.305 255.843,176.305 142.132,176.305 143.219,188.488 154.38,313.627 256,313.627"/>
+                  <polygon fill="#EBEBEB" points="256,386.153 255.801,386.206 205.227,372.55 201.994,336.333 177.419,336.333 156.409,336.333 162.771,407.634 255.791,433.457 256,433.399"/>
+                  <path d="M108.382,0h23.077v22.8h21.11V0h23.078v69.044H152.57v-23.12h-21.11v23.12h-23.077V0z"/>
+                  <path d="M205.994,22.896h-20.316V0h63.72v22.896h-20.325v46.148h-23.078V22.896z"/>
+                  <path d="M259.511,0h24.063l14.802,24.26L313.163,0h24.072v69.044h-22.982V34.822l-15.877,24.549h-0.397l-15.888-24.549v34.222h-22.58V0z"/>
+                  <path d="M348.72,0h23.084v46.222h32.453v22.822H348.72V0z"/>
+                  <polygon fill="#FFFFFF" points="255.843,268.217 255.843,313.627 311.761,313.627 306.49,372.521 255.843,386.191 255.843,433.435 348.937,407.634 349.62,399.962 360.291,280.411 361.399,268.217 349.162,268.217"/>
+                  <polygon fill="#FFFFFF" points="255.843,176.305 255.843,204.509 255.843,221.605 255.843,221.716 365.385,221.716 365.385,221.716 365.531,221.716 366.442,211.509 368.511,188.488 369.597,176.305"/>
+                </svg>
+                <div class="media-body graceful-overflow">
+                  <h4 class="list-group-item-heading"><a href="#">Channels</a></h4>                  
+                  <a class="view-plots" href="#" >view plots</a><br/>
+                  <span class="list-group-item-text">Master: <a href="#">smaug</a><br/>
+                  <span class="badge pull-right">5</span>
+                  Slaves: <a href="#">slave1</a>, <a href="#">slave2</a>, <a href="#">slave3</a>, <a href="#">slave4</a>, <a href="#">slave5</a><br/>
+                  Time running: <strong>01:34</strong><br/>
+                  Started by: <i class="glyphicon glyphicon-user"><a href="#">ajk</a></i></span>
+                </div>
+              </li>
+              <li class="list-group-item media list-item-media">
+                <svg class="media-object pull-left" width="100" height="100" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                  <title>HTML5 Logo</title>
+                  <polygon fill="#E44D26" points="107.644,470.877 74.633,100.62 437.367,100.62 404.321,470.819 255.778,512"/>
+                  <polygon fill="#F16529" points="256,480.523 376.03,447.246 404.27,130.894 256,130.894"/>
+                  <polygon fill="#EBEBEB" points="256,268.217 195.91,268.217 191.76,221.716 256,221.716 256,176.305 255.843,176.305 142.132,176.305 143.219,188.488 154.38,313.627 256,313.627"/>
+                  <polygon fill="#EBEBEB" points="256,386.153 255.801,386.206 205.227,372.55 201.994,336.333 177.419,336.333 156.409,336.333 162.771,407.634 255.791,433.457 256,433.399"/>
+                  <path d="M108.382,0h23.077v22.8h21.11V0h23.078v69.044H152.57v-23.12h-21.11v23.12h-23.077V0z"/>
+                  <path d="M205.994,22.896h-20.316V0h63.72v22.896h-20.325v46.148h-23.078V22.896z"/>
+                  <path d="M259.511,0h24.063l14.802,24.26L313.163,0h24.072v69.044h-22.982V34.822l-15.877,24.549h-0.397l-15.888-24.549v34.222h-22.58V0z"/>
+                  <path d="M348.72,0h23.084v46.222h32.453v22.822H348.72V0z"/>
+                  <polygon fill="#FFFFFF" points="255.843,268.217 255.843,313.627 311.761,313.627 306.49,372.521 255.843,386.191 255.843,433.435 348.937,407.634 349.62,399.962 360.291,280.411 361.399,268.217 349.162,268.217"/>
+                  <polygon fill="#FFFFFF" points="255.843,176.305 255.843,204.509 255.843,221.605 255.843,221.716 365.385,221.716 365.385,221.716 365.531,221.716 366.442,211.509 368.511,188.488 369.597,176.305"/>
+                </svg>
+                <div class="media-body graceful-overflow">
+                  <h4 class="list-group-item-heading"><a href="#">Channels</a></h4>
+                  <a class="view-plots" href="#" >view plots</a><br/>
+                  <span class="list-group-item-text">Master: <a href="#">smaug</a><br/>
+                  <span class="badge pull-right">5</span>
+                  Slaves: <a href="#">slave1</a>, <a href="#">slave2</a>, <a href="#">slave3</a>, <a href="#">slave4</a>, <a href="#">slave5</a><br/>
+                  Time running: <strong>01:34</strong><br/>
+                  Started by: <i class="glyphicon glyphicon-user"><a href="#">ajk</a></i></span>
+                </div>
+              </li>
+            </ul>              
+          </div>
+          <div class="container-fluid details">            
+            <svg class="detailed-image" width="256" height="256" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+              <title>HTML5 Logo</title>
+              <polygon fill="#E44D26" points="107.644,470.877 74.633,100.62 437.367,100.62 404.321,470.819 255.778,512"/>
+              <polygon fill="#F16529" points="256,480.523 376.03,447.246 404.27,130.894 256,130.894"/>
+              <polygon fill="#EBEBEB" points="256,268.217 195.91,268.217 191.76,221.716 256,221.716 256,176.305 255.843,176.305 142.132,176.305 143.219,188.488 154.38,313.627 256,313.627"/>
+              <polygon fill="#EBEBEB" points="256,386.153 255.801,386.206 205.227,372.55 201.994,336.333 177.419,336.333 156.409,336.333 162.771,407.634 255.791,433.457 256,433.399"/>
+              <path d="M108.382,0h23.077v22.8h21.11V0h23.078v69.044H152.57v-23.12h-21.11v23.12h-23.077V0z"/>
+              <path d="M205.994,22.896h-20.316V0h63.72v22.896h-20.325v46.148h-23.078V22.896z"/>
+              <path d="M259.511,0h24.063l14.802,24.26L313.163,0h24.072v69.044h-22.982V34.822l-15.877,24.549h-0.397l-15.888-24.549v34.222h-22.58V0z"/>
+              <path d="M348.72,0h23.084v46.222h32.453v22.822H348.72V0z"/>
+              <polygon fill="#FFFFFF" points="255.843,268.217 255.843,313.627 311.761,313.627 306.49,372.521 255.843,386.191 255.843,433.435 348.937,407.634 349.62,399.962 360.291,280.411 361.399,268.217 349.162,268.217"/>
+              <polygon fill="#FFFFFF" points="255.843,176.305 255.843,204.509 255.843,221.605 255.843,221.716 365.385,221.716 365.385,221.716 365.531,221.716 366.442,211.509 368.511,188.488 369.597,176.305"/>
+            </svg>
+            <div class="detailed-description">
+              <h3 class="media-heading">Channels</h3>
+              Detailed description goes here.<br/>              
+              <br/>
+              <div class="panel panel-borderless">
+                <div class="panel-heading details-panel-heading">Actions</div>
+                <div class="btn-group btn-group-justified" style="">
+                  <div class="btn-group">
+                    <button type="button" class="btn btn-default">View plots</button>
+                  </div>
+                  <div class="btn-group">
+                    <button type="button" class="btn btn-default">Suspend</button>
+                  </div>
+                  <div class="btn-group">
+                    <button type="button" class="btn btn-danger">Cancel</button>
+                  </div>                
+                </div>
+              </div>
+              <div class="panel panel-borderless">
+                <div class="panel-heading details-panel-heading">Slaves</div>
+                <div class="panel panel-default">
+                  <table class="table table-condensed">
+                    <thead>
+                      <tr>
+                        <th class="center-cell">ID</th>
+                        <th class="center-cell">Host</th>
+                        <th class="center-cell">Status</th>
+                        <th class="center-cell">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="success">
+                        <td>1</td>
+                        <td><a href="#">markovtsevu64</a></td>
+                        <td class="center-cell">Working</td>
+                        <td class="center-cell"><i class="glyphicon glyphicon-pause"><a class="slave-action" href="#">pause</a></i>, <i class="glyphicon glyphicon-remove"><a class="slave-action" href="#">remove</a></i></td>
+                      </tr>
+                      <tr class="success">
+                        <td>2</td>
+                        <td><a href="#">smaug</a></td>
+                        <td class="center-cell">Working</td>
+                        <td class="center-cell"><i class="glyphicon glyphicon-pause"><a class="slave-action" href="#">pause</a></i>, <i class="glyphicon glyphicon-remove"><a class="slave-action" href="#">remove</a></i></td>
+                      </tr>
+                      <tr class="success">
+                        <td>3</td>
+                        <td><a href="#">smaug</a></td>
+                        <td class="center-cell">Working</td>
+                        <td class="center-cell"><i class="glyphicon glyphicon-pause"><a class="slave-action" href="#">pause</a></i>, <i class="glyphicon glyphicon-remove"><a class="slave-action" href="#">remove</a></i></td>
+                      </tr>
+                      <tr class="success">
+                        <td>4</td>
+                        <td><a href="#">kazantsevu64</a></td>
+                        <td class="center-cell">Working</td>
+                        <td class="center-cell"><i class="glyphicon glyphicon-pause"><a class="slave-action" href="#">pause</a></i>, <i class="glyphicon glyphicon-remove"><a class="slave-action" href="#">remove</a></i></td>
+                      </tr>
+                      <tr class="warning">
+                        <td>5</td>
+                        <td><a href="#">kuznetsovu64</a></td>
+                        <td class="center-cell">Waiting</td>
+                        <td class="center-cell"><i class="glyphicon glyphicon-pause"><a class="slave-action" href="#">pause</a></i>, <i class="glyphicon glyphicon-remove"><a class="slave-action" href="#">remove</a></i></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>          
+        </div>
+      </div>
+      <div id="footer">
+        <div class="container-narrow">
+          <p class="text-muted">Samsung R&D Institute Russia, Platform Algorithms Group, 2014.<span class="pull-right">For internal use only. Confidential.</span></p>          
+        </div>
+      </div>
 
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="js/jquery.min.js"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
     <script src="js/bootstrap.min.js"></script>
+    
+    <script src="js/viz.js"></script>
+    
+    <script>
+    	function render_graphviz(desc) {
+        var result;
+        try {
+          result = Viz(desc, svg, "circo");
+          return result;
+        } catch(e) {
+          return inspect(e.toString());
+        }
+      }
+    </script>
     
     <script>
       $("#test_json").click(function(args) {

@@ -1,0 +1,6 @@
+@font-face {
+  font-family: 'Audiowide';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Audiowide'), local('Audiowide-Regular'), url(../fonts/audiowide.woff) format('woff');
+}
