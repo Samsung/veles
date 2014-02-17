@@ -56,7 +56,7 @@ class Plotter(Unit):
         Graphics.shutdown()
 
     def generate_data_for_master(self):
-        return 1
+        return None
 
     def apply_data_from_slave(self, data, slave=None):
         if (((Unit.callvle(self.gate_block[0]) and
