@@ -60,7 +60,8 @@ class Distributable(object):
     """Callbacks for working in distributed environment.
     """
     def generate_data_for_master(self):
-        """Here, you should generate data to be sent from slave to master.
+        """Data for master should be generated here. This function is executed
+        on a slave instance.
 
         Returns:
             data of any type or None if there is nothing to send.
@@ -68,7 +69,8 @@ class Distributable(object):
         return None
 
     def generate_data_for_slave(self, slave=None):
-        """Here, the data for slave should be generated.
+        """Data for slave should be generated here. This function is executed
+        on a master instance.
 
         Parameters:
             slave: some information about the slave (may be None).
@@ -79,7 +81,8 @@ class Distributable(object):
         return None
 
     def apply_data_from_master(self, data):
-        """Here, you should apply received data from master.
+        """Data from master should be applied here. This function is executed
+        on a slave instance.
 
         Parameters:
             data - exactly the same value that was returned by
@@ -91,7 +94,8 @@ class Distributable(object):
         pass
 
     def apply_data_from_slave(self, data, slave=None):
-        """Here, the data from slave should be applied.
+        """Data from slave should be applied here. This function is executed
+        on a master instance.
 
         Parameters:
             slave: some information about the slave (may be None).
