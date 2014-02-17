@@ -21,6 +21,9 @@ import config
 import logger
 
 
+debug_mode = True
+
+
 class ServiceHandler(web.RequestHandler):
     def initialize(self, server):
         self.server = server
@@ -56,7 +59,8 @@ class UpdateHandler(web.RequestHandler):
 class WebStatusServer(logger.Logger):
     def __init__(self, cmd_queue_in, cmd_queue_out):
         super(WebStatusServer, self).__init__()
-        self.redirect_logging_to_file(config.web_status_log_file)
+        if not debug_mode:
+            self.redirect_logging_to_file(config.web_status_log_file)
         self.application = web.Application([
             ("/service", ServiceHandler, {"server": self}),
             ("/" + config.web_status_update, UpdateHandler, {"server": self}),
@@ -80,7 +84,7 @@ class WebStatusServer(logger.Logger):
         self.cmd_queue_out = cmd_queue_out
         self.cmd_thread = threading.Thread(target=self.cmd_loop)
         self.pending_requests = {}
-        self.info("Status server is listening on %s:%s",
+        self.info("HTTP server is going to listen on %s:%s",
                   socket.gethostname(), config.web_status_port)
 
     def send_command(self, handler, cmd):
@@ -126,14 +130,55 @@ class WebStatus(logger.Logger):
 
     def __init__(self):
         super(WebStatus, self).__init__()
-        self.redirect_logging_to_file(config.web_status_log_file)
+        if not debug_mode:
+            self.redirect_logging_to_file(config.web_status_log_file)
         self.exiting = False
         self.masters = {}
+        """self.masters = {str(uuid.uuid4()): {
+            'name': "Mnist",
+            'master': "markovtsevu64",
+            'time': "%02d:%02d:%02d" % (1, 34, 15),
+            'user': "markhor",
+            'description': "\"All-to-all\" neural network training on MNIST "
+                           "database, giving approximately 1% of errors.<br/>",
+            'graph': 'digraph Workflow {'
+                     'bgcolor=transparent;'
+                     '"0x7f5ad5861410" [style="rounded,filled", shape=rect, fillcolor=lightgrey, gradientangle=90, label=Start];'
+                     '"0x7f5ad5861410" -> "0x7f5ad5861610";'
+                     '"0x7f5ad5861610" [style="rounded,filled", shape=rect, fillcolor=white, gradientangle=90, label=Repeater];'
+                     '"0x7f5ad5861610" -> "0x7f5ad5861690";'
+                     '"0x7f5ad5861690" [style="rounded,filled", shape=rect, fillcolor=cyan, gradientangle=90, label="Wine loader"];'
+                     '"0x7f5ad5861690" -> "0x7f5ad5861850";'
+                     '"0x7f5ad5861850" [style="rounded,filled", shape=rect, fillcolor=greenyellow, gradientangle=90, label=All2AllTanh];'
+                     '"0x7f5ad5861850" -> "0x7f5ad5861950";'
+                     '"0x7f5ad5861950" [style="rounded,filled", shape=rect, fillcolor=greenyellow, gradientangle=90, label=All2AllSoftmax];'
+                     '"0x7f5ad5861950" -> "0x7f5ad5861b10";'
+                     '"0x7f5ad5861b10" [style="rounded,filled", shape=rect, fillcolor=plum, gradientangle=90, label=EvaluatorSoftmax];'
+                     '"0x7f5ad5861b10" -> "0x7f5ad5861c90";'
+                     '"0x7f5ad5861c90" [style="rounded,filled", shape=rect, fillcolor=coral, gradientangle=90, label=Decision];'
+                     '"0x7f5ad5861c90" -> "0x7f5ad5861510";'
+                     '"0x7f5ad5861c90" -> "0x7f5ad5861d10";'
+                     '"0x7f5ad5861d10" [style="rounded,filled", shape=rect, fillcolor=coral, gradientangle=90, label=GDSM];'
+                     '"0x7f5ad5861d10" -> "0x7f5ad5861d90";'
+                     '"0x7f5ad5861510" [style="rounded,filled", shape=rect, fillcolor=lightgrey, gradientangle=90, label=End];'
+                     '"0x7f5ad5861d90" [style="rounded,filled", shape=rect, fillcolor=coral, gradientangle=90, label=GDTanh];'
+                     '"0x7f5ad5861d90" -> "0x7f5ad5861610";'
+                     '}',
+            'slaves': {
+                str(uuid.uuid4()): {'power': 100, 'status': "Working",
+                                    'host': "markovtsevu64"},
+                str(uuid.uuid4()): {'power': 200, 'status': "Working",
+                                    'host': "smaug"},
+                str(uuid.uuid4()): {'power': 100, 'status': "Waiting",
+                                    'host': "kuznetsovu64"},
+            }
+        }}"""
         self.cmd_queue_in = mp.Queue()
         self.cmd_queue_out = mp.Queue()
         self.cmd_thread = threading.Thread(target=self.cmd_loop)
         self.process = mp.Process(target=WebStatus.start_web_server,
                                   args=(self.cmd_queue_out, self.cmd_queue_in))
+        self.info("Initialized")
 
     def run(self):
         self.cmd_thread.start()
@@ -149,19 +194,25 @@ class WebStatus(logger.Logger):
             cmd = self.cmd_queue_in.get()
             if not cmd:
                 break
+            self.debug("New command %s", str(cmd))
             try:
                 if "update" in cmd.keys():
                     host, _, _ = socket.gethostbyaddr(cmd["update"])
                     self.debug("Master %s yielded %s", host, str(cmd["body"]))
                     self.masters[host] = cmd["body"]
                 elif "request" in cmd.keys():
-                    ret = {}
-                    for mid, master in self.masters.items():
-                        for item in cmd["body"]:
-                            ret[mid] = master[item]
-                    self.debug("Request %s: %s", cmd["request"], str(ret))
-                    self.cmd_queue_out.put_nowait({"request": cmd["request"],
-                                                   "result": ret})
+                    if cmd["body"]["request"] == "workflows":
+                        ret = {}
+                        for mid, master in self.masters.items():
+                            ret[mid] = {}
+                            for item in cmd["body"]["args"]:
+                                ret[mid][item] = master[item]
+                        self.debug("Request %s: %s", cmd["request"], str(ret))
+                        self.cmd_queue_out.put_nowait(
+                            {"request": cmd["request"], "result": ret})
+                    else:
+                        self.cmd_queue_out.put_nowait(
+                            {"request": cmd["request"], "result": None})
                 elif "stop" in cmd.keys():
                     self.info("Stopping everything")
                     self.stop()
@@ -170,6 +221,12 @@ class WebStatus(logger.Logger):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    with daemon.DaemonContext():
+    if not debug_mode:
+        logger.Logger(logging.getLogger('root')).redirect_logging_to_file(
+            config.web_status_log_file)
+        with daemon.DaemonContext():
+            ws = WebStatus()
+            ws.run()
+    else:
         ws = WebStatus()
         ws.run()
