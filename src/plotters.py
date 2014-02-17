@@ -56,17 +56,17 @@ class Plotter(Unit):
         Graphics.shutdown()
 
     def generate_data_for_master(self):
-        return None
+        return True
 
     def apply_data_from_slave(self, data, slave=None):
-        if (((not Unit.callvle(self.gate_block[0]) and
-             (not Unit.callvle(self.gate_block_not[0]))) or
+        if ((((not Unit.callvle(self.gate_block[0])) and
+              (not Unit.callvle(self.gate_block_not[0]))) or
              (Unit.callvle(self.gate_block[0]) and
               Unit.callvle(self.gate_block_not[0]))) and
             (((not Unit.callvle(self.gate_skip[0])) and
               (not Unit.callvle(self.gate_skip_not[0]))) or
-            ((Unit.callvle(self.gate_skip[0]) and
-              Unit.callvle(self.gate_skip_not[0]))))):
+             (Unit.callvle(self.gate_skip[0]) and
+              Unit.callvle(self.gate_skip_not[0])))):
             self.run()
 
 

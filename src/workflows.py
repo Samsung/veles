@@ -55,18 +55,24 @@ class EndPoint(UttermostPoint):
     def wait(self):
         self.sem_.acquire()
 
+    def is_finished(self):
+        b = self.sem_.acquire(False)
+        if b:
+            self.sem_.release()
+        return b
+
     def generate_data_for_master(self):
-        return None
+        return True
 
     def apply_data_from_slave(self, data, slave=None):
-        if (((Unit.callvle(self.gate_block[0]) and
+        if ((((not Unit.callvle(self.gate_block[0])) and
               (not Unit.callvle(self.gate_block_not[0]))) or
-             ((not Unit.callvle(self.gate_block[0])) and
+             (Unit.callvle(self.gate_block[0]) and
               Unit.callvle(self.gate_block_not[0]))) and
             (((not Unit.callvle(self.gate_skip[0])) and
-             (not Unit.callvle(self.gate_skip_not[0]))) or
-            ((Unit.callvle(self.gate_skip[0]) and
-              Unit.callvle(self.gate_skip_not[0]))))):
+              (not Unit.callvle(self.gate_skip_not[0]))) or
+             (Unit.callvle(self.gate_skip[0]) and
+              Unit.callvle(self.gate_skip_not[0])))):
             self.run()
 
 
@@ -151,6 +157,9 @@ class Workflow(Unit):
 
     def generate_data_for_slave(self, slave=None):
         self.lock_pipeline()
+        if self.is_finished():
+            self.unlock_pipeline()
+            return None
         data = []
         for unit in self.units:
             data.append(unit.generate_data_for_slave(slave))
@@ -174,7 +183,13 @@ class Workflow(Unit):
         """
         Produces a new job, when a slave asks for it. Run by a master.
         """
-        return pickle.dumps(self.generate_data_for_slave(slave))
+        if self.is_finished():
+            return None
+        data = self.generate_data_for_slave(slave)
+        return pickle.dumps(data) if data != None else None
+
+    def is_finished(self):
+        return self.end_point.is_finished()
 
     def do_job(self, data):
         """
@@ -395,4 +410,5 @@ class OpenCLWorkflow(OpenCLUnit, Workflow):
         if not self.power:
             bench = benchmark.OpenCLBenchmark(None, device=self.device)
             self.power = bench.estimate()
+            self.info("Computing power is %.6f", self.power)
         return self.power

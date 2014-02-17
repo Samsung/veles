@@ -79,6 +79,10 @@ class VelesProtocol(network_common.StringLineReceiver):
 
     def connectionLost(self, reason):
         self.state.drop()
+        if self.host.workflow.is_finished():
+            del self.nodes[self.id]
+            if len(self.nodes) == 0:
+                self.host.stop()
 
     def lineReceived(self, line):
         logging.debug("lineReceived %s:  %s", self.id, line)
@@ -130,8 +134,8 @@ class VelesProtocol(network_common.StringLineReceiver):
                 logging.debug("Received JOB command. " +
                               "Requesting a new job from the host.")
                 job = threads.deferToThreadPool(reactor,
-                                                self.host.thread_pool(),
-                                                self.host.request_job)
+                                                self.host.workflow.thread_pool(),
+                                                self.host.workflow.request_job)
                 job.addCallback(self.jobRequestFinished)
                 self.state.request_job()
             else:
@@ -149,8 +153,8 @@ class VelesProtocol(network_common.StringLineReceiver):
             if len(self.update) == self.size:
                 self.setLineMode()
                 upd = threads.deferToThreadPool(reactor,
-                                                self.host.thread_pool(),
-                                                self.host.apply_update,
+                                                self.host.workflow.thread_pool(),
+                                                self.host.workflow.apply_update,
                                                 self.update)
                 upd.addCallback(self.updateApplied)
             if len(self.update) > self.size:
@@ -171,13 +175,13 @@ class VelesProtocol(network_common.StringLineReceiver):
             logging.error("Wrong state.")
 
     def jobRequestFinished(self, data=None):
-        if data:
+        if data != None:
             self.sendLine({'job': 'offer', 'size': len(data)})
             self.transport.write(data)
             self.state.obtain_job()
         else:
             self.sendLine({'job': 'refuse'})
-            self.refuse_job()
+            self.state.refuse_job()
 
     def resolveAddr(self, addr):
         host, _, _ = socket.gethostbyaddr(addr.host)
@@ -217,7 +221,7 @@ class Server(network_common.NetworkConfigurable):
         super(Server, self).__init__(configuration)
         self.workflow = workflow
         self.workflow_graph = self.workflow.generate_graph(write_on_disk=False)
-        self.factory = VelesProtocolFactory(workflow)
+        self.factory = VelesProtocolFactory(self)
         reactor.listenTCP(self.port, self.factory, interface=self.address)
         self.notify_task = task.LoopingCall(self.notify_status)
         self.notify_agent = AsyncHTTPClient()

@@ -107,7 +107,7 @@ class VelesProtocol(network_common.StringLineReceiver):
             if job == "refuse":
                 logging.info("Job was refused.")
                 self.state.refuse_job()
-                self.request_job()
+                self.factory.host.stop()
                 return
             if job != "offer":
                 self.disconnect("Unknown job value %s.", job)
@@ -127,9 +127,9 @@ class VelesProtocol(network_common.StringLineReceiver):
             if len(self.job) == self.size:
                 self.setLineMode()
                 job = threads.deferToThreadPool(reactor,
-                                            self.factory.host.thread_pool(),
-                                            self.factory.host.do_job,
-                                            self.job)
+                                    self.factory.host.workflow.thread_pool(),
+                                    self.factory.host.workflow.do_job,
+                                    self.job)
                 job.addCallback(self.jobFinished)
                 self.state.obtain_job()
             if len(self.job) > self.size:
@@ -153,7 +153,8 @@ class VelesProtocol(network_common.StringLineReceiver):
         self.sendLine({'id': self.factory.id})
 
     def request_id(self):
-        self.sendLine({'power': self.factory.host.get_computing_power()})
+        self.sendLine({'power':
+                       self.factory.host.workflow.get_computing_power()})
         self.state.request_id()
 
     def request_job(self):
@@ -197,7 +198,8 @@ class Client(network_common.NetworkConfigurable):
 
     def __init__(self, configuration, workflow):
         super(Client, self).__init__(configuration)
-        self.factory = VelesProtocolFactory(workflow)
+        self.workflow = workflow
+        self.factory = VelesProtocolFactory(self)
         reactor.connectTCP(self.address, self.port, self.factory)
 
     @daemonize
