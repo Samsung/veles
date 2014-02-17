@@ -13,8 +13,11 @@ class Logger(object):
     Provides logging facilities to derived classes.
     """
 
-    def __init__(self):
-        self.init_unpickled()
+    def __init__(self, logger=None):
+        if logger == None:
+            self.init_unpickled()
+        else:
+            self.logger_ = logger
 
     def init_unpickled(self):
         self.logger_ = logging.getLogger(self.__class__.__name__)
@@ -47,7 +50,7 @@ class Logger(object):
     def error(self, msg, *args, **kwargs):
         self.logger_.error(msg, *args, **kwargs)
 
-    def exception(self, msg, *args, **kwargs):
+    def exception(self, msg="Exception", *args, **kwargs):
         self.logger_.exception(msg, *args, **kwargs)
 
     def critical(self, msg, *args, **kwargs):
