@@ -128,7 +128,10 @@ class WebStatus(logger.Logger):
 
     @staticmethod
     def start_web_server(cmd_queue_in, cmd_queue_out):
-        WebStatusServer(cmd_queue_in, cmd_queue_out).run()
+        try:
+            WebStatusServer(cmd_queue_in, cmd_queue_out).run()
+        except:
+            cmd_queue_out.put_nowait(None)
 
     def __init__(self):
         super(WebStatus, self).__init__()
