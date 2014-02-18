@@ -42,6 +42,10 @@ function updateUI() {
 	      var workflows = Object.keys(ret).map(function(key) {
           return { "key": key, "value": ret[key] };
         });
+	      if (workflows.length == 0) {
+	        updating = false;
+	        return;
+	      }
 	      workflows.sort(function(a, b) {
 	        return a.value.name > b.value.name;
         });
