@@ -278,6 +278,9 @@ class Server(network_common.NetworkConfigurable):
                'user': getpass.getuser(),
                'graph': self.workflow_graph,
                'slaves': self.factory.nodes,
+               # TODO(v.markovtsev): use the real webagg port from Graphics
+               'plots': "http://" + socket.gethostname() + ":" +
+                        config.matplotlib_webagg_port,
                'description': escape("<br />".join(
                                   self.workflow.__doc__.split("\n")))}
         self.notify_agent.fetch("http://%s/%s:%d" % (config.web_status_host,

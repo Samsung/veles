@@ -98,7 +98,9 @@ web_status_update = "update"
 web_status_port = 8090
 web_status_notification_interval = 1
 web_status_log_file = "/var/log/veles_web_status.log"
-webagg_port = 8081
+
+matplotlib_backend = "Qt4Agg"
+matplotlib_webagg_port = 8081
 
 slaves = ["markovtsevu64", "seresovu64", "seninu64", "kuznetsovu64",
           "kazantsevu64", "lpodoynitsinau64", "smaug", "smaug",

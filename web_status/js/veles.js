@@ -27,7 +27,8 @@ function updateUI() {
 	console.log("Update started");
 	var msg = {
     request: "workflows",
-    args: ["name", "master", "slaves", "time", "user", "graph", "description"]
+    args: ["name", "master", "slaves", "time", "user", "graph", "description",
+           "plots"]
   };
 	$.ajax({
 		url: "service",
@@ -69,7 +70,9 @@ function updateUI() {
 	        items += '\')">';
 	        items += workflow.name;
 	        items += '</a></h4>\n';
-	        items += '<a class="view-plots" href="#" >view plots</a><br/>\n';
+	        items += '<a class="view-plots" href="';
+	        items += workflow.plots;
+	        items += '" target="_blank">view plots</a><br/>\n';
 	        items += '<span class="list-group-item-text">Master: ';
 	        items += '<a href="#"><strong>';
 	        items += workflow.master;
@@ -127,7 +130,10 @@ function activateListItem(item_id) {
   details += 'Actions</div>\n';
   details += '<div class="btn-group btn-group-justified">\n';
   details += '<div class="btn-group">\n';
-  details += '<button type="button" class="btn btn-default">View plots';
+  details += '<button type="button" class="btn btn-default" ';
+  details += 'onclick="showPlots(\'';
+  details += item_id;
+  details += '\')">View plots';
   details += '</button>\n';
   details += '</div>\n';
   details += '<div class="btn-group">\n';
@@ -202,6 +208,12 @@ function activateListItem(item_id) {
   $("#" + item_id).addClass("active");
   $("#details-loading-indicator").remove()
   $('#workflow-details').empty().append(details);
+}
+
+function showPlots(item_id) {
+  var workflow = listed_workflows[item_id];
+  var win = window.open(workflow.plots, '_blank');
+  win.focus();
 }
 
 $(window).load(function() {
