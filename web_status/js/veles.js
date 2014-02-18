@@ -47,13 +47,14 @@ function updateUI() {
 	      if (active_workflow_id == null) {
 	        active_workflow_id = workflows[0].key;
 	      }
+	      var items = '';
 	      workflows.forEach(function(pair) {
 	        var workflow = pair.value;
 	        var svg = $(renderGraphviz(workflow.graph)).find("svg");
 	        listed_workflows[pair.key].svg = svg.clone()
 	        svg.attr("class", "media-object pull-left");
 	        svg.attr("width", "100").attr("height", 100);
-	        items = '<li class="list-group-item media list-item-media'
+	        items += '<li class="list-group-item media list-item-media'
 	        if (active_workflow_id == pair.key) {
 	          items += " active";
 	        }
@@ -62,7 +63,10 @@ function updateUI() {
 	        items += '">\n';
 	        items += svg.clone().wrap('<div>').parent().html();
 	        items += '<div class="media-body graceful-overflow">\n';
-	        items += '<h4 class="list-group-item-heading"><a href="#">';
+	        items += '<h4 class="list-group-item-heading"><a href="#" ';
+	        items += 'onclick="activateListItem(\'';
+	        items += pair.key;
+	        items += '\')">';
 	        items += workflow.name;
 	        items += '</a></h4>\n';
 	        items += '<a class="view-plots" href="#" >view plots</a><br/>\n';
@@ -101,7 +105,6 @@ function updateUI() {
 }
 
 function activateListItem(item_id) {
-  active_workflow_id = item_id;
   var workflow = listed_workflows[item_id];
   workflow.svg.attr("class", "detailed-image").attr("width", "600")
       .attr("height", "600");
@@ -192,6 +195,11 @@ function activateListItem(item_id) {
   details += '</div>\n';
   details += '</div>\n';
   details += '</div>\n';
+  if (active_workflow_id != item_id) {
+    $("#" + active_workflow_id).removeClass("active");
+  }
+  active_workflow_id = item_id;
+  $("#" + item_id).addClass("active");
   $("#details-loading-indicator").remove()
   $('#workflow-details').empty().append(details);
 }
