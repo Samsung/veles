@@ -289,8 +289,8 @@ class Server(network_common.NetworkConfigurable):
                # TODO(v.markovtsev): use the real webagg port from Graphics
                'plots': "http://" + socket.gethostname() + ":" +
                         str(config.matplotlib_webagg_port),
-               'description': escape("<br />".join(
-                                  self.workflow.__doc__.split("\n")))}
+               'description': "<br />".join(escape(
+                                  self.workflow.__doc__).split("\n"))}
         self.notify_agent.fetch("http://%s:%d/%s" % (config.web_status_host,
                                                      config.web_status_port,
                                                      config.web_status_update),
