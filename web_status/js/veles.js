@@ -159,7 +159,7 @@ function activateListItem(item_id) {
   details += '<tr>\n';
   details += '<th>ID</th>\n';
   details += '<th>Host</th>\n';
-  details += '<th class="power">Power</th>\n';
+  details += '<th class="center-cell">Power</th>\n';
   details += '<th class="center-cell">Status</th>\n';
   details += '<th class="center-cell">Actions</th>\n';
   details += '</tr>\n';
@@ -168,7 +168,7 @@ function activateListItem(item_id) {
   for (var skey in workflow.slaves) {
     var slave = workflow.slaves[skey];
     details += '<tr class="';
-    switch (slave.status) {
+    switch (slave.state) {
       case "Working":
         details += "success";
         break;
@@ -189,10 +189,10 @@ function activateListItem(item_id) {
     details += slave.host;
     details += '</a></td>\n';
     details += '<td class="power">';
-    details += slave.power;
+    details += slave.power.toFixed(0);
     details += '</td>\n';
     details += '<td class="center-cell">';
-    details += slave.status;
+    details += slave.state;
     details += '</td>\n';
     details += '<td class="center-cell">\n';
     if (slave.status != 'Offline') {
