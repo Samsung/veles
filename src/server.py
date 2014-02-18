@@ -285,5 +285,6 @@ class Server(network_common.NetworkConfigurable):
                                                      config.web_status_port),
                                 self.handle_notify_request,
                                 method='POST', headers=None,
-                                connect_timeout=0.2,
+                                connect_timeout=0.1,
+                                request_timeout=0.1,
                                 body=json.dumps(ret))
