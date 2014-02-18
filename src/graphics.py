@@ -5,16 +5,17 @@ Created on Jan 31, 2014
 """
 
 
-import logging
 import multiprocessing as mp
 import os
+import socket
 import queue
 import time
 
 import config
+import logger
 
 
-class Graphics(object):
+class Graphics(logger.Logger):
     """ Class handling all interaction with main graphics window
         NOTE: This class should be created ONLY within one thread
         (preferably main)
@@ -41,7 +42,6 @@ class Graphics(object):
             """ TODO(v.markovtsev): solve the problem with matplotlib, ssh and
             multiprocessing - hangs on figure.show()
             """
-            import socket
             if socket.gethostname() == "smaug":
                 import threading as thr
                 Graphics.process = thr.Thread(target=Graphics.server_entry)
@@ -74,6 +74,7 @@ class Graphics(object):
         return cls._instance
 
     def __init__(self):
+        super(Graphics, self).__init__()
         if hasattr(self, "initialized"):
             return
         self.initialized = True
@@ -83,10 +84,11 @@ class Graphics(object):
         self.exiting = False
         self.showed = False
         self.root = None
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.webagg_port = 0
 
     def run(self):
         import matplotlib
+        matplotlib.use(config.matplotlib_backend)
         import matplotlib.cm as cm
         import matplotlib.lines as lines
         import matplotlib.patches as patches
@@ -100,7 +102,7 @@ class Graphics(object):
         """Creates and runs main graphics window.
         Note that this function should be called only by __init__()
         """
-        self.logger.info("Server is running in process %d", os.getpid())
+        self.info("Graphics server is running in process %d", os.getpid())
         if pp.get_backend() == "TkAgg":
             import tkinter
             self.root = tkinter.Tk()
@@ -115,7 +117,16 @@ class Graphics(object):
             self.timer.start(Graphics.interval * 1000)
             self.root.exec_()
         elif pp.get_backend() == "WebAgg":
-            matplotlib.rcParams['webagg.port'] = config.webagg_port
+            free_port = config.matplotlib_webagg_port - 1
+            result = 0
+            while result == 0:
+                free_port += 1
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                    result = sock.connect_ex(("localhost", free_port))
+            self.info("Launching WebAgg instance on port %d", free_port)
+            self.webagg_port = free_port
+            # TODO(v.markovtsev): send the port number to the other process
+            matplotlib.rcParams['webagg.port'] = free_port
             matplotlib.rcParams['webagg.open_in_browser'] = 'False'
             while not self.exiting:
                 self.update()
@@ -144,9 +155,9 @@ class Graphics(object):
             if not self.exiting:
                 self.root.after(Graphics.interval * 1000, self.update)
             else:
-                self.logger.debug("Terminating the main loop")
+                self.debug("Terminating the main loop")
                 self.root.destroy()
         if self.pp.get_backend() == "Qt4Agg" and self.exiting:
             self.timer.stop()
-            self.logger.debug("Terminating the main loop")
+            self.debug("Terminating the main loop")
             self.root.quit()
