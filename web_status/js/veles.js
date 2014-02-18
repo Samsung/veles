@@ -52,10 +52,10 @@ function updateUI() {
 	      workflows.forEach(function(pair) {
 	        var workflow = pair.value;
 	        var svg = $(renderGraphviz(workflow.graph)).find("svg");
-	        listed_workflows[pair.key].svg = svg.clone()
+	        listed_workflows[pair.key].svg = svg.clone();
 	        svg.attr("class", "media-object pull-left");
 	        svg.attr("width", "100").attr("height", 100);
-	        items += '<li class="list-group-item media list-item-media'
+	        items += '<li class="list-group-item media list-item-media';
 	        if (active_workflow_id == pair.key) {
 	          items += " active";
 	        }
@@ -98,7 +98,7 @@ function updateUI() {
 	        items += '</div>\n';
 	        items += '</li>\n';
 	      });
-	      $("#list-loading-indicator").remove()
+	      $("#list-loading-indicator").remove();
 	      $("#workflow-list").empty().append(items);
 	      console.log("Finished update");
 	      setTimeout(activateListItem, 0, active_workflow_id);
@@ -206,7 +206,7 @@ function activateListItem(item_id) {
   }
   active_workflow_id = item_id;
   $("#" + item_id).addClass("active");
-  $("#details-loading-indicator").remove()
+  $("#details-loading-indicator").remove();
   $('#workflow-details').empty().append(details);
 }
 
