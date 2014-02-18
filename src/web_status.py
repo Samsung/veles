@@ -21,7 +21,7 @@ import config
 import logger
 
 
-debug_mode = True
+debug_mode = False
 
 
 class ServiceHandler(web.RequestHandler):
@@ -135,46 +135,7 @@ class WebStatus(logger.Logger):
         if not debug_mode:
             self.redirect_logging_to_file(config.web_status_log_file)
         self.exiting = False
-        # self.masters = {}
-        self.masters = {str(uuid.uuid4()): {
-            'name': "Mnist",
-            'master': "markovtsevu64",
-            'time': "%02d:%02d:%02d" % (1, 34, 15),
-            'user': "markhor",
-            'description': "\"All-to-all\" neural network training on MNIST "
-                           "database, giving approximately 1% of errors.<br/>",
-            'graph': 'digraph Workflow {'
-                     'bgcolor=transparent;'
-                     '"0x7f5ad5861410" [style="rounded,filled", shape=rect, fillcolor=lightgrey, gradientangle=90, label=Start];'
-                     '"0x7f5ad5861410" -> "0x7f5ad5861610";'
-                     '"0x7f5ad5861610" [style="rounded,filled", shape=rect, fillcolor=white, gradientangle=90, label=Repeater];'
-                     '"0x7f5ad5861610" -> "0x7f5ad5861690";'
-                     '"0x7f5ad5861690" [style="rounded,filled", shape=rect, fillcolor=cyan, gradientangle=90, label="Wine loader"];'
-                     '"0x7f5ad5861690" -> "0x7f5ad5861850";'
-                     '"0x7f5ad5861850" [style="rounded,filled", shape=rect, fillcolor=greenyellow, gradientangle=90, label=All2AllTanh];'
-                     '"0x7f5ad5861850" -> "0x7f5ad5861950";'
-                     '"0x7f5ad5861950" [style="rounded,filled", shape=rect, fillcolor=greenyellow, gradientangle=90, label=All2AllSoftmax];'
-                     '"0x7f5ad5861950" -> "0x7f5ad5861b10";'
-                     '"0x7f5ad5861b10" [style="rounded,filled", shape=rect, fillcolor=plum, gradientangle=90, label=EvaluatorSoftmax];'
-                     '"0x7f5ad5861b10" -> "0x7f5ad5861c90";'
-                     '"0x7f5ad5861c90" [style="rounded,filled", shape=rect, fillcolor=coral, gradientangle=90, label=Decision];'
-                     '"0x7f5ad5861c90" -> "0x7f5ad5861510";'
-                     '"0x7f5ad5861c90" -> "0x7f5ad5861d10";'
-                     '"0x7f5ad5861d10" [style="rounded,filled", shape=rect, fillcolor=coral, gradientangle=90, label=GDSM];'
-                     '"0x7f5ad5861d10" -> "0x7f5ad5861d90";'
-                     '"0x7f5ad5861510" [style="rounded,filled", shape=rect, fillcolor=lightgrey, gradientangle=90, label=End];'
-                     '"0x7f5ad5861d90" [style="rounded,filled", shape=rect, fillcolor=coral, gradientangle=90, label=GDTanh];'
-                     '"0x7f5ad5861d90" -> "0x7f5ad5861610";'
-                     '}',
-            'slaves': {
-                str(uuid.uuid4()): {'power': 100, 'status': "Working",
-                                    'host': "markovtsevu64"},
-                str(uuid.uuid4()): {'power': 200, 'status': "Working",
-                                    'host': "smaug"},
-                str(uuid.uuid4()): {'power': 100, 'status': "Waiting",
-                                    'host': "kuznetsovu64"},
-            }
-        }}
+        self.masters = {}
         self.cmd_queue_in = mp.Queue()
         self.cmd_queue_out = mp.Queue()
         self.cmd_thread = threading.Thread(target=self.cmd_loop)
