@@ -92,9 +92,10 @@ class Launcher(logger.Logger):
                                       config.web_status_port))
         if result != 0:
             self.info("Launching the web status server")
-            self.launch_remote_program(config.web_status_host,
-                                       os.path.join(config.this_dir,
-                                                    "web_status.py"))
+            self.launch_remote_program(
+                config.web_status_host,
+                os.path.abspath(os.path.join(config.this_dir,
+                                             "web_status.py")))
         else:
             self.info("Discovered an already running web status server")
 
