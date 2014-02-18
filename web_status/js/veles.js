@@ -98,8 +98,9 @@ function updateUI() {
 	        items += '</div>\n';
 	        items += '</li>\n';
 	      });
+	      objs = $.parseHTML(items);
 	      $("#list-loading-indicator").remove();
-	      $("#workflow-list").empty().append(items);
+	      $("#workflow-list").empty().append(objs);
 	      console.log("Finished update");
 	      setTimeout(activateListItem, 0, active_workflow_id);
 	      updating = false;
@@ -206,8 +207,9 @@ function activateListItem(item_id) {
   }
   active_workflow_id = item_id;
   $("#" + item_id).addClass("active");
+  objs = $.parseHTML(details);
   $("#details-loading-indicator").remove();
-  $('#workflow-details').empty().append(details);
+  $('#workflow-details').empty().append(objs);
 }
 
 function showPlots(item_id) {
@@ -218,5 +220,5 @@ function showPlots(item_id) {
 
 $(window).load(function() {
 	setInterval(updateUI, 2000);
-	updateUI();
+	setTimeout(updateUI, 0);
 });
