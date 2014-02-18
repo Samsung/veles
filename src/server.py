@@ -12,6 +12,7 @@ import logging
 import socket
 import time
 from tornado.httpclient import AsyncHTTPClient
+import tornado.ioloop as ioloop
 from twisted.internet import reactor, threads, task
 from twisted.internet.protocol import Factory
 from twisted.web.html import escape
@@ -271,6 +272,9 @@ class Server(network_common.NetworkConfigurable):
         if response.error:
             logging.warn("Failed to upload the status update to %s:%s",
                          config.web_status_host, config.web_status_port)
+        else:
+            logging.debug("Successfully updated the status")
+        ioloop.IOLoop.instance().stop()
 
     def notify_status(self):
         mins, secs = divmod(time.time() - self.start_time, 60)
@@ -287,11 +291,12 @@ class Server(network_common.NetworkConfigurable):
                         str(config.matplotlib_webagg_port),
                'description': escape("<br />".join(
                                   self.workflow.__doc__.split("\n")))}
-        self.notify_agent.fetch("http://%s/%s:%d" % (config.web_status_host,
-                                                     config.web_status_update,
-                                                     config.web_status_port),
+        self.notify_agent.fetch("http://%s:%d/%s" % (config.web_status_host,
+                                                     config.web_status_port,
+                                                     config.web_status_update),
                                 self.handle_notify_request,
                                 method='POST', headers=None,
-                                connect_timeout=0.1,
-                                request_timeout=0.1,
+                                connect_timeout=0.2,
+                                request_timeout=0.2,
                                 body=json.dumps(ret))
+        ioloop.IOLoop.instance().start()
