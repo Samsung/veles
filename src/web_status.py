@@ -70,6 +70,8 @@ class WebStatusServer(logger.Logger):
                                                    config.web_status_root}),
             (r"/(fonts/.*)", web.StaticFileHandler, {'path':
                                                      config.web_status_root}),
+            (r"/(img/.*)", web.StaticFileHandler, {'path':
+                                                   config.web_status_root}),
             (r"/(.+\.html)", web.StaticFileHandler, {'path':
                                                      config.web_status_root}),
             ("/(veles.png)", web.StaticFileHandler, {'path':
@@ -133,8 +135,8 @@ class WebStatus(logger.Logger):
         if not debug_mode:
             self.redirect_logging_to_file(config.web_status_log_file)
         self.exiting = False
-        self.masters = {}
-        """self.masters = {str(uuid.uuid4()): {
+        # self.masters = {}
+        self.masters = {str(uuid.uuid4()): {
             'name': "Mnist",
             'master': "markovtsevu64",
             'time': "%02d:%02d:%02d" % (1, 34, 15),
@@ -172,7 +174,7 @@ class WebStatus(logger.Logger):
                 str(uuid.uuid4()): {'power': 100, 'status': "Waiting",
                                     'host': "kuznetsovu64"},
             }
-        }}"""
+        }}
         self.cmd_queue_in = mp.Queue()
         self.cmd_queue_out = mp.Queue()
         self.cmd_thread = threading.Thread(target=self.cmd_loop)

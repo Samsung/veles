@@ -11,7 +11,7 @@ function renderGraphviz(desc) {
     result = $.parseXML(raw_result);
   } catch(e) {
     result = e;
-  }  
+  }
   return result;
 }
 
@@ -28,7 +28,7 @@ function updateUI() {
 	var msg = {
     request: "workflows",
     args: ["name", "master", "slaves", "time", "user", "graph", "description"]
-  }; 
+  };
 	$.ajax({
 		url: "service",
 		type: "POST",
@@ -44,28 +44,19 @@ function updateUI() {
 	      workflows.sort(function(a, b) {
 	        return a.value.name > b.value.name;
         });
-	      var activate_needed = true;
-	      var first_pair = true;
+	      if (active_workflow_id == null) {
+	        active_workflow_id = workflows[0].key;
+	      }
 	      workflows.forEach(function(pair) {
 	        var workflow = pair.value;
 	        var svg = $(renderGraphviz(workflow.graph)).find("svg");
 	        listed_workflows[pair.key].svg = svg.clone()
 	        svg.attr("class", "media-object pull-left");
-	        svg.attr("width", "100").attr("height", 100);	        
+	        svg.attr("width", "100").attr("height", 100);
 	        items = '<li class="list-group-item media list-item-media'
-	        if (active_workflow_id === pair.key) {
-	          // This workflow is already displayed in details, no need
-	          // to trigger activation.
-	          activate_needed = false;
-	        }
-	        if (active_workflow_id === pair.key ||
-	            (active_workflow_id == null && first_pair)) {
-	          // Activate the first list item, if nothing was previously active
-	          // OR if this workflow id matches the currently active one.
+	        if (active_workflow_id == pair.key) {
 	          items += " active";
-	          active_workflow_id = pair.key;
 	        }
-	        first_pair = false;
 	        items += '" id="';
 	        items += pair.key;
 	        items += '">\n';
@@ -75,17 +66,18 @@ function updateUI() {
 	        items += workflow.name;
 	        items += '</a></h4>\n';
 	        items += '<a class="view-plots" href="#" >view plots</a><br/>\n';
-	        items += '<span class="list-group-item-text">Master: <a href="#">';
+	        items += '<span class="list-group-item-text">Master: ';
+	        items += '<a href="#"><strong>';
 	        items += workflow.master;
-	        items += '</a><br/>\n';
+	        items += '</strong></a><br/>\n';
 	        items += '<span class="badge pull-right">';
 	        items += Object.keys(workflow.slaves).length;
 	        items += '</span>\n';
 	        items += 'Slaves: ';
 	        for (var skey in workflow.slaves) {
-	          items += '<a href="#">';
+	          items += '<a href="#"><strong>';
 	          items += workflow.slaves[skey].host;
-	          items += '</a>, ';
+	          items += '</strong></a>, ';
 	        }
 	        items = items.substring(0, items.length - 2);
           items += '<br/>\n';
@@ -93,18 +85,17 @@ function updateUI() {
 	        items += workflow.time;
 	        items += '</strong><br/>\n';
 	        items += 'Started by: <i class="glyphicon glyphicon-user">';
-	        items += '<a href="#">';
+	        items += '<a href="#"><strong>';
 	        items += workflow.user;
-	        items += '</a></i></span>\n';
+	        items += '</strong></a></i></span>\n';
 	        items += '</div>\n';
 	        items += '</li>\n';
 	      });
+	      $("#list-loading-indicator").remove()
 	      $("#workflow-list").empty().append(items);
 	      console.log("Finished update");
-	      if (activate_needed) {
-	        setTimeout(activateListItem, 0, active_workflow_id);
-	      }
-	      updating = false
+	      setTimeout(activateListItem, 0, active_workflow_id);
+	      updating = false;
 	    }
 	});
 }
@@ -120,7 +111,14 @@ function activateListItem(item_id) {
   details += workflow.name;
   details += '</h3>\n';
   details += workflow.description;
-  details += '<br/>\n';
+  details += 'This workflow is managed by ';
+  details += '<i class="glyphicon glyphicon-user"><a href="#"">';
+  details += workflow.user;
+  details += '</a></i> on <a href="#">';
+  details += workflow.master;
+  details += "</a> and has ";
+  details += Object.keys(workflow.slaves).length;
+  details += ' nodes.<br/>\n';
   details += '<div class="panel panel-borderless">\n';
   details += '<div class="panel-heading details-panel-heading">';
   details += 'Actions</div>\n';
@@ -184,19 +182,20 @@ function activateListItem(item_id) {
     details += '</td>\n';
     details += '<td class="center-cell">\n';
     if (slave.status != 'Offline') {
-      details += '<i class="glyphicon glyphicon-pause"><a class="slave-action" href="#">pause</a></i>, <i class="glyphicon glyphicon-remove"><a class="slave-action" href="#">remove</a></i>\n';      
+      details += '<i class="glyphicon glyphicon-pause"><a class="slave-action" href="#">pause</a></i>, <i class="glyphicon glyphicon-remove"><a class="slave-action" href="#">remove</a></i>\n';
     }
     details += '</td>\n';
     details += '</tr>\n';
-  }                   
+  }
   details += '</tbody>\n';
   details += '</table>\n';
   details += '</div>\n';
   details += '</div>\n';
   details += '</div>\n';
+  $("#details-loading-indicator").remove()
   $('#workflow-details').empty().append(details);
 }
 
 $(window).load(function() {
-	setInterval(updateUI, 1000)
+	setInterval(updateUI, 1000);
 });

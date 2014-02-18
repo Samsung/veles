@@ -4,20 +4,17 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" type="image/png" href="/veles.png" />
+    <link rel="icon" type="image/png" href="img/veles.png" />
     <link href='css/audiowide.css' rel='stylesheet' type='text/css'>
     <title>VELES Cloud Status</title>
-
     <!-- Bootstrap -->
     <link href="css/bootstrap.min.css" rel="stylesheet">
-
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
       <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
       <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
     <![endif]-->
-    
     <style type="text/css">
       body {
         padding-top: 20px;
@@ -25,11 +22,9 @@
         /* Margin bottom by footer height */
         margin-bottom: 40px;
       }
-
       .navbar {
         margin-bottom: 20px;
-      }      
-      
+      }
       .navbar-default {
         background-color: #ffffff;
         border-color: #888888;
@@ -83,7 +78,6 @@
       .navbar-default .navbar-link:hover {
         color: #ffffff;
       }
-
       @media (max-width: 80%) {
         .navbar-default .navbar-nav .open .dropdown-menu > li > a {
           color: #888888;
@@ -94,9 +88,8 @@
         .navbar-default .navbar-nav .open .dropdown-menu > .active > a, .navbar-default .navbar-nav .open .dropdown-menu > .active > a:hover, .navbar-default .navbar-nav .open .dropdown-menu > .active > a:focus {
           color: #ffffff;
           background-color: #428bca;
-        }        
+        }
       }
-
       /* Custom container */
       .container-narrow {
         margin: 0 auto;
@@ -107,7 +100,6 @@
       .container-narrow > hr {
         margin: 30px 0;
       }
-      
       #footer {
         position: absolute;
         bottom: 0;
@@ -116,146 +108,133 @@
         height: 40px;
         background-color: #ffffff;
       }
-      
       .pull-center {
           display: table;
           margin-left: auto;
           margin-right: auto;
           float: none;
       }
-      
       .left-list {
         width: 25%;
         min-width: 300px;
         float: left;
       }
-      
       .details {
         padding: 0;
         padding-left: 20px;
         margin-left: 25%;
       }
-      
       .no-padding {
         padding: 0;
       }
-      
       .list-group-item.media > li {
         padding-left: 10px;
       }
-      
       .list-group-item.media {
         padding-left: 10px;
         margin-bottom: 0px;
         margin-top: 0px;
       }
-      
       .list-group-item.media.active {
         background-color: #428bca;
       }
-      
       .graceful-overflow {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
-      
       .detailed-image {
         float: left;
       }
-      
       .detailed-description {
         margin-left: 610px;
         padding: 0;
       }
-      
       .panel-margin-zero {
         margin-bottom: 0;
       }
-      
       .active > div, .active > div > a, .active > div > h4 > a,
       .active > div > .list-group-item-text > a,
       .active > div > .list-group-item-text > i > a {
         color: #ffffff;
       }
-      
       .list-group-item-heading {
         display: inline;
       }
-      
       .view-plots {
         float: right;
         font-size: small;
       }
-      
       .list-group-item-text {
         font-size: small;
       }
-      
       .slave-action {
         vertical-align: text-top;
         font-size: small;
       }
-      
       table tr td:empty {
         width: 50px;
       }
-      
       .slave-id {
         width: 50px;
       }
-      
       .details-panel-heading {
         text-align: center;
         font-size: large;
         font-weight: bold;
       }
-      
       .active > div > span > .badge {
         color: #428bca;
         background-color: #ffffff;
       }
-      
       .center-cell {
         text-align: center;
       }
-      
       td.power {
         text-align: center;
       }
       
+      .loading-indicator {
+        text-align: center;
+        margin-top: 50px;
+      }
+      
     </style>
-    
     </head>
     <body>
       <div class="container-narrow">
         <div class="navbar navbar-default" role="navigation">
           <div class="container-fluid">
-            <div class="navbar-header">            
+            <div class="navbar-header">
               <span class="navbar-brand">VELES Distributed Machine Learning Platform</span>
-            </div>        
+            </div>
             <ul class="nav navbar-nav pull-center">
               <li class="active"><a href="#">Workflows</a></li>
               <li><a href="#">Nodes</a></li>
               <li><a href="#">Users</a></li>
-            </ul>      
+            </ul>
           </div>
         </div>
         <div class="container-fluid no-padding">
           <div class="left-list no-padding">
-            <ul class="list-group" id="workflow-list">              
-            </ul>              
+            <ul class="list-group" id="workflow-list">
+            </ul>
+            <div class="loading-indicator" id="list-loading-indicator">
+              <img src="img/ajax-loader.gif" />
+            </div>
           </div>
           <div class="container-fluid details" id="workflow-details">
-          </div>          
+            <div class="loading-indicator" id="details-loading-indicator">
+              <img src="img/ajax-loader.gif" />
+            </div>
+          </div>
         </div>
       </div>
       <div id="footer">
         <div class="container-narrow">
-          <p class="text-muted">Samsung R&D Institute Russia, Platform Algorithms Group, 2014.<span class="pull-right">For internal use only. Confidential.</span></p>          
+          <p class="text-muted">Samsung R&D Institute Russia, Platform Algorithms Group, 2014.<span class="pull-right">For internal use only. Confidential.</span></p>
         </div>
       </div>
-
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="js/jquery.min.js"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
