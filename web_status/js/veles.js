@@ -206,4 +206,5 @@ function activateListItem(item_id) {
 
 $(window).load(function() {
 	setInterval(updateUI, 2000);
+	updateUI();
 });
