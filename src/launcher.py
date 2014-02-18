@@ -88,7 +88,7 @@ class Launcher(logger.Logger):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             result = sock.connect_ex((config.web_status_host,
                                       config.web_status_port))
-        if result == 0:
+        if result != 0:
             self.info("Launching the web status server")
             self.launch_remote_program(config.web_status_host,
                                        os.path.join(config.this_dir,
