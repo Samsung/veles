@@ -123,8 +123,9 @@ class Launcher(logger.Logger):
         slave_args = " ".join(filtered_argv)
         self.debug("Slave args: %s", slave_args)
         for node in nodes:
-            self.launch_remote_program(node, "%s %s" % (sys.argv[0],
-                                                        slave_args))
+            self.launch_remote_program(node,
+                                       "%s %s" % (os.path.abspath(sys.argv[0]),
+                                                  slave_args))
 
     def launch_remote_program(self, host, prog):
         self.debug("Launching \"%s\" on %s", prog, host)
