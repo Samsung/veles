@@ -32,7 +32,9 @@ class Launcher(logger.Logger):
     """
     def __init__(self, **kwargs):
         super(Launcher, self).__init__()
-        parser = argparse.ArgumentParser()
+        parser = kwargs.get("parser")
+        if parser == None:
+            parser = argparse.ArgumentParser()
         parser.add_argument("-s", "--server_address", type=str, default="",
             help="Workflow will be launched in client mode "
             "and connected to the server at the specified address.")
