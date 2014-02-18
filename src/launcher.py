@@ -69,6 +69,7 @@ class Launcher(logger.Logger):
             self.agent = server.Server(self.args.listen_address, workflow)
             # Launch the status server if it's not been running yet
             if not self.args.skip_web_status:
+                # Launch the status server if it's not been running yet
                 self.launch_status()
             # Launch the nodes described in the configuration file/string
             nodes = self.args.slaves
@@ -76,8 +77,6 @@ class Launcher(logger.Logger):
                 self.launch_nodes(nodes)
         else:
             self.agent = workflow
-        # Launch the status server if it's not been running yet
-        self.launch_status()
 
     def run(self, daemonize=False):
         return (self.agent.run() if isinstance(self.agent, units.Unit)
