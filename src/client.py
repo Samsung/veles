@@ -116,15 +116,17 @@ class VelesProtocol(network_common.StringLineReceiver):
             if self.size == None:
                 self.disconnect("Job size was not specified.")
                 return
-            self.job = bytearray()
+            self.job = bytearray(self.size)
+            self.job_pos = 0
             self.setRawMode()
             return
         self.disconnect("Invalid state %s.", self.state.current)
 
     def rawDataReceived(self, data):
         if self.state.current == 'GETTING_JOB':
-            self.job += data
-            if len(self.job) == self.size:
+            self.job[self.job_pos:self.job_pos + len(data)] = data
+            self.job_pos += len(data)
+            if self.job_pos == self.size:
                 self.setLineMode()
                 job = threads.deferToThreadPool(reactor,
                                     self.factory.host.workflow.thread_pool(),

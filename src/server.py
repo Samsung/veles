@@ -146,7 +146,8 @@ class VelesProtocol(network_common.StringLineReceiver):
                 if self.size == None:
                     self.disconnect("Update size was not specified.")
                     return
-                self.update = bytearray()
+                self.update = bytearray(self.size)
+                self.update_pos = 0
                 self.setRawMode()
                 self.state.receive_update()
             elif cmd == "job":
@@ -168,13 +169,15 @@ class VelesProtocol(network_common.StringLineReceiver):
 
     def rawDataReceived(self, data):
         if self.state.current == 'APPLYING_UPDATE':
-            self.update += data
-            if len(self.update) == self.size:
+            self.update[self.update_pos:self.update_pos + len(data)] = data
+            self.update_pos += len(data)
+            if self.update_pos == self.size:
                 self.setLineMode()
-                upd = threads.deferToThreadPool(reactor,
-                                                self.host.workflow.thread_pool(),
-                                                self.host.workflow.apply_update,
-                                                self.update)
+                upd = threads.deferToThreadPool(
+                    reactor,
+                    self.host.workflow.thread_pool(),
+                    self.host.workflow.apply_update,
+                    self.update)
                 upd.addCallback(self.updateApplied)
             if len(self.update) > self.size:
                 self.disconnect("Received update size %d exceeded the expected"
@@ -196,6 +199,7 @@ class VelesProtocol(network_common.StringLineReceiver):
     def jobRequestFinished(self, data=None):
         if data != None:
             self.sendLine({'job': 'offer', 'size': len(data)})
+            logging.debug("Job size: %d Kb", len(data) / 1000)
             self.transport.write(data)
             self.state.obtain_job()
         else:
