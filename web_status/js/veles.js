@@ -120,8 +120,11 @@ function activateListItem(item_id) {
     $("#" + item_id).addClass("active");
   }
   var workflow = listed_workflows[item_id];
-  workflow.svg.attr("class", "detailed-image").attr("width", "50%")
-      .attr("height", "50%");
+  var div_width = $("#workflow-details").width();
+  var height = workflow.svg[0].viewBox.baseVal.height * div_width /
+      (workflow.svg[0].viewBox.baseVal.width * 2);
+  workflow.svg.attr("class", "detailed-image").attr("width", div_width / 2)
+     .attr("height", height).attr("id", "workflow-svg");
   details = workflow.svg.clone().wrap('<div>').parent().html();
   details += '<div class="detailed-description">\n';
   details += '<h3 class="media-heading">';
@@ -226,4 +229,15 @@ function showPlots(item_id) {
 $(window).load(function() {
 	setInterval(updateUI, 2000);
 	setTimeout(updateUI, 0);
+});
+
+$(window).resize(function() {
+  var svg = $("#workflow-svg")[0];
+  if (svg == null) {
+    return;
+  }
+  var div_width = $("#workflow-details").width();
+  var height = svg.viewBox.baseVal.height * div_width /
+      (svg.viewBox.baseVal.width * 2);
+  $("#workflow-svg").attr("width", div_width / 2).attr("height", height);
 });
