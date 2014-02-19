@@ -18,8 +18,6 @@ function renderGraphviz(desc) {
 var updating = false;
 var active_workflow_id = null;
 var listed_workflows = null;
-var svg_width_ratio = 0.98;
-var min_details_table_width = 400;
 
 function updateUI() {
   if (updating) {
@@ -121,22 +119,8 @@ function activateListItem(item_id) {
     active_workflow_id = item_id;
     $("#" + item_id).addClass("active");
   }
-  var details = "";
   var workflow = listed_workflows[item_id];
-  var div_width = $("#workflow-details").width();
-  var div_detailed_description_width = $(".detailed-description").width();
-  if (div_detailed_description_width == null) {
-    if (div_width >= 2 * min_details_table_width) {
-      div_detailed_description_width = 0.5 * div_width;
-    } else {
-      div_detailed_description_width = min_details_table_width;
-    }
-  }
-  var width = svg_width_ratio * (div_width - div_detailed_description_width);
-  var height = workflow.svg[0].viewBox.baseVal.height * width /
-      workflow.svg[0].viewBox.baseVal.width;
-  workflow.svg.attr("width", width).attr("height", height)
-      .attr("id", "workflow-svg");
+  var details = "";
   details += '<div class="detailed-description">\n';
   details += '<div class="panel panel-borderless">\n';
   details += '<div class="panel-heading details-panel-heading">';
@@ -226,6 +210,7 @@ function activateListItem(item_id) {
   details += "</a> and has ";
   details += Object.keys(workflow.slaves).length;
   details += ' nodes.<br/><br/>';
+  workflow.svg.attr("id", "workflow-svg");
   details += workflow.svg.clone().wrap('<div>').parent().html();
   details += '</div>\n';
   objs = $.parseHTML(details);
@@ -243,23 +228,3 @@ $(window).load(function() {
 	setInterval(updateUI, 2000);
 	setTimeout(updateUI, 0);
 });
-
-$(window).resize(function() {
-  var svg = $("#workflow-svg")[0];
-  if (svg == null) {
-    return;
-  }
-  var div_width = $("#workflow-details").width();
-  var div_detailed_description_width = $(".detailed-description").width();
-  if (div_detailed_description_width == null) {
-    if (div_width >= 2 * min_details_table_width) {
-      div_detailed_description_width = 0.5 * div_width;
-    } else {
-      div_detailed_description_width = min_details_table_width;
-    }
-  }
-  var width = svg_width_ratio * (div_width - div_detailed_description_width);
-  var height = svg.viewBox.baseVal.height * width / svg.viewBox.baseVal.width;
-  $("#workflow-svg").attr("width", width).attr("height", height);
-});
-

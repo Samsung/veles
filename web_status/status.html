@@ -112,16 +112,17 @@
         margin-right: 10%;
         bottom: 0;
         width: 80%;
+        min-width: 400px;
         /* Set the fixed height of the footer here */
         height: 4%;
-        padding-top: 0.5%;
+        padding-top: 0.75%;
         background-color: #ffffff;
       }
       .pull-center {
-          display: table;
-          margin-left: auto;
-          margin-right: auto;
-          float: none;
+        display: table;
+        margin-left: auto;
+        margin-right: auto;
+        float: none;
       }
       .content {
         height: 100%;
@@ -131,11 +132,29 @@
         min-width: 300px;
         float: left;
         height: 100%;
+        display: table-cell;
       }
       .details {
         padding: 0;
         padding-left: 20px;
         margin-left: 25%;
+        display: table-cell;
+      }
+      .detailed-description {
+        float: right;
+        min-width: 440px;
+        width: 40%;
+        padding: 0;
+        margin-left: 20px;
+        display: table-cell;
+      }
+      .detailed-text {
+        overflow: hidden;
+        min-width: 100px;
+      }
+      #workflow-svg {
+        width: 100%;
+        height: 100%;
       }
       .no-padding {
         padding: 0;
@@ -155,12 +174,6 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-      }
-      .detailed-description {
-        float: right;
-        min-width: 400px;
-        width: 50%;
-        padding: 0;
       }
       .panel-margin-zero {
         margin-bottom: 0;
@@ -212,6 +225,9 @@
         text-align: center;
         margin-top: 50px;
       }
+      .table {
+        overflow: scroll;
+      }
     </style>
     </head>
     <body>
@@ -246,12 +262,12 @@
         </div>
       </div>
       <div id="footer">
-        <p class="text-muted">
-          Samsung R&D Institute Russia, Platform Algorithms Group, 2014.
-          <span class="pull-right">
+          <div class="pull-right text-muted">
             For internal use only. Confidential.
-          </span>
-        </p>
+          </div>
+          <div class="graceful-overflow text-muted">
+            Samsung R&D Institute Russia, Platform Algorithms Group, 2014.
+          </div>
       </div>
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="js/jquery.min.js"></script>
