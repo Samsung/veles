@@ -18,6 +18,8 @@ function renderGraphviz(desc) {
 var updating = false;
 var active_workflow_id = null;
 var listed_workflows = null;
+var svg_width_ratio = 0.98;
+var min_details_table_width = 400;
 
 function updateUI() {
   if (updating) {
@@ -119,26 +121,23 @@ function activateListItem(item_id) {
     active_workflow_id = item_id;
     $("#" + item_id).addClass("active");
   }
+  var details = "";
   var workflow = listed_workflows[item_id];
   var div_width = $("#workflow-details").width();
-  var height = workflow.svg[0].viewBox.baseVal.height * div_width /
-      (workflow.svg[0].viewBox.baseVal.width * 2);
-  workflow.svg.attr("class", "detailed-image").attr("width", div_width / 2)
-     .attr("height", height).attr("id", "workflow-svg");
-  details = workflow.svg.clone().wrap('<div>').parent().html();
+  var div_detailed_description_width = $(".detailed-description").width();
+  if (div_detailed_description_width == null) {
+    if (div_width >= 2 * min_details_table_width) {
+      div_detailed_description_width = 0.5 * div_width;
+    } else {
+      div_detailed_description_width = min_details_table_width;
+    }
+  }
+  var width = svg_width_ratio * (div_width - div_detailed_description_width);
+  var height = workflow.svg[0].viewBox.baseVal.height * width /
+      workflow.svg[0].viewBox.baseVal.width;
+  workflow.svg.attr("width", width).attr("height", height)
+      .attr("id", "workflow-svg");
   details += '<div class="detailed-description">\n';
-  details += '<h3 class="media-heading">';
-  details += workflow.name;
-  details += '</h3>\n';
-  details += workflow.description;
-  details += 'This workflow is managed by ';
-  details += '<i class="glyphicon glyphicon-user"><a href="#"">';
-  details += workflow.user;
-  details += '</a></i> on <a href="#">';
-  details += workflow.master;
-  details += "</a> and has ";
-  details += Object.keys(workflow.slaves).length;
-  details += ' nodes.<br/>\n';
   details += '<div class="panel panel-borderless">\n';
   details += '<div class="panel-heading details-panel-heading">';
   details += 'Actions</div>\n';
@@ -215,6 +214,20 @@ function activateListItem(item_id) {
   details += '</div>\n';
   details += '</div>\n';
   details += '</div>\n';
+  details += '<div class="detailed-text"><h3 class="media-heading">';
+  details += workflow.name;
+  details += '</h3>\n';
+  details += workflow.description;
+  details += 'This workflow is managed by ';
+  details += '<i class="glyphicon glyphicon-user"><a href="#"">';
+  details += workflow.user;
+  details += '</a></i> on <a href="#">';
+  details += workflow.master;
+  details += "</a> and has ";
+  details += Object.keys(workflow.slaves).length;
+  details += ' nodes.<br/><br/>';
+  details += workflow.svg.clone().wrap('<div>').parent().html();
+  details += '</div>\n';
   objs = $.parseHTML(details);
   $("#details-loading-indicator").remove();
   $('#workflow-details').empty().append(objs);
@@ -237,7 +250,16 @@ $(window).resize(function() {
     return;
   }
   var div_width = $("#workflow-details").width();
-  var height = svg.viewBox.baseVal.height * div_width /
-      (svg.viewBox.baseVal.width * 2);
-  $("#workflow-svg").attr("width", div_width / 2).attr("height", height);
+  var div_detailed_description_width = $(".detailed-description").width();
+  if (div_detailed_description_width == null) {
+    if (div_width >= 2 * min_details_table_width) {
+      div_detailed_description_width = 0.5 * div_width;
+    } else {
+      div_detailed_description_width = min_details_table_width;
+    }
+  }
+  var width = svg_width_ratio * (div_width - div_detailed_description_width);
+  var height = svg.viewBox.baseVal.height * width / svg.viewBox.baseVal.width;
+  $("#workflow-svg").attr("width", width).attr("height", height);
 });
+

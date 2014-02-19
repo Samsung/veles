@@ -97,9 +97,11 @@
       .container-narrow {
         margin: 0 auto;
         /*padding-left: 100px;*/
-        max-width: 80%;
+        max-width: 100%;
+        width: 80%;
         min-width: 800px;
         padding-bottom: 2%;
+        height: 100%;
       }
       .container-narrow > hr {
         margin: 30px 0;
@@ -121,10 +123,14 @@
           margin-right: auto;
           float: none;
       }
+      .content {
+        height: 100%;
+      }
       .left-list {
         width: 25%;
         min-width: 300px;
         float: left;
+        height: 100%;
       }
       .details {
         padding: 0;
@@ -150,11 +156,10 @@
         text-overflow: ellipsis;
         white-space: nowrap;
       }
-      .detailed-image {
-        float: left;
-      }
       .detailed-description {
-        margin-left: 52%;
+        float: right;
+        min-width: 400px;
+        width: 50%;
         padding: 0;
       }
       .panel-margin-zero {
@@ -225,7 +230,7 @@
             </ul>
           </div>
         </div>
-        <div class="container-fluid no-padding">
+        <div class="container-fluid no-padding content">
           <div class="left-list no-padding">
             <ul class="list-group" id="workflow-list">
             </ul>
