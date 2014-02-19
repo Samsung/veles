@@ -90,7 +90,9 @@ function updateUI() {
 	          items += workflow.slaves[skey].host;
 	          items += '</strong></a>, ';
 	        }
-	        items = items.substring(0, items.length - 2);
+          if (Object.keys(workflow.slaves).length > 0) {
+            items = items.substring(0, items.length - 2);
+          }
           items += '<br/>\n';
 	        items += 'Time running: <strong>';
 	        items += workflow.time;
