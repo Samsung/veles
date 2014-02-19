@@ -163,9 +163,9 @@ class WebStatus(logger.Logger):
             self.debug("New command %s", str(cmd))
             try:
                 if "update" in cmd.keys():
-                    host, _, _ = socket.gethostbyaddr(cmd["update"])
-                    self.debug("Master %s yielded %s", host, str(cmd["body"]))
-                    self.masters[host] = cmd["body"]
+                    self.debug("Master %s yielded %s", cmd["body"]["id"],
+                               str(cmd["body"]))
+                    self.masters[cmd["body"]["id"]] = cmd["body"]
                 elif "request" in cmd.keys():
                     if cmd["body"]["request"] == "workflows":
                         ret = {}
