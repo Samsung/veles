@@ -209,6 +209,8 @@ class VelesProtocol(network_common.StringLineReceiver):
 
     def resolveAddr(self, addr):
         host, _, _ = socket.gethostbyaddr(addr.host)
+        if host == "localhost":
+            host = socket.gethostname()
         logging.debug("Address %s was resolved to %s", addr.host, host)
         self.nodes[self.id]['host'] = host
 
