@@ -7,17 +7,18 @@ Created on Feb 10, 2014
 """
 
 
-import daemon
 import logging
 import multiprocessing as mp
 import socket
 import threading
+import time
 import tornado.escape
 import tornado.ioloop as ioloop
 import tornado.web as web
 import uuid
 
 import config
+import daemon
 import logger
 
 
@@ -126,6 +127,8 @@ class WebStatus(logger.Logger):
     http://twistedmatrix.com/documents/current/web/howto/web-in-60/index.html
     """
 
+    GARBAGE_TIMEOUT = 30
+
     @staticmethod
     def start_web_server(cmd_queue_in, cmd_queue_out):
         try:
@@ -163,16 +166,26 @@ class WebStatus(logger.Logger):
             self.debug("New command %s", str(cmd))
             try:
                 if "update" in cmd.keys():
-                    self.debug("Master %s yielded %s", cmd["body"]["id"],
-                               str(cmd["body"]))
-                    self.masters[cmd["body"]["id"]] = cmd["body"]
+                    mid = cmd["body"]["id"]
+                    self.debug("Master %s yielded %s", mid, str(cmd["body"]))
+                    self.masters[mid] = cmd["body"]
+                    self.masters[mid]["last_update"] = time.time()
                 elif "request" in cmd.keys():
                     if cmd["body"]["request"] == "workflows":
                         ret = {}
+                        garbage = []
                         for mid, master in self.masters.items():
+                            if time.time() - master["last_update"] > \
+                                WebStatus.GARBAGE_TIMEOUT:
+                                garbage.append(mid)
+                                continue
                             ret[mid] = {}
                             for item in cmd["body"]["args"]:
                                 ret[mid][item] = master[item]
+                        for mid in garbage:
+                            self.info("Removing the garbage collected master %"
+                                      "%s", mid)
+                            del(self.masters[mid])
                         self.debug("Request %s: %s", cmd["request"], str(ret))
                         self.cmd_queue_out.put_nowait(
                             {"request": cmd["request"], "result": ret})
