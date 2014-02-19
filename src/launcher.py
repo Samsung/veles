@@ -41,10 +41,14 @@ class Launcher(logger.Logger):
         parser.add_argument("-l", "--listen_address", type=str, default="",
             help="Workflow will be launched in server mode "
             "and will accept client connections at the specified address.")
+        parser.add_argument("-p", "--matplotlib_backend", type=str,
+                            default="Qt4Agg",
+            help="Matplotlib drawing backend.")
         self.args = parser.parse_args()
 
         self.args.server_address = self.args.server_address.strip()
         self.args.listen_address = self.args.listen_address.strip()
+        config.matplotlib_backend = self.args.matplotlib_backend;
 
         if (not self.args.server_address and
            "mode" in kwargs and kwargs["mode"] == "slave"):
