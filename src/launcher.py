@@ -67,7 +67,11 @@ class Launcher(logger.Logger):
     def is_master(self):
         return True if self.args.listen_address else False
 
+    def on_shutdown(self):
+        self.stop()
+
     def initialize(self, workflow):
+        workflow.thread_pool().register_on_shutdown(self.on_shutdown)
         if self.args.server_address:
             self.agent = client.Client(self.args.server_address, workflow)
         elif self.args.listen_address:
@@ -88,7 +92,8 @@ class Launcher(logger.Logger):
                 else self.agent.run(daemonize=daemonize))
 
     def stop(self):
-        self.agent.stop()
+        if hasattr(self, "agent"):
+            self.agent.stop()
 
     def launch_status(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
