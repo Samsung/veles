@@ -127,7 +127,7 @@ class SimplePlotter(Plotter):
             axes.set_ylim(self.ylim[0], self.ylim[1])
         axes.plot(self.values, self.plot_style)
         Graphics().pp.ion()
-        figure.show()
+        Graphics().show_figure(figure)
         if self.redraw_plot:
             figure.canvas.draw()
         super(SimplePlotter, self).redraw()
@@ -313,7 +313,7 @@ class MatrixPlotter(Plotter):
             verticalalignment="center",
             horizontalalignment="center")
         Graphics().pp.ion()
-        figure.show()
+        Graphics().show_figure(figure)
         figure.canvas.draw()
         super(MatrixPlotter, self).redraw()
 
@@ -419,7 +419,7 @@ class Weights2D(Plotter):
             if i >= value.shape[0]:
                 break
 
-        figure.show()
+        Graphics().show_figure(figure)
         figure.canvas.draw()
 
         super(Weights2D, self).redraw()
@@ -510,7 +510,7 @@ class Image(Plotter):
             ax.cla()
             self.draw_image(ax, value)
 
-        figure.show()
+        Graphics().show_figure(figure)
         figure.canvas.draw()
         super(Image, self).redraw()
 
@@ -562,7 +562,7 @@ class Plot(Plotter):
 
             ax.plot(value, self.input_styles[i])
 
-        figure.show()
+        Graphics().show_figure(figure)
         figure.canvas.draw()
         super(Plot, self).redraw()
 

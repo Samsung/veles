@@ -123,7 +123,7 @@ class Graphics(logger.Logger):
                 free_port += 1
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                     result = sock.connect_ex(("localhost", free_port))
-            self.info("Launching WebAgg instance on port %d", free_port)
+            self.info("Will launch WebAgg instance on port %d", free_port)
             self.webagg_port = free_port
             # TODO(v.markovtsev): send the port number to the other process
             matplotlib.rcParams['webagg.port'] = free_port
@@ -148,6 +148,7 @@ class Graphics(logger.Logger):
                 plotter.redraw()
                 if self.pp.get_backend() == "WebAgg" and not self.showed:
                     self.showed = True
+                    self.info("Starting WebAgg...")
                     self.pp.show()
         except queue.Empty:
             pass
@@ -161,3 +162,7 @@ class Graphics(logger.Logger):
             self.timer.stop()
             self.debug("Terminating the main loop")
             self.root.quit()
+
+    def show_figure(self, figure):
+        if self.pp.get_backend() != "WebAgg":
+            figure.show()
