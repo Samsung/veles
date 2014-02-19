@@ -85,12 +85,19 @@ function updateUI() {
 	        items += Object.keys(workflow.slaves).length;
 	        items += '</span>\n';
 	        items += 'Slaves: ';
-	        for (var skey in workflow.slaves) {
+          slaves = Object.keys(workflow.slaves).map(function(key) {
+            return { "key": key, "value": workflow.slaves[key] };
+          });
+          slaves.sort(function(a, b) {
+            return a.value.host > b.value.host;
+          });
+          listed_workflows[pair.key].slaves = slaves;
+	        slaves.forEach(function(slave) {
 	          items += '<a href="#"><strong>';
-	          items += workflow.slaves[skey].host;
+	          items += slave.value.host;
 	          items += '</strong></a>, ';
-	        }
-          if (Object.keys(workflow.slaves).length > 0) {
+	        });
+          if (slaves.length > 0) {
             items = items.substring(0, items.length - 2);
           }
           items += '<br/>\n';
@@ -159,8 +166,8 @@ function activateListItem(item_id) {
   details += '</tr>\n';
   details += '</thead>\n';
   details += '<tbody>\n';
-  for (var skey in workflow.slaves) {
-    var slave = workflow.slaves[skey];
+  workflow.slaves.forEach(function(slave_pair) {
+    var slave = slave_pair.value;
     details += '<tr class="';
     switch (slave.state) {
       case "Working":
@@ -177,7 +184,7 @@ function activateListItem(item_id) {
     }
     details += '">\n';
     details += '<td><div class="slave-id graceful-overflow">';
-    details += skey;
+    details += slave_pair.key;
     details += '</div></td>\n';
     details += '<td><div class="slave-host graceful-overflow"><a href="#">';
     details += slave.host;
@@ -194,7 +201,7 @@ function activateListItem(item_id) {
     }
     details += '</td>\n';
     details += '</tr>\n';
-  }
+  });
   details += '</tbody>\n';
   details += '</table>\n';
   details += '</div>\n';
