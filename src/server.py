@@ -293,12 +293,13 @@ class Server(network_common.NetworkConfigurable):
                         str(config.matplotlib_webagg_port),
                'description': "<br />".join(escape(
                                   self.workflow.__doc__).split("\n"))}
+        timeout = config.web_status_notification_interval / 2
         self.notify_agent.fetch("http://%s:%d/%s" % (config.web_status_host,
                                                      config.web_status_port,
                                                      config.web_status_update),
                                 self.handle_notify_request,
                                 method='POST', headers=None,
-                                connect_timeout=0.2,
-                                request_timeout=0.2,
+                                connect_timeout=timeout,
+                                request_timeout=timeout,
                                 body=json.dumps(ret))
         ioloop.IOLoop.instance().start()
