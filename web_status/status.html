@@ -22,6 +22,9 @@
         /* Margin bottom by footer height */
         margin-bottom: 40px;
       }
+      html, body {
+        height: 100%;
+      }
       .navbar {
         margin-bottom: 20px;
       }
@@ -96,16 +99,20 @@
         /*padding-left: 100px;*/
         max-width: 80%;
         min-width: 800px;
+        padding-bottom: 2%;
       }
       .container-narrow > hr {
         margin: 30px 0;
       }
       #footer {
-        position: absolute;
+        position: fixed;
+        margin-left: 10%;
+        margin-right: 10%;
         bottom: 0;
-        width: 100%;
+        width: 80%;
         /* Set the fixed height of the footer here */
-        height: 40px;
+        height: 4%;
+        padding-top: 0.5%;
         background-color: #ffffff;
       }
       .pull-center {
@@ -147,7 +154,7 @@
         float: left;
       }
       .detailed-description {
-        margin-left: 610px;
+        margin-left: 52%;
         padding: 0;
       }
       .panel-margin-zero {
@@ -178,6 +185,9 @@
       .slave-id {
         width: 50px;
       }
+      .slave-host {
+        width: 110px;
+      }
       .details-panel-heading {
         text-align: center;
         font-size: large;
@@ -193,12 +203,10 @@
       td.power {
         text-align: center;
       }
-      
       .loading-indicator {
         text-align: center;
         margin-top: 50px;
       }
-      
     </style>
     </head>
     <body>
@@ -231,9 +239,7 @@
         </div>
       </div>
       <div id="footer">
-        <div class="container-narrow">
-          <p class="text-muted">Samsung R&D Institute Russia, Platform Algorithms Group, 2014.<span class="pull-right">For internal use only. Confidential.</span></p>
-        </div>
+        <p class="text-muted">Samsung R&D Institute Russia, Platform Algorithms Group, 2014.<span class="pull-right">For internal use only. Confidential.</span></p>
       </div>
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="js/jquery.min.js"></script>

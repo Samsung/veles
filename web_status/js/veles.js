@@ -113,9 +113,15 @@ function updateUI() {
 }
 
 function activateListItem(item_id) {
+  if (active_workflow_id != item_id) {
+    console.log("Switching items in the list");
+    $("#" + active_workflow_id).removeClass("active");
+    active_workflow_id = item_id;
+    $("#" + item_id).addClass("active");
+  }
   var workflow = listed_workflows[item_id];
-  workflow.svg.attr("class", "detailed-image").attr("width", "600")
-      .attr("height", "600");
+  workflow.svg.attr("class", "detailed-image").attr("width", "50%")
+      .attr("height", "50%");
   details = workflow.svg.clone().wrap('<div>').parent().html();
   details += '<div class="detailed-description">\n';
   details += '<h3 class="media-heading">';
@@ -185,9 +191,9 @@ function activateListItem(item_id) {
     details += '<td><div class="slave-id graceful-overflow">';
     details += skey;
     details += '</div></td>\n';
-    details += '<td><a href="#">';
+    details += '<td><div class="slave-host graceful-overflow"><a href="#">';
     details += slave.host;
-    details += '</a></td>\n';
+    details += '</a></div></td>\n';
     details += '<td class="power">';
     details += slave.power.toFixed(0);
     details += '</td>\n';
@@ -206,11 +212,6 @@ function activateListItem(item_id) {
   details += '</div>\n';
   details += '</div>\n';
   details += '</div>\n';
-  if (active_workflow_id != item_id) {
-    $("#" + active_workflow_id).removeClass("active");
-  }
-  active_workflow_id = item_id;
-  $("#" + item_id).addClass("active");
   objs = $.parseHTML(details);
   $("#details-loading-indicator").remove();
   $('#workflow-details').empty().append(objs);
