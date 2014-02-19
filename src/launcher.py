@@ -58,6 +58,7 @@ class Launcher(logger.Logger):
 
         if self.args.server_address:
             config.is_slave = True
+            config.plotters_disabled = True
 
     def is_master(self):
         return True if self.args.listen_address else False
