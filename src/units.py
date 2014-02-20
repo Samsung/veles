@@ -163,7 +163,7 @@ class Unit(Pickleable, Distributable):
         self.applied_data_from_slave_recursively = False
         setattr(self, "run", Unit.measure_time(getattr(self, "run"),
                                                Unit.timers, self))
-        self.unlock_pipeline = False
+        self.should_unlock_pipeline = False
 
     def __fini__(self):
         if self.workflow != None and hasattr(self.workflow, "del_ref"):
