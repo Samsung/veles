@@ -214,6 +214,9 @@ class Workflow(Unit):
         """
         return 0
 
+    def stop(self):
+        self.end_point.sem_.release()
+
     def generate_graph(self, filename=None, write_on_disk=True):
         if config.is_slave:
             return
