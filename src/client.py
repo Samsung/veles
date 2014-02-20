@@ -8,6 +8,7 @@ Created on Jan 22, 2014
 from fysom import Fysom
 import json
 import logging
+import time
 from twisted.internet import reactor, threads
 from twisted.internet.protocol import ReconnectingClientFactory
 
@@ -174,11 +175,15 @@ class VelesProtocol(network_common.StringLineReceiver):
 
 
 class VelesProtocolFactory(ReconnectingClientFactory):
+    RECONNECTION_INTERVAL = 1
+    RECONNECTION_ATTEMPTS = 60
+
     def __init__(self, host):
         super(VelesProtocolFactory, self).__init__()
         self.host = host
         self.id = None
         self.state = None
+        self.disconnect_time = None
 
     def startedConnecting(self, connector):
         logging.info('Connecting...')
@@ -188,13 +193,24 @@ class VelesProtocolFactory(ReconnectingClientFactory):
 
     def clientConnectionLost(self, connector, reason):
         if self.state.current != 'ERROR':
+            if not self.disconnect_time:
+                self.disconnect_time = time.time()
+            if (time.time() - self.disconnect_time) // \
+                VelesProtocolFactory.RECONNECTION_INTERVAL > \
+                VelesProtocolFactory.RECONNECTION_ATTEMPTS:
+                logging.error("Max reconnection attempts reached, exiting.")
+                self.host.stop()
+                return
             logging.warning("Disconnected, trying to reconnect...")
-            connector.connect()
+            reactor.callLater(VelesProtocolFactory.RECONNECTION_INTERVAL,
+                              connector.connect)
         else:
             logging.info("Disconnected.")
+            self.host.stop()
 
     def clientConnectionFailed(self, connector, reason):
         logging.warn('Connection failed. Reason: %s', reason)
+        self.clientConnectionLost(connector, reason)
 
 
 class Client(network_common.NetworkConfigurable):
