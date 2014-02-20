@@ -42,7 +42,10 @@ class Graphics(logger.Logger):
             """ TODO(v.markovtsev): solve the problem with matplotlib, ssh and
             multiprocessing - hangs on figure.show()
             """
-            if socket.gethostname() == "smaug":
+            import matplotlib
+            mplver = matplotlib.__version__
+            del(matplotlib)
+            if mplver == "1.4.x":
                 import threading as thr
                 Graphics.process = thr.Thread(target=Graphics.server_entry)
             else:
