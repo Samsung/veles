@@ -133,7 +133,10 @@ class Workflow(Unit):
     def unlock_pipeline(self):
         """Unlocks master=>slave pipeline execution.
         """
-        self.master_pipeline_lock_.release()
+        try:
+            self.master_pipeline_lock_.release()
+        except:
+            pass
 
     def lock_data(self):
         """Locks master-slave data update.
@@ -147,7 +150,10 @@ class Workflow(Unit):
 
         Read weights, apply gradients for example.
         """
-        self.master_data_lock_.release()
+        try:
+            self.master_data_lock_.release()
+        except:
+            pass
 
     def generate_data_for_master(self):
         data = []
