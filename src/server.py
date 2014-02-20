@@ -261,14 +261,15 @@ class Server(network_common.NetworkConfigurable):
         try:
             reactor.run()
         except:
-            logging.exception()
+            logging.exception("Failed to run the reactor")
 
     def stop(self):
         try:
             self.notify_task.stop()
-            reactor.stop()
+            if reactor.running:
+                reactor.stop()
         except:
-            logging.exception()
+            logging.exception("Failed to stop the reactor")
 
     def handle_notify_request(self, response):
         if response.error:
