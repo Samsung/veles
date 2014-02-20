@@ -10,6 +10,8 @@ import os
 import socket
 import queue
 import time
+import threading
+import tornado.ioloop as ioloop
 
 import config
 import logger
@@ -49,8 +51,8 @@ class Graphics(logger.Logger):
             mplver = matplotlib.__version__
             del(matplotlib)
             if mplver == "1.4.x":
-                import threading as thr
-                Graphics.process = thr.Thread(target=Graphics.server_entry)
+                Graphics.process = threading.Thread(
+                    target=Graphics.server_entry)
             else:
                 Graphics.process = multiprocessing.Process(
                     target=Graphics.server_entry)
@@ -135,9 +137,15 @@ class Graphics(logger.Logger):
             Graphics.matplotlib_webagg_listened_port = free_port
             matplotlib.rcParams['webagg.port'] = free_port
             matplotlib.rcParams['webagg.open_in_browser'] = 'False'
+            self.webagg_thread = threading.Thread(target=self._run_webagg)
             while not self.exiting:
                 self.update()
                 time.sleep(Graphics.interval)
+            ioloop.IOLoop.instance().stop()
+            self.webagg_thread.join()
+
+    def _run_webagg(self):
+        self.pp.show()
 
     def update(self):
         """Processes all events scheduled for plotting
@@ -156,7 +164,7 @@ class Graphics(logger.Logger):
                 if self.pp.get_backend() == "WebAgg" and not self.showed:
                     self.showed = True
                     self.info("Starting WebAgg...")
-                    self.pp.show()
+                    self.webagg_thread.start()
         except queue.Empty:
             pass
         if self.pp.get_backend() == "TkAgg":
