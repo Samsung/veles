@@ -49,7 +49,7 @@ function updateUI() {
 	      workflows.sort(function(a, b) {
 	        return a.value.name > b.value.name;
         });
-	      if (active_workflow_id == null) {
+	      if (active_workflow_id == null || !(active_workflow_id in ret)) {
 	        active_workflow_id = workflows[0].key;
 	      }
 	      var items = '';
