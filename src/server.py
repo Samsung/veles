@@ -95,15 +95,24 @@ class VelesProtocol(network_common.StringLineReceiver):
         self.state = Fysom(VelesProtocol.FSM_DESCRIPTION)
         setattr(self.state, "protocol", self)
 
+    def disappear(self):
+        del(self.nodes[self.id])
+
     def connectionMade(self):
         self.state.connect()
 
     def connectionLost(self, reason):
         self.state.drop()
         if self.host.workflow.is_finished():
-            del self.nodes[self.id]
+            self.disappear()
             if len(self.nodes) == 0:
                 self.host.stop()
+        else:
+            upd = threads.deferToThreadPool(reactor,
+                                            self.host.workflow.thread_pool(),
+                                            self.host.workflow.drop_slave,
+                                            self.nodes[self.id])
+            upd.addCallback(self.disappear)
 
     def lineReceived(self, line):
         logging.debug("lineReceived %s:  %s", self.id, line)
@@ -179,7 +188,7 @@ class VelesProtocol(network_common.StringLineReceiver):
                     reactor,
                     self.host.workflow.thread_pool(),
                     self.host.workflow.apply_update,
-                    self.update)
+                    self.update, self.nodes[self.id])
                 upd.addCallback(self.updateApplied)
             if len(self.update) > self.size:
                 self.disconnect("Received update size %d exceeded the expected"

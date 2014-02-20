@@ -105,6 +105,11 @@ class Distributable(object):
         """
         pass
 
+    def drop_slave(self, slave=None):
+        """Unexpected slave disconnection leads to this function call.
+        """
+        pass
+
 
 class Unit(Pickleable, Distributable):
     """General unit in data stream model.

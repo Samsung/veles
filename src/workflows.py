@@ -182,9 +182,14 @@ class Workflow(Unit):
     def apply_data_from_slave(self, data, slave=None):
         if not isinstance(data, list):
             raise ValueError("data must be a list")
-        for i in range(0, len(data)):
+        for i in range(len(self.units)):
             if data[i] != None:
                 self.units[i].apply_data_from_slave(data[i], slave)
+
+    def drop_slave(self, slave=None):
+        self.info("Job drop")
+        for i in range(len(self.units)):
+            self.units[i].drop_slave(slave)
 
     def request_job(self, slave=None):
         """
