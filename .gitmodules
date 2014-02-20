@@ -17,3 +17,6 @@
 [submodule "web_status/viz.js"]
   path = web_status/viz.js
   url = https://github.com/vmarkovtsev/viz.js
+[submodule "src/matplotlib"]
+	path = src/matplotlib
+	url = https://github.com/vmarkovtsev/matplotlib.git
