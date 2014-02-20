@@ -5,7 +5,7 @@ Created on Jan 31, 2014
 """
 
 
-import multiprocessing as mp
+import multiprocessing
 import os
 import socket
 import queue
@@ -34,11 +34,14 @@ class Graphics(logger.Logger):
     event_queue = None
     process = None
     interval = 0.1  # secs in event loop
+    matplotlib_webagg_listened_port = multiprocessing.Value(
+        'i', config.matplotlib_webagg_port)
 
     @staticmethod
     def initialize():
         if not Graphics.process:
-            Graphics.event_queue = mp.Queue(20)  # cache only 20 drawing events
+            # cache only 20 drawing events
+            Graphics.event_queue = multiprocessing.Queue(20)
             """ TODO(v.markovtsev): solve the problem with matplotlib, ssh and
             multiprocessing - hangs on figure.show()
             """
@@ -49,7 +52,8 @@ class Graphics(logger.Logger):
                 import threading as thr
                 Graphics.process = thr.Thread(target=Graphics.server_entry)
             else:
-                Graphics.process = mp.Process(target=Graphics.server_entry)
+                Graphics.process = multiprocessing.Process(
+                    target=Graphics.server_entry)
             Graphics.process.start()
 
     @staticmethod
@@ -128,7 +132,7 @@ class Graphics(logger.Logger):
                     result = sock.connect_ex(("localhost", free_port))
             self.info("Will launch WebAgg instance on port %d", free_port)
             self.webagg_port = free_port
-            # TODO(v.markovtsev): send the port number to the other process
+            Graphics.matplotlib_webagg_listened_port = free_port
             matplotlib.rcParams['webagg.port'] = free_port
             matplotlib.rcParams['webagg.open_in_browser'] = 'False'
             while not self.exiting:

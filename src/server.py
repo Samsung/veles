@@ -21,6 +21,7 @@ import uuid
 import config
 from daemon import daemonize
 import network_common
+from graphics import Graphics
 
 
 def onFSMStateChanged(e):
@@ -289,9 +290,8 @@ class Server(network_common.NetworkConfigurable):
                'user': getpass.getuser(),
                'graph': self.workflow_graph,
                'slaves': self.factory.nodes,
-               # TODO(v.markovtsev): use the real webagg port from Graphics
                'plots': "http://" + socket.gethostname() + ":" +
-                        str(config.matplotlib_webagg_port),
+                        str(Graphics.matplotlib_webagg_listened_port),
                'description': "<br />".join(escape(
                                   self.workflow.__doc__).split("\n"))}
         timeout = config.web_status_notification_interval / 2
