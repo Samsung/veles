@@ -5,10 +5,12 @@ Base class for workflows.
 
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
+import hashlib
 import numpy
 import os
 import pickle
 import shutil
+import sys
 import tarfile
 import tempfile
 import yaml
@@ -283,6 +285,12 @@ class Workflow(Unit):
                          "TRAINER": "coral",
                          "EVALUATOR": "plum",
                          "START_END": "lightgrey"}
+
+    def checksum(self):
+        sha1 = hashlib.sha1()
+        with open(sys.argv[0]) as f:
+            sha1.update(f.read())
+        return sha1.hexdigest()
 
 
 class OpenCLWorkflow(OpenCLUnit, Workflow):

@@ -121,6 +121,16 @@ class VelesProtocol(network_common.StringLineReceiver):
             logging.error("Could not parse the received line, dropping it.")
             return
         if self.state.current == "WAIT":
+            mysha = self.host.workflow.checksum()
+            your_sha = msg.get("checksum")
+            if not your_sha:
+                logging.error("Did not receive the workflow checksum.")
+                self.sendError("Workflow checksum is missing.")
+                return
+            if mysha != your_sha:
+                logging.error("Workflow checksum mismatch.")
+                self.sendError("Workflow checksum mismatched.")
+                return
             cid = msg.get("id")
             if not cid:
                 power = msg.get("power")
@@ -136,11 +146,16 @@ class VelesProtocol(network_common.StringLineReceiver):
                 self.sendLine({'id': self.id})
                 self.state.receive_description()
                 return
-            if not self.nodes.get(cid):
-                logging.error(("Did not recognize the received ID %s." +
-                              "Sending back the error message.") % cid)
-                self.sendError("Your ID was not found.")
             self.id = cid
+            if not self.nodes.get(cid):
+                logging.warn(("Did not recognize the received ID %s.") % cid)
+                power = msg.get("power")
+                if not power:
+                    logging.error("Unable to add a client without it's power.")
+                    self.sendError("I need your computing power.")
+                    return
+                self.nodes[self.id] = {'power': power}
+                reactor.callLater(0, self.resolveAddr, self.addr)
             self.state.receive_id()
         if self.state.current == "WORK":
             cmd = msg.get("cmd")

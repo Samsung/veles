@@ -152,11 +152,15 @@ class VelesProtocol(network_common.StringLineReceiver):
         super(VelesProtocol, self).sendLine(json.dumps(line))
 
     def send_id(self):
-        self.sendLine({'id': self.factory.id})
+        self.sendLine({'id': self.factory.id,
+                       'power':
+                       self.factory.host.workflow.get_computing_power(),
+                       'checksum': self.factory.host.workflow.checksum()})
 
     def request_id(self):
         self.sendLine({'power':
-                       self.factory.host.workflow.get_computing_power()})
+                       self.factory.host.workflow.get_computing_power(),
+                       'checksum': self.factory.host.workflow.checksum()})
         self.state.request_id()
 
     def request_job(self):
