@@ -1,0 +1,16 @@
+html {
+  background-color: #ffffff;	
+  background-image: url(../img/background.png);	
+  background-repeat: no-repeat;	
+  background-position: top center;	
+  -webkit-background-size: cover;	
+  -moz-background-size: cover;
+  -o-background-size: cover;	
+  background-size: cover;
+}	
+body {	
+  padding-left: 0;	
+  padding-right: 0;	
+  background: transparent;	
+}	
+
