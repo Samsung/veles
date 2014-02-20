@@ -50,6 +50,8 @@ class Plotter(Unit):
             self.stripped_pickle = True
             Graphics.enqueue(self)
             self.stripped_pickle = False
+            if self.unlock_pipeline:
+                self.workflow.unlock_pipeline()
 
     def on_shutdown(self):
         self.debug("Waiting for the graphics server process to finish")
