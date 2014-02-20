@@ -137,7 +137,8 @@ class Unit(Pickleable, Distributable):
             sp = time.time()
             fn()
             fp = time.time()
-            storage[key] += fp - sp
+            if key in storage:
+                storage[key] += fp - sp
 
         return wrapped
 

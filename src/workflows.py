@@ -97,6 +97,7 @@ class Workflow(Unit):
         super(Workflow, self).init_unpickled()
         self.master_pipeline_lock_ = threading.Lock()
         self.master_data_lock_ = threading.Lock()
+        del(Unit.timers[self])
 
     def initialize(self):
         return self.start_point.initialize_dependent()
