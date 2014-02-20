@@ -671,7 +671,7 @@ class MSEHistogram(Plotter):
                                    ha='center', va='bottom',
                                    fontsize=l3, rotation=90)
 
-        fig.show()
+        Graphics().show_figure(fig)
         fig.canvas.draw()
         super(MSEHistogram, self).redraw()
 
