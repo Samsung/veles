@@ -134,6 +134,7 @@ class Graphics(logger.Logger):
             Graphics.matplotlib_webagg_listened_port = free_port
             matplotlib.rcParams['webagg.port'] = free_port
             matplotlib.rcParams['webagg.open_in_browser'] = 'False'
+            matplotlib.rcParams['webagg.use_logging'] = 'True'
             self.webagg_thread = threading.Thread(target=self._run_webagg)
             while not self.exiting:
                 self.update()
