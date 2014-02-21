@@ -485,6 +485,10 @@ class OpenCLUnit(Unit):
     def get_kernel(self, name):
         return self.device.pyopencl_.Kernel(self.prg_, name)
 
+    def enqueue_nd_range_kernel(self, krn, global_size, local_size):
+        return self.device.pyopencl_.enqueue_nd_range_kernel(
+                            self.device.queue_, krn, global_size, local_size)
+
 
 class Repeater(Unit):
     """Repeater.
