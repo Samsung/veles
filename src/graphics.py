@@ -44,13 +44,10 @@ class Graphics(logger.Logger):
         if not Graphics.process:
             # cache only 20 drawing events
             Graphics.event_queue = multiprocessing.Queue(20)
-            """ TODO(v.markovtsev): solve the problem with matplotlib, ssh and
-            multiprocessing - hangs on figure.show()
-            """
             import matplotlib
             mplver = matplotlib.__version__
             del(matplotlib)
-            if mplver == "1.4.x":
+            if mplver == "1.4.x" and config.matplotlib_backend != "WebAgg":
                 Graphics.process = threading.Thread(
                     target=Graphics.server_entry)
             else:
