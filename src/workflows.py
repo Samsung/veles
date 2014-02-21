@@ -289,7 +289,7 @@ class Workflow(Unit):
     def checksum(self):
         sha1 = hashlib.sha1()
         with open(sys.argv[0]) as f:
-            sha1.update(f.read())
+            sha1.update(f.read().encode())
         return sha1.hexdigest()
 
 
