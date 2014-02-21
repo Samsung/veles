@@ -8,7 +8,6 @@ OpenCL helper classes.
 import numpy
 import os
 import pickle
-import pyopencl
 import sys
 import time
 import traceback
@@ -65,9 +64,8 @@ class Device(units.Pickleable):
     """
     def __init__(self):
         super(Device, self).__init__()
-        if not config.plotters_disabled:
-            import plotters
-            plotters.Plotter(None)  # will register on shutdown method
+        import pyopencl
+        self.pyopencl_ = pyopencl
         self._get_some_device()
         self._fill_device_info_performance_values()
         self.info("Will use the following device "
@@ -86,22 +84,24 @@ class Device(units.Pickleable):
     def _get_some_device(self):
         """Gets some device from the available OpenCL devices.
         """
-        self.context_ = pyopencl.create_some_context()
+        self.context_ = self.pyopencl_.create_some_context()
         if self.context_ == None:
             raise error.ErrNotExists("Could not create OpenCL context.")
         device = self.context_.devices[0]
-        s = device.get_info(pyopencl.device_info.VERSION)
+        s = device.get_info(self.pyopencl_.device_info.VERSION)
         n = s.find(" ") + 1
         m = s.find(" ", n)
         self.device_info = DeviceInfo(guid="%s/%s/%s" % (
-            device.get_info(pyopencl.device_info.VENDOR).strip(),
-            device.get_info(pyopencl.device_info.NAME).strip(),
-            str(device.get_info(pyopencl.device_info.VENDOR_ID))),
-            memsize=device.get_info(pyopencl.device_info.GLOBAL_MEM_SIZE),
-            memalign=device.get_info(pyopencl.device_info.MEM_BASE_ADDR_ALIGN),
+            device.get_info(self.pyopencl_.device_info.VENDOR).strip(),
+            device.get_info(self.pyopencl_.device_info.NAME).strip(),
+            str(device.get_info(self.pyopencl_.device_info.VENDOR_ID))),
+            memsize=device.get_info(
+                self.pyopencl_.device_info.GLOBAL_MEM_SIZE),
+            memalign=device.get_info(
+                self.pyopencl_.device_info.MEM_BASE_ADDR_ALIGN),
             version=float(s[n:m]))
-        self.queue_ = pyopencl.CommandQueue(self.context_,
-            properties=pyopencl.command_queue_properties.\
+        self.queue_ = self.pyopencl_.CommandQueue(self.context_,
+            properties=self.pyopencl_.command_queue_properties.\
             OUT_OF_ORDER_EXEC_MODE_ENABLE)
 
     def _fill_device_info_performance_values(self):
@@ -185,8 +185,8 @@ class Device(units.Pickleable):
                                     "max_diff = %.6f" % (
                                     dt, numpy.sum(c) / c.size, c.max()))
                     self._cleanup_after_tests()
-                except (pyopencl.LogicError, pyopencl.RuntimeError,
-                        pyopencl.MemoryError):
+                except (self.pyopencl_.LogicError, self.pyopencl_.RuntimeError,
+                        self.pyopencl_.MemoryError):
                     a, b, c = sys.exc_info()
                     self.info("Program compilation or run failed for "
                         "BLOCK_SIZE = %d and dtype = %s "
@@ -315,8 +315,9 @@ class Device(units.Pickleable):
         for i in range(0, iters + 1):
             if i == 1:
                 t1 = time.time()
-            event = pyopencl.enqueue_nd_range_kernel(self.queue_, krn,
-                                            global_size, local_size)
+            event = self.pyopencl_.enqueue_nd_range_kernel(self.queue_, krn,
+                                                           global_size,
+                                                           local_size)
             event.wait()
         dt = time.time() - t1
         # Get results back

@@ -18,10 +18,8 @@ class Plotter(Unit):
     server_shutdown_registered = False
 
     def __init__(self, workflow, **kwargs):
-        device = kwargs.get("device")
         name = kwargs.get("name")
         view_group = kwargs.get("view_group", "PLOTTER")
-        kwargs["device"] = device
         kwargs["name"] = name
         kwargs["view_group"] = view_group
         self.stripped_pickle = False
@@ -30,7 +28,6 @@ class Plotter(Unit):
             not Plotter.server_shutdown_registered):
             self.thread_pool().register_on_shutdown(self.on_shutdown)
             Plotter.server_shutdown_registered = True
-            Graphics.initialize()
 
     def redraw(self):
         """ Do the actual drawing here
@@ -38,12 +35,12 @@ class Plotter(Unit):
         pass
 
     def __getstate__(self):
-        kv = super(Plotter, self).__getstate__()
+        state = super(Plotter, self).__getstate__()
         if self.stripped_pickle:
-            kv["links_from"] = {}
-            kv["links_to"] = {}
-            kv["workflow"] = None
-        return kv
+            state["links_from"] = {}
+            state["links_to"] = {}
+            state["workflow"] = None
+        return state
 
     def run(self):
         if not config.plotters_disabled:

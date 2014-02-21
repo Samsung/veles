@@ -8,7 +8,6 @@ Data formats for connectors.
 import logging
 import numpy
 import os
-import pyopencl
 
 import config
 import error
@@ -16,8 +15,8 @@ import opencl_types
 import units
 import threading
 
-MAP_READ = pyopencl.map_flags.READ
-MAP_WRITE = pyopencl.map_flags.WRITE
+MAP_READ = 1
+MAP_WRITE = 2
 MAP_INVALIDATE = 4  # pyopencl.map_flags.WRITE_INVALIDATE_REGION
 
 
@@ -249,8 +248,8 @@ class Vector(units.Pickleable):
                 opencl_types.dtypes[config.c_dtype])):
             self.v = self.v.astype(opencl_types.convert_map[self.v.dtype])
         self.v = realign(self.v, self.device.device_info.memalign)
-        mf = pyopencl.mem_flags
-        self.v_ = pyopencl.Buffer(self.device.context_,
+        mf = self.device.pyopencl_.mem_flags
+        self.v_ = self.device.pyopencl_.Buffer(self.device.context_,
             mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=ravel(self.v))
 
     def initialize(self, device=None):
@@ -269,7 +268,7 @@ class Vector(units.Pickleable):
         if (flags == MAP_INVALIDATE and
             self.device.device_info.version < 1.1999):
             flags = MAP_WRITE  # 'cause available only starting with 1.2
-        self.map_arr_, event = pyopencl.enqueue_map_buffer(
+        self.map_arr_, event = self.device.pyopencl_.enqueue_map_buffer(
             queue=self.device.queue_, buf=self.v_, flags=flags, offset=0,
             shape=(self.v.size,), dtype=self.v.dtype, order="C",
             wait_for=None, is_blocking=False)

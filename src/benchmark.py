@@ -6,7 +6,6 @@ Created on Jan 28, 2014
 
 
 import numpy
-import pyopencl
 import time
 
 import formats
@@ -55,9 +54,8 @@ class OpenCLBenchmark(units.OpenCLUnit):
                        formats.roundup(self.size, self.block_size)]
         local_size = [self.block_size, self.block_size]
         tstart = time.time()
-        event = pyopencl.enqueue_nd_range_kernel(self.device.queue_,
-                                                 self.kernel_,
-                                                 global_size, local_size)
+        event = self.device.pyopencl_.enqueue_nd_range_kernel(
+            self.device.queue_, self.kernel_, global_size, local_size)
         event.wait()
         self.output_C_.map_read()
         tfinish = time.time()

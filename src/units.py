@@ -8,7 +8,6 @@ Units in data stream neural network_common model.
 from copy import copy
 import os
 from ply import lex
-import pyopencl
 import threading
 import time
 import traceback
@@ -480,11 +479,11 @@ class OpenCLUnit(Unit):
 
         # compile OpenCL program from the merged sources
         self.prg_src = preprocessed_source
-        self.prg_ = pyopencl.Program(self.device.context_,
-                                     self.prg_src).build()
+        self.prg_ = self.device.pyopencl_.Program(self.device.context_,
+                                                 self.prg_src).build()
 
     def get_kernel(self, name):
-        return pyopencl.Kernel(self.prg_, name)
+        return self.device.pyopencl_.Kernel(self.prg_, name)
 
 
 class Repeater(Unit):

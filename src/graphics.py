@@ -5,8 +5,10 @@ Created on Jan 31, 2014
 """
 
 
+import logging
 import multiprocessing
 import os
+import pickle
 import socket
 import queue
 import time
@@ -42,15 +44,20 @@ class Graphics(logger.Logger):
     @staticmethod
     def initialize():
         if not Graphics.process:
+            logging.basicConfig(level=logging.INFO)
             # cache only 20 drawing events
             Graphics.event_queue = multiprocessing.Queue(20)
-            import matplotlib
-            mplver = matplotlib.__version__
-            del(matplotlib)
+            from matplotlib import __version__
+            mplver = __version__
+            del(__version__)
             if mplver == "1.4.x" and config.matplotlib_backend != "WebAgg":
+                logging.getLogger("Graphics").info("Launching Graphics "
+                                                   "in a new thread")
                 Graphics.process = threading.Thread(
                     target=Graphics.server_entry)
             else:
+                logging.getLogger("Graphics").info("Launching Graphics "
+                                                   "in a new process")
                 Graphics.process = multiprocessing.Process(
                     target=Graphics.server_entry)
             Graphics.process.start()
@@ -60,7 +67,7 @@ class Graphics(logger.Logger):
         if not Graphics.process:
             raise RuntimeError("Graphics is not initialized")
         try:
-            Graphics.event_queue.put_nowait(obj)
+            Graphics.event_queue.put_nowait(pickle.dumps(obj))
         except queue.Full:
             pass
 
@@ -99,6 +106,7 @@ class Graphics(logger.Logger):
         import matplotlib.lines as lines
         import matplotlib.patches as patches
         import matplotlib.pyplot as pp
+        import plotters
         pp.ion()
         self.matplotlib = matplotlib
         self.cm = cm
@@ -151,7 +159,8 @@ class Graphics(logger.Logger):
         try:
             processed = set()
             while True:
-                plotter = self.event_queue.get_nowait()
+                plotter_raw = self.event_queue.get_nowait()
+                plotter = pickle.loads(plotter_raw)
                 if not plotter:
                     self.exiting = True
                     break
@@ -179,3 +188,5 @@ class Graphics(logger.Logger):
     def show_figure(self, figure):
         if self.pp.get_backend() != "WebAgg":
             figure.show()
+
+Graphics.initialize()
