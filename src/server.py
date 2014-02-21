@@ -11,6 +11,7 @@ import json
 import logging
 import socket
 import time
+import threading
 from tornado.httpclient import AsyncHTTPClient
 import tornado.ioloop as ioloop
 from twisted.internet import reactor, threads, task
@@ -44,7 +45,8 @@ def setWaiting(e):
 
 
 def onDropped(e):
-    e.fsm.protocol.nodes[e.fsm.protocol.id]["state"] = "Offline"
+    if e.fsm.protocol.id in e.fsm.protocol.nodes:
+        e.fsm.protocol.nodes[e.fsm.protocol.id]["state"] = "Offline"
 
 
 class VelesProtocol(network_common.StringLineReceiver):
@@ -277,10 +279,13 @@ class Server(network_common.NetworkConfigurable):
         reactor.listenTCP(self.port, self.factory, interface=self.address)
         self.notify_task = task.LoopingCall(self.notify_status)
         self.notify_agent = AsyncHTTPClient()
+        self.tornado_ioloop_thread = threading.Thread(
+            target=self.tornado_ioloop)
 
     @daemonize
     def run(self):
         self.start_time = time.time()
+        self.tornado_ioloop_thread.start()
         self.notify_task.start(config.web_status_notification_interval,
                                now=False)
         try:
@@ -293,6 +298,9 @@ class Server(network_common.NetworkConfigurable):
             self.notify_task.stop()
             if reactor.running:
                 reactor.stop()
+
+            ioloop.IOLoop.instance().stop()
+            self.tornado_ioloop_thread.join()
         except:
             logging.exception("Failed to stop the reactor")
 
@@ -302,9 +310,13 @@ class Server(network_common.NetworkConfigurable):
                          config.web_status_host, config.web_status_port)
         else:
             logging.debug("Successfully updated the status")
-        ioloop.IOLoop.instance().stop()
+
+    def tornado_ioloop(self):
+        ioloop.IOLoop.instance().start()
 
     def notify_status(self):
+        if not ioloop.IOLoop.instance().running():
+            return
         mins, secs = divmod(time.time() - self.start_time, 60)
         hours, mins = divmod(mins, 60)
         ret = {'id': self.id,
@@ -327,4 +339,3 @@ class Server(network_common.NetworkConfigurable):
                                 connect_timeout=timeout,
                                 request_timeout=timeout,
                                 body=json.dumps(ret))
-        ioloop.IOLoop.instance().start()
