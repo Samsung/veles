@@ -1,0 +1,12 @@
+html {
+  background-color: #ffffff;	
+  background-image: url(../img/background.png);	
+  background-repeat: no-repeat;	
+  background-position: top left;
+  background-size: auto auto;
+}
+
+body {
+  background: transparent;
+}
+
