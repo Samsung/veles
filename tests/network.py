@@ -10,6 +10,8 @@ import pickle
 from twisted.internet import reactor
 import unittest
 
+import config
+config.plotters_disabled = True
 import client
 import network_common
 import server
@@ -35,7 +37,7 @@ class TestWorkflow(workflows.Workflow):
             TestWorkflow.job_done = True
         return data
 
-    def apply_update(self, update):
+    def apply_update(self, update, slave=None):
         obj = pickle.loads(update)
         if isinstance(obj, dict):
             TestWorkflow.update_applied = True
@@ -60,13 +62,13 @@ class Test(unittest.TestCase):
         self.slave = TestWorkflow(None)
         self.server = server.Server(Test.CONFIG_FILE_NAME, self.master)
         self.client = client.Client(Test.CONFIG_FILE_NAME, self.slave)
-        reactor.callLater(0.1, reactor.stop)
+        reactor.callLater(0.1, self.server.stop)
 
     def tearDown(self):
         pass
 
     def testWork(self):
-        self.server.run()
+        self.server.run(daemonize=False)
         self.assertTrue(TestWorkflow.job_requested, "Job was not requested.")
         self.assertTrue(TestWorkflow.job_done, "Job was not done.")
         self.assertTrue(TestWorkflow.update_applied, "Update was not applied.")

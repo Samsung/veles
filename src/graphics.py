@@ -43,7 +43,7 @@ class Graphics(logger.Logger):
 
     @staticmethod
     def initialize():
-        if not Graphics.process:
+        if not Graphics.process and not config.plotters_disabled:
             logging.basicConfig(level=logging.INFO)
             # cache only 20 drawing events
             Graphics.event_queue = multiprocessing.Queue(20)
