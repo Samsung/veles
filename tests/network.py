@@ -23,6 +23,7 @@ class TestWorkflow(workflows.Workflow):
     job_done = False
     update_applied = False
     power_requested = False
+    job_dropped = False
 
     def __init__(self, workflow, **kwargs):
         super(TestWorkflow, self).__init__(workflow, **kwargs)
@@ -43,6 +44,9 @@ class TestWorkflow(workflows.Workflow):
             TestWorkflow.update_applied = True
             return True
         return False
+
+    def drop_slave(self, slave=None):
+        TestWorkflow.job_dropped = True
 
     def get_computing_power(self):
         TestWorkflow.power_requested = True
@@ -74,6 +78,8 @@ class Test(unittest.TestCase):
         self.assertTrue(TestWorkflow.update_applied, "Update was not applied.")
         self.assertTrue(TestWorkflow.power_requested,
                         "Power was not requested.")
+        self.assertTrue(TestWorkflow.job_dropped,
+                        "Job was not dropped in the end.")
 
 
 if __name__ == "__main__":

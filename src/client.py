@@ -5,25 +5,26 @@ Created on Jan 22, 2014
 """
 
 
-from fysom import Fysom
+import fysom
 import json
-import logging
 import time
 from twisted.internet import reactor, threads
 from twisted.internet.protocol import ReconnectingClientFactory
 
 from daemon import daemonize
-import network_common
+from logger import Logger
+from network_common import NetworkConfigurable, StringLineReceiver
 
 
 def onFSMStateChanged(e):
         """
         Logs the current state transition.
         """
-        logging.debug("slave state: %s, %s -> %s", e.event, e.src, e.dst)
+        e.fsm.owner.factory.host.debug("state: %s, %s -> %s",
+                                       e.event, e.src, e.dst)
 
 
-class VelesProtocol(network_common.StringLineReceiver):
+class VelesProtocol(StringLineReceiver):
     """A communication controller from client to server.
 
     Attributes:
@@ -60,7 +61,7 @@ class VelesProtocol(network_common.StringLineReceiver):
         self.factory = factory
         self.id = 'None'
         if not factory.state:
-            factory.state = Fysom(VelesProtocol.FSM_DESCRIPTION)
+            factory.state = fysom.Fysom(VelesProtocol.FSM_DESCRIPTION, self)
         self.state = factory.state
 
     def connectionMade(self):
@@ -77,13 +78,14 @@ class VelesProtocol(network_common.StringLineReceiver):
             return
 
     def connectionLost(self, reason):
-        logging.debug("Connection was lost.")
+        self.factory.host.debug("Connection was lost.")
 
     def lineReceived(self, line):
-        logging.debug("lineReceived %s:  %s", self.id, line)
+        self.factory.host.debug("lineReceived %s:  %s", self.id, line)
         msg = json.loads(line.decode("utf-8"))
         if not isinstance(msg, dict):
-            logging.error("Could not parse the received line, dropping it.")
+            self.factory.host.error("Could not parse the received line, "
+                                    "dropping it.")
             return
         error = msg.get("error")
         if error:
@@ -94,7 +96,7 @@ class VelesProtocol(network_common.StringLineReceiver):
             if not update:
                 cid = msg.get("id")
                 if not cid:
-                    logging.error("No id is present.")
+                    self.factory.host.error("No id is present.")
                     self.request_id()
                     return
                 self.factory.id = cid
@@ -106,7 +108,7 @@ class VelesProtocol(network_common.StringLineReceiver):
                 self.disconnect("No job is present.")
                 return
             if job == "refuse":
-                logging.info("Job was refused.")
+                self.factory.host.info("Job was refused.")
                 self.state.refuse_job()
                 self.factory.host.stop()
                 return
@@ -147,7 +149,7 @@ class VelesProtocol(network_common.StringLineReceiver):
             self.transport.write(update)
             self.state.wait_update_notification()
             return
-        logging.error("Invalid state %s.", self.state.current)
+        self.factory.host.error("Invalid state %s.", self.state.current)
 
     def sendLine(self, line):
         super(VelesProtocol, self).sendLine(json.dumps(line))
@@ -169,7 +171,7 @@ class VelesProtocol(network_common.StringLineReceiver):
         self.state.request_job()
 
     def disconnect(self, msg, *args, **kwargs):
-        logging.error(msg, *args, **kwargs)
+        self.factory.host.error(msg, *args, **kwargs)
         self.state.disconnect()
         self.transport.loseConnection()
 
@@ -186,7 +188,7 @@ class VelesProtocolFactory(ReconnectingClientFactory):
         self.disconnect_time = None
 
     def startedConnecting(self, connector):
-        logging.info('Connecting...')
+        self.host.info('Connecting...')
 
     def buildProtocol(self, addr):
         return VelesProtocol(addr, self)
@@ -198,22 +200,22 @@ class VelesProtocolFactory(ReconnectingClientFactory):
             if (time.time() - self.disconnect_time) // \
                 VelesProtocolFactory.RECONNECTION_INTERVAL > \
                 VelesProtocolFactory.RECONNECTION_ATTEMPTS:
-                logging.error("Max reconnection attempts reached, exiting.")
+                self.host.error("Max reconnection attempts reached, exiting.")
                 self.host.stop()
                 return
-            logging.warning("Disconnected, trying to reconnect...")
+            self.host.warning("Disconnected, trying to reconnect...")
             reactor.callLater(VelesProtocolFactory.RECONNECTION_INTERVAL,
                               connector.connect)
         else:
-            logging.info("Disconnected.")
+            self.host.info("Disconnected.")
             self.host.stop()
 
     def clientConnectionFailed(self, connector, reason):
-        logging.warn('Connection failed. Reason: %s', reason)
+        self.host.warning('Connection failed. Reason: %s', reason)
         self.clientConnectionLost(connector, reason)
 
 
-class Client(network_common.NetworkConfigurable):
+class Client(NetworkConfigurable, Logger):
     """
     UDT/TCP client operating on a single socket.
     """
@@ -229,11 +231,11 @@ class Client(network_common.NetworkConfigurable):
         try:
             reactor.run()
         except:
-            logging.exception("Failed to run the reactor")
+            self.exception("Failed to run the reactor")
 
     def stop(self):
         try:
             if reactor.running:
                 reactor.stop()
         except:
-            logging.exception("Failed to stop the reactor")
+            self.exception("Failed to stop the reactor")

@@ -5,15 +5,14 @@ Created on Jan 14, 2014
 """
 
 
-from fysom import Fysom
+import fysom
 import getpass
 import json
-import logging
 import socket
 import time
 import threading
 from tornado.httpclient import AsyncHTTPClient
-import tornado.ioloop as ioloop
+from tornado.ioloop import IOLoop
 from twisted.internet import reactor, threads, task
 from twisted.internet.protocol import Factory
 from twisted.web.html import escape
@@ -21,7 +20,8 @@ import uuid
 
 import config
 from daemon import daemonize
-import network_common
+from logger import Logger
+from network_common import NetworkConfigurable, StringLineReceiver
 from graphics import Graphics
 
 
@@ -29,27 +29,24 @@ def onFSMStateChanged(e):
     """
     Logs the current state transition.
     """
-    owner_id = "None"
-    if hasattr(e.fsm, "protocol"):
-        owner_id = e.fsm.protocol.id
-    logging.debug("master %s state: %s, %s -> %s",
-                 owner_id, e.event, e.src, e.dst)
+    e.fsm.owner.host.debug("%s state: %s, %s -> %s",
+                           e.fsm.owner.id, e.event, e.src, e.dst)
 
 
 def onJobObtained(e):
-    e.fsm.protocol.nodes[e.fsm.protocol.id]["state"] = "Working"
+    e.fsm.owner.nodes[e.fsm.owner.id]["state"] = "Working"
 
 
 def setWaiting(e):
-    e.fsm.protocol.nodes[e.fsm.protocol.id]["state"] = "Waiting"
+    e.fsm.owner.nodes[e.fsm.owner.id]["state"] = "Waiting"
 
 
 def onDropped(e):
-    if e.fsm.protocol.id in e.fsm.protocol.nodes:
-        e.fsm.protocol.nodes[e.fsm.protocol.id]["state"] = "Offline"
+    if e.fsm.owner.id in e.fsm.owner.nodes:
+        e.fsm.owner.nodes[e.fsm.owner.id]["state"] = "Offline"
 
 
-class VelesProtocol(network_common.StringLineReceiver):
+class VelesProtocol(StringLineReceiver):
     """A communication controller from server to client.
 
     Attributes:
@@ -94,8 +91,7 @@ class VelesProtocol(network_common.StringLineReceiver):
         self.nodes = nodes
         self.host = host
         self.id = None
-        self.state = Fysom(VelesProtocol.FSM_DESCRIPTION)
-        setattr(self.state, "protocol", self)
+        self.state = fysom.Fysom(VelesProtocol.FSM_DESCRIPTION, self)
 
     def disappear(self):
         del(self.nodes[self.id])
@@ -117,29 +113,30 @@ class VelesProtocol(network_common.StringLineReceiver):
             upd.addCallback(self.disappear)
 
     def lineReceived(self, line):
-        logging.debug("lineReceived %s:  %s", self.id, line)
+        self.host.debug("%s lineReceived:  %s", self.id, line)
         msg = json.loads(line.decode("utf-8"))
         if not isinstance(msg, dict):
-            logging.error("Could not parse the received line, dropping it.")
+            self.host.error("%s Could not parse the received line, dropping "
+                            "it.", self.id)
             return
         if self.state.current == "WAIT":
             mysha = self.host.workflow.checksum()
             your_sha = msg.get("checksum")
             if not your_sha:
-                logging.error("Did not receive the workflow checksum.")
+                self.host.error("Did not receive the workflow checksum.")
                 self.sendError("Workflow checksum is missing.")
                 return
             if mysha != your_sha:
-                logging.error("Workflow checksum mismatch.")
+                self.host.error("Workflow checksum mismatch.")
                 self.sendError("Workflow checksum mismatched.")
                 return
             cid = msg.get("id")
             if not cid:
                 power = msg.get("power")
                 if not power:
-                    logging.error("Newly connected client did not send it's " +
-                                  "computing power value, sending back the" +
-                                  " error message.")
+                    self.host.error("Newly connected client did not send "
+                                    "it's computing power value, sending back "
+                                    "the error message.")
                     self.sendError("I need your computing power.")
                     return
                 self.id = str(uuid.uuid4())
@@ -150,10 +147,11 @@ class VelesProtocol(network_common.StringLineReceiver):
                 return
             self.id = cid
             if not self.nodes.get(cid):
-                logging.warn(("Did not recognize the received ID %s.") % cid)
+                self.host.warning("Did not recognize the received ID %s.", cid)
                 power = msg.get("power")
                 if not power:
-                    logging.error("Unable to add a client without it's power.")
+                    self.host.error("%s Unable to add a client without it's "
+                                    "power.", self.id)
                     self.sendError("I need your computing power.")
                     return
                 self.nodes[self.id] = {'power': power}
@@ -162,14 +160,14 @@ class VelesProtocol(network_common.StringLineReceiver):
         if self.state.current == "WORK":
             cmd = msg.get("cmd")
             if not cmd:
-                logging.error(("Client %s sent something which is not " +
-                              "a command: %s. Sending back the error " +
-                              "message.") % (self.id, line))
+                self.host.error("%s Client sent something which is not "
+                                "a command: %s. Sending back the error "
+                                "message.", self.id, line)
                 self.sendError("No command found.")
                 return
             if cmd == "update":
-                logging.debug("Received UPDATE command. " +
-                              "Expecting to receive a pickle.")
+                self.host.debug("%s Received UPDATE command. "
+                                "Expecting to receive a pickle.", self.id)
                 self.size = msg.get("size")
                 if self.size == None:
                     self.disconnect("Update size was not specified.")
@@ -179,19 +177,20 @@ class VelesProtocol(network_common.StringLineReceiver):
                 self.setRawMode()
                 self.state.receive_update()
             elif cmd == "job":
-                logging.debug("Received JOB command. " +
-                              "Requesting a new job from the host.")
-                job = threads.deferToThreadPool(reactor,
-                                                self.host.workflow.thread_pool(),
-                                                self.host.workflow.request_job)
+                self.host.debug("%s Received JOB command. " +
+                                "Requesting a new job from the host.", self.id)
+                job = threads.deferToThreadPool(
+                    reactor,
+                    self.host.workflow.thread_pool(),
+                    self.host.workflow.request_job)
                 job.addCallback(self.jobRequestFinished)
                 self.state.request_job()
             else:
-                logging.error(("Unsupported %s command. Sending back the " +
-                              "error message.") % cmd)
+                self.host.error("%s Unsupported %s command. Sending back the "
+                                "error message.", self.id, cmd)
                 self.sendError("Unsupported command.")
             return
-        logging.error("Invalid state %s.", self.state.current)
+        self.host.error("%s Invalid state %s.", self.id, self.state.current)
         self.sendError("You sent me something which is not allowed in my " +
                        "current state %s." % self.state.current)
 
@@ -211,8 +210,8 @@ class VelesProtocol(network_common.StringLineReceiver):
                 self.disconnect("Received update size %d exceeded the expected"
                                 " length (%d)", len(self.update), self.size)
         else:
-            logging.error("Cannot receive raw data in %s state." %
-                          self.state.current)
+            self.host.error("%s Cannot receive raw data in %s state.",
+                            self.id, self.state.current)
 
     def updateApplied(self, result):
         if self.state.current == 'APPLYING_UPDATE':
@@ -222,12 +221,12 @@ class VelesProtocol(network_common.StringLineReceiver):
                 self.sendLine({'update': 'deny'})
             self.state.apply_update()
         else:
-            logging.error("Wrong state.")
+            self.host.error("%s Wrong state for update.", self.id)
 
     def jobRequestFinished(self, data=None):
         if data != None:
             self.sendLine({'job': 'offer', 'size': len(data)})
-            logging.debug("Job size: %d Kb", len(data) / 1000)
+            self.host.debug("%s Job size: %d Kb", self.id, len(data) / 1000)
             self.transport.write(data)
             self.state.obtain_job()
         else:
@@ -238,7 +237,8 @@ class VelesProtocol(network_common.StringLineReceiver):
         host, _, _ = socket.gethostbyaddr(addr.host)
         if host == "localhost":
             host = socket.gethostname()
-        logging.debug("Address %s was resolved to %s", addr.host, host)
+        self.host.debug("%s Address %s was resolved to %s", self.id,
+                        addr.host, host)
         self.nodes[self.id]['host'] = host
 
     def sendLine(self, line):
@@ -251,7 +251,7 @@ class VelesProtocol(network_common.StringLineReceiver):
         Parameters:
             err:    The error message.
         """
-        logging.error(err)
+        self.host.error(err)
         self.sendLine({'error': err})
 
 
@@ -265,7 +265,7 @@ class VelesProtocolFactory(Factory):
         return VelesProtocol(addr, self.nodes, self.host)
 
 
-class Server(network_common.NetworkConfigurable):
+class Server(NetworkConfigurable, Logger):
     """
     UDT/TCP server operating on a single socket
     """
@@ -291,7 +291,7 @@ class Server(network_common.NetworkConfigurable):
         try:
             reactor.run()
         except:
-            logging.exception("Failed to run the reactor")
+            self.exception("Failed to run the reactor")
 
     def stop(self):
         try:
@@ -299,23 +299,23 @@ class Server(network_common.NetworkConfigurable):
             if reactor.running:
                 reactor.stop()
 
-            ioloop.IOLoop.instance().stop()
+            IOLoop.instance().stop()
             self.tornado_ioloop_thread.join()
         except:
-            logging.exception("Failed to stop the reactor")
+            self.exception("Failed to stop the reactor")
 
     def handle_notify_request(self, response):
         if response.error:
-            logging.warn("Failed to upload the status update to %s:%s",
+            self.warning("Failed to upload the status update to %s:%s",
                          config.web_status_host, config.web_status_port)
         else:
-            logging.debug("Successfully updated the status")
+            self.debug("Successfully updated the status")
 
     def tornado_ioloop(self):
-        ioloop.IOLoop.instance().start()
+        IOLoop.instance().start()
 
     def notify_status(self):
-        if not ioloop.IOLoop.instance().running():
+        if not IOLoop.instance().running():
             return
         mins, secs = divmod(time.time() - self.start_time, 60)
         hours, mins = divmod(mins, 60)

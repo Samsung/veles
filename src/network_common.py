@@ -20,6 +20,7 @@ class NetworkConfigurable(object):
         """
         Parses the configuration file and loads CONFIG_ADDRESS and CONFIG_PORT
         """
+        super(NetworkConfigurable, self).__init__()
         idx_semicolon = configuration.find(":")
         if idx_semicolon == -1:  # assume configuration file
             cf = open(configuration, "r")

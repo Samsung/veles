@@ -45,7 +45,8 @@ class FysomError(Exception):
 
 class Fysom(object):
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, owner):
+        self.owner = owner
         self._apply(cfg)
 
     def isstate(self, state):

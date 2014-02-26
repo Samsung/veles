@@ -44,8 +44,8 @@ class Logger(object):
     def info(self, msg, *args, **kwargs):
         self.logger_.info(msg, *args, **kwargs)
 
-    def warn(self, msg, *args, **kwargs):
-        self.logger_.warn(msg, *args, **kwargs)
+    def warning(self, msg, *args, **kwargs):
+        self.logger_.warning(msg, *args, **kwargs)
 
     def error(self, msg, *args, **kwargs):
         self.logger_.error(msg, *args, **kwargs)
