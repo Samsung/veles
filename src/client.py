@@ -16,14 +16,6 @@ from logger import Logger
 from network_common import NetworkConfigurable, StringLineReceiver
 
 
-def onFSMStateChanged(e):
-        """
-        Logs the current state transition.
-        """
-        e.fsm.owner.factory.host.debug("state: %s, %s -> %s",
-                                       e.event, e.src, e.dst)
-
-
 class VelesProtocol(StringLineReceiver):
     """A communication controller from client to server.
 
@@ -31,6 +23,12 @@ class VelesProtocol(StringLineReceiver):
         FSM_DESCRIPTION     The definition of the Finite State Machine of the
                             protocol.
     """
+
+    def onFSMStateChanged(self, e):
+        """
+        Logs the current state transition.
+        """
+        self.factory.host.debug("state: %s, %s -> %s", e.event, e.src, e.dst)
 
     FSM_DESCRIPTION = {
         'initial': 'INIT',

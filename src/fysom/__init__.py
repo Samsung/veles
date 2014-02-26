@@ -146,30 +146,26 @@ class Fysom(object):
 
         return fn
 
-    def _before_event(self, e):
-        fnname = 'onbefore' + e.event
+    def _invoke_fn(self, fnname, e):
         if hasattr(self, fnname):
-            return getattr(self, fnname)(e)
+            getattr(self, fnname)(self.owner, e)
+
+    def _before_event(self, e):
+        self._invoke_fn('onbefore' + e.event, e)
 
     def _after_event(self, e):
         for fnname in ['onafter' + e.event, 'on' + e.event]:
-            if hasattr(self, fnname):
-                return getattr(self, fnname)(e)
+            self._invoke_fn(fnname, e)
 
     def _leave_state(self, e):
-        fnname = 'onleave' + e.src
-        if hasattr(self, fnname):
-            return getattr(self, fnname)(e)
+        self._invoke_fn('onleave' + e.src, e)
 
     def _enter_state(self, e):
         for fnname in ['onenter' + e.dst, 'on' + e.dst]:
-            if hasattr(self, fnname):
-                return getattr(self, fnname)(e)
+            self._invoke_fn(fnname, e)
 
     def _change_state(self, e):
-        fnname = 'onchangestate'
-        if hasattr(self, fnname):
-            return getattr(self, fnname)(e)
+        self._invoke_fn('onchangestate', e)
 
     def _is_base_string(self, object):  # pragma: no cover
         try:

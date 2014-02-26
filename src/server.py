@@ -25,27 +25,6 @@ from network_common import NetworkConfigurable, StringLineReceiver
 from graphics import Graphics
 
 
-def onFSMStateChanged(e):
-    """
-    Logs the current state transition.
-    """
-    e.fsm.owner.host.debug("%s state: %s, %s -> %s",
-                           e.fsm.owner.id, e.event, e.src, e.dst)
-
-
-def onJobObtained(e):
-    e.fsm.owner.nodes[e.fsm.owner.id]["state"] = "Working"
-
-
-def setWaiting(e):
-    e.fsm.owner.nodes[e.fsm.owner.id]["state"] = "Waiting"
-
-
-def onDropped(e):
-    if e.fsm.owner.id in e.fsm.owner.nodes:
-        e.fsm.owner.nodes[e.fsm.owner.id]["state"] = "Offline"
-
-
 class VelesProtocol(StringLineReceiver):
     """A communication controller from server to client.
 
@@ -53,6 +32,23 @@ class VelesProtocol(StringLineReceiver):
         FSM_DESCRIPTION     The definition of the Finite State Machine of the
                             protocol.
     """
+
+    def onFSMStateChanged(self, e):
+        """
+        Logs the current state transition.
+        """
+        self.host.debug("%s state: %s, %s -> %s",
+                        self.id, e.event, e.src, e.dst)
+
+    def onJobObtained(self, e):
+        self.nodes[self.id]["state"] = "Working"
+
+    def setWaiting(self, e):
+        self.nodes[self.id]["state"] = "Waiting"
+
+    def onDropped(self, e):
+        if self.id in self.nodes:
+            self.nodes[self.id]["state"] = "Offline"
 
     FSM_DESCRIPTION = {
         'initial': 'INIT',
