@@ -148,41 +148,6 @@ def norm_image(a, yuv=False):
     return aa.astype(numpy.uint8)
 
 
-def realign(arr, boundary=4096):
-    """Reallocates array to become PAGE-aligned as required for
-        clEnqueueMapBuffer().
-    """
-    if arr == None:
-        return None
-    address = arr.__array_interface__["data"][0]
-    if address % boundary == 0:
-        return arr
-    N = numpy.prod(arr.shape)
-    d = arr.dtype
-    tmp = numpy.empty(N * d.itemsize + boundary, dtype=numpy.uint8)
-    address = tmp.__array_interface__["data"][0]
-    offset = (boundary - address % boundary) % boundary
-    a = tmp[offset:offset + N * d.itemsize].view(dtype=d)
-    b = a.reshape(arr.shape, order="C")
-    assert_addr(a, b)
-    b[:] = arr[:]
-    return b
-
-
-def aligned_zeros(shape, boundary=4096, dtype=numpy.float32):
-    """Allocates PAGE-aligned array required for clEnqueueMapBuffer().
-    """
-    N = numpy.prod(shape)
-    d = numpy.dtype(dtype)
-    tmp = numpy.zeros(N * d.itemsize + boundary, dtype=numpy.uint8)
-    address = tmp.__array_interface__["data"][0]
-    offset = (boundary - address % boundary) % boundary
-    a = tmp[offset:offset + N * d.itemsize].view(dtype=d)
-    b = a.reshape(shape, order="C")
-    assert_addr(a, b)
-    return b
-
-
 class Vector(units.Pickleable):
     """Container class for numpy array backed by OpenCL buffer.
 
@@ -243,7 +208,8 @@ class Vector(units.Pickleable):
                 opencl_types.dtypes[config.dtype],
                 opencl_types.dtypes[config.c_dtype])):
             self.v = self.v.astype(opencl_types.convert_map[self.v.dtype])
-        self.v = realign(self.v, self.device.device_info.memalign)
+        self.v = cl.realign_array(self.v, self.device.device_info.memalign,
+                                  numpy)
         self.v_ = self.device.queue_.context.create_buffer(
             cl.CL_MEM_READ_WRITE | cl.CL_MEM_USE_HOST_PTR, ravel(self.v))
 

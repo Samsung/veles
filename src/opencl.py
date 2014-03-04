@@ -49,7 +49,7 @@ class DeviceInfo(object):
             self.min_dt[dtype] = 86400
         self.BLOCK_SIZE = {}
         for dtype in opencl_types.dtypes.keys():
-            self.BLOCK_SIZE[dtype] = 16
+            self.BLOCK_SIZE[dtype] = 8
 
 
 class Device(units.Pickleable):
