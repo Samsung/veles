@@ -7,7 +7,8 @@ OpenCL helper classes.
 """
 import numpy
 import os
-import pickle
+import six
+from six.moves import cPickle as pickle
 import sys
 import time
 import traceback
@@ -94,12 +95,14 @@ class Device(units.Pickleable):
     def _fill_device_info_performance_values(self):
         device_infos = {}
         try:
-            fin = open("%s/device_infos.pickle" % (config.cache_dir), "rb")
+            fin = open("%s/device_infos.%d.pickle" % (config.cache_dir,
+                                                      3 if six.PY3 else 2),
+                       "rb")
             device_infos = pickle.load(fin)
             fin.close()
         except IOError:
-            self.info("%s/device_infos.pickle was not found" % (
-                                                        config.cache_dir))
+            self.info("%s/device_infos.%d.pickle was not found" %
+                      (config.cache_dir, 3 if six.PY3 else 2))
         if (not config.test_known_device and
             self.device_info.guid in device_infos.keys()):
             device_info = device_infos[self.device_info.guid]
@@ -113,8 +116,11 @@ class Device(units.Pickleable):
         device_infos[self.device_info.guid] = self.device_info
         self._do_tests(device_infos)
         self.info("Saving found device performance values into "
-                        "%s/device_infos.pickle" % (config.cache_dir))
-        fout = open("%s/device_infos.pickle" % (config.cache_dir), "wb")
+                        "%s/device_infos.%d.pickle" % (config.cache_dir,
+                                                       3 if six.PY3 else 2))
+        fout = open("%s/device_infos.%d.pickle" % (config.cache_dir,
+                                                   3 if six.PY3 else 2),
+                    "wb")
         pickle.dump(device_infos, fout)
         fout.close()
         self.info("Saved")
@@ -123,8 +129,9 @@ class Device(units.Pickleable):
         """Measure relative device performance.
         """
         self.info("Will test device performance.\n"
-            "Results of the test will be saved to %s/device_infos.pickle, "
-            "so this is one time process usually." % (config.cache_dir))
+            "Results of the test will be saved to %s/device_infos.%d.pickle, "
+            "so this is one time process usually." % (config.cache_dir,
+                                                      3 if six.PY3 else 2))
 
         min_dt = {}
         dt_numpy = {}
@@ -208,9 +215,9 @@ class Device(units.Pickleable):
         self.AB_WIDTH = 3001
         self.B_HEIGHT = 3001
         self.A_HEIGHT = 3001
-        #self.AB_WIDTH = formats.roundup(self.AB_WIDTH, BLOCK_SIZE)
-        #self.B_HEIGHT = formats.roundup(self.B_HEIGHT, BLOCK_SIZE)
-        #self.A_HEIGHT = formats.roundup(self.A_HEIGHT, BLOCK_SIZE)
+        # self.AB_WIDTH = formats.roundup(self.AB_WIDTH, BLOCK_SIZE)
+        # self.B_HEIGHT = formats.roundup(self.B_HEIGHT, BLOCK_SIZE)
+        # self.A_HEIGHT = formats.roundup(self.A_HEIGHT, BLOCK_SIZE)
         self.info("Matricies are: [%d, %d] * [%d, %d] = [%d, %d]" % (
             self.AB_WIDTH, self.A_HEIGHT, self.B_HEIGHT, self.AB_WIDTH,
             self.A_HEIGHT, self.B_HEIGHT))
