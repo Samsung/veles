@@ -47,10 +47,11 @@ class Graphics(logger.Logger):
             logging.basicConfig(level=logging.INFO)
             # cache only 20 drawing events
             Graphics.event_queue = multiprocessing.Queue(20)
-            from matplotlib import __version__
-            mplver = __version__
-            del(__version__)
-            if mplver == "1.4.x" and config.matplotlib_backend != "WebAgg":
+            #from matplotlib import __version__
+            #mplver = __version__
+            #del(__version__)
+            #if mplver == "1.4.x" and config.matplotlib_backend != "WebAgg":
+            if socket.gethostname() == "smaug":
                 logging.getLogger("Graphics").info("Launching Graphics "
                                                    "in a new thread")
                 Graphics.process = threading.Thread(
@@ -189,4 +190,6 @@ class Graphics(logger.Logger):
         if self.pp.get_backend() != "WebAgg":
             figure.show()
 
-Graphics.initialize()
+
+if not config.plotters_disabled:
+    Graphics.initialize()

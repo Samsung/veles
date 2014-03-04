@@ -5,12 +5,11 @@ Workflow launcher (server/client/standalone).
 
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
-import argparse
 import os
+import sys
+import argparse
 import paramiko
 import socket
-import sys
-
 import client
 import config
 import server

@@ -11,9 +11,8 @@ import pickle
 import sys
 import time
 import traceback
-
+import opencl4py as cl
 import config
-import error
 import formats
 import opencl_types
 import rnd
@@ -64,45 +63,33 @@ class Device(units.Pickleable):
     """
     def __init__(self):
         super(Device, self).__init__()
-        import pyopencl
-        self.pyopencl_ = pyopencl
         self._get_some_device()
         self._fill_device_info_performance_values()
         self.info("Will use the following device "
-                        "(guid: dtype, rating, BLOCK_SIZE, memalign):")
+                  "(guid: dtype, rating, BLOCK_SIZE, memalign, version):")
         for dtype in sorted(opencl_types.dtypes.keys()):
-            self.info("%s: %s, %.2f, %d, %d" % (
+            self.info("%s: %s, %.2f, %d, %d, %.1f" % (
                 self.device_info.guid, dtype, self.device_info.rating[dtype],
-                self.device_info.BLOCK_SIZE[dtype], self.device_info.memalign))
+                self.device_info.BLOCK_SIZE[dtype], self.device_info.memalign,
+                self.device_info.version))
 
     def init_unpickled(self):
         super(Device, self).init_unpickled()
-        self.context_ = None
         self.queue_ = None
         self.pid_ = os.getpid()
 
     def _get_some_device(self):
         """Gets some device from the available OpenCL devices.
         """
-        self.context_ = self.pyopencl_.create_some_context()
-        if self.context_ == None:
-            raise error.ErrNotExists("Could not create OpenCL context.")
-        device = self.context_.devices[0]
-        s = device.get_info(self.pyopencl_.device_info.VERSION)
-        n = s.find(" ") + 1
-        m = s.find(" ", n)
-        self.device_info = DeviceInfo(guid="%s/%s/%s" % (
-            device.get_info(self.pyopencl_.device_info.VENDOR).strip(),
-            device.get_info(self.pyopencl_.device_info.NAME).strip(),
-            str(device.get_info(self.pyopencl_.device_info.VENDOR_ID))),
-            memsize=device.get_info(
-                self.pyopencl_.device_info.GLOBAL_MEM_SIZE),
-            memalign=device.get_info(
-                self.pyopencl_.device_info.MEM_BASE_ADDR_ALIGN),
-            version=float(s[n:m]))
-        self.queue_ = self.pyopencl_.CommandQueue(self.context_,
-            properties=self.pyopencl_.command_queue_properties.\
-            OUT_OF_ORDER_EXEC_MODE_ENABLE)
+        platforms = cl.Platforms()
+        context = platforms.create_some_context()
+        device = context.devices[0]
+        guid = "%s/%s/%d" % (device.vendor.strip(), device.name.strip(),
+                             device.vendor_id)
+        self.device_info = DeviceInfo(guid=guid, memsize=device.memsize,
+            memalign=device.memalign, version=device.version)
+        self.queue_ = context.create_queue(device,
+            cl.CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE)
 
     def _fill_device_info_performance_values(self):
         device_infos = {}
@@ -123,8 +110,8 @@ class Device(units.Pickleable):
             return
         if not config.test_unknown_device:
             return
+        device_infos[self.device_info.guid] = self.device_info
         self._do_tests(device_infos)
-        device_infos[self.info.guid] = self.info
         self.info("Saving found device performance values into "
                         "%s/device_infos.pickle" % (config.cache_dir))
         fout = open("%s/device_infos.pickle" % (config.cache_dir), "wb")
@@ -140,9 +127,10 @@ class Device(units.Pickleable):
             "so this is one time process usually." % (config.cache_dir))
 
         min_dt = {}
+        dt_numpy = {}
         for dtype in opencl_types.dtypes.keys():
             min_dt[dtype] = 86400
-        dt_numpy = 86400
+            dt_numpy[dtype] = 86400
         for device_info in device_infos.values():
             for dtype in device_info.min_dt.keys():
                 min_dt[dtype] = device_info.min_dt[dtype]
@@ -154,20 +142,17 @@ class Device(units.Pickleable):
         for BLOCK_SIZE in range(32, 3, -1):
             for dtype in sorted(opencl_types.dtypes.keys()):
                 try:
-                    self._prepare_tests(BLOCK_SIZE, dtype)
-                    key = "%s_%d_%d_%d" % (
-                        "double2" if dtype[-1] == "2"
-                        else "double", self.AB_WIDTH,
+                    self._prepare_test(BLOCK_SIZE, dtype, cc)
+                    key = "%s_%d_%d_%d" % (dtype, self.AB_WIDTH,
                         self.B_HEIGHT, self.A_HEIGHT)
                     if not key in cc.keys():
-                        self.info("Numpy double precision "
-                                        "for dtype=%s" % (dtype))
+                        self.info("Numpy for dtype=%s" % (dtype))
                         dt = self._do_cpu_test(cc, key)
-                        self.info("Done in %.2f seconds" % (dt))
-                        if dt < dt_numpy:
-                            dt_numpy = dt
-                        if dt_numpy < min_dt[dtype]:
-                            min_dt[dtype] = dt_numpy
+                        self.info("Done in %.3f seconds" % (dt))
+                        if dt < dt_numpy[dtype]:
+                            dt_numpy[dtype] = dt
+                        if dt_numpy[dtype] < min_dt[dtype]:
+                            min_dt[dtype] = dt_numpy[dtype]
                     self.info("Testing %s with BLOCK_SIZE = %d "
                         "and dtype = %s" % (self.device_info.guid, BLOCK_SIZE,
                                             dtype))
@@ -177,32 +162,35 @@ class Device(units.Pickleable):
                         self.device_info.BLOCK_SIZE[dtype] = BLOCK_SIZE
                     if dt < min_dt[dtype]:
                         min_dt[dtype] = dt
+                    key = "%s_%d_%d_%d" % ("double2" if dtype[-1] == "2"
+                        else "double", self.AB_WIDTH,
+                        self.B_HEIGHT, self.A_HEIGHT)
                     c = cc[key].copy()
                     c -= self.c.v
                     c = numpy.sqrt(numpy.square(numpy.real(c)) +
                                    numpy.square(numpy.imag(c)))
-                    self.info("Avg is %.2f seconds, MSE = %.6f, "
+                    self.info("Avg is %.3f seconds, MSE = %.6f, "
                                     "max_diff = %.6f" % (
                                     dt, numpy.sum(c) / c.size, c.max()))
-                    self._cleanup_after_tests()
-                except (self.pyopencl_.LogicError, self.pyopencl_.RuntimeError,
-                        self.pyopencl_.MemoryError):
+                    self._cleanup_after_test()
+                except RuntimeError:
                     a, b, c = sys.exc_info()
                     self.info("Program compilation or run failed for "
                         "BLOCK_SIZE = %d and dtype = %s "
                         "(details in stderr)" % (BLOCK_SIZE, dtype))
                     traceback.print_exception(a, b, c)
-                    self._cleanup_after_tests()
+                    self._cleanup_after_test()
 
         del cc
 
-        self.info("\nRating(numpy double precision): %.4f" % (
-            min_dt[config.dtype] / dt_numpy))
+        for dtype in sorted(opencl_types.dtypes.keys()):
+            self.info("Rating of numpy for dtype = %s: %.4f" % (
+                dtype, min_dt[dtype] / dt_numpy[dtype]))
         for device_info in device_infos.values():
             for dtype in sorted(opencl_types.dtypes.keys()):
                 self.info("================")
                 self.info(dtype)
-                rating = min_dt[dtype] / info.dt[dtype]
+                rating = min_dt[dtype] / device_info.dt[dtype]
                 if device_info.rating[dtype] != rating:
                     if device_info.rating[dtype]:
                         self.info("UPD Rating(%s): %.4f" % (device_info.guid,
@@ -216,39 +204,65 @@ class Device(units.Pickleable):
                 device_info.min_dt[dtype] = min_dt[dtype]
         self.info("================")
 
-    def _prepare_tests(self, BLOCK_SIZE, dtype):
-        self.AB_WIDTH = 65537
-        self.B_HEIGHT = 257
-        self.A_HEIGHT = 511
-        if False:
-            self.AB_WIDTH = formats.roundup(self.AB_WIDTH, BLOCK_SIZE)
-            self.B_HEIGHT = formats.roundup(self.B_HEIGHT, BLOCK_SIZE)
-            self.A_HEIGHT = formats.roundup(self.A_HEIGHT, BLOCK_SIZE)
+    def _prepare_test(self, BLOCK_SIZE, dtype, cc):
+        self.AB_WIDTH = 3001
+        self.B_HEIGHT = 3001
+        self.A_HEIGHT = 3001
+        #self.AB_WIDTH = formats.roundup(self.AB_WIDTH, BLOCK_SIZE)
+        #self.B_HEIGHT = formats.roundup(self.B_HEIGHT, BLOCK_SIZE)
+        #self.A_HEIGHT = formats.roundup(self.A_HEIGHT, BLOCK_SIZE)
         self.info("Matricies are: [%d, %d] * [%d, %d] = [%d, %d]" % (
             self.AB_WIDTH, self.A_HEIGHT, self.B_HEIGHT, self.AB_WIDTH,
             self.A_HEIGHT, self.B_HEIGHT))
         self.rnd_state = rnd.default.state
 
+        xdtype = ("complex" if dtype in (numpy.complex64, numpy.complex128)
+                  else "real")
+
         self.a = formats.Vector()
         self.a.v = numpy.zeros([self.A_HEIGHT, self.AB_WIDTH],
                                dtype=opencl_types.dtypes[dtype])
-        rnd.default.fill(self.a.v, -0.1, 0.1)
+        a_rnd = cc.get("a_rnd")
+        if a_rnd == None:
+            a_rnd = {}
+            cc["a_rnd"] = a_rnd
+        if a_rnd.get(xdtype) == None:
+            rnd.default.fill(self.a.v, -0.1, 0.1)
+            a_rnd[xdtype] = self.a.v.copy()
+        else:
+            self.a.v[:] = a_rnd[xdtype][:]
 
         self.b = formats.Vector()
         self.b.v = numpy.zeros([self.B_HEIGHT, self.AB_WIDTH],
                                dtype=opencl_types.dtypes[dtype])
-        rnd.default.fill(self.b.v, -0.1, 0.1)
+        b_rnd = cc.get("b_rnd")
+        if b_rnd == None:
+            b_rnd = {}
+            cc["b_rnd"] = b_rnd
+        if b_rnd.get(xdtype) == None:
+            rnd.default.fill(self.b.v, -0.1, 0.1)
+            b_rnd[xdtype] = self.b.v.copy()
+        else:
+            self.b.v[:] = b_rnd[xdtype][:]
 
         self.bias = formats.Vector()
         self.bias.v = numpy.zeros(self.B_HEIGHT,
                                   dtype=opencl_types.dtypes[dtype])
-        rnd.default.fill(self.bias.v, -0.1, 0.1)
+        bias_rnd = cc.get("bias_rnd")
+        if bias_rnd == None:
+            bias_rnd = {}
+            cc["bias_rnd"] = bias_rnd
+        if bias_rnd.get(xdtype) == None:
+            rnd.default.fill(self.bias.v, -0.1, 0.1)
+            bias_rnd[xdtype] = self.bias.v.copy()
+        else:
+            self.bias.v[:] = bias_rnd[xdtype][:]
 
         self.c = formats.Vector()
         self.c.v = numpy.zeros([self.A_HEIGHT, self.B_HEIGHT],
                                dtype=opencl_types.dtypes[dtype])
 
-    def _cleanup_after_tests(self):
+    def _cleanup_after_test(self):
         del(self.c)
         del(self.bias)
         del(self.b)
@@ -260,7 +274,7 @@ class Device(units.Pickleable):
         del(self.AB_WIDTH)
 
     def _do_cpu_test(self, cc, key):
-        """Pure single core CPU test
+        """Pure single core CPU test.
         """
         dtype = (numpy.complex128 if self.a.v.dtype in (
                     numpy.complex64, numpy.complex128) else numpy.float64)
@@ -283,7 +297,7 @@ class Device(units.Pickleable):
         return dt
 
     def _do_test(self, BLOCK_SIZE, dtype, iters):
-        """Do test for specific context
+        """Do test for specific context.
         """
         obj = units.OpenCLUnit(None, device=self)
         obj.cl_sources_["forward.cl"] = {}
@@ -293,7 +307,8 @@ class Device(units.Pickleable):
             "H": self.AB_WIDTH,
             "Y": self.B_HEIGHT,
             "BATCH": self.A_HEIGHT}
-        obj.build_program(defines, os.path.join(config.cache_dir, "test.cl"))
+        obj.build_program(defines, os.path.join(config.cache_dir, "test.cl"),
+                          dtype=dtype)
 
         krn = obj.get_kernel("feed_layer")
 
@@ -312,13 +327,17 @@ class Device(units.Pickleable):
         local_size = [BLOCK_SIZE, BLOCK_SIZE]
         t1 = time.time()
         # Will skip the first iteration
-        for i in range(0, iters + 1):
-            if i == 1:
+        ev = None
+        for i in range(iters + 1):
+            ev = self.queue_.execute_kernel(krn, global_size, local_size,
+                wait_for=(None if ev == None else (ev,)))
+            if i == 0:
+                self.queue_.flush()
+                ev.wait()
+                ev = None
                 t1 = time.time()
-            event = self.pyopencl_.enqueue_nd_range_kernel(self.queue_, krn,
-                                                           global_size,
-                                                           local_size)
-            event.wait()
+        self.queue_.flush()
+        ev.wait()
         dt = time.time() - t1
         # Get results back
         self.c.map_read()

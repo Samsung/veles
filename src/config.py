@@ -77,7 +77,7 @@ test_dataset_root = "/data/veles"
 
 
 # : Disabled plotters or not (for benchmarking purposes)
-plotters_disabled = False
+plotters_disabled = True
 
 
 # : If the program has been run in slave mode
@@ -99,7 +99,7 @@ web_status_port = 8090
 web_status_notification_interval = 1
 web_status_log_file = "/var/log/veles_web_status.log"
 
-matplotlib_backend = "Qt4Agg"
+matplotlib_backend = "WebAgg"
 matplotlib_webagg_port = 8081
 
 slaves = ["markovtsevu64", "seresovu64", "seninu64", "kuznetsovu64",

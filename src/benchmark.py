@@ -11,6 +11,7 @@ import time
 import formats
 import opencl
 import units
+import znicz_config
 
 
 class OpenCLBenchmark(units.OpenCLUnit):
@@ -54,8 +55,8 @@ class OpenCLBenchmark(units.OpenCLUnit):
                        formats.roundup(self.size, self.block_size)]
         local_size = [self.block_size, self.block_size]
         tstart = time.time()
-        event = self.device.pyopencl_.enqueue_nd_range_kernel(
-            self.device.queue_, self.kernel_, global_size, local_size)
+        event = self.device.queue_.execute_kernel(self.kernel_, global_size,
+                                                  local_size)
         event.wait()
         self.output_C_.map_read()
         tfinish = time.time()

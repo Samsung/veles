@@ -15,7 +15,7 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         logging.basicConfig(level=logging.DEBUG)
-        self.bench = benchmark.OpenCLBenchmark()
+        self.bench = benchmark.OpenCLBenchmark(None)
 
     def tearDown(self):
         pass

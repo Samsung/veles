@@ -8,16 +8,12 @@ Data formats for connectors.
 import logging
 import numpy
 import os
-
 import config
 import error
 import opencl_types
 import units
 import threading
-
-MAP_READ = 1
-MAP_WRITE = 2
-MAP_INVALIDATE = 4  # pyopencl.map_flags.WRITE_INVALIDATE_REGION
+import opencl4py as cl
 
 
 def roundup(num, align):
@@ -248,9 +244,8 @@ class Vector(units.Pickleable):
                 opencl_types.dtypes[config.c_dtype])):
             self.v = self.v.astype(opencl_types.convert_map[self.v.dtype])
         self.v = realign(self.v, self.device.device_info.memalign)
-        mf = self.device.pyopencl_.mem_flags
-        self.v_ = self.device.pyopencl_.Buffer(self.device.context_,
-            mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=ravel(self.v))
+        self.v_ = self.device.queue_.context.create_buffer(
+            cl.CL_MEM_READ_WRITE | cl.CL_MEM_USE_HOST_PTR, ravel(self.v))
 
     def initialize(self, device=None):
         self.lock_.acquire()
@@ -262,39 +257,39 @@ class Vector(units.Pickleable):
             return
         if self.map_arr_ != None:
             # already mapped properly, nothing to do
-            if self.map_flags != MAP_READ or flags == MAP_READ:
+            if (self.map_flags != cl.CL_MAP_READ or flags == cl.CL_MAP_READ):
                 return
             self._unmap()
-        if (flags == MAP_INVALIDATE and
+        if (flags == cl.CL_MAP_WRITE_INVALIDATE_REGION and
             self.device.device_info.version < 1.1999):
-            flags = MAP_WRITE  # 'cause available only starting with 1.2
-        self.map_arr_, event = self.device.pyopencl_.enqueue_map_buffer(
-            queue=self.device.queue_, buf=self.v_, flags=flags, offset=0,
-            shape=(self.v.size,), dtype=self.v.dtype, order="C",
-            wait_for=None, is_blocking=False)
-        event.wait()
+            # 'cause available only starting with 1.2
+            flags = cl.CL_MAP_WRITE
+        ev, self.map_arr_ = self.device.queue_.map_buffer(self.v_, flags,
+                                                          self.v.nbytes)
+        del ev
         self.map_flags = flags
 
     def _unmap(self):
         if self.map_arr_ == None:
             return
-        self.map_arr_.base.release(queue=self.device.queue_, wait_for=None)
+        ev = self.device.queue_.unmap_buffer(self.v_, self.map_arr_)
+        ev.wait()
         self.map_arr_ = None
         self.map_flags = 0
 
     def map_read(self):
         self.lock_.acquire()
-        self._map(MAP_READ)
+        self._map(cl.CL_MAP_READ)
         self.lock_.release()
 
     def map_write(self):
         self.lock_.acquire()
-        self._map(MAP_WRITE)
+        self._map(cl.CL_MAP_WRITE)
         self.lock_.release()
 
     def map_invalidate(self):
         self.lock_.acquire()
-        self._map(MAP_INVALIDATE)
+        self._map(cl.CL_MAP_WRITE_INVALIDATE_REGION)
         self.lock_.release()
 
     def unmap(self):
@@ -326,3 +321,6 @@ class Vector(units.Pickleable):
         self.v_ = None
         self.map_flags = 0
         self.lock_.release()
+
+    def __del__(self):
+        self.reset()

@@ -6,14 +6,10 @@ Units in data stream neural network_common model.
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
 from copy import copy
-import os
-from ply import lex
 import threading
 import time
 import traceback
-
 import config
-import cpp
 import error
 import logger
 import opencl_types
@@ -350,7 +346,6 @@ class OpenCLUnit(Unit):
         kwargs["device"] = device
         super(OpenCLUnit, self).__init__(workflow, **kwargs)
         self.device = device
-        self.prg_src = None
         self.run_executed = False
 
     def init_unpickled(self):
@@ -378,116 +373,43 @@ class OpenCLUnit(Unit):
         self.debug("%s in %.2f sec" % (self.__class__.__name__,
                                              time.time() - t1))
 
-    @staticmethod
-    def read_ocl_file(file_name):
-        fin = None
-        for path in config.ocl_dirs:
-            try:
-                fin = open(os.path.join(path, file_name), "r")
-            except:
-                continue
-            break
-        if not fin:
-            raise error.VelesException(
-                "\"%s\" was not found in any of the following paths: %s" % (
-                                    file_name, ", ".join(config.ocl_dirs)[2:]))
-        s = fin.read()
-        fin.close()
-        return s
-
-    def build_program(self, defines=None, dump_preprocessed=None):
+    def build_program(self, defines=None, dump_filename=None, dtype=None):
         """Builds OpenCL program.
 
-        _prg will be is_initialized with built program.
-
-        Parameters:
-            defines: additional definitions.
-            log_fnme: file to write constructed source to.
-            s_append: string to append to constructed source.
-
-        Returns:
-            Built OpenCL program source code.
+        prg_ will be is_initialized with built program.
         """
-        # write the skeleton
-        source = ""
         if defines and not isinstance(defines, dict):
             raise RuntimeError("defines must be a dictionary")
+        lines = []
         my_defines = copy(defines) if defines else {}
-        for file, defs in self.cl_sources_.items():
-            source += '#include "%s"\n' % file
+        for fnme, defs in self.cl_sources_.items():
+            lines.append("#include \"%s\"" % (fnme))
             my_defines.update(defs)
-        my_defines.update(opencl_types.cl_defines[config.c_dtype])
+        if dtype == None:
+            dtype = config.c_dtype
+        elif type(dtype) != str:
+            dtype = opencl_types.numpy_dtype_to_opencl(dtype)
+        my_defines.update(opencl_types.cl_defines[dtype])
 
-        # initialize C preprocessor
-        lexer = lex.lex(cpp)
-        cprep = cpp.Preprocessor(lexer)
-        for name, value in my_defines.items():
-            cprep.define("%s %s" % (name, value))
-        cprep.path = copy(config.ocl_dirs)
-        cprep.parse(source, "opencl")
+        for k, v in my_defines.items():
+            lines.insert(0, "#define %s %s" % (k, v))
 
-        # record includes
-        files_list = [('opencl', 0)]
-        while True:
-            token = cprep.token()
-            if not token:
-                break
-            if files_list[-1][0] != cprep.source:
-                lineno = 1
-                if token.lineno >= 3:
-                    lineno = token.lineno - 1
-                files_list.append((cprep.source, lineno))
+        source = "\n".join(lines)
 
-        # bake the inclusion plan
-        flatten_plan = []
-        file_bottoms = {}
-        for file in reversed(files_list[1:-1]):
-            if file[0] == 'opencl':
-                continue
-            bottom = file_bottoms.get(file[0])
-            if not bottom:
-                flatten_plan.insert(0, (file[0], -1))
-            else:
-                lines = bottom - file[1]
-                flatten_plan.insert(0, (file[0], lines))
-            file_bottoms[file[0]] = file[1] - 1
-
-        # execute the plan
-        preprocessed_source = ''.join('#define {} {}\n'.format(key, val)
-                                      for key, val in my_defines.items())
-        opened_files = {}
-        for incl in flatten_plan:
-            file = opened_files.get(incl[0])
-            if not file:
-                file = open(incl[0])
-                opened_files[incl[0]] = file
-            if incl[1] == -1:
-                preprocessed_source += file.read()
-                file.seek(0)
-            else:
-                for _ in range(0, incl[1]):
-                    preprocessed_source += file.readline()
-                file.readline()  # skip the #include line
-        for key, val in opened_files.items():
-            val.close()
-
-        # debug the merged sources
-        if dump_preprocessed != None:
-            flog = open(dump_preprocessed, "w")
-            flog.write(preprocessed_source)
-            flog.close()
-
-        # compile OpenCL program from the merged sources
-        self.prg_src = preprocessed_source
-        self.prg_ = self.device.pyopencl_.Program(self.device.context_,
-                                                 self.prg_src).build()
+        try:
+            self.prg_ = self.device.queue_.context.create_program(source,
+                                                              config.ocl_dirs)
+        finally:
+            if dump_filename != None:
+                flog = open(dump_filename, "w")
+                flog.write(source)
+                flog.close()
 
     def get_kernel(self, name):
-        return self.device.pyopencl_.Kernel(self.prg_, name)
+        return self.prg_.get_kernel(name)
 
-    def enqueue_nd_range_kernel(self, krn, global_size, local_size):
-        return self.device.pyopencl_.enqueue_nd_range_kernel(
-                            self.device.queue_, krn, global_size, local_size)
+    def execute_kernel(self, krn, global_size, local_size):
+        return self.device.queue_.execute_kernel(krn, global_size, local_size)
 
 
 class Repeater(Unit):

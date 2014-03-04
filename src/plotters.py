@@ -486,11 +486,12 @@ class Image(Plotter):
             w = value.copy()
 
         if color:
-            ax.imshow(formats.norm_image(w, self.yuv[0]),
-                      interpolation="nearest")
+            img = formats.norm_image(w, self.yuv[0])
+            ax.imshow(img, interpolation="nearest")
         else:
-            ax.imshow(formats.norm_image(w, self.yuv[0]),
-                      interpolation="nearest", cmap=Graphics().cm.gray)
+            img = formats.norm_image(w, self.yuv[0])
+            print("IMAGE:", img.min(), img.max())
+            ax.imshow(img, interpolation="nearest", cmap=Graphics().cm.gray)
 
     def redraw(self):
         figure = Graphics().pp.figure(self.name())
