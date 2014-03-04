@@ -10,7 +10,7 @@ import multiprocessing
 import os
 import pickle
 import socket
-import queue
+from six.moves import queue
 import time
 import threading
 import tornado.ioloop as ioloop

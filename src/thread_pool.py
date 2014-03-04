@@ -8,7 +8,7 @@ Created on Jan 21, 2014
 
 import copy
 import logging
-from queue import Queue
+from six.moves import queue
 import signal
 import sys
 import types
@@ -31,7 +31,7 @@ class ThreadPool(threadpool.ThreadPool):
         """
         super(ThreadPool, self).__init__(minthreads=minthreads,
             maxthreads=maxthreads, name=name)
-        self.q = Queue(queue_size)
+        self.q = queue.Queue(queue_size)
         self.start()
         self.on_shutdowns = []
         if not ThreadPool.pools:
