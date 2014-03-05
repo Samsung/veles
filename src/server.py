@@ -16,13 +16,19 @@ from tornado.ioloop import IOLoop
 from twisted.internet import reactor, threads, task
 from twisted.internet.protocol import Factory
 from twisted.web.html import escape
+from txzmq import ZmqConnection, ZmqEndpoint, ZmqEndpointType, ZmqFactory
 import uuid
+import zmq
 
 import config
 from daemon import daemonize
 from logger import Logger
 from network_common import NetworkConfigurable, StringLineReceiver
 from graphics import Graphics
+
+
+class ZmqPusher(ZmqConnection):
+    socketType = zmq.constants.PUSH
 
 
 class VelesProtocol(StringLineReceiver):
@@ -277,6 +283,15 @@ class Server(NetworkConfigurable, Logger):
         self.notify_agent = AsyncHTTPClient()
         self.tornado_ioloop_thread = threading.Thread(
             target=self.tornado_ioloop)
+        self.zmq_factory = ZmqFactory()
+        self.zmq_connection = ZmqPusher(self.zmq_factory)
+        self.zmq_ipc_fn, self.zmq_tcp_port = self.zmq_connection.addEndpoints(
+            ZmqEndpoint(ZmqEndpointType.bind, "inproc://veles"),
+            ZmqEndpoint(ZmqEndpointType.bind, "rndipc://veles-ipc-:"),
+            ZmqEndpoint(ZmqEndpointType.bind, "rndtcp://*:1024:65535:1"),
+        )
+        self.info("ZeroMQ endpoints: inproc://veles, ipc://%s, tcp://*:%d",
+                  self.zmq_ipc_fn, self.zmq_tcp_port)
 
     @daemonize
     def run(self):
