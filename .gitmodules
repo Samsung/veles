@@ -1,5 +1,5 @@
 [submodule "Znicz"]
-  path = Znicz
+  path = veles/znicz
   branch = master
   url = ssh://alserver.rnd.samsung.ru:29418/Znicz.git
 [submodule "libSoundFeatureExtraction"]
