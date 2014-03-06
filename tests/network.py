@@ -59,8 +59,8 @@ class Test(unittest.TestCase):
     def setUp(self):
         conf = open(Test.CONFIG_FILE_NAME, "w")
         conf.write("{'%s': '127.0.0.1', '%s': 5050}" %
-                   (network_common.NetworkConfigurable.CONFIG_ADDRESS,
-                    network_common.NetworkConfigurable.CONFIG_PORT))
+                   (network_common.NetworkAgent.CONFIG_ADDRESS,
+                    network_common.NetworkAgent.CONFIG_PORT))
         conf.close()
         self.master = TestWorkflow(None)
         self.slave = TestWorkflow(None)

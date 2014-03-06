@@ -23,7 +23,7 @@ import zmq
 import config
 from daemon import daemonize
 from logger import Logger
-from network_common import NetworkConfigurable, StringLineReceiver
+from network_common import NetworkAgent, StringLineReceiver
 from graphics import Graphics
 
 
@@ -267,7 +267,7 @@ class VelesProtocolFactory(Factory):
         return VelesProtocol(addr, self.nodes, self.host)
 
 
-class Server(NetworkConfigurable, Logger):
+class Server(NetworkAgent, Logger):
     """
     UDT/TCP server operating on a single socket
     """

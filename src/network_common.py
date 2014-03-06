@@ -8,7 +8,7 @@ import logging
 from twisted.protocols.basic import LineReceiver
 
 
-class NetworkConfigurable(object):
+class NetworkAgent(object):
     """
     Stores the address and the port number.
     """
@@ -20,7 +20,7 @@ class NetworkConfigurable(object):
         """
         Parses the configuration file and loads CONFIG_ADDRESS and CONFIG_PORT
         """
-        super(NetworkConfigurable, self).__init__()
+        super(NetworkAgent, self).__init__()
         idx_semicolon = configuration.find(":")
         if idx_semicolon == -1:  # assume configuration file
             cf = open(configuration, "r")
@@ -30,8 +30,8 @@ class NetworkConfigurable(object):
             if not isinstance(self.options, dict):
                 raise RuntimeError("Corrupted network configuration file %s." %
                                    configuration)
-            self.address = self.options[NetworkConfigurable.CONFIG_ADDRESS]
-            self.port = self.options[NetworkConfigurable.CONFIG_PORT]
+            self.address = self.options[NetworkAgent.CONFIG_ADDRESS]
+            self.port = self.options[NetworkAgent.CONFIG_PORT]
         else:  # assume tcp
             self.address = configuration[:idx_semicolon]
             if not self.address:

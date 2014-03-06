@@ -13,7 +13,7 @@ from twisted.internet.protocol import ReconnectingClientFactory
 
 from daemon import daemonize
 from logger import Logger
-from network_common import NetworkConfigurable, StringLineReceiver
+from network_common import NetworkAgent, StringLineReceiver
 
 
 class VelesProtocol(StringLineReceiver):
@@ -213,7 +213,7 @@ class VelesProtocolFactory(ReconnectingClientFactory):
         self.clientConnectionLost(connector, reason)
 
 
-class Client(NetworkConfigurable, Logger):
+class Client(NetworkAgent, Logger):
     """
     UDT/TCP client operating on a single socket.
     """
