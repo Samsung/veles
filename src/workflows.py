@@ -120,12 +120,12 @@ class Workflow(Unit):
     def add_ref(self, unit):
         if unit not in self.units:
             self.units.append(unit)
-        if self.workflow != None:
+        if self.workflow is not None:
             self.workflow.add_ref(unit)
 
     def del_ref(self, unit):
         self.units.remove(unit)
-        if self.workflow != None:
+        if self.workflow is not None:
             self.workflow.del_ref(unit)
 
     def lock_pipeline(self):
@@ -178,14 +178,14 @@ class Workflow(Unit):
         if not isinstance(data, list):
             raise ValueError("data must be a list")
         for i in range(0, len(data)):
-            if data[i] != None:
+            if data[i] is not None:
                 self.units[i].apply_data_from_master(data[i])
 
     def apply_data_from_slave(self, data, slave):
         if not isinstance(data, list):
             raise ValueError("data must be a list")
         for i in range(len(self.units)):
-            if data[i] != None:
+            if data[i] is not None:
                 self.units[i].apply_data_from_slave(data[i], slave)
 
     def drop_slave(self, slave):
@@ -200,7 +200,7 @@ class Workflow(Unit):
         if self.is_finished():
             return None
         data = self.generate_data_for_slave(slave)
-        return pickle.dumps(data) if data != None else None
+        return pickle.dumps(data) if data is not None else None
 
     def is_finished(self):
         return self.end_point.is_finished()
@@ -315,12 +315,12 @@ class OpenCLWorkflow(OpenCLUnit, Workflow):
         self.power = None
 
     def initialize(self, device=None):
-        if device != None:
+        if device is not None:
             self.device = device
         for obj in self.forward:
-            if obj != None:
+            if obj is not None:
                 obj.device = self.device
-        if self.ev != None:
+        if self.ev is not None:
             if type(self.ev) == list:
                 for ev in self.ev:
                     if isinstance(ev, OpenCLUnit):
@@ -328,7 +328,7 @@ class OpenCLWorkflow(OpenCLUnit, Workflow):
             elif isinstance(self.ev, OpenCLUnit):
                 self.ev.device = self.device
         for obj in self.gd:
-            if obj != None:
+            if obj is not None:
                 obj.device = self.device
         return super(OpenCLWorkflow, self).initialize()
 
@@ -347,7 +347,7 @@ class OpenCLWorkflow(OpenCLUnit, Workflow):
         units_to_export.extend(self.forward)
         for i in range(len(units_to_export)):
             u = units_to_export[i]
-            if u.exports == None:
+            if u.exports is None:
                 self.debug("%s continue" % u.__class__.__name__)
                 continue
             variables = u.__getstate__()

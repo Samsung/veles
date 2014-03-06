@@ -8,6 +8,7 @@ Created on Jan 21, 2014
 
 import copy
 import logging
+import six
 from six.moves import queue
 import signal
 import sys
@@ -29,8 +30,12 @@ class ThreadPool(threadpool.ThreadPool):
         """
         Creates a new thread pool and starts it.
         """
-        super(ThreadPool, self).__init__(minthreads=minthreads,
-            maxthreads=maxthreads, name=name)
+        if six.PY3:
+            super(ThreadPool, self).__init__(
+                minthreads=minthreads, maxthreads=maxthreads, name=name)
+        else:
+            threadpool.ThreadPool.__init__(
+                self, minthreads=minthreads, maxthreads=maxthreads, name=name)
         self.q = queue.Queue(queue_size)
         self.start()
         self.on_shutdowns = []
@@ -61,6 +66,7 @@ class ThreadPool(threadpool.ThreadPool):
         """
         self.on_shutdowns.append(func)
 
+    @staticmethod
     def _put(self, item):
         """
         Private method used by shutdown() to redefine Queue's _put().
@@ -74,7 +80,7 @@ class ThreadPool(threadpool.ThreadPool):
             return
         for on_shutdown in self.on_shutdowns:
             on_shutdown()
-        self.on_shutdowns.clear()
+        del self.on_shutdowns[:]
         self.joined = True
         threads = copy.copy(self.threads)
         if not execute_remaining:

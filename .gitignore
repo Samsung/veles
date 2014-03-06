@@ -4,6 +4,7 @@
 *.log
 *.in
 *.pickle
+*.pyc
 aclocal.m4
 autom4te.cache
 test-driver

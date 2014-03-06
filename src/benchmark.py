@@ -21,7 +21,7 @@ class OpenCLBenchmark(units.OpenCLUnit):
 
     def __init__(self, workflow, **kwargs):
         device = kwargs.get("device")
-        if device == None:
+        if device is None:
             device = opencl.Device()
         kwargs["device"] = device
         super(OpenCLBenchmark, self).__init__(workflow, **kwargs)

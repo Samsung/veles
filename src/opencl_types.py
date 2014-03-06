@@ -33,13 +33,6 @@ itypes = {"char": numpy.int8, "short": numpy.int16, "int": numpy.int32,
           "uchar": numpy.uint8, "ushort": numpy.uint16, "uint": numpy.uint32,
           "ulong": numpy.uint64}
 
-
-# : Allowable types for automatic conversion for use in OpenCL
-# (automatic conversion implemeted in formats.py).
-convert_map = {numpy.float32: numpy.float64, numpy.float64: numpy.float32,
-               numpy.complex64: numpy.complex128,
-               numpy.complex128: numpy.complex64}
-
 # : Supported float types as OpenCL => numpy dictionary.
 dtypes = {"float": numpy.float32, "double": numpy.float64,
           "float2": numpy.complex64, "double2": numpy.complex128}

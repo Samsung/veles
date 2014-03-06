@@ -122,7 +122,7 @@ class SimplePlotter(Plotter):
         axes = figure.add_subplot(111)  # Main axes
         if self.clear_plot:
             axes.cla()
-        if self.ylim != None:
+        if self.ylim is not None:
             axes.set_ylim(self.ylim[0], self.ylim[1])
         axes.plot(self.values, self.plot_style)
         Graphics().pp.ion()
@@ -365,7 +365,7 @@ class Weights2D(Plotter):
         figure.clf()
 
         color = False
-        if self.get_shape_from == None:
+        if self.get_shape_from is None:
             sx = int(numpy.round(numpy.sqrt(value.shape[1])))
             sy = int(value.shape[1]) // sx
         elif type(self.get_shape_from) == list:
@@ -482,7 +482,7 @@ class Image(Plotter):
             sx = int(numpy.round(value.size / sy))
             value = value.reshape(sy, sx)
 
-        if w == None:
+        if w is None:
             w = value.copy()
 
         if color:
@@ -549,7 +549,7 @@ class Plot(Plotter):
         figure.clf()
         ax = figure.add_subplot(111)
         ax.cla()
-        if self.ylim != None:
+        if self.ylim is not None:
             ax.set_ylim(self.ylim[0], self.ylim[1])
 
         for i, input_field in enumerate(self.input_fields):
