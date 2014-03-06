@@ -5,7 +5,9 @@ Created on Jan 22, 2014
 """
 
 import logging
+import os
 from twisted.protocols.basic import LineReceiver
+import uuid
 
 
 class NetworkAgent(object):
@@ -21,6 +23,8 @@ class NetworkAgent(object):
         Parses the configuration file and loads CONFIG_ADDRESS and CONFIG_PORT
         """
         super(NetworkAgent, self).__init__()
+        self._mid = None
+        self._pid = None
         idx_semicolon = configuration.find(":")
         if idx_semicolon == -1:  # assume configuration file
             cf = open(configuration, "r")
@@ -38,6 +42,19 @@ class NetworkAgent(object):
                 self.address = "0.0.0.0"
             self.port = int(configuration[idx_semicolon + 1:])
         logging.info("Network configuration: %s:%d", self.address, self.port)
+
+    @property
+    def pid(self):
+        if self._pid is None:
+            self._pid = os.getpid()
+        return self._pid
+
+    @property
+    def mid(self):
+        if self._mid is None:
+            with open("/var/lib/dbus/machine-id") as midfd:
+                self._mid = "%s-%x" % (midfd.read()[:-1], uuid.getnode())
+        return self._mid
 
 
 class StringLineReceiver(LineReceiver):
