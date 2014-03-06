@@ -94,11 +94,17 @@ class ThreadPool(threadpool.ThreadPool):
             else:
                 thread.join(timeout)
                 if thread.is_alive():
-                    thread._stop()
+                    if hasattr(thread, "_stop") and callable(thread._stop):
+                        thread._stop()
                     logging.warning("Failed to join with thread #%d " +
                                     "since the timeout (%.2f sec) was " +
-                                    "exceeded. It was killed.",
-                                    thread.ident, timeout)
+                                    "exceeded.%s",
+                                    thread.ident, timeout, " It was killed."
+                                    if (hasattr(thread, "_stop") and
+                                        callable(thread._stop))
+                                    else " It was not killed "
+                                    "due to the lack of _stop for Thread "
+                                    "in current python interpreter.")
         ThreadPool.pools.remove(self)
 
     @staticmethod
