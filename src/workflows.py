@@ -262,7 +262,7 @@ class Workflow(Unit):
             self.info("Saving the workflow graph to %s", filename)
             g.write(filename, format='png')
         desc = g.to_string()
-        self.debug("Graphviz workflow scheme:\n" + desc)
+        self.debug("Graphviz workflow scheme:\n" + desc[:-1])
         return desc
 
     def print_stats(self, by_name=False, top_number=5):
