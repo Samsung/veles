@@ -90,7 +90,7 @@ class ZmqConnection(object):
     tcpKeepaliveIdle = 0
     tcpKeepaliveInterval = 0
 
-    def __init__(self, factory, identity=None):
+    def __init__(self, factory, endpoints, identity=None):
         """
         Constructor.
 
@@ -136,23 +136,13 @@ class ZmqConnection(object):
         if self.identity is not None:
             self.socket.set(constants.IDENTITY, self.identity)
 
+        self.endpoints = endpoints
+        self.rnd_vals = self._connectOrBind(endpoints)
+
         self.factory.connections.add(self)
 
         self.factory.reactor.addReader(self)
         self.doRead()
-
-    def addEndpoints(self, *endpoints):
-        """
-        Add more connection endpoints.
-
-        Connection may have many endpoints, mixing ZeroMQ protocols
-        (TCP, IPC, ...) and types (connect or bind).
-
-        :param endpoints: list of endpoints to add
-        :type endpoints: list of :class:`ZmqEndpoint`
-        """
-        self.endpoints.extend(endpoints)
-        return self._connectOrBind(endpoints)
 
     def shutdown(self):
         """

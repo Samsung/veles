@@ -6,7 +6,7 @@ from zmq import Context
 from twisted.internet import reactor
 
 
-class ZmqFactory(object):
+class ZmqContextManager(object):
     """
     I control individual ZeroMQ connections.
 
@@ -19,7 +19,7 @@ class ZmqFactory(object):
         (terminating context), when there are some messages pending to be sent
     :vartype lingerPeriod: int
 
-    :var connections: set of instanciated :class:`ZmqConnection`
+    :var connections: set of instantiated :class:`ZmqConnection`
     :vartype connections: set
     :var context: ZeroMQ context
     """
@@ -27,6 +27,13 @@ class ZmqFactory(object):
     reactor = reactor
     ioThreads = 1
     lingerPeriod = 100
+    _instance = None
+
+    def __new__(cls):
+        if not cls._instance:
+            cls._instance = super(ZmqContextManager, cls).__new__(cls)
+            cls._instance.initialized = False
+        return cls._instance
 
     def __init__(self):
         """
@@ -34,11 +41,14 @@ class ZmqFactory(object):
 
         Create ZeroMQ context.
         """
-        self.connections = set()
-        self.context = Context(self.ioThreads)
+        if not self.initialized:
+            self.connections = set()
+            self.context = Context(self.ioThreads)
+            self.initialized = True
+            self.registerForShutdown()
 
     def __repr__(self):
-        return "ZmqFactory()"
+        return "ZmqContextManager()"
 
     def shutdown(self):
         """
