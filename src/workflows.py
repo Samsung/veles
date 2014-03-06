@@ -66,7 +66,7 @@ class EndPoint(UttermostPoint):
     def generate_data_for_master(self):
         return True
 
-    def apply_data_from_slave(self, data, slave=None):
+    def apply_data_from_slave(self, data, slave):
         if ((((not Unit.callvle(self.gate_block[0])) and
               (not Unit.callvle(self.gate_block_not[0]))) or
              (Unit.callvle(self.gate_block[0]) and
@@ -164,7 +164,7 @@ class Workflow(Unit):
             data.append(unit.generate_data_for_master())
         return data
 
-    def generate_data_for_slave(self, slave=None):
+    def generate_data_for_slave(self, slave):
         self.lock_pipeline()
         if self.is_finished():
             self.unlock_pipeline()
@@ -181,19 +181,19 @@ class Workflow(Unit):
             if data[i] != None:
                 self.units[i].apply_data_from_master(data[i])
 
-    def apply_data_from_slave(self, data, slave=None):
+    def apply_data_from_slave(self, data, slave):
         if not isinstance(data, list):
             raise ValueError("data must be a list")
         for i in range(len(self.units)):
             if data[i] != None:
                 self.units[i].apply_data_from_slave(data[i], slave)
 
-    def drop_slave(self, slave=None):
+    def drop_slave(self, slave):
         self.info("Job drop")
         for i in range(len(self.units)):
             self.units[i].drop_slave(slave)
 
-    def request_job(self, slave=None):
+    def request_job(self, slave):
         """
         Produces a new job, when a slave asks for it. Run by a master.
         """
@@ -214,7 +214,7 @@ class Workflow(Unit):
         self.run()
         return pickle.dumps(self.generate_data_for_master())
 
-    def apply_update(self, data, slave=None):
+    def apply_update(self, data, slave):
         """
         Harness the results of a slave's job. Run by a master.
         """

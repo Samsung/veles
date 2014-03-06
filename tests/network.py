@@ -28,7 +28,7 @@ class TestWorkflow(workflows.Workflow):
     def __init__(self, workflow, **kwargs):
         super(TestWorkflow, self).__init__(workflow, **kwargs)
 
-    def request_job(self):
+    def request_job(self, slave):
         TestWorkflow.job_requested = True
         return pickle.dumps({'objective': 'win'})
 
@@ -38,14 +38,14 @@ class TestWorkflow(workflows.Workflow):
             TestWorkflow.job_done = True
         return data
 
-    def apply_update(self, update, slave=None):
+    def apply_update(self, update, slave):
         obj = pickle.loads(update)
         if isinstance(obj, dict):
             TestWorkflow.update_applied = True
             return True
         return False
 
-    def drop_slave(self, slave=None):
+    def drop_slave(self, slave):
         TestWorkflow.job_dropped = True
 
     def get_computing_power(self):
