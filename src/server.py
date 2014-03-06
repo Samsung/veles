@@ -131,10 +131,6 @@ class VelesProtocol(StringLineReceiver):
         self._id = value
         self.factory.protocols[self._id] = self
 
-    def disappear(self):
-        del(self.nodes[self.id])
-        del(self.factory.protocols[self._id])
-
     def connectionMade(self):
         self.hip = self.transport.getHost().host
         self.state.connect()
