@@ -114,7 +114,7 @@ class VelesProtocol(StringLineReceiver):
                 self.disconnect("Unknown job value %s.", job)
                 return
             self.size = msg.get("size")
-            if self.size == None:
+            if self.size is None:
                 self.disconnect("Job size was not specified.")
                 return
             self.job = bytearray(self.size)

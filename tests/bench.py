@@ -3,24 +3,15 @@ Created on Jan 28, 2014
 
 @author: Vadim Markovtsev <v.markovtsev@samsung.com>
 """
-
-
 import logging
 import unittest
-
 import benchmark
 
 
 class Test(unittest.TestCase):
-
-    def setUp(self):
+    def testBenchmark(self):
         logging.basicConfig(level=logging.DEBUG)
         self.bench = benchmark.OpenCLBenchmark(None)
-
-    def tearDown(self):
-        pass
-
-    def testBenchmark(self):
         logging.info("Result: %d points", self.bench.estimate())
 
 

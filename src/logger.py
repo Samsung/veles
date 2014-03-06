@@ -14,7 +14,7 @@ class Logger(object):
     """
 
     def __init__(self, logger=None):
-        if logger == None:
+        if logger is None:
             self.init_unpickled()
         else:
             self.logger_ = logger

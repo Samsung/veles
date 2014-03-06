@@ -230,10 +230,10 @@ class Device(units.Pickleable):
         self.a.v = numpy.zeros([self.A_HEIGHT, self.AB_WIDTH],
                                dtype=opencl_types.dtypes[dtype])
         a_rnd = cc.get("a_rnd")
-        if a_rnd == None:
+        if a_rnd is None:
             a_rnd = {}
             cc["a_rnd"] = a_rnd
-        if a_rnd.get(xdtype) == None:
+        if a_rnd.get(xdtype) is None:
             rnd.default.fill(self.a.v, -0.1, 0.1)
             a_rnd[xdtype] = self.a.v.copy()
         else:
@@ -243,10 +243,10 @@ class Device(units.Pickleable):
         self.b.v = numpy.zeros([self.B_HEIGHT, self.AB_WIDTH],
                                dtype=opencl_types.dtypes[dtype])
         b_rnd = cc.get("b_rnd")
-        if b_rnd == None:
+        if b_rnd is None:
             b_rnd = {}
             cc["b_rnd"] = b_rnd
-        if b_rnd.get(xdtype) == None:
+        if b_rnd.get(xdtype) is None:
             rnd.default.fill(self.b.v, -0.1, 0.1)
             b_rnd[xdtype] = self.b.v.copy()
         else:
@@ -256,10 +256,10 @@ class Device(units.Pickleable):
         self.bias.v = numpy.zeros(self.B_HEIGHT,
                                   dtype=opencl_types.dtypes[dtype])
         bias_rnd = cc.get("bias_rnd")
-        if bias_rnd == None:
+        if bias_rnd is None:
             bias_rnd = {}
             cc["bias_rnd"] = bias_rnd
-        if bias_rnd.get(xdtype) == None:
+        if bias_rnd.get(xdtype) is None:
             rnd.default.fill(self.bias.v, -0.1, 0.1)
             bias_rnd[xdtype] = self.bias.v.copy()
         else:
@@ -337,7 +337,7 @@ class Device(units.Pickleable):
         ev = None
         for i in range(iters + 1):
             ev = self.queue_.execute_kernel(krn, global_size, local_size,
-                wait_for=(None if ev == None else (ev,)))
+                wait_for=(None if ev is None else (ev,)))
             if i == 0:
                 self.queue_.flush()
                 ev.wait()

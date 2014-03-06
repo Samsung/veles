@@ -165,7 +165,7 @@ class VelesProtocol(StringLineReceiver):
                 self.host.debug("%s Received UPDATE command. "
                                 "Expecting to receive a pickle.", self.id)
                 self.size = msg.get("size")
-                if self.size == None:
+                if self.size is None:
                     self.disconnect("Update size was not specified.")
                     return
                 self.update = bytearray(self.size)
@@ -220,7 +220,7 @@ class VelesProtocol(StringLineReceiver):
             self.host.error("%s Wrong state for update.", self.id)
 
     def jobRequestFinished(self, data=None):
-        if data != None:
+        if data is not None:
             self.sendLine({'job': 'offer', 'size': len(data)})
             self.host.debug("%s Job size: %d Kb", self.id, len(data) / 1000)
             self.transport.write(data)

@@ -192,22 +192,32 @@ class Vector(units.Pickleable):
     def __getstate__(self):
         """Get data from OpenCL device before pickling.
         """
-        if (self.device != None and self.device.pid_ == os.getpid()):
+        if (self.device is not None and self.device.pid_ == os.getpid()):
             self.map_read()
         return super(Vector, self).__getstate__()
 
+    def _converted_dtype(self, dtype):
+        if dtype == numpy.float32:
+            return numpy.float64
+        if dtype == numpy.float64:
+            return numpy.float32
+        if dtype == numpy.complex64:
+            return numpy.complex128
+        if dtype == numpy.complex128:
+            return numpy.complex64
+        return None
+
     def _initialize(self, device):
-        if self.v == None or self.v_ != None:
+        if self.v is None or self.v_ is not None:
             return
-        if device != None:
+        if device is not None:
             self.device = device
-        if self.device == None:
+        if self.device is None:
             return
-        if (self.v.dtype in opencl_types.convert_map.keys() and
-            opencl_types.convert_map[self.v.dtype] in (
-                opencl_types.dtypes[config.dtype],
-                opencl_types.dtypes[config.c_dtype])):
-            self.v = self.v.astype(opencl_types.convert_map[self.v.dtype])
+        converted_dtype = self._converted_dtype(self.v.dtype)
+        if converted_dtype in (opencl_types.dtypes[config.dtype],
+                               opencl_types.dtypes[config.c_dtype]):
+            self.v = self.v.astype(converted_dtype)
         self.v = cl.realign_array(self.v, self.device.device_info.memalign,
                                   numpy)
         self.v_ = self.device.queue_.context.create_buffer(
@@ -219,9 +229,9 @@ class Vector(units.Pickleable):
         self.lock_.release()
 
     def _map(self, flags):
-        if self.device == None:
+        if self.device is None:
             return
-        if self.map_arr_ != None:
+        if self.map_arr_ is not None:
             # already mapped properly, nothing to do
             if (self.map_flags != cl.CL_MAP_READ or flags == cl.CL_MAP_READ):
                 return
@@ -236,7 +246,7 @@ class Vector(units.Pickleable):
         self.map_flags = flags
 
     def _unmap(self):
-        if self.map_arr_ == None:
+        if self.map_arr_ is None:
             return
         ev = self.device.queue_.unmap_buffer(self.v_, self.map_arr_)
         ev.wait()

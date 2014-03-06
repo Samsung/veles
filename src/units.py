@@ -143,7 +143,7 @@ class Unit(Pickleable, Distributable):
         return wrapped
 
     def __init__(self, workflow, **kwargs):
-        if workflow != None and not isinstance(workflow, Unit):
+        if workflow is not None and not isinstance(workflow, Unit):
             raise error.VelesException(
                 "workflow parameter is not a Unit object")
         name = kwargs.get("name")
@@ -158,7 +158,7 @@ class Unit(Pickleable, Distributable):
         self.individual_name = name
         self.view_group = view_group
         self.workflow = workflow
-        if self.workflow != None and hasattr(self.workflow, "add_ref"):
+        if self.workflow is not None and hasattr(self.workflow, "add_ref"):
             self.workflow.add_ref(self)
         self.applied_data_from_master_recursively = False
         self.applied_data_from_slave_recursively = False
@@ -167,7 +167,7 @@ class Unit(Pickleable, Distributable):
         self.should_unlock_pipeline = False
 
     def __fini__(self):
-        if self.workflow != None and hasattr(self.workflow, "del_ref"):
+        if self.workflow is not None and hasattr(self.workflow, "del_ref"):
             self.workflow.del_ref(self)
 
     def init_unpickled(self):
@@ -180,7 +180,7 @@ class Unit(Pickleable, Distributable):
     def thread_pool(self):
         Unit.pool_lock_.acquire()
         try:
-            if Unit.pool_ == None:
+            if Unit.pool_ is None:
                 Unit.pool_ = thread_pool.ThreadPool()
         finally:
             Unit.pool_lock_.release()
@@ -209,7 +209,7 @@ class Unit(Pickleable, Distributable):
             self.run_dependent()
             return
         # If previous run has not yet finished, discard notification.
-        if not self.run_lock_.acquire(blocking=False):
+        if not self.run_lock_.acquire(False):
             return
         try:
             if not self.is_initialized:
@@ -385,7 +385,7 @@ class OpenCLUnit(Unit):
         for fnme, defs in self.cl_sources_.items():
             lines.append("#include \"%s\"" % (fnme))
             my_defines.update(defs)
-        if dtype == None:
+        if dtype is None:
             dtype = config.c_dtype
         elif type(dtype) != str:
             dtype = opencl_types.numpy_dtype_to_opencl(dtype)
@@ -400,7 +400,7 @@ class OpenCLUnit(Unit):
             self.prg_ = self.device.queue_.context.create_program(source,
                                                               config.ocl_dirs)
         finally:
-            if dump_filename != None:
+            if dump_filename is not None:
                 flog = open(dump_filename, "w")
                 flog.write(source)
                 flog.close()

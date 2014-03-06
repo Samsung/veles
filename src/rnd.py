@@ -20,27 +20,36 @@ class Rand(object):
         state: random state.
     """
     def __init__(self):
-        self.state = numpy.random.get_state()
+        if numpy.random.get_state is not None:
+            self.state = numpy.random.get_state()
 
-    def seed(self, seed):
+    def seed(self, seed, dtype=None, count=None):
         global _lock
-        _lock.acquire()
-        state = numpy.random.get_state()
-        numpy.random.seed(seed)
-        self.state = numpy.random.get_state()
-        numpy.random.set_state(state)
-        _lock.release()
+        try:
+            _lock.acquire()
+            if numpy.random.get_state is not None:
+                state = numpy.random.get_state()
+            if type(seed) == str:
+                fin = open(seed, "rb")
+                seed = numpy.zeros(count, dtype=dtype)
+                n = fin.readinto(seed)
+                fin.close()
+                seed = seed[:n // seed[0].nbytes]
+            numpy.random.seed(seed)
+            if numpy.random.get_state is not None:
+                self.state = numpy.random.get_state()
+                numpy.random.set_state(state)
+        finally:
+            _lock.release()
 
     def normal(self, loc=0.0, scale=1.0, size=None):
         """numpy.normal() with saving the random state.
         """
         global _lock
         _lock.acquire()
-        state = numpy.random.get_state()
-        numpy.random.set_state(self.state)
+        self.save_state()
         retval = numpy.random.normal(loc=loc, scale=scale, size=size)
-        self.state = numpy.random.get_state()
-        numpy.random.set_state(state)
+        self.restore_state()
         _lock.release()
         return retval
 
@@ -54,8 +63,7 @@ class Rand(object):
         """
         global _lock
         _lock.acquire()
-        state = numpy.random.get_state()
-        numpy.random.set_state(self.state)
+        self.save_state()
         arr = formats.ravel(arr)
         if arr.dtype in (numpy.complex64, numpy.complex128):
             # Fill the circle in case of complex numbers.
@@ -66,8 +74,7 @@ class Rand(object):
         else:
             arr[:] = (numpy.random.rand(arr.size) * (vle_max - vle_min) +
                       vle_min)[:]
-        self.state = numpy.random.get_state()
-        numpy.random.set_state(state)
+        self.restore_state()
         _lock.release()
 
     def fill_normal(self, arr, vle_min=-1.0, vle_max=1.0):
@@ -80,8 +87,7 @@ class Rand(object):
         """
         global _lock
         _lock.acquire()
-        state = numpy.random.get_state()
-        numpy.random.set_state(self.state)
+        self.save_state()
         arr = formats.ravel(arr)
         center = (vle_min + vle_max) * 0.5
         radius = (vle_max - vle_min) * 0.5
@@ -95,8 +101,7 @@ class Rand(object):
         else:
             arr[:] = numpy.clip(numpy.random.normal(loc=center, scale=radius,
                 size=arr.size), vle_min, vle_max)[:]
-        self.state = numpy.random.get_state()
-        numpy.random.set_state(state)
+        self.restore_state()
         _lock.release()
 
     def shuffle(self, arr):
@@ -104,11 +109,22 @@ class Rand(object):
         """
         global _lock
         _lock.acquire()
-        state = numpy.random.get_state()
-        numpy.random.set_state(self.state)
-        numpy.random.shuffle(arr)
-        self.state = numpy.random.get_state()
-        numpy.random.set_state(state)
+        self.save_state()
+        if numpy.random.shuffle is not None:
+            numpy.random.shuffle(arr)
+        else:
+            pass
+            """
+            # FIXME(a.kazantsev): rewrite after randint will be fixed in pypy
+            # now randint(n) returns from [0, n] but should from [0, n).
+            n = len(arr) - 1
+            for i in range(n):
+                j = numpy.random.randint(i, n)
+                t = arr[i]
+                arr[i] = arr[j]
+                arr[j] = t
+            """
+        self.restore_state()
         _lock.release()
 
     def permutation(self, x):
@@ -116,11 +132,9 @@ class Rand(object):
         """
         global _lock
         _lock.acquire()
-        state = numpy.random.get_state()
-        numpy.random.set_state(self.state)
+        self.save_state()
         retval = numpy.random.permutation(x)
-        self.state = numpy.random.get_state()
-        numpy.random.set_state(state)
+        self.restore_state()
         _lock.release()
         return retval
 
@@ -129,24 +143,32 @@ class Rand(object):
         """
         global _lock
         _lock.acquire()
-        state = numpy.random.get_state()
-        numpy.random.set_state(self.state)
+        self.save_state()
         retval = numpy.random.randint(low, high, size)
-        self.state = numpy.random.get_state()
-        numpy.random.set_state(state)
+        self.restore_state()
         _lock.release()
         return retval
 
     def rand(self, *args):
         global _lock
         _lock.acquire()
-        state = numpy.random.get_state()
-        numpy.random.set_state(self.state)
+        self.save_state()
         retval = numpy.random.rand(*args)
-        self.state = numpy.random.get_state()
-        numpy.random.set_state(state)
+        self.restore_state()
         _lock.release()
         return retval
+
+    def save_state(self):
+        if numpy.random.get_state is None:
+            return
+        self.saved_state = numpy.random.get_state()
+        numpy.random.set_state(self.state)
+
+    def restore_state(self):
+        if numpy.random.get_state is None:
+            return
+        self.state = numpy.random.get_state()
+        numpy.random.set_state(self.saved_state)
 
 
 # Default global random instances.
