@@ -47,10 +47,10 @@ class Graphics(logger.Logger):
             logging.basicConfig(level=logging.INFO)
             # cache only 20 drawing events
             Graphics.event_queue = multiprocessing.Queue(20)
-            #from matplotlib import __version__
-            #mplver = __version__
-            #del(__version__)
-            #if mplver == "1.4.x" and config.matplotlib_backend != "WebAgg":
+            # from matplotlib import __version__
+            # mplver = __version__
+            # del(__version__)
+            # if mplver == "1.4.x" and config.matplotlib_backend != "WebAgg":
             if socket.gethostname() == "smaug":
                 logging.getLogger("Graphics").info("Launching Graphics "
                                                    "in a new thread")
@@ -143,7 +143,6 @@ class Graphics(logger.Logger):
             Graphics.matplotlib_webagg_listened_port = free_port
             matplotlib.rcParams['webagg.port'] = free_port
             matplotlib.rcParams['webagg.open_in_browser'] = 'False'
-            matplotlib.rcParams['webagg.use_logging'] = 'True'
             self.webagg_thread = threading.Thread(target=self._run_webagg)
             while not self.exiting:
                 self.update()
@@ -152,6 +151,8 @@ class Graphics(logger.Logger):
             self.webagg_thread.join()
 
     def _run_webagg(self):
+        # WebAgg always launches IOLoop
+        ioloop.IOLoop.instance().stop()
         self.pp.show()
 
     def update(self):
