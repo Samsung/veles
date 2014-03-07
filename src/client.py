@@ -10,7 +10,7 @@ import json
 import time
 from twisted.internet import reactor, threads
 from twisted.internet.protocol import ReconnectingClientFactory
-from txzmq import ZmqConnection, ZmqEndpoint, ZmqContextManager
+from txzmq import ZmqConnection, ZmqEndpoint
 import zmq
 
 from daemon import daemonize
@@ -21,8 +21,8 @@ from network_common import NetworkAgent, StringLineReceiver
 class ZmqDealer(ZmqConnection):
     socketType = zmq.constants.DEALER
 
-    def __init__(self, factory, id, host, *endpoints):
-        super(ZmqDealer, self).__init__(factory, endpoints)
+    def __init__(self, id, host, *endpoints):
+        super(ZmqDealer, self).__init__(endpoints)
         self.id = id.encode()
         self.host = host
 
@@ -122,8 +122,7 @@ class VelesProtocol(StringLineReceiver):
                 self.request_id()
                 return
             self.zmq_connection = ZmqDealer(
-                self.factory.zmq_manager, cid, self,
-                ZmqEndpoint("connect", endpoint))
+                cid, self, ZmqEndpoint("connect", endpoint))
             self.factory.host.info("Connected to ZeroMQ endpoint %s",
                                    endpoint)
             self.request_job()
@@ -193,7 +192,6 @@ class VelesProtocolFactory(ReconnectingClientFactory):
         self.id = None
         self.state = None
         self.disconnect_time = None
-        self.zmq_manager = ZmqContextManager()
 
     def startedConnecting(self, connector):
         self.host.info('Connecting...')

@@ -18,6 +18,8 @@ from twisted.python import log
 from zmq import zmq_version_info
 ZMQ3 = zmq_version_info()[0] >= 3
 
+from txzmq.manager import ZmqContextManager
+
 
 class ZmqEndpointType(object):
     """
@@ -67,8 +69,6 @@ class ZmqConnection(object):
     :var highWaterMark: hard limit on the maximum number of outstanding
         messages 0MQ shall queue in memory for any single peer
     :vartype highWaterMark: int
-    :var factory: ZeroMQ Twisted factory reference
-    :vartype factory: :class:`ZmqFactory`
     :var socket: ZeroMQ Socket
     :vartype socket: zmq.Socket
     :var endpoints: ZeroMQ addresses for connect/bind
@@ -90,7 +90,7 @@ class ZmqConnection(object):
     tcpKeepaliveIdle = 0
     tcpKeepaliveInterval = 0
 
-    def __init__(self, factory, endpoints, identity=None):
+    def __init__(self, endpoints, identity=None):
         """
         Constructor.
 
@@ -100,16 +100,16 @@ class ZmqConnection(object):
             how it works
         :type identity: str
         """
-        self.factory = factory
+        self.factory = ZmqContextManager()
         self.endpoints = []
         self.identity = identity
-        self.socket = Socket(factory.context, self.socketType)
+        self.socket = Socket(self.factory.context, self.socketType)
         self.queue = deque()
         self.recv_parts = []
         self.read_scheduled = None
 
         self.fd = self.socket.get(constants.FD)
-        self.socket.set(constants.LINGER, factory.lingerPeriod)
+        self.socket.set(constants.LINGER, self.factory.lingerPeriod)
 
         if not ZMQ3:
             self.socket.set(

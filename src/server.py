@@ -16,7 +16,7 @@ from tornado.ioloop import IOLoop
 from twisted.internet import reactor, threads, task
 from twisted.internet.protocol import ServerFactory
 from twisted.web.html import escape
-from txzmq import ZmqConnection, ZmqEndpoint, ZmqContextManager
+from txzmq import ZmqConnection, ZmqEndpoint
 import uuid
 import zmq
 
@@ -30,8 +30,8 @@ from graphics import Graphics
 class ZmqRouter(ZmqConnection):
     socketType = zmq.constants.ROUTER
 
-    def __init__(self, factory, host, *endpoints):
-        super(ZmqRouter, self).__init__(factory, endpoints)
+    def __init__(self, host, *endpoints):
+        super(ZmqRouter, self).__init__(endpoints)
         self.host = host
         self.routing = {}
 
@@ -310,8 +310,7 @@ class Server(NetworkAgent, Logger):
         self.notify_agent = AsyncHTTPClient()
         self.tornado_ioloop_thread = threading.Thread(
             target=self.tornado_ioloop)
-        self.zmq_manager = ZmqContextManager()
-        self.zmq_connection = ZmqRouter(self.zmq_manager, self,
+        self.zmq_connection = ZmqRouter(self,
             ZmqEndpoint("bind", "inproc://veles"),
             ZmqEndpoint("bind", "rndipc://veles-ipc-:"),
             ZmqEndpoint("bind", "rndtcp://*:1024:65535:1")
