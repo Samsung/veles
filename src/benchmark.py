@@ -11,7 +11,6 @@ import time
 import formats
 import opencl
 import units
-import znicz_config
 
 
 class OpenCLBenchmark(units.OpenCLUnit):
