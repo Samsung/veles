@@ -37,6 +37,8 @@ class GraphicsClient(Logger):
     """ Class handling all interaction with the main graphics window.
     """
 
+    ui_update_interval = 0.01
+
     def __init__(self, backend, *endpoints, webagg_fifo=None):
         super(GraphicsClient, self).__init__()
         self.backend = backend
@@ -57,6 +59,8 @@ class GraphicsClient(Logger):
         signal.signal(signal.SIGINT, self._sigint_initial)
 
     def run(self):
+        """Creates and runs main graphics window.
+        """
         with self._lock:
             if self._shutted_down:
                 return
@@ -74,19 +78,20 @@ class GraphicsClient(Logger):
             self.lines = lines
             self.patches = patches
             self.pp = pp
-            """Creates and runs main graphics window.
-            Note that this function should be called only by __init__()
-            """
             self.info("Graphics client is running in process %d", os.getpid())
             if pp.get_backend() == "TkAgg":
                 from six.moves import tkinter
                 self.root = tkinter.Tk()
                 self.root.withdraw()
-                tkinter.mainloop()
+                reactor.callLater(GraphicsClient.ui_update_interval,
+                                  self._process_tk_events)
+            # tkinter.mainloop()
             elif pp.get_backend() == "Qt4Agg":
                 import PyQt4
                 self.root = PyQt4.QtGui.QApplication([])
-                self.root.exec_()
+                reactor.callLater(GraphicsClient.ui_update_interval,
+                                  self._process_qt_events)
+                # self.root.exec_()
             elif pp.get_backend() == "WebAgg":
                 self.condition = threading.Condition()
                 with self.condition:
@@ -109,7 +114,20 @@ class GraphicsClient(Logger):
                                        os.O_WRONLY | os.O_NONBLOCK)
                         self._webagg_port_bytes = bytes(self._webagg_port)
                         reactor.callLater(0, self._write_webagg_port, fifo)
-                self.pp.show()
+        if pp.get_backend() != "WebAgg":
+            reactor.run()
+        else:
+            self.pp.show()
+
+    def _process_qt_events(self):
+        self.root.processEvents()
+        reactor.callLater(GraphicsClient.ui_update_interval,
+                          self._process_qt_events)
+
+    def _process_tk_events(self):
+        self.root.update()
+        reactor.callLater(GraphicsClient.ui_update_interval,
+                          self._process_tk_events)
 
     def _write_webagg_port(self, fifo):
         if os.write(fifo, self._webagg_port_bytes) != \
@@ -132,7 +150,8 @@ class GraphicsClient(Logger):
             plotter.redraw()
         else:
             self.info("Received the termination command")
-            self.shutdown()
+            with self._lock:
+                self.shutdown()
 
     def show_figure(self, figure):
         if self.pp.get_backend() != "WebAgg":
@@ -143,8 +162,10 @@ class GraphicsClient(Logger):
 
     def shutdown(self):
         with self._lock:
-            if not self._started:
+            if not self._started or self._shutted_down:
                 return
+            if reactor.running:
+                reactor.stop()
             self._shutted_down = True
             if self.pp.get_backend() == "TkAgg":
                 self.root.destroy()
@@ -157,19 +178,17 @@ class GraphicsClient(Logger):
         self.shutdown()
         self._sigint_initial(signal, frame)
 
-"""
-reactor_thread = threading.Thread(target=run_reactor)
-    reactor_thread.start()
-    client.run()
-    reactor_thread.join()
-"""
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    client = GraphicsClient(sys.argv[1], sys.argv[2],
+    backend, endpoint = sys.argv[1:3]
+    client = GraphicsClient(backend, endpoint,
                             webagg_fifo=sys.argv[3]
                             if len(sys.argv) > 3 else None)
-    client_thread = threading.Thread(target=client.run)
-    client_thread.start()
-    reactor.run()
-    client_thread.join()
+    if backend == "WebAgg":
+        client_thread = threading.Thread(target=client.run)
+        client_thread.start()
+        reactor.run()
+        client_thread.join()
+    else:
+        client.run()

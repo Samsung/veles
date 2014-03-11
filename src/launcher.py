@@ -10,6 +10,7 @@ import sys
 import argparse
 import paramiko
 import socket
+from twisted.internet import reactor, threads
 
 import client
 import config
@@ -49,7 +50,7 @@ class Launcher(logger.Logger):
 
         self.args.server_address = self.args.server_address.strip()
         self.args.listen_address = self.args.listen_address.strip()
-        config.matplotlib_backend = self.args.matplotlib_backend;
+        config.matplotlib_backend = self.args.matplotlib_backend
 
         if (not self.args.server_address and
            "mode" in kwargs and kwargs["mode"] == "slave"):
@@ -100,14 +101,28 @@ class Launcher(logger.Logger):
                 graphics_server.GraphicsServer.launch_pair()
 
     def run(self, daemonize=False):
-        return (self.agent.run() if isinstance(self.agent, units.Unit)
-                else self.agent.run(daemonize=daemonize))
+        self.running = True
+        try:
+            if not self.is_standalone:
+                return self.agent.run(daemonize=daemonize)
+            else:
+                darun = threads.deferToThreadPool(reactor,
+                                                  self.agent.thread_pool(),
+                                                  self.agent.run)
+                darun.addCallback(self.stop)
+                reactor.run()
+        finally:
+            self.running = False
 
-    def stop(self):
+    def stop(self, *args):
+        if not self.running:
+            return
+        self.running = False
         if not self.is_standalone:
             self.agent.stop()
-        else:
-            self.graphics_client.terminate()
+        elif not config.plotters_disabled:
+            self.graphics_client.wait()
+            reactor.stop()
 
     def launch_status(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:

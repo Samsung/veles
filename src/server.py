@@ -309,8 +309,10 @@ class Server(NetworkAgent, Logger):
         self.notify_task = task.LoopingCall(self.notify_status)
         self.notify_agent = AsyncHTTPClient()
         self.webagg_port = 0
-        self.graphics_server, self.graphics_client = \
-            graphics_server.GraphicsServer.launch_pair(self.set_webagg_port)
+        if not config.plotters_disabled:
+            self.graphics_server, self.graphics_client = \
+                graphics_server.GraphicsServer.launch_pair(
+                    self.set_webagg_port)
         self.tornado_ioloop_thread = threading.Thread(
             target=ioloop.IOLoop.instance().start)
         self.zmq_connection = ZmqRouter(self,
@@ -339,13 +341,20 @@ class Server(NetworkAgent, Logger):
     def stop(self):
         try:
             self.notify_task.stop()
-            if reactor.running:
-                reactor.stop()
             ioloop.IOLoop.instance().stop()
             self.tornado_ioloop_thread.join()
-            self.graphics_client.terminate()
+            if not config.plotters_disabled:
+                reactor.callLater(0, self._wait_graphics_client)
+            elif reactor.running:
+                reactor.stop()
         except:
             self.exception("Failed to stop the reactor")
+
+    def _wait_graphics_client(self):
+        if self.graphics_client.poll() is not None:
+            reactor.stop()
+        else:
+            reactor.callLater(0, self._wait_graphics_client)
 
     def endpoint(self, mid, pid, hip):
         if self.mid == mid:
