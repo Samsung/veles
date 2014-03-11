@@ -94,6 +94,7 @@ class Workflow(Unit):
         self.units = []
         self.start_point = StartPoint(self)
         self.end_point = EndPoint(self)
+        self.thread_pool().register_on_shutdown(self.emergency_stop)
 
     def init_unpickled(self):
         super(Workflow, self).init_unpickled()
@@ -116,6 +117,9 @@ class Workflow(Unit):
             return retval
         self.end_point.wait()
         self.print_stats()
+
+    def emergency_stop(self):
+        self.end_point.run()
 
     def add_ref(self, unit):
         if unit not in self.units:
