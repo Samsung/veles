@@ -73,7 +73,7 @@ class ThreadPool(threadpool.ThreadPool):
         """
         self.queue.appendleft(item)
 
-    def shutdown(self, execute_remaining=False, force=False, timeout=0.25):
+    def shutdown(self, execute_remaining=True, force=False, timeout=0.25):
         """Safely brings thread pool down.
         """
         if self not in ThreadPool.pools:
@@ -102,13 +102,13 @@ class ThreadPool(threadpool.ThreadPool):
         ThreadPool.pools.remove(self)
 
     @staticmethod
-    def shutdown_pools():
+    def shutdown_pools(execute_remaining=True, force=False, timeout=0.25):
         """
         Private method to shut down all the pools.
         """
         pools = copy.copy(ThreadPool.pools)
         for pool in pools:
-            pool.shutdown()
+            pool.shutdown(execute_remaining, force, timeout)
 
     @staticmethod
     def exit(retcode=0):
@@ -124,5 +124,5 @@ class ThreadPool(threadpool.ThreadPool):
         """
         Private method - handler for SIGINT.
         """
-        ThreadPool.shutdown_pools()
+        ThreadPool.shutdown_pools(execute_remaining=False, force=True)
         ThreadPool.sigint_initial(signal, frame)
