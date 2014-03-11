@@ -136,8 +136,9 @@ class Graphics(logger.Logger):
             result = 0
             while result == 0:
                 free_port += 1
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                    result = sock.connect_ex(("localhost", free_port))
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                result = sock.connect_ex(("localhost", free_port))
+                sock.close()
             self.info("Will launch WebAgg instance on port %d", free_port)
             self.webagg_port = free_port
             Graphics.matplotlib_webagg_listened_port = free_port

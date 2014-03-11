@@ -77,7 +77,7 @@ test_dataset_root = "/data/veles"
 
 
 # : Disabled plotters or not (for benchmarking purposes)
-plotters_disabled = True
+plotters_disabled = False
 
 
 # : If the program has been run in slave mode

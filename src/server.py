@@ -4,10 +4,10 @@ Created on Jan 14, 2014
 @author: Vadim Markovtsev <v.markovtsev@samsung.com>
 """
 
-
 import fysom
 import getpass
 import json
+import six
 import socket
 import time
 import threading
@@ -42,9 +42,10 @@ class ZmqRouter(ZmqConnection):
             message[:i - 1], message[i - 1].decode(), message[i + 1:]
         self.routing[node_id] = routing
         protocol = self.host.factory.protocols.get(node_id)
-        if not protocol:
+        if protocol is None:
             self.host.error("ZeroMQ sent unknown node ID %s", node_id)
             self.reply(node_id, bytes(False))
+            return
         command = payload[0]
         if command == b'job':
             protocol.jobRequestReceived()
@@ -147,7 +148,8 @@ class VelesProtocol(StringLineReceiver):
                                       self.host.workflow.thread_pool(),
                                       self.host.workflow.drop_slave,
                                       self.nodes[self.id])
-            del(self.factory.protocols[self._id])
+            if self._id in self.factory.protocols:
+                del(self.factory.protocols[self._id])
 
     def lineReceived(self, line):
         self.host.debug("%s lineReceived:  %s", self.id, line)
@@ -238,7 +240,10 @@ class VelesProtocol(StringLineReceiver):
         self.nodes[self.id]['host'] = host
 
     def sendLine(self, line):
-        super(VelesProtocol, self).sendLine(json.dumps(line))
+        if six.PY3:
+            super(VelesProtocol, self).sendLine(json.dumps(line))
+        else:
+            StringLineReceiver.sendLine(self, json.dumps(line))
 
     def sendError(self, err):
         """
@@ -285,7 +290,8 @@ class VelesProtocol(StringLineReceiver):
 
 class VelesProtocolFactory(ServerFactory):
     def __init__(self, host):
-        super(VelesProtocolFactory, self).__init__()
+        if six.PY3:
+            super(VelesProtocolFactory, self).__init__()
         self.host = host
         self.protocols = {}
 

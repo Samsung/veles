@@ -7,6 +7,7 @@ Created on Jan 22, 2014
 
 import fysom
 import json
+import six
 import time
 from twisted.internet import reactor, threads
 from twisted.internet.protocol import ReconnectingClientFactory
@@ -155,7 +156,10 @@ class VelesProtocol(StringLineReceiver):
         self.request_job()
 
     def sendLine(self, line):
-        super(VelesProtocol, self).sendLine(json.dumps(line))
+        if six.PY3:
+            super(VelesProtocol, self).sendLine(json.dumps(line))
+        else:
+            StringLineReceiver.sendLine(self, json.dumps(line))
 
     def _common_id(self):
         return {'power': self.factory.host.workflow.get_computing_power(),
@@ -187,7 +191,8 @@ class VelesProtocolFactory(ReconnectingClientFactory):
     RECONNECTION_ATTEMPTS = 60
 
     def __init__(self, host):
-        super(VelesProtocolFactory, self).__init__()
+        if six.PY3:
+            super(VelesProtocolFactory, self).__init__()
         self.host = host
         self.id = None
         self.state = None

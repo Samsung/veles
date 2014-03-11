@@ -95,9 +95,10 @@ class Launcher(logger.Logger):
             self.agent.stop()
 
     def launch_status(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            result = sock.connect_ex((config.web_status_host,
-                                      config.web_status_port))
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = sock.connect_ex((config.web_status_host,
+                                  config.web_status_port))
+        sock.close()
         if result != 0:
             self.info("Launching the web status server")
             self.launch_remote_program(

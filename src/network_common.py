@@ -6,6 +6,7 @@ Created on Jan 22, 2014
 
 import logging
 import os
+import six
 from twisted.protocols.basic import LineReceiver
 import uuid
 
@@ -57,11 +58,17 @@ class NetworkAgent(object):
         return self._mid
 
 
-class StringLineReceiver(LineReceiver):
+class StringLineReceiver(LineReceiver, object):
     def sendLine(self, line):
         if isinstance(line, str):
-            super(StringLineReceiver, self).sendLine(line.encode())
+            if six.PY3:
+                super(StringLineReceiver, self).sendLine(line.encode())
+            else:
+                LineReceiver.sendLine(self, line.encode())
         elif isinstance(line, bytes):
-            super(StringLineReceiver, self).sendLine(line)
+            if six.PY3:
+                super(StringLineReceiver, self).sendLine(line)
+            else:
+                LineReceiver.sendLine(self, line)
         else:
             raise RuntimeError("Only str and bytes are allowed.")
