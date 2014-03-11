@@ -99,7 +99,8 @@ web_status_port = 8090
 web_status_notification_interval = 1
 web_status_log_file = "/var/log/veles_web_status.log"
 
-matplotlib_backend = "WebAgg"
+graphics_multicast_address = "239.192.1.1"
+matplotlib_backend = "Qt4Agg"
 matplotlib_webagg_port = 8081
 
 slaves = ["markovtsevu64", "seresovu64", "seninu64", "kuznetsovu64",

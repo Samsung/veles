@@ -293,11 +293,14 @@ class ZmqConnection(object):
             if endpoint.type == ZmqEndpointType.connect:
                 self.socket.connect(endpoint.address)
             elif endpoint.type == ZmqEndpointType.bind:
-                if endpoint.address.startswith("rndtcp://"):
+                if endpoint.address.startswith("rndtcp://") or \
+                   endpoint.address.startswith("rndepgm://"):
+                    endpos = endpoint.address.find("://") + 3
+                    proto = endpoint.address[3:endpos]
                     addr, min_port, max_port, max_tries = \
-                        endpoint.address[9:].split(':')
+                        endpoint.address[endpos:].split(':')
                     rnd_vals.append(self.socket.bind_to_random_port(
-                        "tcp://" + addr, int(min_port), int(max_port),
+                        proto + addr, int(min_port), int(max_port),
                         int(max_tries)))
                 elif endpoint.address.startswith("rndipc://"):
                     prefix, suffix = endpoint.address[9:].split(':')
