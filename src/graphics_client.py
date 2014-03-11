@@ -71,7 +71,7 @@ class GraphicsClient(Logger):
             import matplotlib.lines as lines
             import matplotlib.patches as patches
             import matplotlib.pyplot as pp
-            import plotters  # important - do not remove
+            import plotting_units  # important - do not remove
             pp.ion()
             self.matplotlib = matplotlib
             self.cm = cm
