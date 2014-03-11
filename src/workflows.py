@@ -139,7 +139,7 @@ class Workflow(Unit):
         try:
             self.master_pipeline_lock_.release()
         except:
-            self.warn("Double unlock in unlock_pipeline")
+            self.warning("Double unlock in unlock_pipeline")
 
     def lock_data(self):
         """Locks master-slave data update.
@@ -156,7 +156,7 @@ class Workflow(Unit):
         try:
             self.master_data_lock_.release()
         except:
-            self.warn("Double unlock in unlock_data")
+            self.warning("Double unlock in unlock_data")
 
     def generate_data_for_master(self):
         data = []

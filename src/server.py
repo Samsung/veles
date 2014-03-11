@@ -12,7 +12,7 @@ import socket
 import time
 import threading
 from tornado.httpclient import AsyncHTTPClient
-from tornado.ioloop import IOLoop
+import tornado.ioloop as ioloop
 from twisted.internet import reactor, threads, task
 from twisted.internet.protocol import ServerFactory
 from twisted.web.html import escape
@@ -24,7 +24,7 @@ import config
 from daemon import daemonize
 from logger import Logger
 from network_common import NetworkAgent, StringLineReceiver
-from graphics import Graphics
+import graphics_server
 
 
 class ZmqRouter(ZmqConnection):
@@ -308,8 +308,11 @@ class Server(NetworkAgent, Logger):
         reactor.listenTCP(self.port, self.factory, interface=self.address)
         self.notify_task = task.LoopingCall(self.notify_status)
         self.notify_agent = AsyncHTTPClient()
+        self.webagg_port = 0
+        self.graphics_server, self.graphics_client = \
+            graphics_server.GraphicsServer.launch_pair(self.set_webagg_port)
         self.tornado_ioloop_thread = threading.Thread(
-            target=self.tornado_ioloop)
+            target=ioloop.IOLoop.instance().start)
         self.zmq_connection = ZmqRouter(self,
             ZmqEndpoint("bind", "inproc://veles"),
             ZmqEndpoint("bind", "rndipc://veles-ipc-:"),
@@ -338,9 +341,9 @@ class Server(NetworkAgent, Logger):
             self.notify_task.stop()
             if reactor.running:
                 reactor.stop()
-
-            IOLoop.instance().stop()
+            ioloop.IOLoop.instance().stop()
             self.tornado_ioloop_thread.join()
+            self.graphics_client.terminate()
         except:
             self.exception("Failed to stop the reactor")
 
@@ -353,6 +356,10 @@ class Server(NetworkAgent, Logger):
         else:
             return self.zmq_endpoints["tcp"].replace("*", hip)
 
+    def set_webagg_port(self, port):
+        self.info("Found out the WebAgg port: %d", port)
+        self.webagg_port = port
+
     def handle_notify_request(self, response):
         if response.error:
             self.warning("Failed to upload the status update to %s:%s",
@@ -360,12 +367,7 @@ class Server(NetworkAgent, Logger):
         else:
             self.debug("Successfully updated the status")
 
-    def tornado_ioloop(self):
-        IOLoop.instance().start()
-
     def notify_status(self):
-        if not IOLoop.instance().running():
-            return
         mins, secs = divmod(time.time() - self.start_time, 60)
         hours, mins = divmod(mins, 60)
         ret = {'id': self.id,
@@ -375,8 +377,11 @@ class Server(NetworkAgent, Logger):
                'user': getpass.getuser(),
                'graph': self.workflow_graph,
                'slaves': self.nodes,
-               'plots': "http://" + socket.gethostname() + ":" +
-                        str(Graphics.matplotlib_webagg_listened_port),
+               'plots': "http://%s:%d" % (socket.gethostname(),
+                                          self.webagg_port),
+               'custom_plots':
+                    ";".join(self.graphics_server.endpoints["epgm"]) + ";" +
+                    self.graphics_server.endpoints["ipc"],
                'description': "<br />".join(escape(
                                   self.workflow.__doc__).split("\n"))}
         timeout = config.web_status_notification_interval / 2

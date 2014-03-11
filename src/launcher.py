@@ -10,8 +10,10 @@ import sys
 import argparse
 import paramiko
 import socket
+
 import client
 import config
+import graphics_server
 import server
 import logger
 import units
@@ -63,17 +65,26 @@ class Launcher(logger.Logger):
             config.is_slave = True
             config.plotters_disabled = True
 
+    @property
     def is_master(self):
         return True if self.args.listen_address else False
+
+    @property
+    def is_slave(self):
+        return True if self.args.server_address else False
+
+    @property
+    def is_standalone(self):
+        return not self.is_master and not self.is_slave
 
     def on_shutdown(self):
         self.stop()
 
     def initialize(self, workflow):
         workflow.thread_pool().register_on_shutdown(self.on_shutdown)
-        if self.args.server_address:
+        if self.is_master:
             self.agent = client.Client(self.args.server_address, workflow)
-        elif self.args.listen_address:
+        elif self.is_slave:
             self.agent = server.Server(self.args.listen_address, workflow)
             # Launch the status server if it's not been running yet
             if not self.args.skip_web_status:
@@ -85,14 +96,18 @@ class Launcher(logger.Logger):
                 self.launch_nodes(nodes)
         else:
             self.agent = workflow
+            self.graphics_server, self.graphics_client = \
+                graphics_server.GraphicsServer.launch_pair()
 
     def run(self, daemonize=False):
         return (self.agent.run() if isinstance(self.agent, units.Unit)
                 else self.agent.run(daemonize=daemonize))
 
     def stop(self):
-        if hasattr(self, "agent"):
+        if not self.is_standalone:
             self.agent.stop()
+        else:
+            self.graphics_client.terminate()
 
     def launch_status(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
