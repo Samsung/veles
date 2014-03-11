@@ -113,17 +113,16 @@ class Rand(object):
         if numpy.random.shuffle is not None:
             numpy.random.shuffle(arr)
         else:
-            pass
-            """
-            # FIXME(a.kazantsev): rewrite after randint will be fixed in pypy
-            # now randint(n) returns from [0, n] but should from [0, n).
+            import logging
+            logging.warn("numpy.random.shuffle is None")
             n = len(arr) - 1
             for i in range(n):
-                j = numpy.random.randint(i, n)
+                j = n + 1
+                while j >= n + 1:  # pypy workaround
+                    j = numpy.random.randint(i, n + 1)
                 t = arr[i]
                 arr[i] = arr[j]
                 arr[j] = t
-            """
         self.restore_state()
         _lock.release()
 
