@@ -329,7 +329,7 @@ class Launcher(logger.Logger):
                'plots': "http://%s:%d" % (socket.gethostname(),
                                           self.webagg_port),
                'custom_plots':
-                    ";".join(self.graphics_server.endpoints["epgm"]) + ";" +
+                    "<br/>".join(self.graphics_server.endpoints["epgm"]) + ";" +
                     self.graphics_server.endpoints["ipc"],
                'description': "<br />".join(escape(
                     self.workflow.__doc__).split("\n"))}

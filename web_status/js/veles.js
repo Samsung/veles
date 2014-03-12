@@ -28,7 +28,7 @@ function updateUI() {
 	var msg = {
     request: "workflows",
     args: ["name", "master", "slaves", "time", "user", "graph", "description",
-           "plots"]
+           "plots", "custom_plots"]
   };
 	$.ajax({
 		url: "service",
@@ -218,7 +218,10 @@ function activateListItem(item_id) {
   details += workflow.master;
   details += "</a> and has ";
   details += Object.keys(workflow.slaves).length;
-  details += ' nodes.<br/><br/>';
+  details += ' nodes.<br/>';
+  details += 'ØMQ endpoints for custom plots:<br/><strong>';
+  details += workflow.custom_plots;
+  details += '</strong><br/>';
   workflow.svg.attr("id", "workflow-svg");
   details += workflow.svg.clone().wrap('<div>').parent().html();
   details += '</div>\n';
