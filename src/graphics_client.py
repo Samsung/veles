@@ -61,7 +61,8 @@ class GraphicsClient(Logger):
     def run(self):
         """Creates and runs main graphics window.
         """
-        with self._lock:
+        self._lock.acquire()
+        try:
             if self._shutted_down:
                 return
             self._started = True
@@ -114,9 +115,13 @@ class GraphicsClient(Logger):
                                        os.O_WRONLY | os.O_NONBLOCK)
                         self._webagg_port_bytes = bytes(self._webagg_port)
                         reactor.callLater(0, self._write_webagg_port, fifo)
+        except:
+            self._lock.release()
         if pp.get_backend() != "WebAgg":
+            reactor.callLater(0, self._lock.release)
             reactor.run()
         else:
+            ioloop.IOLoop.instance().add_callback(self._lock.release)
             self.pp.show()
         self.info("Finished")
 
@@ -150,7 +155,7 @@ class GraphicsClient(Logger):
             plotter.show_figure = self.show_figure
             plotter.redraw()
         else:
-            # self.debug("Received the termination command")
+            self.debug("Received the command to terminate")
             self.shutdown()
 
     def show_figure(self, figure):
