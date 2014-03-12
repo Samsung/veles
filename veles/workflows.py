@@ -14,14 +14,14 @@ import sys
 import tarfile
 import tempfile
 import yaml
-
-import benchmark
-import config
-import formats
-import pydot
 import threading
-from units import Unit, OpenCLUnit, Repeater
-from prettytable import PrettyTable
+
+import veles.benchmark as benchmark
+import veles.config as config
+import veles.formats as formats
+import veles.pydot as pydot
+from veles.units import Unit, OpenCLUnit, Repeater
+from veles.prettytable import PrettyTable
 
 
 class UttermostPoint(Unit):
@@ -268,13 +268,6 @@ class Workflow(Unit):
         self.debug("Graphviz workflow scheme:\n" + desc[:-1])
         return desc
 
-    unit_group_colors = {"PLOTTER": "gold",
-                         "WORKER": "greenyellow",
-                         "LOADER": "cyan",
-                         "TRAINER": "coral",
-                         "EVALUATOR": "plum",
-                         "START_END": "lightgrey"}
-
     def print_stats(self, by_name=False, top_number=5):
         timers = {}
         for key, value in Unit.timers.items():
@@ -284,12 +277,17 @@ class Workflow(Unit):
             timers[uid] += value
         stats = sorted(timers.items(), key=lambda x: x[1], reverse=True)
         time_all = sum(timers.values())
-        table = PrettyTable("#", "%", "unit")
-        table.align["unit"] = "l"
+        self.info("Unit run time statistics top:")
         for i in range(1, min(top_number, len(stats)) + 1):
-            table.add_row(i, int(stats[i - 1][1] * 100 / time_all),
-                          stats[i - 1][0])
-        self.info("Unit run time statistics top:\n%s", str(table))
+            self.info("%d.  %s (%d%%)", i, stats[i - 1][0],
+                            stats[i - 1][1] * 100 / time_all)
+
+    unit_group_colors = {"PLOTTER": "gold",
+                         "WORKER": "greenyellow",
+                         "LOADER": "cyan",
+                         "TRAINER": "coral",
+                         "EVALUATOR": "plum",
+                         "START_END": "lightgrey"}
 
     def checksum(self):
         sha1 = hashlib.sha1()

@@ -4,7 +4,9 @@ Created on Jan 14, 2014
 @author: Vadim Markovtsev <v.markovtsev@samsung.com>
 """
 
+
 import fysom
+import getpass
 import json
 import six
 import socket
@@ -14,7 +16,11 @@ from txzmq import ZmqConnection, ZmqEndpoint
 import uuid
 import zmq
 
-from network_common import NetworkAgent, StringLineReceiver
+import veles.fysom as fysom
+import veles.config as config
+from veles.daemon import daemonize
+from veles.logger import Logger
+from veles.network_common import NetworkAgent, StringLineReceiver
 
 
 class ZmqRouter(ZmqConnection):

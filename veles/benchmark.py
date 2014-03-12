@@ -8,9 +8,9 @@ Created on Jan 28, 2014
 import numpy
 import time
 
-import formats
-import opencl
-import units
+import veles.formats as formats
+import veles.opencl as opencl
+import veles.units as units
 
 
 class OpenCLBenchmark(units.OpenCLUnit):

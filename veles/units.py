@@ -9,11 +9,12 @@ from copy import copy
 import threading
 import time
 import traceback
-import config
-import error
-import logger
-import opencl_types
-import thread_pool
+
+import veles.config as config
+import veles.error as error
+import veles.logger as logger
+import veles.opencl_types as opencl_types
+import veles.thread_pool as thread_pool
 
 
 class Pickleable(logger.Logger):

@@ -17,11 +17,12 @@ import sys
 import time
 import traceback
 import opencl4py as cl
-import config
-import formats
-import opencl_types
-import rnd
-import units
+
+import veles.config as config
+import veles.formats as formats
+import veles.opencl_types as opencl_types
+import veles.rnd as rnd
+import veles.units as units
 
 
 class DeviceInfo(object):

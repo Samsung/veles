@@ -14,7 +14,10 @@ from twisted.internet.protocol import ReconnectingClientFactory
 from txzmq import ZmqConnection, ZmqEndpoint
 import zmq
 
-from network_common import NetworkAgent, StringLineReceiver
+import veles.fysom as fysom
+from veles.daemon import daemonize
+from veles.logger import Logger
+from veles.network_common import NetworkAgent, StringLineReceiver
 
 
 class ZmqDealer(ZmqConnection):

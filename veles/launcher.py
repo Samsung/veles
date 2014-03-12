@@ -24,11 +24,11 @@ from twisted.internet import reactor, threads, task
 from twisted.web.html import escape
 import uuid
 
-import client
-import config
-import graphics_server
-import logger
-import server
+import veles.client as client
+import veles.config as config
+import veles.graphics_server as graphics_server
+import veles.logger as logger
+import veles.server as server
 
 
 def threadsafe(fn):

@@ -6,8 +6,9 @@ Image Scale.
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
 import numpy
-import config
-import error
+
+import veles.config as config
+import veles.error as error
 from ctypes import POINTER, c_byte, c_int, cdll
 
 

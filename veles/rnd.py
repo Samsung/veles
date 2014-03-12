@@ -7,7 +7,8 @@ Random generators.
 """
 import numpy
 import threading
-import formats
+
+import veles.formats as formats
 
 
 _lock = threading.Lock()

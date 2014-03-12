@@ -8,7 +8,8 @@ Global configuration variables.
 
 
 import os
-import opencl_types
+
+import veles.opencl_types as opencl_types
 
 
 global sconfig

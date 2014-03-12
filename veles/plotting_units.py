@@ -7,10 +7,10 @@ Created on May 17, 2013
 
 import numpy
 
-import config
-import opencl_types
-import formats
-import plotter
+import veles.config as config
+import veles.opencl_types as opencl_types
+import veles.formats as formats
+import veles.plotter as plotter
 
 
 class SimplePlotter(plotter.Plotter):

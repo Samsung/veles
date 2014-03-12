@@ -4,9 +4,9 @@ Created on Feb 11, 2014
 @author: Vadim Markovtsev <v.markovtsev@samsung.com>
 """
 
-
-import error
 import numpy
+
+import veles.error as error
 
 
 # : CL type defines

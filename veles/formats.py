@@ -8,12 +8,13 @@ Data formats for connectors.
 import logging
 import numpy
 import os
-import config
-import error
-import opencl_types
-import units
 import threading
 import opencl4py as cl
+
+import veles.config as config
+import veles.error as error
+import veles.opencl_types as opencl_types
+import veles.units as units
 
 
 def roundup(num, align):
