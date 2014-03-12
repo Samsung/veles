@@ -158,7 +158,8 @@ class Launcher(logger.Logger):
         workflow.thread_pool.register_on_shutdown(self._on_shutdown)
 
         if self.is_slave:
-            self.agent = client.Client(self.args.server_address, workflow)
+            self.agent = client.Client(self.args.server_address, workflow,
+                                       self)
         else:
             if self.reports_web_status:
                 self.tornado_ioloop_thread = threading.Thread(
@@ -173,7 +174,8 @@ class Launcher(logger.Logger):
                         workflow.thread_pool, self.matplotlib_backend,
                         self._set_webagg_port)
             if self.is_master:
-                self.agent = server.Server(self.args.listen_address, workflow)
+                self.agent = server.Server(self.args.listen_address, workflow,
+                                           self)
                 # Launch the nodes described in the configuration file/string
                 self._launch_nodes()
             else:
