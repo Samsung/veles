@@ -94,7 +94,8 @@ class Workflow(Unit):
         self.units = []
         self.start_point = StartPoint(self)
         self.end_point = EndPoint(self)
-        self.thread_pool().register_on_shutdown(self.emergency_stop)
+        self.thread_pool().register_on_shutdown(self.stop)
+        self._plotters_are_enabled = not config.plotters_disabled
 
     def init_unpickled(self):
         super(Workflow, self).init_unpickled()
@@ -113,13 +114,10 @@ class Workflow(Unit):
         """
         self.generate_graph()
         retval = self.start_point.run_dependent()
-        if retval:
+        if retval is not None:
             return retval
         self.end_point.wait()
         self.print_stats()
-
-    def emergency_stop(self):
-        self.end_point.run()
 
     def add_ref(self, unit):
         if unit not in self.units:
@@ -209,6 +207,14 @@ class Workflow(Unit):
     def is_finished(self):
         return self.end_point.is_finished()
 
+    @property
+    def plotters_are_enabled(self):
+        return self._plotters_are_enabled
+
+    @plotters_are_enabled.setter
+    def plotters_are_enabled(self, value):
+        self._plotters_are_enabled = value
+
     def do_job(self, data):
         """
         Executes this workflow on the given source data. Run by a slave.
@@ -233,7 +239,7 @@ class Workflow(Unit):
         return 0
 
     def stop(self):
-        self.end_point.sem_.release()
+        self.end_point.run()
 
     def generate_graph(self, filename=None, write_on_disk=True):
         if config.is_slave:

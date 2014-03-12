@@ -107,6 +107,7 @@ class ZmqConnection(object):
         self.queue = deque()
         self.recv_parts = []
         self.read_scheduled = None
+        self.shutted_down = False
 
         self.fd = self.socket.get(constants.FD)
         self.socket.set(constants.LINGER, self.factory.lingerPeriod)
@@ -148,6 +149,9 @@ class ZmqConnection(object):
         """
         Shutdown (close) connection and ZeroMQ socket.
         """
+        if self.shutted_down:
+            return
+        self.shutted_down = True
         self.factory.reactor.removeReader(self)
 
         self.factory.connections.discard(self)
@@ -214,6 +218,8 @@ class ZmqConnection(object):
         Implementation of :tm:`IReadDescriptor
         <internet.interfaces.IReadDescriptor>`.
         """
+        if self.shutted_down:
+            return
         if self.read_scheduled is not None:
             if not self.read_scheduled.called:
                 self.read_scheduled.cancel()
@@ -263,6 +269,8 @@ class ZmqConnection(object):
             message) or just str
         :type message: str or list of str
         """
+        if self.shutted_down:
+            return
         if isinstance(message, bytes):
             self.socket.send(message, constants.NOBLOCK)
         else:

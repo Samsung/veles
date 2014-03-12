@@ -42,9 +42,10 @@ class ZmqContextManager(object):
         Create ZeroMQ context.
         """
         if not self.initialized:
+            self.initialized = True
             self.connections = set()
             self.context = Context(self.ioThreads)
-            self.initialized = True
+            self.shutted_down = False
             self.registerForShutdown()
 
     def __repr__(self):
@@ -58,11 +59,13 @@ class ZmqContextManager(object):
         and terminating ZeroMQ context. Also cleans up
         Twisted reactor.
         """
+        if self.shutted_down:
+            return
+        self.shutted_down = True
         for connection in self.connections.copy():
             connection.shutdown()
 
         self.connections = None
-
         self.context.term()
         self.context = None
 

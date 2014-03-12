@@ -10,8 +10,10 @@ import six
 from twisted.protocols.basic import LineReceiver
 import uuid
 
+import logger
 
-class NetworkAgent(object):
+
+class NetworkAgent(logger.Logger):
     """
     Stores the address and the port number.
     """
@@ -42,7 +44,7 @@ class NetworkAgent(object):
             if not self.address:
                 self.address = "0.0.0.0"
             self.port = int(configuration[idx_semicolon + 1:])
-        logging.info("Network configuration: %s:%d", self.address, self.port)
+        self.info("Network configuration: %s:%d", self.address, self.port)
 
     @property
     def pid(self):

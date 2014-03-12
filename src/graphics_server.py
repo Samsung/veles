@@ -34,17 +34,20 @@ class GraphicsServer(Logger):
     _instance = None
     _pair_fds = {}
 
-    def __new__(cls):
+    def __new__(cls, *args, **kwargs):
         if not cls._instance:
             cls._instance = super(GraphicsServer, cls).__new__(cls)
             cls._instance.initialized = False
         return cls._instance
 
-    def __init__(self):
+    def __init__(self, thread_pool=None):
         if self.initialized:
             return
         self.initialized = True
+        assert(thread_pool is not None,
+               "GraphicsServer was not previously initialized")
         super(GraphicsServer, self).__init__()
+        thread_pool.register_on_shutdown(self.shutdown)
         zmq_endpoints = [ZmqEndpoint("bind", "inproc://veles-plots"),
                          ZmqEndpoint("bind", "rndipc://veles-ipc-plots-:")]
         interfaces = []
@@ -89,28 +92,26 @@ class GraphicsServer(Logger):
         self.zmq_connection.send(data)
 
     def shutdown(self):
-        self.debug("Broadcasting None")
+        self.debug("Shutting down")
         self.enqueue(None)
 
     @staticmethod
-    def launch_pair(webagg_callback=None):
-        if not config.plotters_disabled:
-            server = GraphicsServer()
-            args = ["env", "python3", graphics_client.__file__,
-                    config.matplotlib_backend,
-                    server.endpoints["ipc"]]
-            if config.matplotlib_backend == "WebAgg" and \
-               webagg_callback is not None:
-                tmpdir = mkdtemp(prefix="veles-graphics")
-                tmpfn = os.path.join(tmpdir, "comm")
-                os.mkfifo(tmpfn)
-                fifo = os.open(tmpfn, os.O_RDONLY | os.O_NONBLOCK)
-                reactor.callLater(0, GraphicsServer._read_webagg_port,
-                                  fifo, tmpfn, tmpdir, webagg_callback)
-                args.append(tmpfn)
-            client = subprocess.Popen(args, stdout=sys.stdout,
-                                      stderr=sys.stderr)
-            return server, client
+    def launch_pair(thread_pool, backend, webagg_callback=None):
+        server = GraphicsServer(thread_pool)
+        args = ["env", "python3", graphics_client.__file__,
+                backend, server.endpoints["ipc"]]
+        if backend == "WebAgg" and \
+           webagg_callback is not None:
+            tmpdir = mkdtemp(prefix="veles-graphics")
+            tmpfn = os.path.join(tmpdir, "comm")
+            os.mkfifo(tmpfn)
+            fifo = os.open(tmpfn, os.O_RDONLY | os.O_NONBLOCK)
+            reactor.callLater(0, GraphicsServer._read_webagg_port,
+                              fifo, tmpfn, tmpdir, webagg_callback)
+            args.append(tmpfn)
+        client = subprocess.Popen(args, stdout=sys.stdout,
+                                  stderr=sys.stderr)
+        return server, client
 
     @staticmethod
     def _read_webagg_port(fifo, tmpfn, tmpdir, webagg_callback):

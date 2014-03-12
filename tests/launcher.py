@@ -22,13 +22,14 @@ import veles.workflows
 class TestWorkflow(veles.workflows.Workflow):
     job_requested = False
     job_done = False
+    job_dropped = False
     update_applied = False
     power_requested = False
 
     def __init__(self, workflow, **kwargs):
         super(TestWorkflow, self).__init__(workflow, **kwargs)
 
-    def request_job(self):
+    def request_job(self, slave):
         TestWorkflow.job_requested = True
         return pickle.dumps({'objective': 'win'})
 
@@ -38,12 +39,15 @@ class TestWorkflow(veles.workflows.Workflow):
             TestWorkflow.job_done = True
         return data
 
-    def apply_update(self, update):
+    def apply_update(self, update, slave):
         obj = pickle.loads(update)
         if isinstance(obj, dict):
             TestWorkflow.update_applied = True
             return True
         return False
+
+    def drop_slave(self, slave):
+        TestWorkflow.job_dropped = True
 
     def get_computing_power(self):
         TestWorkflow.power_requested = True
@@ -56,19 +60,22 @@ class Test(unittest.TestCase):
         self.master_workflow = TestWorkflow(None)
         self.slave_workflow = TestWorkflow(None)
         veles.config.web_status_host = socket.gethostname()
-        self.server = Launcher(self.master_workflow, mode="master",
-                               addr="localhost:9999")
-        self.client = Launcher(self.slave_workflow, mode="slave",
-                               addr="localhost:9999")
+        self.server = Launcher(listen_address="localhost:9999",
+                               web_status=False)
+        self.server.initialize(self.master_workflow)
+        self.client = Launcher(server_address="localhost:9999")
+        self.client.initialize(self.slave_workflow)
 
     def tearDown(self):
         pass
 
     def testConnectivity(self):
-        reactor.callLater(0.5, reactor.stop)
-        reactor.run()
+        reactor.callLater(0.1, self.server.stop)
+        self.server.run()
         self.assertTrue(TestWorkflow.job_requested, "Job was not requested.")
         self.assertTrue(TestWorkflow.job_done, "Job was not done.")
+        self.assertTrue(TestWorkflow.job_dropped,
+                        "Job was not dropped in the end.")
         self.assertTrue(TestWorkflow.update_applied, "Update was not applied.")
         self.assertTrue(TestWorkflow.power_requested,
                         "Power was not requested.")

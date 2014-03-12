@@ -14,8 +14,6 @@ from twisted.internet.protocol import ReconnectingClientFactory
 from txzmq import ZmqConnection, ZmqEndpoint
 import zmq
 
-from daemon import daemonize
-from logger import Logger
 from network_common import NetworkAgent, StringLineReceiver
 
 
@@ -219,34 +217,21 @@ class VelesProtocolFactory(ReconnectingClientFactory):
                               connector.connect)
         else:
             self.host.info("Disconnected.")
-            self.host.stop()
+            self.host.launcher.stop()
 
     def clientConnectionFailed(self, connector, reason):
         self.host.warning('Connection failed. Reason: %s', reason)
         self.clientConnectionLost(connector, reason)
 
 
-class Client(NetworkAgent, Logger):
+class Client(NetworkAgent):
     """
     UDT/TCP client operating on a single socket.
     """
 
-    def __init__(self, configuration, workflow):
+    def __init__(self, configuration, workflow, launcher):
         super(Client, self).__init__(configuration)
         self.workflow = workflow
+        self.launcher = launcher
         self.factory = VelesProtocolFactory(self)
         reactor.connectTCP(self.address, self.port, self.factory)
-
-    @daemonize
-    def run(self):
-        try:
-            reactor.run()
-        except:
-            self.exception("Failed to run the reactor")
-
-    def stop(self):
-        try:
-            if reactor.running:
-                reactor.stop()
-        except:
-            self.exception("Failed to stop the reactor")

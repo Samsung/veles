@@ -118,6 +118,7 @@ class GraphicsClient(Logger):
             reactor.run()
         else:
             self.pp.show()
+        self.info("Finished")
 
     def _process_qt_events(self):
         self.root.processEvents()
@@ -149,9 +150,8 @@ class GraphicsClient(Logger):
             plotter.show_figure = self.show_figure
             plotter.redraw()
         else:
-            self.info("Received the termination command")
-            with self._lock:
-                self.shutdown()
+            # self.debug("Received the termination command")
+            self.shutdown()
 
     def show_figure(self, figure):
         if self.pp.get_backend() != "WebAgg":
@@ -160,12 +160,11 @@ class GraphicsClient(Logger):
             with self.condition:
                 self.condition.notify()
 
-    def shutdown(self):
+    def shutdown(self, urgent=False):
         with self._lock:
             if not self._started or self._shutted_down:
                 return
-            if reactor.running:
-                reactor.stop()
+            self.info("Shutting down")
             self._shutted_down = True
             if self.pp.get_backend() == "TkAgg":
                 self.root.destroy()
@@ -173,9 +172,15 @@ class GraphicsClient(Logger):
                 self.root.quit()
             elif self.pp.get_backend() == "WebAgg":
                 ioloop.IOLoop.instance().stop()
+            if not urgent:
+                reactor.stop()
+            else:
+                reactor.crash()
+            # Not strictly necessary, but prevents from DoS
+            self.zmq_connection.shutdown()
 
     def _sigint_handler(self, signal, frame):
-        self.shutdown()
+        self.shutdown(True)
         self._sigint_initial(signal, frame)
 
 

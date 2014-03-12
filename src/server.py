@@ -5,26 +5,16 @@ Created on Jan 14, 2014
 """
 
 import fysom
-import getpass
 import json
 import six
 import socket
-import time
-import threading
-from tornado.httpclient import AsyncHTTPClient
-import tornado.ioloop as ioloop
-from twisted.internet import reactor, threads, task
+from twisted.internet import reactor, threads
 from twisted.internet.protocol import ServerFactory
-from twisted.web.html import escape
 from txzmq import ZmqConnection, ZmqEndpoint
 import uuid
 import zmq
 
-import config
-from daemon import daemonize
-from logger import Logger
 from network_common import NetworkAgent, StringLineReceiver
-import graphics_server
 
 
 class ZmqRouter(ZmqConnection):
@@ -142,7 +132,7 @@ class VelesProtocol(StringLineReceiver):
             del(self.nodes[self.id])
             del(self.factory.protocols[self._id])
             if len(self.nodes) == 0:
-                self.host.stop()
+                self.host.launcher.stop()
         else:
             threads.deferToThreadPool(reactor,
                                       self.host.workflow.thread_pool(),
@@ -299,28 +289,18 @@ class VelesProtocolFactory(ServerFactory):
         return VelesProtocol(addr, self)
 
 
-class Server(NetworkAgent, Logger):
+class Server(NetworkAgent):
     """
     UDT/TCP server operating on a single socket
     """
 
-    def __init__(self, configuration, workflow):
+    def __init__(self, configuration, workflow, launcher):
         super(Server, self).__init__(configuration)
-        self.id = str(uuid.uuid4())
         self.nodes = {}
         self.workflow = workflow
-        self.workflow_graph = self.workflow.generate_graph(write_on_disk=False)
+        self.launcher = launcher
         self.factory = VelesProtocolFactory(self)
         reactor.listenTCP(self.port, self.factory, interface=self.address)
-        self.notify_task = task.LoopingCall(self.notify_status)
-        self.notify_agent = AsyncHTTPClient()
-        self.webagg_port = 0
-        if not config.plotters_disabled:
-            self.graphics_server, self.graphics_client = \
-                graphics_server.GraphicsServer.launch_pair(
-                    self.set_webagg_port)
-        self.tornado_ioloop_thread = threading.Thread(
-            target=ioloop.IOLoop.instance().start)
         self.zmq_connection = ZmqRouter(self,
             ZmqEndpoint("bind", "inproc://veles"),
             ZmqEndpoint("bind", "rndipc://veles-ipc-:"),
@@ -333,35 +313,6 @@ class Server(NetworkAgent, Logger):
         self.info("ZeroMQ endpoints: %s",
                   ' '.join(self.zmq_endpoints.values()))
 
-    @daemonize
-    def run(self):
-        self.start_time = time.time()
-        self.tornado_ioloop_thread.start()
-        self.notify_task.start(config.web_status_notification_interval,
-                               now=False)
-        try:
-            reactor.run()
-        except:
-            self.exception("Failed to run the reactor")
-
-    def stop(self):
-        try:
-            self.notify_task.stop()
-            ioloop.IOLoop.instance().stop()
-            self.tornado_ioloop_thread.join()
-            if not config.plotters_disabled:
-                reactor.callLater(0, self._wait_graphics_client)
-            elif reactor.running:
-                reactor.stop()
-        except:
-            self.exception("Failed to stop the reactor")
-
-    def _wait_graphics_client(self):
-        if self.graphics_client.poll() is not None:
-            reactor.stop()
-        else:
-            reactor.callLater(0, self._wait_graphics_client)
-
     def endpoint(self, mid, pid, hip):
         if self.mid == mid:
             if self.pid == pid:
@@ -370,41 +321,3 @@ class Server(NetworkAgent, Logger):
                 return self.zmq_endpoints["ipc"]
         else:
             return self.zmq_endpoints["tcp"].replace("*", hip)
-
-    def set_webagg_port(self, port):
-        self.info("Found out the WebAgg port: %d", port)
-        self.webagg_port = port
-
-    def handle_notify_request(self, response):
-        if response.error:
-            self.warning("Failed to upload the status update to %s:%s",
-                         config.web_status_host, config.web_status_port)
-        else:
-            self.debug("Successfully updated the status")
-
-    def notify_status(self):
-        mins, secs = divmod(time.time() - self.start_time, 60)
-        hours, mins = divmod(mins, 60)
-        ret = {'id': self.id,
-               'name': self.workflow.name(),
-               'master': socket.gethostname(),
-               'time': "%02d:%02d:%02d" % (hours, mins, secs),
-               'user': getpass.getuser(),
-               'graph': self.workflow_graph,
-               'slaves': self.nodes,
-               'plots': "http://%s:%d" % (socket.gethostname(),
-                                          self.webagg_port),
-               'custom_plots':
-                    ";".join(self.graphics_server.endpoints["epgm"]) + ";" +
-                    self.graphics_server.endpoints["ipc"],
-               'description': "<br />".join(escape(
-                                  self.workflow.__doc__).split("\n"))}
-        timeout = config.web_status_notification_interval / 2
-        self.notify_agent.fetch("http://%s:%d/%s" % (config.web_status_host,
-                                                     config.web_status_port,
-                                                     config.web_status_update),
-                                self.handle_notify_request,
-                                method='POST', headers=None,
-                                connect_timeout=timeout,
-                                request_timeout=timeout,
-                                body=json.dumps(ret))

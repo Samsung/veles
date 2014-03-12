@@ -23,10 +23,6 @@ class Plotter(Unit):
         kwargs["view_group"] = view_group
         super(Plotter, self).__init__(workflow, **kwargs)
         self.stripped_pickle = False
-        if (not config.plotters_disabled and
-            not Plotter.server_shutdown_registered):
-            self.thread_pool().register_on_shutdown(self.on_shutdown)
-            Plotter.server_shutdown_registered = True
         self.last_run = time.time()
         self.redraw_threshold = 0.1
 
@@ -44,7 +40,7 @@ class Plotter(Unit):
         return state
 
     def run(self):
-        if not config.plotters_disabled and \
+        if self.workflow.plotters_are_enabled and \
            (time.time() - self.last_run) > self.redraw_threshold:
             self.last_run = time.time()
             self.stripped_pickle = True
@@ -52,10 +48,6 @@ class Plotter(Unit):
             self.stripped_pickle = False
             if self.should_unlock_pipeline:
                 self.workflow.unlock_pipeline()
-
-    def on_shutdown(self):
-        self.debug("Waiting for the graphics server process to finish")
-        GraphicsServer().shutdown()
 
     def generate_data_for_master(self):
         return True
