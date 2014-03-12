@@ -7,16 +7,18 @@ Created on Jan 21, 2014
 
 
 import copy
-import logging
 import six
 from six.moves import queue
 import signal
+from six.moves import zip
 import sys
 import types
 from twisted.python import threadpool
 
+import logger
 
-class ThreadPool(threadpool.ThreadPool):
+
+class ThreadPool(threadpool.ThreadPool, logger.Logger):
     """
     Pool of threads.
     """
@@ -36,9 +38,11 @@ class ThreadPool(threadpool.ThreadPool):
         else:
             threadpool.ThreadPool.__init__(
                 self, minthreads=minthreads, maxthreads=maxthreads, name=name)
+        logger.Logger.__init__(self)
         self.q = queue.Queue(queue_size)
         self.start()
         self.on_shutdowns = []
+        self.shutting_down = False
         if not ThreadPool.pools:
             ThreadPool.sysexit_initial = sys.exit
             sys.exit = ThreadPool.exit
@@ -73,13 +77,18 @@ class ThreadPool(threadpool.ThreadPool):
         """
         self.queue.appendleft(item)
 
-    def shutdown(self, execute_remaining=False, force=False, timeout=0.25):
+    def shutdown(self, execute_remaining=True, force=False, timeout=0.25):
         """Safely brings thread pool down.
         """
-        if self not in ThreadPool.pools:
+        if self not in ThreadPool.pools or self.shutting_down:
             return
-        for on_shutdown in self.on_shutdowns:
+        self.shutting_down = True
+        sdl = len(self.on_shutdowns)
+        self.debug("Running shutdown-ers")
+        for on_shutdown, ind in zip(self.on_shutdowns, range(sdl)):
+            self.debug("%d/%d - %s", ind, sdl, str(on_shutdown))
             on_shutdown()
+        self.debug("Joining threads")
         del self.on_shutdowns[:]
         self.joined = True
         threads = copy.copy(self.threads)
@@ -96,25 +105,26 @@ class ThreadPool(threadpool.ThreadPool):
                 if thread.is_alive():
                     if hasattr(thread, "_stop") and callable(thread._stop):
                         thread._stop()
-                    logging.warning("Failed to join with thread #%d " +
-                                    "since the timeout (%.2f sec) was " +
-                                    "exceeded.%s",
-                                    thread.ident, timeout, " It was killed."
-                                    if (hasattr(thread, "_stop") and
-                                        callable(thread._stop))
-                                    else " It was not killed "
-                                    "due to the lack of _stop for Thread "
-                                    "in current python interpreter.")
+                    self.warning("Failed to join with thread #%d since the "
+                                 "timeout (%.2f sec) was exceeded.%s",
+                                 thread.ident, timeout, " It was killed."
+                                 if (hasattr(thread, "_stop") and
+                                     callable(thread._stop))
+                                 else " It was not killed "
+                                      "due to the lack of _stop for Thread "
+                                      "in current python interpreter.")
         ThreadPool.pools.remove(self)
+        self.debug("I am destroyed")
+        self.shutting_down = False
 
     @staticmethod
-    def shutdown_pools():
+    def shutdown_pools(execute_remaining=True, force=False, timeout=0.25):
         """
         Private method to shut down all the pools.
         """
         pools = copy.copy(ThreadPool.pools)
         for pool in pools:
-            pool.shutdown()
+            pool.shutdown(execute_remaining, force, timeout)
 
     @staticmethod
     def exit(retcode=0):
@@ -130,5 +140,5 @@ class ThreadPool(threadpool.ThreadPool):
         """
         Private method - handler for SIGINT.
         """
-        ThreadPool.shutdown_pools()
+        ThreadPool.shutdown_pools(execute_remaining=False, force=True)
         ThreadPool.sigint_initial(signal, frame)

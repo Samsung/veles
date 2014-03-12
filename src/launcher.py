@@ -3,118 +3,278 @@ Created on Feb 10, 2014
 
 Workflow launcher (server/client/standalone).
 
-@author: Kazantsev Alexey <a.kazantsev@samsung.com>
+@author: Kazantsev Alexey <a.kazantsev@samsung.com>,
+         Markovtsev Vadim <v.markovtsev@samsung.com>
 """
-import os
-import sys
+
+
 import argparse
+import daemon
+import getpass
+import json
+import os
 import paramiko
 import socket
+import sys
+import threading
+import time
+from tornado.ioloop import IOLoop
+from tornado.httpclient import AsyncHTTPClient
+from twisted.internet import reactor, threads, task
+from twisted.web.html import escape
+import uuid
+
 import client
 import config
-import server
+import graphics_server
 import logger
-import units
+import server
+
+
+def threadsafe(fn):
+    def wrapped(self, *args, **kwargs):
+        with self._lock:
+            return fn(self, *args, **kwargs)
+    return wrapped
 
 
 class Launcher(logger.Logger):
     """Workflow launcher.
 
     Parameters:
-    mode                  The operation mode ("slave" or "master").
-    addr                  The partner's address (host:port).
-                          These two parameters are used in case of empty
-                          command line args.
-    skip_web_status       If set to True, do not launch the status server.
-                          It will not start if already running, anyway.
-    slaves                The list of slaves to launch remotely.
+        parser                A custom argparse.ArgumentParser instance.
+        server_address        The server address (Slave Mode).
+        listen_address        The address to listen (MAster Mode).
+        backend               Matplotlib backend to use.
+        daemonize             Run as a daemon in background.
+        web_status            Report the status to the web server, launch it if
+                              necessary.
+        slaves                The list of slaves to launch remotely.
     """
+
     def __init__(self, **kwargs):
         super(Launcher, self).__init__()
-        parser = kwargs.get("parser")
-        if parser is None:
-            parser = argparse.ArgumentParser()
-        parser.add_argument("-s", "--server_address", type=str, default="",
-            help="Workflow will be launched in client mode "
-            "and connected to the server at the specified address.")
-        parser.add_argument("-l", "--listen_address", type=str, default="",
-            help="Workflow will be launched in server mode "
-            "and will accept client connections at the specified address.")
-        parser.add_argument("-p", "--matplotlib_backend", type=str,
-                            default="Qt4Agg",
-            help="Matplotlib drawing backend.")
+        parser = kwargs.get("parser", argparse.ArgumentParser())
+        parser.add_argument("-s", "--server-address", type=str,
+                            default=kwargs.get("server_address", ""),
+                            help="Workflow will be launched in client mode "
+                            "and connected to the server at the specified "
+                            "address.")
+        parser.add_argument("-l", "--listen-address", type=str,
+                            default=kwargs.get("listen_address", ""),
+                            help="Workflow will be launched in server mode "
+                                 "and will accept client connections at the "
+                                 "specified address.")
+        parser.add_argument("-p", "--matplotlib-backend", type=str,
+                            default=kwargs.get("backend",
+                                               config.matplotlib_backend),
+                            help="Matplotlib drawing backend.")
+        parser.add_argument("-b", "--background", type=bool,
+                            default=kwargs.get("daemonize", False),
+                            help="Run in background as a daemon.")
+        parser.add_argument("-w", "--web-status", type=bool,
+                            default=kwargs.get("web_status", True),
+                            help="Report own status to the Web Status Server.")
+        parser.add_argument("-n", "--nodes", type=str,
+                            default=kwargs.get("slaves", ""),
+                            help="The list of slaves to launch remotely "
+                                 "separated by a comma.")
         self.args = parser.parse_args()
-
         self.args.server_address = self.args.server_address.strip()
         self.args.listen_address = self.args.listen_address.strip()
-        config.matplotlib_backend = self.args.matplotlib_backend;
+        self._slaves = [x.strip() for x in self.args.nodes.split(',')
+                        if x.strip() != ""]
+        self._lock = threading.Lock()
+        self._webagg_port = 0
+        self._workflow = None
+        self._id = str(uuid.uuid4())
+        self._initialized = False
+        self._running = False
 
-        if (not self.args.server_address and
-           "mode" in kwargs and kwargs["mode"] == "slave"):
-            self.args.server_address = kwargs["addr"]
-        if (not self.args.listen_address and
-           "mode" in kwargs and kwargs["mode"] == "master"):
-            self.args.listen_address = kwargs["addr"]
+    @property
+    def id(self):
+        return self._id
 
-        self.args.skip_web_status = kwargs.get("skip_web_status", False)
-        self.args.slaves = kwargs.get("slaves")
+    @property
+    def daemonize(self):
+        return self.args.background
 
-        if self.args.server_address:
-            config.is_slave = True
-            config.plotters_disabled = True
+    @property
+    def matplotlib_backend(self):
+        return self.args.matplotlib_backend
 
+    @property
+    def reports_web_status(self):
+        return self.args.web_status and not self.is_slave
+
+    @property
+    def slaves(self):
+        return self._slaves if not self.is_slave else []
+
+    @property
+    def webagg_port(self):
+        return self._webagg_port
+
+    @property
     def is_master(self):
         return True if self.args.listen_address else False
 
-    def on_shutdown(self):
-        self.stop()
+    @property
+    def is_slave(self):
+        return True if self.args.server_address else False
 
+    @property
+    def is_standalone(self):
+        return not self.is_master and not self.is_slave
+
+    @property
+    def mode(self):
+        if self.is_master:
+            return "master"
+        if self.is_slave:
+            return "slave"
+        if self.is_standalone:
+            return "standalone"
+        raise RuntimeError("Impossible happened")
+
+    @property
+    def is_initialized(self):
+        return self._initialized
+
+    @property
+    def is_running(self):
+        return self._running
+
+    @property
+    def workflow(self):
+        return self._workflow
+
+    @threadsafe
     def initialize(self, workflow):
-        workflow.thread_pool().register_on_shutdown(self.on_shutdown)
-        if self.args.server_address:
+        self._workflow = workflow
+        if self.is_slave:
+            workflow.plotters_are_enabled = False
+        self.workflow_graph = self.workflow.generate_graph(write_on_disk=False)
+        workflow.thread_pool.register_on_shutdown(self._on_shutdown)
+
+        if self.is_slave:
             self.agent = client.Client(self.args.server_address, workflow)
-        elif self.args.listen_address:
-            self.agent = server.Server(self.args.listen_address, workflow)
-            # Launch the status server if it's not been running yet
-            if not self.args.skip_web_status:
-                # Launch the status server if it's not been running yet
-                self.launch_status()
-            # Launch the nodes described in the configuration file/string
-            nodes = self.args.slaves
-            if nodes is not None:
-                self.launch_nodes(nodes)
         else:
-            self.agent = workflow
+            if self.reports_web_status:
+                self.tornado_ioloop_thread = threading.Thread(
+                    target=IOLoop.instance().start)
+                self._notify_task = task.LoopingCall(self._notify_status)
+                self._notify_agent = AsyncHTTPClient()
+                # Launch the status server if it's not been running yet
+                self._launch_status()
+            if workflow.plotters_are_enabled:
+                self.graphics_server, self.graphics_client = \
+                    graphics_server.GraphicsServer.launch_pair(
+                        workflow.thread_pool, self.matplotlib_backend,
+                        self._set_webagg_port)
+            if self.is_master:
+                self.agent = server.Server(self.args.listen_address, workflow)
+                # Launch the nodes described in the configuration file/string
+                self._launch_nodes()
+            else:
+                self.agent = workflow
+        self._initialized = True
 
-    def run(self, daemonize=False):
-        return (self.agent.run() if isinstance(self.agent, units.Unit)
-                else self.agent.run(daemonize=daemonize))
+    def run(self):
+        self._pre_run(daemonize=self.daemonize)
+        try:
+            reactor.run()
+        except:
+            self.exception("Reactor malfunction. The whole facility is going "
+                           "to be destroyed in 10 minutes. Personnel "
+                           "evacuation has been started.")
+        finally:
+            with self._lock:
+                self._running = False
 
-    def stop(self):
-        if hasattr(self, "agent"):
-            self.agent.stop()
+    @threadsafe
+    def stop(self, *args, urgent=False):
+        if not self._initialized:
+            raise RuntimeError("Launcher was not initialized")
+        if not self._running:
+            raise RuntimeError("Launcher is not running")
+        self.info("Stopping everything (%s mode)", self.mode)
+        # Kill the Web status Server notification task and thread
+        if self.reports_web_status:
+            self._notify_task.stop()
+            IOLoop.instance().stop()
+            self.tornado_ioloop_thread.join()
+        # Wait for the own graphics client to terminate normally
+        if self.workflow.plotters_are_enabled:
+            attempt = 0
+            while self.graphics_client.poll() is None and attempt < 10:
+                self.graphics_server.shutdown()
+                attempt += 1
+                time.sleep(0.1)
+            if self.graphics_client.poll() is None:
+                self.graphics_client.terminate()
+                self.info("Graphics client has been terminated")
+            else:
+                self.info("Graphics client returned normally")
+        if self.is_standalone:
+            self.agent.thread_pool.shutdown()
+        try:
+            if not urgent:
+                reactor.stop()
+            else:
+                reactor.crash()
+        except:
+            self.exception("Failed to stop the reactor. There is going to be "
+                           "a meltdown unless you immediately activate the "
+                           "emergency graphite protection.")
 
-    def launch_status(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            result = sock.connect_ex((config.web_status_host,
-                                      config.web_status_port))
+    @daemon.daemonize
+    @threadsafe
+    def _pre_run(self):
+        if not self._initialized:
+            raise RuntimeError("Launcher was not initialized")
+        self._running = True
+        if self.reports_web_status:
+            self.start_time = time.time()
+            self.tornado_ioloop_thread.start()
+            self._notify_task.start(config.web_status_notification_interval,
+                                    now=False)
+        if self.is_standalone:
+            darun = threads.deferToThreadPool(reactor,
+                                              self.agent.thread_pool,
+                                              self.agent.run)
+            darun.addCallback(self.stop)
+
+    def _on_shutdown(self):
+        if self.is_running:
+            self.stop(urgent=True)
+
+    def _launch_status(self):
+        if not self.reports_web_status:
+            return
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = sock.connect_ex((config.web_status_host,
+                                  config.web_status_port))
+        sock.close()
         if result != 0:
             self.info("Launching the web status server")
-            self.launch_remote_program(
+            self._launch_remote_program(
                 config.web_status_host,
                 os.path.abspath(os.path.join(config.this_dir,
                                              "web_status.py")))
         else:
             self.info("Discovered an already running web status server")
 
-    def launch_nodes(self, nodes):
-        if not "nodes" in self.options:
+    def _launch_nodes(self):
+        if len(self.slaves) == 0:
             return
+        self.debug("Will launch the following slaves: %s",
+                   ', '.join(self.slaves))
         filtered_argv = []
         skip = False
         for i in range(1, len(sys.argv)):
             if filtered_argv[i] == "-l" or \
-               filtered_argv[i] == "--listen_address":
+               filtered_argv[i] == "--listen-address":
                 skip = True
             elif not skip:
                 filtered_argv.append(sys.argv[i])
@@ -127,16 +287,15 @@ class Launcher(logger.Logger):
         if not host or host == "0.0.0.0" or host == "localhost" or \
            host == "127.0.0.1":
             host = socket.gethostname()
-        filtered_argv.append("%s:%s", (host, port))
+        filtered_argv.append("%s:%s" % (host, port))
         slave_args = " ".join(filtered_argv)
         self.debug("Slave args: %s", slave_args)
-        for node in nodes:
-            self.launch_remote_program(node,
-                                       "%s %s" % (os.path.abspath(sys.argv[0]),
-                                                  slave_args))
+        for node in self.slaves:
+            self._launch_remote_program(
+                node, "%s %s" % (os.path.abspath(sys.argv[0]), slave_args))
 
-    def launch_remote_program(self, host, prog):
-        self.debug("Launching \"%s\" on %s", prog, host)
+    def _launch_remote_program(self, host, prog):
+        self.info("Launching \"%s\" on %s", prog, host)
         try:
             client = paramiko.SSHClient()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -145,3 +304,43 @@ class Launcher(logger.Logger):
             client.close()
         except:
             self.exception()
+
+    def _set_webagg_port(self, port):
+        self.info("Found out the WebAgg port: %d", port)
+        self._webagg_port = port
+
+    def _handle_notify_request(self, response):
+        if response.error:
+            self.warning("Failed to upload the status update to %s:%s",
+                         config.web_status_host, config.web_status_port)
+        else:
+            self.debug("Successfully updated the status")
+
+    def _notify_status(self):
+        mins, secs = divmod(time.time() - self.start_time, 60)
+        hours, mins = divmod(mins, 60)
+        ret = {'id': self.id,
+               'name': self.workflow.name(),
+               'master': socket.gethostname(),
+               'time': "%02d:%02d:%02d" % (hours, mins, secs),
+               'user': getpass.getuser(),
+               'graph': self.workflow_graph,
+               'slaves': self.agent.nodes if self.is_master else [],
+               'plots': "http://%s:%d" % (socket.gethostname(),
+                                          self.webagg_port),
+               'custom_plots':
+                    "<br/>".join(self.graphics_server.endpoints["epgm"]) + ";" +
+                    self.graphics_server.endpoints["ipc"],
+               'description': "<br />".join(escape(
+                    self.workflow.__doc__).split("\n"))}
+        timeout = config.web_status_notification_interval / 2
+        self._notify_agent.fetch("http://%s:%d/%s" % (
+                                    config.web_status_host,
+                                    config.web_status_port,
+                                    config.web_status_update
+                                 ),
+                                 self._handle_notify_request,
+                                 method='POST', headers=None,
+                                 connect_timeout=timeout,
+                                 request_timeout=timeout,
+                                 body=json.dumps(ret))

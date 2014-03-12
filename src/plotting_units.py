@@ -3,73 +3,17 @@ Created on May 17, 2013
 
 @author: Kumok Akim <a.kumok@samsung.com>
 """
+
+
 import numpy
 
 import config
 import opencl_types
 import formats
-from graphics import Graphics
-from units import Unit
+import plotter
 
 
-class Plotter(Unit):
-    """Base class for all plotters.
-    """
-    server_shutdown_registered = False
-
-    def __init__(self, workflow, **kwargs):
-        name = kwargs.get("name")
-        view_group = kwargs.get("view_group", "PLOTTER")
-        kwargs["name"] = name
-        kwargs["view_group"] = view_group
-        self.stripped_pickle = False
-        super(Plotter, self).__init__(workflow, **kwargs)
-        if (not config.plotters_disabled and
-            not Plotter.server_shutdown_registered):
-            self.thread_pool().register_on_shutdown(self.on_shutdown)
-            Plotter.server_shutdown_registered = True
-
-    def redraw(self):
-        """ Do the actual drawing here
-        """
-        pass
-
-    def __getstate__(self):
-        state = super(Plotter, self).__getstate__()
-        if self.stripped_pickle:
-            state["links_from"] = {}
-            state["links_to"] = {}
-            state["workflow"] = None
-        return state
-
-    def run(self):
-        if not config.plotters_disabled:
-            self.stripped_pickle = True
-            Graphics.enqueue(self)
-            self.stripped_pickle = False
-            if self.should_unlock_pipeline:
-                self.workflow.unlock_pipeline()
-
-    def on_shutdown(self):
-        self.debug("Waiting for the graphics server process to finish")
-        Graphics.shutdown()
-
-    def generate_data_for_master(self):
-        return True
-
-    def apply_data_from_slave(self, data, slave=None):
-        if ((((not Unit.callvle(self.gate_block[0])) and
-              (not Unit.callvle(self.gate_block_not[0]))) or
-             (Unit.callvle(self.gate_block[0]) and
-              Unit.callvle(self.gate_block_not[0]))) and
-            (((not Unit.callvle(self.gate_skip[0])) and
-              (not Unit.callvle(self.gate_skip_not[0]))) or
-             (Unit.callvle(self.gate_skip[0]) and
-              Unit.callvle(self.gate_skip_not[0])))):
-            self.run()
-
-
-class SimplePlotter(Plotter):
+class SimplePlotter(plotter.Plotter):
     """Accumulates supplied value and draws the accumulated plot.
 
     Should be assigned before initialize():
@@ -115,8 +59,8 @@ class SimplePlotter(Plotter):
         self.ylim = ylim
 
     def redraw(self):
-        Graphics().pp.ioff()
-        figure = Graphics().pp.figure(self.name())
+        self.pp.ioff()
+        figure = self.pp.figure(self.name())
         if self.clear_plot:
             figure.clf()
         axes = figure.add_subplot(111)  # Main axes
@@ -125,8 +69,8 @@ class SimplePlotter(Plotter):
         if self.ylim is not None:
             axes.set_ylim(self.ylim[0], self.ylim[1])
         axes.plot(self.values, self.plot_style)
-        Graphics().pp.ion()
-        Graphics().show_figure(figure)
+        self.pp.ion()
+        self.show_figure(figure)
         if self.redraw_plot:
             figure.canvas.draw()
         super(SimplePlotter, self).redraw()
@@ -144,7 +88,7 @@ class SimplePlotter(Plotter):
         super(SimplePlotter, self).run()
 
 
-class MatrixPlotter(Plotter):
+class MatrixPlotter(plotter.Plotter):
     """Plotter for drawing matrixes as table.
 
     Should be assigned before initialize():
@@ -164,7 +108,7 @@ class MatrixPlotter(Plotter):
         self.input_field = None
 
     def redraw(self):
-        Graphics().pp.ioff()
+        self.pp.ioff()
         if type(self.input_field) == int:
             if self.input_field < 0 or self.input_field >= len(self.input):
                 return
@@ -172,7 +116,7 @@ class MatrixPlotter(Plotter):
         else:
             value = self.input.__dict__[self.input_field]
 
-        figure = Graphics().pp.figure(self.name())
+        figure = self.pp.figure(self.name())
         figure.clf()
         num_rows = len(value) + 2
         num_columns = len(value[0]) + 2
@@ -180,22 +124,22 @@ class MatrixPlotter(Plotter):
         main_axes = figure.add_axes([0, 0, 1, 1])
         main_axes.cla()
         # First cell color
-        rc = Graphics().patches.Rectangle(
+        rc = self.patches.Rectangle(
             (0, (num_rows - 1) / num_rows),
             1.0 / num_rows, 1.0 / num_columns, color='gray')
         main_axes.add_patch(rc)
         # First row last cell color
-        rc = Graphics().patches.Rectangle(
+        rc = self.patches.Rectangle(
             ((num_columns - 1) / num_columns, (num_rows - 1) / num_rows),
             1.0 / num_rows, 1.0 / num_columns, color='gray')
         main_axes.add_patch(rc)
         # First column last cell color
-        rc = Graphics().patches.Rectangle(
+        rc = self.patches.Rectangle(
             (0, 0),
             1.0 / num_rows, 1.0 / num_columns, color='gray')
         main_axes.add_patch(rc)
         # Last cell color
-        rc = Graphics().patches.Rectangle(
+        rc = self.patches.Rectangle(
             ((num_columns - 1) / num_columns, 0),
             1.0 / num_rows, 1.0 / num_columns, color='silver')
         main_axes.add_patch(rc)
@@ -225,28 +169,28 @@ class MatrixPlotter(Plotter):
                         color = "#FF%02X%02X" % (v, v)
                     else:
                         color = 'green'
-                rc = Graphics().patches.Rectangle(
+                rc = self.patches.Rectangle(
                     (column / num_columns, (num_rows - row - 1) / num_rows),
                     1.0 / num_rows, 1.0 / num_columns, color=color)
                 main_axes.add_patch(rc)
 
         for row in range(num_rows):
             y = row / num_rows
-            main_axes.add_line(Graphics().lines.Line2D([0, 1], [y, y]))
+            main_axes.add_line(self.lines.Line2D([0, 1], [y, y]))
         for column in range(num_columns):
             x = column / num_columns
-            main_axes.add_line(Graphics().lines.Line2D([x, x], [0, 1]))
+            main_axes.add_line(self.lines.Line2D([x, x], [0, 1]))
 
         # First cell
         column = 0
         row = 0
-        Graphics().pp.figtext(label="0",
+        self.pp.figtext(label="0",
             s="target",
             x=(column + 0.9) / num_columns,
             y=(num_rows - row - 0.33) / num_rows,
             verticalalignment="center",
             horizontalalignment="right")
-        Graphics().pp.figtext(label="0",
+        self.pp.figtext(label="0",
             s="value",
             x=(column + 0.1) / num_columns,
             y=(num_rows - row - 0.66) / num_rows,
@@ -255,7 +199,7 @@ class MatrixPlotter(Plotter):
         # Headers in first row
         row = 0
         for column in range(1, num_columns - 1):
-            Graphics().pp.figtext(label=("C%d" % (column - 1)),
+            self.pp.figtext(label=("C%d" % (column - 1)),
                             s=(column - 1),
                             x=(column + 0.5) / num_columns,
                             y=(num_rows - row - 0.5) / num_rows,
@@ -264,7 +208,7 @@ class MatrixPlotter(Plotter):
                 # Headers in first column
         column = 0
         for row in range(1, num_rows - 1):
-            Graphics().pp.figtext(label=("R%d" % (row - 1)),
+            self.pp.figtext(label=("R%d" % (row - 1)),
                             s=(row - 1),
                             x=(column + 0.5) / num_columns,
                             y=(num_rows - row - 0.5) / num_rows,
@@ -277,14 +221,14 @@ class MatrixPlotter(Plotter):
                 n = sum_total
                 pt_total = 100.0 * n_elem / n if n else 0
                 label = "%d as %d" % (column - 1, row - 1)
-                Graphics().pp.figtext(
+                self.pp.figtext(
                     label=label,
                     s=n_elem,
                     x=(column + 0.5) / num_columns,
                     y=(num_rows - row - 0.33) / num_rows,
                     verticalalignment="center",
                     horizontalalignment="center")
-                Graphics().pp.figtext(
+                self.pp.figtext(
                     label=label,
                     s=("%.2f%%" % (pt_total)),
                     x=(column + 0.5) / num_columns,
@@ -297,27 +241,27 @@ class MatrixPlotter(Plotter):
         label = "Totals"
         row = num_rows - 1
         column = num_columns - 1
-        Graphics().pp.figtext(
+        self.pp.figtext(
             label=label,
             s=sum_ok,
             x=(column + 0.5) / num_columns,
             y=(num_rows - row - 0.33) / num_rows,
             verticalalignment="center",
             horizontalalignment="center")
-        Graphics().pp.figtext(
+        self.pp.figtext(
             label=label,
             s=("%.2f%%" % (pt_total)),
             x=(column + 0.5) / num_columns,
             y=(num_rows - row - 0.66) / num_rows,
             verticalalignment="center",
             horizontalalignment="center")
-        Graphics().pp.ion()
-        Graphics().show_figure(figure)
+        self.pp.ion()
+        self.show_figure(figure)
         figure.canvas.draw()
         super(MatrixPlotter, self).redraw()
 
 
-class Weights2D(Plotter):
+class Weights2D(plotter.Plotter):
     """Plotter for drawing weights as 2D.
 
     Should be assigned before initialize():
@@ -361,7 +305,7 @@ class Weights2D(Plotter):
         if value.shape[0] > self.limit:
             value = value[:self.limit]
 
-        figure = Graphics().pp.figure(self.name())
+        figure = self.pp.figure(self.name())
         figure.clf()
 
         color = False
@@ -411,20 +355,20 @@ class Weights2D(Plotter):
                 else:
                     ax.imshow(formats.norm_image(v.reshape(sy, sx),
                                                  self.yuv[0]),
-                              interpolation="nearest", cmap=Graphics().cm.gray)
+                              interpolation="nearest", cmap=self.cm.gray)
                 i += 1
                 if i >= value.shape[0]:
                     break
             if i >= value.shape[0]:
                 break
 
-        Graphics().show_figure(figure)
+        self.show_figure(figure)
         figure.canvas.draw()
 
         super(Weights2D, self).redraw()
 
 
-class Image(Plotter):
+class Image(plotter.Plotter):
     """Plotter for drawing N images.
 
     Should be assigned before initialize():
@@ -491,10 +435,10 @@ class Image(Plotter):
         else:
             img = formats.norm_image(w, self.yuv[0])
             print("IMAGE:", img.min(), img.max())
-            ax.imshow(img, interpolation="nearest", cmap=Graphics().cm.gray)
+            ax.imshow(img, interpolation="nearest", cmap=self.cm.gray)
 
     def redraw(self):
-        figure = Graphics().pp.figure(self.name())
+        figure = self.pp.figure(self.name())
         figure.clf()
 
         for i, input_field in enumerate(self.input_fields):
@@ -510,12 +454,12 @@ class Image(Plotter):
             ax.cla()
             self.draw_image(ax, value)
 
-        Graphics().show_figure(figure)
+        self.show_figure(figure)
         figure.canvas.draw()
         super(Image, self).redraw()
 
 
-class Plot(Plotter):
+class Plot(plotter.Plotter):
     """Plotter for drawing N plots together.
 
     Should be assigned before initialize():
@@ -545,7 +489,7 @@ class Plot(Plotter):
         self.ylim = ylim
 
     def redraw(self):
-        figure = Graphics().pp.figure(self.name())
+        figure = self.pp.figure(self.name())
         figure.clf()
         ax = figure.add_subplot(111)
         ax.cla()
@@ -562,12 +506,12 @@ class Plot(Plotter):
 
             ax.plot(value, self.input_styles[i])
 
-        Graphics().show_figure(figure)
+        self.show_figure(figure)
         figure.canvas.draw()
         super(Plot, self).redraw()
 
 
-class MSEHistogram(Plotter):
+class MSEHistogram(plotter.Plotter):
     """Plotter for drawing histogram.
 
     Should be assigned before initialize():
@@ -595,7 +539,7 @@ class MSEHistogram(Plotter):
                                    dtype=opencl_types.dtypes[config.dtype])
 
     def redraw(self):
-        fig = Graphics().pp.figure(self.name())
+        fig = self.pp.figure(self.name())
         fig.clf()
         fig.patch.set_facecolor('#E8D6BB')
         # fig.patch.set_alpha(0.45)
@@ -661,15 +605,15 @@ class MSEHistogram(Plotter):
 
         for x, y in zip(N, self.val_mse):
             if y > koef - l2 * 0.75:
-                Graphics().pp.text(x + l1, y - l2 * 0.75, '%.0f' % y,
+                self.pp.text(x + l1, y - l2 * 0.75, '%.0f' % y,
                                    ha='center', va='bottom',
                                    fontsize=l3, rotation=90)
             else:
-                Graphics().pp.text(x + l1, t0, '%.0f' % y,
+                self.pp.text(x + l1, t0, '%.0f' % y,
                                    ha='center', va='bottom',
                                    fontsize=l3, rotation=90)
 
-        Graphics().show_figure(fig)
+        self.show_figure(fig)
         fig.canvas.draw()
         super(MSEHistogram, self).redraw()
 

@@ -66,7 +66,7 @@ class EndPoint(UttermostPoint):
     def generate_data_for_master(self):
         return True
 
-    def apply_data_from_slave(self, data, slave=None):
+    def apply_data_from_slave(self, data, slave):
         if ((((not Unit.callvle(self.gate_block[0])) and
               (not Unit.callvle(self.gate_block_not[0]))) or
              (Unit.callvle(self.gate_block[0]) and
@@ -94,6 +94,8 @@ class Workflow(Unit):
         self.units = []
         self.start_point = StartPoint(self)
         self.end_point = EndPoint(self)
+        self.thread_pool.register_on_shutdown(self.stop)
+        self._plotters_are_enabled = not config.plotters_disabled
 
     def init_unpickled(self):
         super(Workflow, self).init_unpickled()
@@ -112,7 +114,7 @@ class Workflow(Unit):
         """
         self.generate_graph()
         retval = self.start_point.run_dependent()
-        if retval:
+        if retval is not None:
             return retval
         self.end_point.wait()
         self.print_stats()
@@ -139,7 +141,7 @@ class Workflow(Unit):
         try:
             self.master_pipeline_lock_.release()
         except:
-            self.warn("Double unlock in unlock_pipeline")
+            self.warning("Double unlock in unlock_pipeline")
 
     def lock_data(self):
         """Locks master-slave data update.
@@ -156,7 +158,7 @@ class Workflow(Unit):
         try:
             self.master_data_lock_.release()
         except:
-            self.warn("Double unlock in unlock_data")
+            self.warning("Double unlock in unlock_data")
 
     def generate_data_for_master(self):
         data = []
@@ -164,7 +166,7 @@ class Workflow(Unit):
             data.append(unit.generate_data_for_master())
         return data
 
-    def generate_data_for_slave(self, slave=None):
+    def generate_data_for_slave(self, slave):
         self.lock_pipeline()
         if self.is_finished():
             self.unlock_pipeline()
@@ -181,19 +183,19 @@ class Workflow(Unit):
             if data[i] is not None:
                 self.units[i].apply_data_from_master(data[i])
 
-    def apply_data_from_slave(self, data, slave=None):
+    def apply_data_from_slave(self, data, slave):
         if not isinstance(data, list):
             raise ValueError("data must be a list")
         for i in range(len(self.units)):
             if data[i] is not None:
                 self.units[i].apply_data_from_slave(data[i], slave)
 
-    def drop_slave(self, slave=None):
+    def drop_slave(self, slave):
         self.info("Job drop")
         for i in range(len(self.units)):
             self.units[i].drop_slave(slave)
 
-    def request_job(self, slave=None):
+    def request_job(self, slave):
         """
         Produces a new job, when a slave asks for it. Run by a master.
         """
@@ -205,6 +207,14 @@ class Workflow(Unit):
     def is_finished(self):
         return self.end_point.is_finished()
 
+    @property
+    def plotters_are_enabled(self):
+        return self._plotters_are_enabled
+
+    @plotters_are_enabled.setter
+    def plotters_are_enabled(self, value):
+        self._plotters_are_enabled = value
+
     def do_job(self, data):
         """
         Executes this workflow on the given source data. Run by a slave.
@@ -214,7 +224,7 @@ class Workflow(Unit):
         self.run()
         return pickle.dumps(self.generate_data_for_master())
 
-    def apply_update(self, data, slave=None):
+    def apply_update(self, data, slave):
         """
         Harness the results of a slave's job. Run by a master.
         """
@@ -229,7 +239,7 @@ class Workflow(Unit):
         return 0
 
     def stop(self):
-        self.end_point.sem_.release()
+        self.end_point.run()
 
     def generate_graph(self, filename=None, write_on_disk=True):
         if config.is_slave:
@@ -262,7 +272,7 @@ class Workflow(Unit):
             self.info("Saving the workflow graph to %s", filename)
             g.write(filename, format='png')
         desc = g.to_string()
-        self.debug("Graphviz workflow scheme:\n" + desc)
+        self.debug("Graphviz workflow scheme:\n" + desc[:-1])
         return desc
 
     def print_stats(self, by_name=False, top_number=5):

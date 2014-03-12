@@ -28,7 +28,7 @@ class TestWorkflow(workflows.Workflow):
     def __init__(self, workflow, **kwargs):
         super(TestWorkflow, self).__init__(workflow, **kwargs)
 
-    def request_job(self):
+    def request_job(self, slave):
         TestWorkflow.job_requested = True
         return pickle.dumps({'objective': 'win'})
 
@@ -38,14 +38,14 @@ class TestWorkflow(workflows.Workflow):
             TestWorkflow.job_done = True
         return data
 
-    def apply_update(self, update, slave=None):
+    def apply_update(self, update, slave):
         obj = pickle.loads(update)
         if isinstance(obj, dict):
             TestWorkflow.update_applied = True
             return True
         return False
 
-    def drop_slave(self, slave=None):
+    def drop_slave(self, slave):
         TestWorkflow.job_dropped = True
 
     def get_computing_power(self):
@@ -54,25 +54,18 @@ class TestWorkflow(workflows.Workflow):
 
 
 class Test(unittest.TestCase):
-    CONFIG_FILE_NAME = "/tmp/test_network_veles_conf.py"
-
     def setUp(self):
-        conf = open(Test.CONFIG_FILE_NAME, "w")
-        conf.write("{'%s': '127.0.0.1', '%s': 5050}" %
-                   (network_common.NetworkConfigurable.CONFIG_ADDRESS,
-                    network_common.NetworkConfigurable.CONFIG_PORT))
-        conf.close()
         self.master = TestWorkflow(None)
         self.slave = TestWorkflow(None)
-        self.server = server.Server(Test.CONFIG_FILE_NAME, self.master)
-        self.client = client.Client(Test.CONFIG_FILE_NAME, self.slave)
-        reactor.callLater(0.1, self.server.stop)
+        self.server = server.Server("127.0.0.1:5050", self.master)
+        self.client = client.Client("127.0.0.1:5050", self.slave)
+        reactor.callLater(0.1, reactor.stop)
 
     def tearDown(self):
         pass
 
     def testWork(self):
-        self.server.run(daemonize=False)
+        reactor.run()
         self.assertTrue(TestWorkflow.job_requested, "Job was not requested.")
         self.assertTrue(TestWorkflow.job_done, "Job was not done.")
         self.assertTrue(TestWorkflow.update_applied, "Update was not applied.")
@@ -83,6 +76,5 @@ class Test(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'Test.testConnection']
     logging.basicConfig(level=logging.DEBUG)
     unittest.main()

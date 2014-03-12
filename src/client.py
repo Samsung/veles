@@ -7,13 +7,32 @@ Created on Jan 22, 2014
 
 import fysom
 import json
+import six
 import time
 from twisted.internet import reactor, threads
 from twisted.internet.protocol import ReconnectingClientFactory
+from txzmq import ZmqConnection, ZmqEndpoint
+import zmq
 
-from daemon import daemonize
-from logger import Logger
-from network_common import NetworkConfigurable, StringLineReceiver
+from network_common import NetworkAgent, StringLineReceiver
+
+
+class ZmqDealer(ZmqConnection):
+    socketType = zmq.constants.DEALER
+
+    def __init__(self, id, host, *endpoints):
+        super(ZmqDealer, self).__init__(endpoints)
+        self.id = id.encode()
+        self.host = host
+
+    def messageReceived(self, message):
+        if self.host.state.current == "GETTING_JOB":
+            self.host.job_received(message[2])
+        elif self.host.state.current == "WAIT":
+            self.host.update_result_received(message[2])
+
+    def request(self, command, message=b''):
+        self.send([self.id, b''] + [command.encode(), message])
 
 
 class VelesProtocol(StringLineReceiver):
@@ -90,82 +109,73 @@ class VelesProtocol(StringLineReceiver):
             self.disconnect("Server returned error: '%s'.", error)
             return
         if self.state.current == "WAIT":
-            update = msg.get("update")
-            if not update:
-                cid = msg.get("id")
-                if not cid:
-                    self.factory.host.error("No id is present.")
-                    self.request_id()
-                    return
-                self.factory.id = cid
+            cid = msg.get("id")
+            if not cid:
+                self.factory.host.error("No ID was received in WAIT state.")
+                self.request_id()
+                return
+            self.factory.id = cid
+            endpoint = msg.get("endpoint")
+            if not endpoint:
+                self.factory.host.error("No endpoint was received.")
+                self.request_id()
+                return
+            self.zmq_connection = ZmqDealer(
+                cid, self, ZmqEndpoint("connect", endpoint))
+            self.factory.host.info("Connected to ZeroMQ endpoint %s",
+                                   endpoint)
             self.request_job()
             return
-        if self.state.current == "GETTING_JOB":
-            job = msg.get("job")
-            if not job:
-                self.disconnect("No job is present.")
-                return
-            if job == "refuse":
-                self.factory.host.info("Job was refused.")
-                self.state.refuse_job()
-                self.factory.host.stop()
-                return
-            if job != "offer":
-                self.disconnect("Unknown job value %s.", job)
-                return
-            self.size = msg.get("size")
-            if self.size is None:
-                self.disconnect("Job size was not specified.")
-                return
-            self.job = bytearray(self.size)
-            self.job_pos = 0
-            self.setRawMode()
-            return
         self.disconnect("Invalid state %s.", self.state.current)
 
-    def rawDataReceived(self, data):
-        if self.state.current == 'GETTING_JOB':
-            self.job[self.job_pos:self.job_pos + len(data)] = data
-            self.job_pos += len(data)
-            if self.job_pos == self.size:
-                self.setLineMode()
-                job = threads.deferToThreadPool(reactor,
-                                    self.factory.host.workflow.thread_pool(),
-                                    self.factory.host.workflow.do_job,
-                                    self.job)
-                job.addCallback(self.jobFinished)
-                self.state.obtain_job()
-            if len(self.job) > self.size:
-                self.disconnect("Received job size %d exceeded the expected "
-                                "length (%d)", len(self.job), self.size)
+    def job_received(self, job):
+        if job == bytes(False):
+            self.factory.host.info("Job was refused.")
+            self.state.refuse_job()
+            self.factory.host.stop()
             return
-        self.disconnect("Invalid state %s.", self.state.current)
+        else:
+            djob = threads.deferToThreadPool(
+                reactor,
+                self.factory.host.workflow.thread_pool,
+                self.factory.host.workflow.do_job,
+                job)
+            djob.addCallback(self.job_finished)
+            self.state.obtain_job()
 
-    def jobFinished(self, update):
+    def job_finished(self, update):
         if self.state.current == "BUSY":
-            self.sendLine({'cmd': 'update', 'size': len(update)})
-            self.transport.write(update)
+            self.zmq_connection.request("update", update)
             self.state.wait_update_notification()
             return
         self.factory.host.error("Invalid state %s.", self.state.current)
 
+    def update_result_received(self, result):
+        self.request_job()
+
     def sendLine(self, line):
-        super(VelesProtocol, self).sendLine(json.dumps(line))
+        if six.PY3:
+            super(VelesProtocol, self).sendLine(json.dumps(line))
+        else:
+            StringLineReceiver.sendLine(self, json.dumps(line))
+
+    def _common_id(self):
+        return {'power': self.factory.host.workflow.get_computing_power(),
+                'checksum': self.factory.host.workflow.checksum(),
+                'mid': self.factory.host.mid,
+                'pid': self.factory.host.pid}
 
     def send_id(self):
-        self.sendLine({'id': self.factory.id,
-                       'power':
-                       self.factory.host.workflow.get_computing_power(),
-                       'checksum': self.factory.host.workflow.checksum()})
+        common = self._common_id()
+        common['id'] = self.factory.id
+        self.sendLine(common)
 
     def request_id(self):
-        self.sendLine({'power':
-                       self.factory.host.workflow.get_computing_power(),
-                       'checksum': self.factory.host.workflow.checksum()})
+        self.sendLine(self._common_id())
         self.state.request_id()
 
     def request_job(self):
-        self.sendLine({'cmd': 'job'})
+        self.zmq_connection.request("job")
         self.state.request_job()
 
     def disconnect(self, msg, *args, **kwargs):
@@ -179,7 +189,8 @@ class VelesProtocolFactory(ReconnectingClientFactory):
     RECONNECTION_ATTEMPTS = 60
 
     def __init__(self, host):
-        super(VelesProtocolFactory, self).__init__()
+        if six.PY3:
+            super(VelesProtocolFactory, self).__init__()
         self.host = host
         self.id = None
         self.state = None
@@ -206,34 +217,21 @@ class VelesProtocolFactory(ReconnectingClientFactory):
                               connector.connect)
         else:
             self.host.info("Disconnected.")
-            self.host.stop()
+            self.host.launcher.stop()
 
     def clientConnectionFailed(self, connector, reason):
         self.host.warning('Connection failed. Reason: %s', reason)
         self.clientConnectionLost(connector, reason)
 
 
-class Client(NetworkConfigurable, Logger):
+class Client(NetworkAgent):
     """
     UDT/TCP client operating on a single socket.
     """
 
-    def __init__(self, configuration, workflow):
+    def __init__(self, configuration, workflow, launcher):
         super(Client, self).__init__(configuration)
         self.workflow = workflow
+        self.launcher = launcher
         self.factory = VelesProtocolFactory(self)
         reactor.connectTCP(self.address, self.port, self.factory)
-
-    @daemonize
-    def run(self):
-        try:
-            reactor.run()
-        except:
-            self.exception("Failed to run the reactor")
-
-    def stop(self):
-        try:
-            if reactor.running:
-                reactor.stop()
-        except:
-            self.exception("Failed to stop the reactor")
