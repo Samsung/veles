@@ -44,8 +44,8 @@ class GraphicsServer(Logger):
         if self.initialized:
             return
         self.initialized = True
-        assert(thread_pool is not None,
-               "GraphicsServer was not previously initialized")
+        assert thread_pool is not None,
+               "GraphicsServer was not previously initialized"
         super(GraphicsServer, self).__init__()
         thread_pool.register_on_shutdown(self.shutdown)
         zmq_endpoints = [ZmqEndpoint("bind", "inproc://veles-plots"),
