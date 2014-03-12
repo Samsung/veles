@@ -8,9 +8,10 @@ Created on Oct 15, 2013
 import logging
 import os
 from itertools import repeat, chain
-from snd_file_loader import SndFileLoader
-from ffmpeg_file_loader import FFmpegFileLoader
-import units
+
+from veles.snd_file_loader import SndFileLoader
+from veles.ffmpeg_file_loader import FFmpegFileLoader
+import veles.units as units
 
 
 class AudioFileLoader(units.Unit):

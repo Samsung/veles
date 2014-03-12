@@ -8,9 +8,9 @@ Created on May 17, 2013
 import numpy
 
 import veles.config as config
-import veles.opencl_types as opencl_types
 import veles.formats as formats
 import veles.plotter as plotter
+import veles.opencl_types as opencl_types
 
 
 class SimplePlotter(plotter.Plotter):

@@ -10,7 +10,7 @@ import six
 from twisted.protocols.basic import LineReceiver
 import uuid
 
-import logger
+import veles.logger as logger
 
 
 class NetworkAgent(logger.Logger):

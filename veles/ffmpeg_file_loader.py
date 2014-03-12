@@ -8,7 +8,8 @@ Created on Oct 15, 2013
 import logging
 import os
 from subprocess import check_call, CalledProcessError
-from snd_file_loader import SndFileLoader
+
+from veles.snd_file_loader import SndFileLoader
 
 
 class FFmpegFileLoader(object):

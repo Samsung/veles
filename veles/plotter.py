@@ -5,10 +5,11 @@ Created on Mar 7, 2014
 """
 
 
-import config
-from graphics_server import GraphicsServer
 import time
-from units import Unit
+
+import veles.config as config
+from veles.graphics_server import GraphicsServer
+from veles.units import Unit
 
 
 class Plotter(Unit):

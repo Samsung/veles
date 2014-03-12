@@ -119,7 +119,18 @@ class Device(units.Pickleable):
             fin = open("%s/device_infos.%d.pickle" % (config.cache_dir,
                                                       3 if six.PY3 else 2),
                        "rb")
+
+            def add_path(path):
+                if path not in sys.path:
+                    sys.path.append(path)
+
+            this_dir = os.path.dirname(__file__)
+            if not this_dir:
+                this_dir = "."
+            add_path("%s" % (this_dir))
+
             device_infos = pickle.load(fin)
+
             fin.close()
         except IOError:
             self.info("%s/device_infos.%d.pickle was not found" %

@@ -10,20 +10,19 @@ import errno
 import fcntl
 import os
 import six
+from six.moves import cPickle as pickle, zip
 import socket
 import struct
 import subprocess
 import sys
 from tempfile import mkdtemp
 from twisted.internet import reactor
+from txzmq import ZmqConnection, ZmqEndpoint
 import zmq
 
-import config
-from logger import Logger
-
-import graphics_client
-from six.moves import cPickle as pickle, zip
-from txzmq import ZmqConnection, ZmqEndpoint
+import veles.config as config
+from veles.logger import Logger
+import veles.graphics_client as graphics_client
 
 
 class ZmqPublisher(ZmqConnection):

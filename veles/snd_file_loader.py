@@ -6,10 +6,11 @@ Created on May 21, 2013
 
 
 import logging
-import error
 import numpy
-from libsndfile import libsndfile, SF_INFO
 from ctypes import byref, c_short, c_char_p, POINTER
+
+import veles.error as error
+from veles.libsndfile import libsndfile, SF_INFO
 
 
 class SndFileLoader(object):

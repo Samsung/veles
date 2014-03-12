@@ -30,7 +30,6 @@ import veles.graphics_server as graphics_server
 import veles.logger as logger
 import veles.server as server
 
-
 def threadsafe(fn):
     def wrapped(self, *args, **kwargs):
         with self._lock:

@@ -15,12 +15,11 @@ import sys
 import threading
 import tornado.ioloop as ioloop
 from twisted.internet import reactor
-from txzmq import ZmqConnection, ZmqEndpoint
 import zmq
+from txzmq import ZmqConnection, ZmqEndpoint
 
-import config
-from logger import Logger
-
+import veles.config as config
+from veles.logger import Logger
 
 class ZmqSubscriber(ZmqConnection):
     socketType = zmq.constants.SUB

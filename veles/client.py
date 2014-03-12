@@ -5,6 +5,7 @@ Created on Jan 22, 2014
 """
 
 
+from daemon import daemonize
 import fysom
 import json
 import six
@@ -14,8 +15,6 @@ from twisted.internet.protocol import ReconnectingClientFactory
 from txzmq import ZmqConnection, ZmqEndpoint
 import zmq
 
-import veles.fysom as fysom
-from veles.daemon import daemonize
 from veles.logger import Logger
 from veles.network_common import NetworkAgent, StringLineReceiver
 

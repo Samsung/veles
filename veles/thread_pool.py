@@ -17,7 +17,7 @@ import threading
 import types
 from twisted.python import threadpool
 
-import logger
+import veles.logger as logger
 
 
 class ThreadPool(threadpool.ThreadPool, logger.Logger):

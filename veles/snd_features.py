@@ -10,9 +10,10 @@ from itertools import groupby
 import logging
 import os
 from six.moves import cPickle as pickle
-import units
+
 from sound_feature_extraction.extractor import Extractor
 from sound_feature_extraction.feature import Feature
+import veles.units as units
 
 
 class SoundFeatures(units.Unit):
