@@ -82,6 +82,7 @@ class Launcher(logger.Logger):
         self.args = parser.parse_args()
         self.args.server_address = self.args.server_address.strip()
         self.args.listen_address = self.args.listen_address.strip()
+        self.args.matplotlib_backend = self.args.matplotlib_backend.strip()
         self._slaves = [x.strip() for x in self.args.nodes.split(',')
                         if x.strip() != ""]
         self._lock = threading.Lock()
@@ -149,10 +150,16 @@ class Launcher(logger.Logger):
     def workflow(self):
         return self._workflow
 
+    @property
+    def plots_endpoints(self):
+        return self.graphics_server.endpoints["epgm"] + \
+            [self.graphics_server.endpoints["ipc"]] \
+            if hasattr(self, "graphics_server") else []
+
     @threadsafe
     def initialize(self, workflow):
         self._workflow = workflow
-        if self.is_slave:
+        if self.is_slave or self.matplotlib_backend == "":
             workflow.plotters_are_enabled = False
         self.workflow_graph = self.workflow.generate_graph(write_on_disk=False)
         workflow.thread_pool.register_on_shutdown(self._on_shutdown)
@@ -330,9 +337,7 @@ class Launcher(logger.Logger):
                'slaves': self.agent.nodes if self.is_master else [],
                'plots': "http://%s:%d" % (socket.gethostname(),
                                           self.webagg_port),
-               'custom_plots':
-                    "<br/>".join(self.graphics_server.endpoints["epgm"]) + ";" +
-                    self.graphics_server.endpoints["ipc"],
+               'custom_plots': "<br/>".join(self.plots_endpoints),
                'description': "<br />".join(escape(
                     self.workflow.__doc__).split("\n"))}
         timeout = config.web_status_notification_interval / 2
