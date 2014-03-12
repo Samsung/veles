@@ -135,7 +135,7 @@ class VelesProtocol(StringLineReceiver):
                 self.host.launcher.stop()
         else:
             threads.deferToThreadPool(reactor,
-                                      self.host.workflow.thread_pool(),
+                                      self.host.workflow.thread_pool,
                                       self.host.workflow.drop_slave,
                                       self.nodes[self.id])
             if self._id in self.factory.protocols:
@@ -248,7 +248,7 @@ class VelesProtocol(StringLineReceiver):
     def jobRequestReceived(self):
         self.state.request_job()
         job = threads.deferToThreadPool(reactor,
-                                        self.host.workflow.thread_pool(),
+                                        self.host.workflow.thread_pool,
                                         self.host.workflow.request_job,
                                         self.nodes[self.id])
         job.addCallback(self.jobRequestFinished)
@@ -265,7 +265,7 @@ class VelesProtocol(StringLineReceiver):
     def updateReceived(self, data):
         self.state.receive_update()
         upd = threads.deferToThreadPool(reactor,
-                                        self.host.workflow.thread_pool(),
+                                        self.host.workflow.thread_pool,
                                         self.host.workflow.apply_update,
                                         data, self.nodes[self.id])
         upd.addCallback(self.updateFinished)

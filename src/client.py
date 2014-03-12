@@ -137,7 +137,7 @@ class VelesProtocol(StringLineReceiver):
         else:
             djob = threads.deferToThreadPool(
                 reactor,
-                self.factory.host.workflow.thread_pool(),
+                self.factory.host.workflow.thread_pool,
                 self.factory.host.workflow.do_job,
                 job)
             djob.addCallback(self.job_finished)

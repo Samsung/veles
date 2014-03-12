@@ -94,7 +94,7 @@ class Workflow(Unit):
         self.units = []
         self.start_point = StartPoint(self)
         self.end_point = EndPoint(self)
-        self.thread_pool().register_on_shutdown(self.stop)
+        self.thread_pool.register_on_shutdown(self.stop)
         self._plotters_are_enabled = not config.plotters_disabled
 
     def init_unpickled(self):

@@ -155,7 +155,7 @@ class Launcher(logger.Logger):
         if self.is_slave:
             workflow.plotters_are_enabled = False
         self.workflow_graph = self.workflow.generate_graph(write_on_disk=False)
-        workflow.thread_pool().register_on_shutdown(self._on_shutdown)
+        workflow.thread_pool.register_on_shutdown(self._on_shutdown)
 
         if self.is_slave:
             self.agent = client.Client(self.args.server_address, workflow)
@@ -170,7 +170,7 @@ class Launcher(logger.Logger):
             if workflow.plotters_are_enabled:
                 self.graphics_server, self.graphics_client = \
                     graphics_server.GraphicsServer.launch_pair(
-                        workflow.thread_pool(), self.matplotlib_backend,
+                        workflow.thread_pool, self.matplotlib_backend,
                         self._set_webagg_port)
             if self.is_master:
                 self.agent = server.Server(self.args.listen_address, workflow)
@@ -217,7 +217,7 @@ class Launcher(logger.Logger):
             else:
                 self.info("Graphics client returned normally")
         if self.is_standalone:
-            self.agent.thread_pool().shutdown()
+            self.agent.thread_pool.shutdown()
         try:
             if not urgent:
                 reactor.stop()
@@ -241,7 +241,7 @@ class Launcher(logger.Logger):
                                     now=False)
         if self.is_standalone:
             darun = threads.deferToThreadPool(reactor,
-                                              self.agent.thread_pool(),
+                                              self.agent.thread_pool,
                                               self.agent.run)
             darun.addCallback(self.stop)
 

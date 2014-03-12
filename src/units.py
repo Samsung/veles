@@ -177,6 +177,7 @@ class Unit(Pickleable, Distributable):
         self.is_initialized = False
         Unit.timers[self] = 0
 
+    @property
     def thread_pool(self):
         Unit.pool_lock_.acquire()
         try:
@@ -243,7 +244,7 @@ class Unit(Pickleable, Distributable):
                 ((not Unit.callvle(dst.gate_block[0])) and
                  Unit.callvle(dst.gate_block_not[0]))):
                 continue
-            self.thread_pool().callInThread(dst.check_gate_and_run, self)
+            self.thread_pool.callInThread(dst.check_gate_and_run, self)
 
     def initialize(self):
         """Allocate buffers here.
