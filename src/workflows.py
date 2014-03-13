@@ -78,6 +78,17 @@ class EndPoint(UttermostPoint):
             self.run()
 
 
+class WorkflowStub(Unit):
+    def __init__(self):
+        super(WorkflowStub, self).__init__(self)
+
+    def add_ref(self, unit):
+        pass
+
+    def del_ref(self, unit):
+        pass
+
+
 class Workflow(Unit):
     """Base class for unit sets which are logically connected and belong to
     the same host.
@@ -86,10 +97,11 @@ class Workflow(Unit):
         start_point: start point.
         end_point: end point.
     """
-    def __init__(self, workflow, **kwargs):
-        self.workflow = workflow
-        if workflow:
-            workflow.add_ref(self)
+    def __init__(self, workflow=None, **kwargs):
+        if workflow is None:
+            # Enable independent workflows by fooling the underlying Unit's
+            # constructor
+            workflow = WorkflowStub()
         super(Workflow, self).__init__(workflow, **kwargs)
         self.units = []
         self.start_point = StartPoint(self)

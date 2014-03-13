@@ -143,9 +143,9 @@ class Unit(Pickleable, Distributable):
         return wrapped
 
     def __init__(self, workflow, **kwargs):
-        if workflow is not None and not isinstance(workflow, Unit):
+        if workflow is None or not isinstance(workflow, Unit):
             raise error.VelesException(
-                "workflow parameter is not a Unit object")
+                "workflow parameter is not a Unit object or None")
         name = kwargs.get("name")
         view_group = kwargs.get("view_group")
         super(Unit, self).__init__()
@@ -158,8 +158,7 @@ class Unit(Pickleable, Distributable):
         self.individual_name = name
         self.view_group = view_group
         self.workflow = workflow
-        if self.workflow is not None and hasattr(self.workflow, "add_ref"):
-            self.workflow.add_ref(self)
+        self.workflow.add_ref(self)
         self.applied_data_from_master_recursively = False
         self.applied_data_from_slave_recursively = False
         setattr(self, "run", Unit.measure_time(getattr(self, "run"),
