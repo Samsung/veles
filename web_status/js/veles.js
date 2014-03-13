@@ -221,7 +221,7 @@ function activateListItem(item_id) {
   details += ' nodes.<br/>';
   details += 'ØMQ endpoints for custom plots:<br/><strong>';
   details += workflow.custom_plots;
-  details += '</strong><br/>';
+  details += '</strong><br/><br/>';
   workflow.svg.attr("id", "workflow-svg");
   details += workflow.svg.clone().wrap('<div>').parent().html();
   details += '</div>\n';
