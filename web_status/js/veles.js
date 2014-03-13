@@ -18,6 +18,7 @@ function renderGraphviz(desc) {
 var updating = false;
 var active_workflow_id = null;
 var listed_workflows = null;
+var svg_cache = {};
 
 function updateUI() {
   if (updating) {
@@ -55,8 +56,12 @@ function updateUI() {
 	      var items = '';
 	      workflows.forEach(function(pair) {
 	        var workflow = pair.value;
-	        var svg = $(renderGraphviz(workflow.graph)).find("svg");
-	        listed_workflows[pair.key].svg = svg.clone();
+          if (typeof svg_cache[pair.key] === "undefined") {
+            svg_cache[pair.key] =
+              $(renderGraphviz(workflow.graph)).find("svg");
+          }
+          listed_workflows[pair.key].svg = svg_cache[pair.key];
+	        var svg = listed_workflows[pair.key].svg.clone();
 	        svg.attr("class", "media-object pull-left");
 	        svg.attr("width", "100").attr("height", 100);
 	        items += '<li class="list-group-item media list-item-media';
@@ -66,7 +71,7 @@ function updateUI() {
 	        items += '" id="';
 	        items += pair.key;
 	        items += '">\n';
-	        items += svg.clone().wrap('<div>').parent().html();
+	        items += svg.wrap('<div>').parent().html();
 	        items += '<div class="media-body graceful-overflow">\n';
 	        items += '<h4 class="list-group-item-heading"><a href="#" ';
 	        items += 'onclick="activateListItem(\'';
@@ -111,6 +116,15 @@ function updateUI() {
 	        items += '</div>\n';
 	        items += '</li>\n';
 	      });
+        free_svgs = [];
+        for (var key in svg_cache) {
+          if (typeof listed_workflows[key] === "undefined") {
+            free_svgs.push(key);
+          }
+        }
+        for (var key in free_svgs) {
+          delete svg_cache[key];
+        }
 	      objs = $.parseHTML(items);
 	      $("#list-loading-indicator").remove();
 	      $("#workflow-list").empty().append(objs);
@@ -222,8 +236,9 @@ function activateListItem(item_id) {
   details += 'ØMQ endpoints for custom plots:<br/><strong>';
   details += workflow.custom_plots;
   details += '</strong><br/><br/>';
-  workflow.svg.attr("id", "workflow-svg");
-  details += workflow.svg.clone().wrap('<div>').parent().html();
+  var svg = workflow.svg.clone();
+  svg.attr("id", "workflow-svg");
+  details += svg.wrap('<div>').parent().html();
   details += '</div>\n';
   objs = $.parseHTML(details);
   $("#details-loading-indicator").remove();
