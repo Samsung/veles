@@ -87,6 +87,7 @@ class Launcher(logger.Logger):
                         if x.strip() != ""]
         self._lock = threading.Lock()
         self._webagg_port = 0
+        self._agent = None
         self._workflow = None
         self._id = str(uuid.uuid4())
         self._initialized = False
@@ -151,6 +152,10 @@ class Launcher(logger.Logger):
         return self._workflow
 
     @property
+    def agent(self):
+        return self._agent
+
+    @property
     def plots_endpoints(self):
         return self.graphics_server.endpoints["epgm"] + \
             [self.graphics_server.endpoints["ipc"]] \
@@ -161,13 +166,15 @@ class Launcher(logger.Logger):
         self._workflow = workflow
         if self.is_slave or self.matplotlib_backend == "":
             workflow.plotters_are_enabled = False
-        self.workflow_graph = self.workflow.generate_graph(write_on_disk=False)
         workflow.thread_pool.register_on_shutdown(self._on_shutdown)
+        workflow.launcher = self
 
         if self.is_slave:
-            self.agent = client.Client(self.args.server_address, workflow,
-                                       self)
+            self._agent = client.Client(self.args.server_address, workflow,
+                                        self)
         else:
+            self.workflow_graph = self.workflow.generate_graph(
+                write_on_disk=False)
             if self.reports_web_status:
                 self.tornado_ioloop_thread = threading.Thread(
                     target=IOLoop.instance().start)
@@ -181,12 +188,10 @@ class Launcher(logger.Logger):
                         workflow.thread_pool, self.matplotlib_backend,
                         self._set_webagg_port)
             if self.is_master:
-                self.agent = server.Server(self.args.listen_address, workflow,
-                                           self)
+                self._agent = server.Server(self.args.listen_address, workflow,
+                                            self)
                 # Launch the nodes described in the configuration file/string
                 self._launch_nodes()
-            else:
-                self.agent = workflow
         self._initialized = True
 
     def run(self):
@@ -226,7 +231,7 @@ class Launcher(logger.Logger):
             else:
                 self.info("Graphics client returned normally")
         if self.is_standalone:
-            self.agent.thread_pool.shutdown()
+            self._workflow.thread_pool.shutdown()
         try:
             if not urgent:
                 reactor.stop()
@@ -250,8 +255,8 @@ class Launcher(logger.Logger):
                                     now=False)
         if self.is_standalone:
             darun = threads.deferToThreadPool(reactor,
-                                              self.agent.thread_pool,
-                                              self.agent.run)
+                                              self._workflow.thread_pool,
+                                              self._workflow.run)
             darun.addCallback(self.stop)
 
     def _on_shutdown(self):
@@ -334,7 +339,7 @@ class Launcher(logger.Logger):
                'time': "%02d:%02d:%02d" % (hours, mins, secs),
                'user': getpass.getuser(),
                'graph': self.workflow_graph,
-               'slaves': self.agent.nodes if self.is_master else [],
+               'slaves': self._agent.nodes if self.is_master else [],
                'plots': "http://%s:%d" % (socket.gethostname(),
                                           self.webagg_port),
                'custom_plots': "<br/>".join(self.plots_endpoints),

@@ -96,6 +96,7 @@ class Workflow(Unit):
         self.end_point = EndPoint(self)
         self.thread_pool.register_on_shutdown(self.stop)
         self._plotters_are_enabled = not config.plotters_disabled
+        self._launcher_ = None
 
     def init_unpickled(self):
         super(Workflow, self).init_unpickled()
@@ -215,6 +216,26 @@ class Workflow(Unit):
     def plotters_are_enabled(self, value):
         self._plotters_are_enabled = value
 
+    @property
+    def launcher(self):
+        return self._launcher_
+
+    @launcher.setter
+    def launcher(self, value):
+        self._launcher_ = value
+
+    @property
+    def is_master(self):
+        return self._launcher.is_master
+
+    @property
+    def is_slave(self):
+        return self._launcher.is_slave
+
+    @property
+    def is_standalone(self):
+        return self._launcher.is_standalone
+
     def do_job(self, data):
         """
         Executes this workflow on the given source data. Run by a slave.
@@ -242,8 +263,6 @@ class Workflow(Unit):
         self.end_point.run()
 
     def generate_graph(self, filename=None, write_on_disk=True):
-        if config.is_slave:
-            return
         g = pydot.Dot(graph_name="Workflow",
                       graph_type="digraph",
                       bgcolor="transparent")
