@@ -95,7 +95,7 @@ web_status_host = "smaug"
 web_status_update = "update"
 web_status_port = 8090
 web_status_notification_interval = 1
-web_status_log_file = "/var/log/veles_web_status.log"
+web_status_log_file = "/var/log/veles/web_status.log"
 
 graphics_multicast_address = "239.192.1.1"
 matplotlib_backend = "Qt4Agg"
