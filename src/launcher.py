@@ -162,19 +162,20 @@ class Launcher(logger.Logger):
             if hasattr(self, "graphics_server") else []
 
     @threadsafe
-    def initialize(self, workflow):
+    def add_ref(self, workflow):
+        """
+        Links with the nested Workflow instance, so that we are able to
+        initialize.
+        """
         self._workflow = workflow
         if self.is_slave or self.matplotlib_backend == "":
             workflow.plotters_are_enabled = False
         workflow.thread_pool.register_on_shutdown(self._on_shutdown)
-        workflow.launcher = self
 
         if self.is_slave:
             self._agent = client.Client(self.args.server_address, workflow,
                                         self)
         else:
-            self.workflow_graph = self.workflow.generate_graph(
-                write_on_disk=False)
             if self.reports_web_status:
                 self.tornado_ioloop_thread = threading.Thread(
                     target=IOLoop.instance().start)
@@ -193,6 +194,9 @@ class Launcher(logger.Logger):
                 # Launch the nodes described in the configuration file/string
                 self._launch_nodes()
         self._initialized = True
+
+    def del_ref(self, workflow):
+        pass
 
     def run(self):
         self._pre_run(daemonize=self.daemonize)
@@ -248,6 +252,9 @@ class Launcher(logger.Logger):
         if not self._initialized:
             raise RuntimeError("Launcher was not initialized")
         self._running = True
+        if not self.is_slave:
+            self.workflow_graph = self.workflow.generate_graph(
+                write_on_disk=False)
         if self.reports_web_status:
             self.start_time = time.time()
             self.tornado_ioloop_thread.start()

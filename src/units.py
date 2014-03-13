@@ -143,9 +143,8 @@ class Unit(Pickleable, Distributable):
         return wrapped
 
     def __init__(self, workflow, **kwargs):
-        if workflow is None or not isinstance(workflow, Unit):
-            raise error.VelesException(
-                "workflow parameter is not a Unit object or None")
+        if workflow is None:
+            raise error.VelesException("workflow parameter must not be None")
         name = kwargs.get("name")
         view_group = kwargs.get("view_group")
         super(Unit, self).__init__()
@@ -166,8 +165,7 @@ class Unit(Pickleable, Distributable):
         self.should_unlock_pipeline = False
 
     def __fini__(self):
-        if self.workflow is not None and hasattr(self.workflow, "del_ref"):
-            self.workflow.del_ref(self)
+        self.workflow.del_ref(self)
 
     def init_unpickled(self):
         super(Unit, self).init_unpickled()
@@ -329,6 +327,18 @@ class Unit(Pickleable, Distributable):
         if not isinstance(value, str):
             raise ValueError("Unit name must be a string")
         self.individual_name = value
+
+    @property
+    def is_master(self):
+        return self.workflow.is_master
+
+    @property
+    def is_slave(self):
+        return self.workflow.is_slave
+
+    @property
+    def is_standalone(self):
+        return self.workflow.is_standalone
 
 
 class OpenCLUnit(Unit):

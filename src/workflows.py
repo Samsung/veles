@@ -78,17 +78,6 @@ class EndPoint(UttermostPoint):
             self.run()
 
 
-class WorkflowStub(Unit):
-    def __init__(self):
-        super(WorkflowStub, self).__init__(self)
-
-    def add_ref(self, unit):
-        pass
-
-    def del_ref(self, unit):
-        pass
-
-
 class Workflow(Unit):
     """Base class for unit sets which are logically connected and belong to
     the same host.
@@ -97,18 +86,13 @@ class Workflow(Unit):
         start_point: start point.
         end_point: end point.
     """
-    def __init__(self, workflow=None, **kwargs):
-        if workflow is None:
-            # Enable independent workflows by fooling the underlying Unit's
-            # constructor
-            workflow = WorkflowStub()
+    def __init__(self, workflow, **kwargs):
+        self._plotters_are_enabled = not config.plotters_disabled
         super(Workflow, self).__init__(workflow, **kwargs)
         self.units = []
         self.start_point = StartPoint(self)
         self.end_point = EndPoint(self)
         self.thread_pool.register_on_shutdown(self.stop)
-        self._plotters_are_enabled = not config.plotters_disabled
-        self._launcher_ = None
 
     def init_unpickled(self):
         super(Workflow, self).init_unpickled()
@@ -135,13 +119,10 @@ class Workflow(Unit):
     def add_ref(self, unit):
         if unit not in self.units:
             self.units.append(unit)
-        if self.workflow is not None:
-            self.workflow.add_ref(unit)
 
     def del_ref(self, unit):
-        self.units.remove(unit)
-        if self.workflow is not None:
-            self.workflow.del_ref(unit)
+        if unit in self.units:
+            self.units.remove(unit)
 
     def lock_pipeline(self):
         """Locks master=>slave pipeline execution.
@@ -227,26 +208,6 @@ class Workflow(Unit):
     @plotters_are_enabled.setter
     def plotters_are_enabled(self, value):
         self._plotters_are_enabled = value
-
-    @property
-    def launcher(self):
-        return self._launcher_
-
-    @launcher.setter
-    def launcher(self, value):
-        self._launcher_ = value
-
-    @property
-    def is_master(self):
-        return self._launcher.is_master
-
-    @property
-    def is_slave(self):
-        return self._launcher.is_slave
-
-    @property
-    def is_standalone(self):
-        return self._launcher.is_standalone
 
     def do_job(self, data):
         """
