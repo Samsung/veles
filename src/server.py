@@ -294,11 +294,11 @@ class Server(NetworkAgent):
     UDT/TCP server operating on a single socket
     """
 
-    def __init__(self, configuration, workflow, launcher):
+    def __init__(self, configuration, workflow):
         super(Server, self).__init__(configuration)
         self.nodes = {}
         self.workflow = workflow
-        self.launcher = launcher
+        self.launcher = workflow.workflow
         self.factory = VelesProtocolFactory(self)
         reactor.listenTCP(self.port, self.factory, interface=self.address)
         self.zmq_connection = ZmqRouter(self,

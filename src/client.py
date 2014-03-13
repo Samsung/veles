@@ -229,9 +229,9 @@ class Client(NetworkAgent):
     UDT/TCP client operating on a single socket.
     """
 
-    def __init__(self, configuration, workflow, launcher):
+    def __init__(self, configuration, workflow):
         super(Client, self).__init__(configuration)
         self.workflow = workflow
-        self.launcher = launcher
+        self.launcher = workflow.workflow
         self.factory = VelesProtocolFactory(self)
         reactor.connectTCP(self.address, self.port, self.factory)
