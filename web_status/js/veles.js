@@ -25,71 +25,71 @@ function updateUI() {
     return;
   }
   updating = true;
-	console.log("Update started");
-	var msg = {
+  console.log("Update started");
+  var msg = {
     request: "workflows",
     args: ["name", "master", "slaves", "time", "user", "graph", "description",
            "plots", "custom_plots"]
   };
-	$.ajax({
-		url: "service",
-		type: "POST",
-		data: JSON.stringify(msg),
-		contentType: "application/json; charset=utf-8",
-	    async: true,
-	    success: function(ret) {
-	      console.log("Received response");
-	      listed_workflows = ret;
-	      var workflows = Object.keys(ret).map(function(key) {
+  $.ajax({
+    url: "service",
+    type: "POST",
+    data: JSON.stringify(msg),
+    contentType: "application/json; charset=utf-8",
+      async: true,
+      success: function(ret) {
+        console.log("Received response");
+        listed_workflows = ret;
+        var workflows = Object.keys(ret).map(function(key) {
           return { "key": key, "value": ret[key] };
         });
-	      if (workflows.length == 0) {
-	        updating = false;
-	        return;
-	      }
-	      workflows.sort(function(a, b) {
-	        return a.value.name > b.value.name;
+        if (workflows.length == 0) {
+          updating = false;
+          return;
+        }
+        workflows.sort(function(a, b) {
+          return a.value.name > b.value.name;
         });
-	      if (active_workflow_id == null || !(active_workflow_id in ret)) {
-	        active_workflow_id = workflows[0].key;
-	      }
-	      var items = '';
-	      workflows.forEach(function(pair) {
-	        var workflow = pair.value;
+        if (active_workflow_id == null || !(active_workflow_id in ret)) {
+          active_workflow_id = workflows[0].key;
+        }
+        var items = '';
+        workflows.forEach(function(pair) {
+          var workflow = pair.value;
           if (typeof svg_cache[pair.key] === "undefined") {
             svg_cache[pair.key] =
               $(renderGraphviz(workflow.graph)).find("svg");
           }
           listed_workflows[pair.key].svg = svg_cache[pair.key];
-	        var svg = listed_workflows[pair.key].svg.clone();
-	        svg.attr("class", "media-object pull-left");
-	        svg.attr("width", "100").attr("height", 100);
-	        items += '<li class="list-group-item media list-item-media';
-	        if (active_workflow_id == pair.key) {
-	          items += " active";
-	        }
-	        items += '" id="';
-	        items += pair.key;
-	        items += '">\n';
-	        items += svg.wrap('<div>').parent().html();
-	        items += '<div class="media-body graceful-overflow">\n';
-	        items += '<h4 class="list-group-item-heading"><a href="#" ';
-	        items += 'onclick="activateListItem(\'';
-	        items += pair.key;
-	        items += '\')">';
-	        items += workflow.name;
-	        items += '</a></h4>\n';
-	        items += '<a class="view-plots" href="';
-	        items += workflow.plots;
-	        items += '" target="_blank">view plots</a><br/>\n';
-	        items += '<span class="list-group-item-text">Master: ';
-	        items += '<a href="#"><strong>';
-	        items += workflow.master;
-	        items += '</strong></a><br/>\n';
-	        items += '<span class="badge pull-right">';
-	        items += Object.keys(workflow.slaves).length;
-	        items += '</span>\n';
-	        items += 'Slaves: ';
+          var svg = listed_workflows[pair.key].svg.clone();
+          svg.attr("class", "media-object pull-left");
+          svg.attr("width", "100").attr("height", 100);
+          items += '<li class="list-group-item media list-item-media';
+          if (active_workflow_id == pair.key) {
+            items += " active";
+          }
+          items += '" id="';
+          items += pair.key;
+          items += '">\n';
+          items += svg.wrap('<div>').parent().html();
+          items += '<div class="media-body graceful-overflow">\n';
+          items += '<h4 class="list-group-item-heading"><a href="#" ';
+          items += 'onclick="activateListItem(\'';
+          items += pair.key;
+          items += '\')">';
+          items += workflow.name;
+          items += '</a></h4>\n';
+          items += '<a class="view-plots" href="';
+          items += workflow.plots;
+          items += '" target="_blank">view plots</a><br/>\n';
+          items += '<span class="list-group-item-text">Master: ';
+          items += '<a href="#"><strong>';
+          items += workflow.master;
+          items += '</strong></a><br/>\n';
+          items += '<span class="badge pull-right">';
+          items += Object.keys(workflow.slaves).length;
+          items += '</span>\n';
+          items += 'Slaves: ';
           slaves = Object.keys(workflow.slaves).map(function(key) {
             return { "key": key, "value": workflow.slaves[key] };
           });
@@ -97,25 +97,25 @@ function updateUI() {
             return a.value.host > b.value.host;
           });
           listed_workflows[pair.key].slaves = slaves;
-	        slaves.forEach(function(slave) {
-	          items += '<a href="#"><strong>';
-	          items += slave.value.host;
-	          items += '</strong></a>, ';
-	        });
+          slaves.forEach(function(slave) {
+            items += '<a href="#"><strong>';
+            items += slave.value.host;
+            items += '</strong></a>, ';
+          });
           if (slaves.length > 0) {
             items = items.substring(0, items.length - 2);
           }
           items += '<br/>\n';
-	        items += 'Time running: <strong>';
-	        items += workflow.time;
-	        items += '</strong><br/>\n';
-	        items += 'Started by: <i class="glyphicon glyphicon-user">';
-	        items += '<a href="#"><strong>';
-	        items += workflow.user;
-	        items += '</strong></a></i></span>\n';
-	        items += '</div>\n';
-	        items += '</li>\n';
-	      });
+          items += 'Time running: <strong>';
+          items += workflow.time;
+          items += '</strong><br/>\n';
+          items += 'Started by: <i class="glyphicon glyphicon-user">';
+          items += '<a href="#"><strong>';
+          items += workflow.user;
+          items += '</strong></a></i></span>\n';
+          items += '</div>\n';
+          items += '</li>\n';
+        });
         free_svgs = [];
         for (var key in svg_cache) {
           if (typeof listed_workflows[key] === "undefined") {
@@ -125,14 +125,14 @@ function updateUI() {
         for (var key in free_svgs) {
           delete svg_cache[key];
         }
-	      objs = $.parseHTML(items);
-	      $("#list-loading-indicator").remove();
-	      $("#workflow-list").empty().append(objs);
-	      console.log("Finished update");
-	      setTimeout(activateListItem, 0, active_workflow_id);
-	      updating = false;
-	    }
-	});
+        objs = $.parseHTML(items);
+        $("#list-loading-indicator").remove();
+        $("#workflow-list").empty().append(objs);
+        console.log("Finished update");
+        setTimeout(activateListItem, 0, active_workflow_id);
+        updating = false;
+      }
+  });
 }
 
 function activateListItem(item_id) {
@@ -252,6 +252,6 @@ function showPlots(item_id) {
 }
 
 $(window).load(function() {
-	setInterval(updateUI, 2000);
-	setTimeout(updateUI, 0);
+  setInterval(updateUI, 2000);
+  setTimeout(updateUI, 0);
 });
