@@ -306,7 +306,18 @@ class Device(units.Pickleable):
     def _do_test(self, BLOCK_SIZE, dtype, iters):
         """Do test for specific context.
         """
-        obj = units.OpenCLUnit(None, device=self)
+
+        class WorkflowStub(units.Unit):
+            def __init__(self):
+                super(WorkflowStub, self).__init__(self)
+
+            def add_ref(self, unit):
+                pass
+
+            def del_ref(self, unit):
+                pass
+
+        obj = units.OpenCLUnit(WorkflowStub(), device=self)
         obj.cl_sources_["forward.cl"] = {}
         defines = {
             "ACTIVATION_TANH": 1,
