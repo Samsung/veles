@@ -118,11 +118,11 @@ class MatrixPlotter(plotter.Plotter):
 
         figure = self.pp.figure(self.name)
         figure.clf()
-        num_rows = len(value) + 2
-        num_columns = len(value[0]) + 2
-
         main_axes = figure.add_axes([0, 0, 1, 1])
         main_axes.cla()
+
+        num_rows = len(value) + 2
+        num_columns = len(value[0]) + 2
         # First cell color
         rc = self.patches.Rectangle(
             (0, (num_rows - 1) / num_rows),
@@ -184,13 +184,13 @@ class MatrixPlotter(plotter.Plotter):
         # First cell
         column = 0
         row = 0
-        self.pp.figtext(label="0",
+        figure.text(label="0",
             s="target",
             x=(column + 0.9) / num_columns,
             y=(num_rows - row - 0.33) / num_rows,
             verticalalignment="center",
             horizontalalignment="right")
-        self.pp.figtext(label="0",
+        figure.text(label="0",
             s="value",
             x=(column + 0.1) / num_columns,
             y=(num_rows - row - 0.66) / num_rows,
@@ -199,21 +199,21 @@ class MatrixPlotter(plotter.Plotter):
         # Headers in first row
         row = 0
         for column in range(1, num_columns - 1):
-            self.pp.figtext(label=("C%d" % (column - 1)),
-                            s=(column - 1),
-                            x=(column + 0.5) / num_columns,
-                            y=(num_rows - row - 0.5) / num_rows,
-                            verticalalignment="center",
-                            horizontalalignment="center")
-                # Headers in first column
+            figure.text(label=("C%d" % (column - 1)),
+                        s=(column - 1),
+                        x=(column + 0.5) / num_columns,
+                        y=(num_rows - row - 0.5) / num_rows,
+                        verticalalignment="center",
+                        horizontalalignment="center")
+        # Headers in first column
         column = 0
         for row in range(1, num_rows - 1):
-            self.pp.figtext(label=("R%d" % (row - 1)),
-                            s=(row - 1),
-                            x=(column + 0.5) / num_columns,
-                            y=(num_rows - row - 0.5) / num_rows,
-                            verticalalignment="center",
-                            horizontalalignment="center")
+            figure.text(label=("R%d" % (row - 1)),
+                        s=(row - 1),
+                        x=(column + 0.5) / num_columns,
+                        y=(num_rows - row - 0.5) / num_rows,
+                        verticalalignment="center",
+                        horizontalalignment="center")
         # Data
         for row in range(1, num_rows - 1):
             for column in range(1, num_columns - 1):
@@ -221,14 +221,14 @@ class MatrixPlotter(plotter.Plotter):
                 n = sum_total
                 pt_total = 100.0 * n_elem / n if n else 0
                 label = "%d as %d" % (column - 1, row - 1)
-                self.pp.figtext(
+                figure.text(
                     label=label,
                     s=n_elem,
                     x=(column + 0.5) / num_columns,
                     y=(num_rows - row - 0.33) / num_rows,
                     verticalalignment="center",
                     horizontalalignment="center")
-                self.pp.figtext(
+                figure.text(
                     label=label,
                     s=("%.2f%%" % (pt_total)),
                     x=(column + 0.5) / num_columns,
@@ -241,14 +241,14 @@ class MatrixPlotter(plotter.Plotter):
         label = "Totals"
         row = num_rows - 1
         column = num_columns - 1
-        self.pp.figtext(
+        figure.text(
             label=label,
             s=sum_ok,
             x=(column + 0.5) / num_columns,
             y=(num_rows - row - 0.33) / num_rows,
             verticalalignment="center",
             horizontalalignment="center")
-        self.pp.figtext(
+        figure.text(
             label=label,
             s=("%.2f%%" % (pt_total)),
             x=(column + 0.5) / num_columns,
