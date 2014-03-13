@@ -96,7 +96,7 @@ html, body {
   width: 80%;
   min-width: 400px;
   /* Set the fixed height of the footer here */
-  height: 4%;
+  height: 40px;
   padding-top: 0.75%;
   background-color: #ffffff;
 }
