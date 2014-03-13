@@ -113,7 +113,8 @@ class GraphicsClient(Logger):
                     if self.webagg_fifo is not None:
                         fifo = os.open(self.webagg_fifo,
                                        os.O_WRONLY | os.O_NONBLOCK)
-                        self._webagg_port_bytes = bytes(self._webagg_port)
+                        self._webagg_port_bytes = \
+                            str(self._webagg_port).encode()
                         reactor.callLater(0, self._write_webagg_port, fifo)
         except:
             self._lock.release()
@@ -136,8 +137,12 @@ class GraphicsClient(Logger):
                           self._process_tk_events)
 
     def _write_webagg_port(self, fifo):
-        if os.write(fifo, self._webagg_port_bytes) != \
-           len(self._webagg_port_bytes):
+        try:
+            written = os.write(fifo, self._webagg_port_bytes)
+        except (OSError, IOError) as ioe:
+            if ioe.args[0] in (errno.EAGAIN, errno.EINTR):
+                written = 0
+        if written != len(self._webagg_port_bytes):
             reactor.callLater(0, self._write_webagg_port, fifo)
         else:
             self.debug("Wrote the WebAgg port to pipe")

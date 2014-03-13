@@ -6,21 +6,23 @@ Created on Mar 7, 2014
 
 
 import array
+import errno
 import fcntl
 import os
-from six.moves import cPickle as pickle, zip
 import socket
 import struct
 import subprocess
 import sys
 from tempfile import mkdtemp
 from twisted.internet import reactor
-from txzmq import ZmqConnection, ZmqEndpoint
 import zmq
 
 import config
 from logger import Logger
+
 import graphics_client
+from six.moves import cPickle as pickle, zip
+from txzmq import ZmqConnection, ZmqEndpoint
 
 
 class ZmqPublisher(ZmqConnection):
@@ -115,9 +117,13 @@ class GraphicsServer(Logger):
 
     @staticmethod
     def _read_webagg_port(fifo, tmpfn, tmpdir, webagg_callback):
-        output = os.read(fifo, 8)
+        try:
+            output = os.read(fifo, 8)
+        except (OSError, IOError) as ioe:
+            if ioe.args[0] in (errno.EAGAIN, errno.EINTR):
+                output = None
         if not output:
-            reactor.callLater(0, GraphicsServer._read_webagg_port,
+            reactor.callLater(0.1, GraphicsServer._read_webagg_port,
                               fifo, tmpfn, tmpdir, webagg_callback)
         else:
             os.close(fifo)
