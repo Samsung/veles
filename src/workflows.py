@@ -101,9 +101,6 @@ class Workflow(Unit):
         del(Unit.timers[self])
 
     def initialize(self):
-        super(Workflow, self).initialize()
-        if not self.is_slave:
-            self.generate_graph()
         return self.start_point.initialize_dependent()
 
     def run(self):
@@ -112,7 +109,11 @@ class Workflow(Unit):
         In the child class:
             call the parent method at the end.
         """
-        self.start_point.run_dependent()
+        if not self.is_slave:
+            self.generate_graph()
+        retval = self.start_point.run_dependent()
+        if retval is not None:
+            return retval
         self.end_point.wait()
         self.print_stats()
 
@@ -317,7 +318,6 @@ class OpenCLWorkflow(OpenCLUnit, Workflow):
         self.power = None
 
     def initialize(self, device=None):
-        super(OpenCLWorkflow, self).initialize()
         if device is not None:
             self.device = device
         for obj in self.forward:
@@ -435,6 +435,5 @@ class OpenCLWorkflow(OpenCLUnit, Workflow):
         if not self.power:
             bench = benchmark.OpenCLBenchmark(self, device=self.device)
             self.power = bench.estimate()
-            self.del_ref(bench)
             self.info("Computing power is %.6f", self.power)
         return self.power
