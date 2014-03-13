@@ -433,7 +433,8 @@ class OpenCLWorkflow(OpenCLUnit, Workflow):
         Run by a slave.
         """
         if not self.power:
-            bench = benchmark.OpenCLBenchmark(None, device=self.device)
+            bench = benchmark.OpenCLBenchmark(self, device=self.device)
             self.power = bench.estimate()
+            self.del_ref(bench)
             self.info("Computing power is %.6f", self.power)
         return self.power
