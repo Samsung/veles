@@ -30,7 +30,7 @@ class Logger(object):
     def redirect_logging_to_file(self, file_name, max_bytes=1024 * 1024,
                                  backups=9):
         handler = logging.handlers.RotatingFileHandler(
-            file_name, max_bytes, backups
+            filename=file_name, maxBytes=max_bytes, backupCount=backups
         )
         formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: "
                                       "%(message)s", "%Y-%m-%d %H:%M:%S")
