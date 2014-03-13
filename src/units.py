@@ -143,10 +143,8 @@ class Unit(Pickleable, Distributable):
         return wrapped
 
     def __init__(self, workflow, **kwargs):
-        if workflow is None:
-            raise error.VelesException("workflow parameter must not be None")
-        name = kwargs.get("name")
-        view_group = kwargs.get("view_group")
+        self.name = kwargs.get("name")
+        self.view_group = kwargs.get("view_group")
         super(Unit, self).__init__()
         self.links_from = {}
         self.links_to = {}
@@ -154,18 +152,13 @@ class Unit(Pickleable, Distributable):
         self.gate_skip = [0]
         self.gate_block_not = [0]
         self.gate_skip_not = [0]
-        self.individual_name = name
-        self.view_group = view_group
-        self.workflow = workflow
-        self.workflow.add_ref(self)
         self.applied_data_from_master_recursively = False
         self.applied_data_from_slave_recursively = False
         setattr(self, "run", Unit.measure_time(getattr(self, "run"),
                                                Unit.timers, self))
         self.should_unlock_pipeline = False
-
-    def __fini__(self):
-        self.workflow.del_ref(self)
+        self._workflow = None
+        self.workflow = workflow
 
     def init_unpickled(self):
         super(Unit, self).init_unpickled()
@@ -173,6 +166,41 @@ class Unit(Pickleable, Distributable):
         self.run_lock_ = threading.Lock()
         self.is_initialized = False
         Unit.timers[self] = 0
+
+    @property
+    def workflow(self):
+        return self._workflow
+
+    @workflow.setter
+    def workflow(self, value):
+        if value is None:
+            raise error.VelesException("Unit must have a hosting Workflow")
+        if self._workflow is not None:
+            self._workflow.del_ref(self)
+        self._workflow = value
+        self._workflow.add_ref(self)
+
+    @property
+    def name(self):
+        if self._name is not None:
+            return self._name
+        return self.__class__.__name__
+
+    @name.setter
+    def name(self, value):
+        if value is not None and not isinstance(value, str):
+            raise ValueError("Unit name must be a string")
+        self._name = value
+
+    @property
+    def view_group(self):
+        return self._view_group
+
+    @view_group.setter
+    def view_group(self, value):
+        if value is not None and not isinstance(value, str):
+            raise ValueError("Unit view group must be a string")
+        self._view_group = value
 
     @property
     def thread_pool(self):
@@ -317,16 +345,6 @@ class Unit(Pickleable, Distributable):
         if "exc_info" in kwargs.keys():
             exc_info = kwargs["exc_info"]
             traceback.print_exception(exc_info[0], exc_info[1], exc_info[2])
-
-    def name(self):
-        if self.individual_name:
-            return self.individual_name
-        return self.__class__.__name__
-
-    def set_name(self, value):
-        if not isinstance(value, str):
-            raise ValueError("Unit name must be a string")
-        self.individual_name = value
 
     @property
     def is_master(self):

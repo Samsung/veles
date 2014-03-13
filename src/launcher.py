@@ -339,7 +339,7 @@ class Launcher(logger.Logger):
         mins, secs = divmod(time.time() - self.start_time, 60)
         hours, mins = divmod(mins, 60)
         ret = {'id': self.id,
-               'name': self.workflow.name(),
+               'name': self.workflow.name,
                'master': socket.gethostname(),
                'time': "%02d:%02d:%02d" % (hours, mins, secs),
                'user': getpass.getuser(),

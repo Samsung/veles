@@ -246,7 +246,7 @@ class Workflow(Unit):
             unit = boilerplate.pop()
             visited_units.add(unit)
             node = pydot.Node(hex(id(unit)))
-            node.set("label", unit.name())
+            node.set("label", unit.name)
             node.set("shape", "rect")
             node.add_style("rounded")
             node.add_style("filled")

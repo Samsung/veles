@@ -36,7 +36,7 @@ class Plotter(Unit):
         if self.stripped_pickle:
             state["links_from"] = {}
             state["links_to"] = {}
-            state["workflow"] = None
+            state["_workflow"] = None
         return state
 
     def run(self):

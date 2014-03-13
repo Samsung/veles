@@ -60,7 +60,7 @@ class SimplePlotter(plotter.Plotter):
 
     def redraw(self):
         self.pp.ioff()
-        figure = self.pp.figure(self.name())
+        figure = self.pp.figure(self.name)
         if self.clear_plot:
             figure.clf()
         axes = figure.add_subplot(111)  # Main axes
@@ -116,7 +116,7 @@ class MatrixPlotter(plotter.Plotter):
         else:
             value = self.input.__dict__[self.input_field]
 
-        figure = self.pp.figure(self.name())
+        figure = self.pp.figure(self.name)
         figure.clf()
         num_rows = len(value) + 2
         num_columns = len(value[0]) + 2
@@ -305,7 +305,7 @@ class Weights2D(plotter.Plotter):
         if value.shape[0] > self.limit:
             value = value[:self.limit]
 
-        figure = self.pp.figure(self.name())
+        figure = self.pp.figure(self.name)
         figure.clf()
 
         color = False
@@ -438,7 +438,7 @@ class Image(plotter.Plotter):
             ax.imshow(img, interpolation="nearest", cmap=self.cm.gray)
 
     def redraw(self):
-        figure = self.pp.figure(self.name())
+        figure = self.pp.figure(self.name)
         figure.clf()
 
         for i, input_field in enumerate(self.input_fields):
@@ -489,7 +489,7 @@ class Plot(plotter.Plotter):
         self.ylim = ylim
 
     def redraw(self):
-        figure = self.pp.figure(self.name())
+        figure = self.pp.figure(self.name)
         figure.clf()
         ax = figure.add_subplot(111)
         ax.cla()
@@ -539,7 +539,7 @@ class MSEHistogram(plotter.Plotter):
                                    dtype=opencl_types.dtypes[config.dtype])
 
     def redraw(self):
-        fig = self.pp.figure(self.name())
+        fig = self.pp.figure(self.name)
         fig.clf()
         fig.patch.set_facecolor('#E8D6BB')
         # fig.patch.set_alpha(0.45)
@@ -594,7 +594,7 @@ class MSEHistogram(plotter.Plotter):
         ax.set_title('Histogram', fontsize=25)
         ax.axis([xmin, xmax + ((xmax - xmin) / self.n_bars), ymin, ymax])
         ax.grid(True)
-        leg = ax.legend((self.name().replace("Histogram ", "")))
+        leg = ax.legend((self.name.replace("Histogram ", "")))
                         # 'upper center')
         frame = leg.get_frame()
         frame.set_facecolor('#E8D6BB')
