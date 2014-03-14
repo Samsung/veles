@@ -95,6 +95,12 @@ class GraphicsClient(Logger):
                 reactor.callLater(GraphicsClient.ui_update_interval,
                                   self._process_qt_events)
                 # self.root.exec_()
+            elif pp.get_backend() == "WxAgg":
+                import wx
+                self.root = wx.PySimpleApp()
+                reactor.callLater(GraphicsClient.ui_update_interval,
+                                  self._process_wx_events)
+                # self.root.MainLoop()
             elif pp.get_backend() == "WebAgg":
                 self.condition = threading.Condition()
                 with self.condition:
@@ -138,6 +144,11 @@ class GraphicsClient(Logger):
         self.root.update()
         reactor.callLater(GraphicsClient.ui_update_interval,
                           self._process_tk_events)
+
+    def _process_wx_events(self):
+        self.root.ProcessPendingEvents()
+        reactor.callLater(GraphicsClient.ui_update_interval,
+                          self._process_wx_events)
 
     def _write_webagg_port(self, fifo):
         try:
@@ -183,6 +194,8 @@ class GraphicsClient(Logger):
                 self.root.destroy()
             elif self.pp.get_backend() == "Qt4Agg":
                 self.root.quit()
+            elif self.pp.get_backend() == "WxAgg":
+                self.root.ExitMainLoop()
             elif self.pp.get_backend() == "WebAgg":
                 ioloop.IOLoop.instance().stop()
             if not urgent:
