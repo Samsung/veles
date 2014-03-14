@@ -26,3 +26,5 @@ cache
 !Veles.pc.in
 !Application.mk.in
 !Android.mk.in
+*.pyc
+*.pyo
