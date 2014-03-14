@@ -59,7 +59,11 @@ class GraphicsServer(Logger):
                 "bind", "rndepgm://%s;%s:1024:65535:1" %
                         (iface, config.graphics_multicast_address)))
         self.zmq_connection = ZmqPublisher(zmq_endpoints)
-        tmpfn, *ports = self.zmq_connection.rnd_vals
+
+        # tmpfn, *ports = self.zmq_connection.rnd_vals
+        tmpfn = self.zmq_connection.rnd_vals[0]
+        ports = self.zmq_connection.rnd_vals[1:]
+
         self.endpoints = {"inproc": "inproc://veles-plots",
                           "ipc": "ipc://" + tmpfn,
                           "epgm": []}
