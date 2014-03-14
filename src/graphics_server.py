@@ -9,6 +9,7 @@ import array
 import errno
 import fcntl
 import os
+import six
 import socket
 import struct
 import subprocess
@@ -77,14 +78,18 @@ class GraphicsServer(Logger):
     def interfaces(self):
         max_possible = 128
         max_bytes = max_possible * 32
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-            names = array.array('B', b'\0' * max_bytes)
-            outbytes = struct.unpack('iL', fcntl.ioctl(
-                sock.fileno(),
-                0x8912,  # SIOCGIFCONF
-                struct.pack('iL', max_bytes, names.buffer_info()[0])
-            ))[0]
-        namestr = names.tobytes()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        names = array.array('B', b'\0' * max_bytes)
+        outbytes = struct.unpack('iL', fcntl.ioctl(
+            sock.fileno(),
+            0x8912,  # SIOCGIFCONF
+            struct.pack('iL', max_bytes, names.buffer_info()[0])
+        ))[0]
+        sock.close()
+        if six.PY3:
+            namestr = names.tobytes()
+        else:
+            namestr = names.tostring()
         for i in range(0, outbytes, 40):
             name = namestr[i:i + 16].split(b'\0', 1)[0]
             if name == b'lo':
@@ -104,7 +109,11 @@ class GraphicsServer(Logger):
     @staticmethod
     def launch_pair(thread_pool, backend, webagg_callback=None):
         server = GraphicsServer(thread_pool)
-        args = ["env", "python3", graphics_client.__file__,
+        if six.PY3:
+            python = "python3"
+        else:
+            python = "python"
+        args = ["env", python, graphics_client.__file__,
                 backend, server.endpoints["ipc"]]
         if backend == "WebAgg" and \
            webagg_callback is not None:

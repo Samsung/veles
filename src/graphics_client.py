@@ -5,6 +5,7 @@ Created on Jan 31, 2014
 """
 
 
+import errno
 import logging
 import os
 import signal
@@ -87,7 +88,7 @@ class GraphicsClient(Logger):
                 self.root.withdraw()
                 reactor.callLater(GraphicsClient.ui_update_interval,
                                   self._process_tk_events)
-            # tkinter.mainloop()
+                # tkinter.mainloop()
             elif pp.get_backend() == "Qt4Agg":
                 import PyQt4
                 self.root = PyQt4.QtGui.QApplication([])
@@ -119,6 +120,7 @@ class GraphicsClient(Logger):
                         reactor.callLater(0, self._write_webagg_port, fifo)
         except:
             self._lock.release()
+            raise
         if pp.get_backend() != "WebAgg":
             reactor.callLater(0, self._lock.release)
             reactor.run()
