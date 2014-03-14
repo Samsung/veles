@@ -18,7 +18,7 @@ from twisted.python import log
 from zmq import zmq_version_info
 ZMQ3 = zmq_version_info()[0] >= 3
 
-from veles.txzmq.manager import ZmqContextManager
+from txzmq.manager import ZmqContextManager
 
 
 class ZmqEndpointType(object):

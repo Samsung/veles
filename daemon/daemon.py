@@ -562,7 +562,7 @@ def detach_process_context():
         Reference: “Advanced Programming in the Unix Environment”,
         section 13.3, by W. Richard Stevens, published 1993 by
         Addison-Wesley.
-
+    
         """
 
     def fork_then_exit_parent(error_message):
@@ -593,7 +593,7 @@ def is_process_started_by_init():
 
         The `init` process has the process ID of 1; if that is our
         parent process ID, return ``True``, otherwise ``False``.
-
+    
         """
     result = False
 
@@ -640,7 +640,7 @@ def is_process_started_by_superserver():
         attaches it to the standard streams of the child process. If
         that is the case for this process, return ``True``, otherwise
         ``False``.
-
+    
         """
     result = False
 
@@ -786,7 +786,7 @@ def daemonize(fn):
     def wrapped(*args, **kwargs):
         fwdkwargs = copy.copy(kwargs)
         go_daemon = fwdkwargs.get(parameter_name)
-        if go_daemon is not None:
+        if go_daemon != None:
             del(fwdkwargs[parameter_name])
         else:
             go_daemon = True

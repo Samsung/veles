@@ -39,21 +39,11 @@
 
 import six
 if six.PY3:
-    from veles.daemon import version as version
-    #import veles.daemon.version as version
-    from veles.daemon.daemon import DaemonContext, daemonize
+    import daemon.version as version
+    from daemon.daemon import DaemonContext, daemonize
 else:
-    from veles.daemon import version as version
-    #import veles.daemon.version as version
-    from veles.daemon.daemon import DaemonContext, daemonize
-
-#import six
-#if six.PY3:
-#    import daemon.version as version
-#    from daemon.daemon import DaemonContext, daemonize
-#else:
-#    import version
-#    from daemon import DaemonContext, daemonize
+    import version
+    from daemon import DaemonContext, daemonize
 
 _version = version.version
 _copyright = version.copyright
