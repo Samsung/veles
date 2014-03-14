@@ -39,8 +39,9 @@ class GraphicsClient(Logger):
 
     ui_update_interval = 0.01
 
-    def __init__(self, backend, *endpoints, webagg_fifo=None):
+    def __init__(self, backend, *endpoints, **kwargs):
         super(GraphicsClient, self).__init__()
+        webagg_fifo = kwargs.get("webagg_fifo")
         self.backend = backend
         if self.backend == "WebAgg":
             self._webagg_port = 0

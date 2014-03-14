@@ -209,11 +209,12 @@ class Launcher(logger.Logger):
                 self._running = False
 
     @threadsafe
-    def stop(self, *args, urgent=False):
+    def stop(self, *args, **kwargs):
         if not self._initialized:
             raise RuntimeError("Launcher was not initialized")
         if not self._running:
             raise RuntimeError("Launcher is not running")
+        urgent = kwargs.get("urgent", False)
         self._running = False
         self.info("Stopping everything (%s mode)", self.mode)
         # Kill the Web status Server notification task and thread
