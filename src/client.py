@@ -210,7 +210,7 @@ class VelesProtocolFactory(ReconnectingClientFactory):
                 VelesProtocolFactory.RECONNECTION_INTERVAL > \
                 VelesProtocolFactory.RECONNECTION_ATTEMPTS:
                 self.host.error("Max reconnection attempts reached, exiting.")
-                self.host.stop()
+                self.host.launcher.stop()
                 return
             self.host.warning("Disconnected, trying to reconnect...")
             reactor.callLater(VelesProtocolFactory.RECONNECTION_INTERVAL,
