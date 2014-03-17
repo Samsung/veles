@@ -24,7 +24,7 @@ class DeviceInfo(object):
     """Info about device.
 
     Attributes:
-        guid: "GUID" of the device.
+        desc: Description of the device.
         memsize: "available" size of the memory on the device.
         memalign: best alignment for device buffers.
         version: OpenCL version.
@@ -34,8 +34,8 @@ class DeviceInfo(object):
         min_dt: minimum time of rating test pass of all tests.
         BLOCK_SIZE: best block size for matrix multiplication for the device.
     """
-    def __init__(self, guid, memsize, memalign, version):
-        self.guid = guid
+    def __init__(self, desc, memsize, memalign, version):
+        self.desc = desc
         self.memsize = memsize
         self.memalign = memalign
         self.version = version
@@ -85,9 +85,9 @@ class Device(units.Pickleable):
         platforms = cl.Platforms()
         context = platforms.create_some_context()
         device = context.devices[0]
-        guid = "%s/%s/%d" % (device.vendor.strip(), device.name.strip(),
+        desc = "%s/%s/%d" % (device.vendor.strip(), device.name.strip(),
                              device.vendor_id)
-        self.device_info = DeviceInfo(guid=guid, memsize=device.memsize,
+        self.device_info = DeviceInfo(desc=desc, memsize=device.memsize,
             memalign=device.memalign, version=device.version)
         self.queue_ = context.create_queue(device,
             cl.CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE)
@@ -104,8 +104,8 @@ class Device(units.Pickleable):
             self.info("%s/device_infos.%d.pickle was not found" %
                       (config.cache_dir, 3 if six.PY3 else 2))
         if (not config.test_known_device and
-            self.device_info.guid in device_infos.keys()):
-            device_info = device_infos[self.device_info.guid]
+            self.device_info.desc in device_infos.keys()):
+            device_info = device_infos[self.device_info.desc]
             self.device_info.rating.update(device_info.rating)
             self.device_info.BLOCK_SIZE.update(device_info.BLOCK_SIZE)
             self.device_info.dt.update(device_info.dt)
@@ -113,7 +113,7 @@ class Device(units.Pickleable):
             return
         if not config.test_unknown_device:
             return
-        device_infos[self.device_info.guid] = self.device_info
+        device_infos[self.device_info.desc] = self.device_info
         self._do_tests(device_infos)
         self.info("Saving found device performance values into "
                         "%s/device_infos.%d.pickle" % (config.cache_dir,
@@ -161,7 +161,7 @@ class Device(units.Pickleable):
                         if dt_numpy[dtype] < min_dt[dtype]:
                             min_dt[dtype] = dt_numpy[dtype]
                     self.info("Testing %s with BLOCK_SIZE = %d "
-                        "and dtype = %s" % (self.device_info.guid, BLOCK_SIZE,
+                        "and dtype = %s" % (self.device_info.desc, BLOCK_SIZE,
                                             dtype))
                     dt = self._do_test(BLOCK_SIZE, dtype, 3)
                     if dt < self.device_info.dt[dtype]:
@@ -200,13 +200,13 @@ class Device(units.Pickleable):
                 rating = min_dt[dtype] / device_info.dt[dtype]
                 if device_info.rating[dtype] != rating:
                     if device_info.rating[dtype]:
-                        self.info("UPD Rating(%s): %.4f" % (device_info.guid,
+                        self.info("UPD Rating(%s): %.4f" % (device_info.desc,
                                                                   rating))
                     else:
-                        self.info("NEW Rating(%s): %.4f" % (device_info.guid,
+                        self.info("NEW Rating(%s): %.4f" % (device_info.desc,
                                                                   rating))
                 else:
-                    self.info("Rating(%s): %.4f" % (device_info.guid, rating))
+                    self.info("Rating(%s): %.4f" % (device_info.desc, rating))
                 device_info.rating[dtype] = rating
                 device_info.min_dt[dtype] = min_dt[dtype]
         self.info("================")
