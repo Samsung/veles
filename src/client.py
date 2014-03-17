@@ -20,9 +20,9 @@ from network_common import NetworkAgent, StringLineReceiver
 class ZmqDealer(ZmqConnection):
     socketType = zmq.constants.DEALER
 
-    def __init__(self, id, host, *endpoints):
+    def __init__(self, nid, host, *endpoints):
         super(ZmqDealer, self).__init__(endpoints)
-        self.id = id.encode()
+        self.id = nid.encode()
         self.host = host
 
     def messageReceived(self, message):
@@ -82,6 +82,7 @@ class VelesProtocol(StringLineReceiver):
         self.state = factory.state
 
     def connectionMade(self):
+        self.factory.host.info("Connected")
         if self.state.current == "INIT" or self.state.current == "WAIT":
             self.request_id()
             return
@@ -197,7 +198,8 @@ class VelesProtocolFactory(ReconnectingClientFactory):
         self.disconnect_time = None
 
     def startedConnecting(self, connector):
-        self.host.info('Connecting to %s...', self.host.address)
+        self.host.info('Connecting to %s:%s...',
+                       self.host.address, self.host.port)
 
     def buildProtocol(self, addr):
         return VelesProtocol(addr, self)
