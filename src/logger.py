@@ -22,6 +22,7 @@ class Logger(object):
     def init_unpickled(self):
         self.logger_ = logging.getLogger(self.__class__.__name__)
 
+    @property
     def log(self):
         """Returns the logger associated with this object.
         """
