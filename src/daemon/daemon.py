@@ -715,8 +715,7 @@ def close_all_open_files(exclude=set()):
         close.
 
         """
-    maxfd = get_maximum_file_descriptors()
-    for fd in reversed(list(range(maxfd))):
+    for fd in [int(x) for x in os.listdir("/proc/self/fd")]:
         if fd not in exclude:
             close_file_descriptor_if_open(fd)
 
