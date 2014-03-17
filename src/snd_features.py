@@ -9,7 +9,7 @@ from decimal import Decimal
 from itertools import groupby
 import logging
 import os
-import pickle
+from six.moves import cPickle as pickle
 import units
 from sound_feature_extraction.extractor import Extractor
 from sound_feature_extraction.feature import Feature

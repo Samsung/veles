@@ -8,7 +8,7 @@ Base class for workflows.
 import hashlib
 import numpy
 import os
-import pickle
+from six.moves import cPickle as pickle
 import shutil
 import sys
 import tarfile
