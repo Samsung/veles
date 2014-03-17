@@ -253,6 +253,7 @@ class Launcher(logger.Logger):
                 reactor.stop()
             else:
                 reactor.crash()
+            reactor.getThreadPool().stop()
         except:
             self.exception("Failed to stop the reactor. There is going to be "
                            "a meltdown unless you immediately activate the "
