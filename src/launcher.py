@@ -52,6 +52,7 @@ class Launcher(logger.Logger):
                               mode).
         nodes                 The list of slaves to launch remotely (only in
                               Master mode).
+        log_file              Duplicate all logging to this file.
     """
 
     def __init__(self, **kwargs):
@@ -84,13 +85,17 @@ class Launcher(logger.Logger):
                             default=kwargs.get("nodes", ""),
                             help="The list of slaves to launch remotely "
                                  "separated by a comma.")
-
+        parser.add_argument("-f", "--log-file", type=str,
+                            default=kwargs.get("log_file", ""),
+                            help="The file name where logs will be copied.")
         self.args, _ = parser.parse_known_args()
         self.args.master_address = self.args.master_address.strip()
         self.args.listen_address = self.args.listen_address.strip()
         self.args.matplotlib_backend = self.args.matplotlib_backend.strip()
         self._slaves = [x.strip() for x in self.args.nodes.split(',')
                         if x.strip() != ""]
+        if self.args.log_file != "":
+            logger.Logger.duplicate_all_logging_to_file(self.args.log_file)
         self._lock = threading.Lock()
         self._webagg_port = 0
         self._agent = None
