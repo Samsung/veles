@@ -43,8 +43,8 @@ class Launcher(logger.Logger):
 
     Parameters:
         parser                A custom argparse.ArgumentParser instance.
-        server_address        The server address (Slave Mode).
-        listen_address        The address to listen (MAster Mode).
+        master_address        The server's address (implies Slave mode).
+        listen_address        The address to listen (implies Master mode).
         backend               Matplotlib backend to use.
         daemonize             Run as a daemon in background.
         web_status            Report the status to the web server, launch it if
@@ -55,10 +55,10 @@ class Launcher(logger.Logger):
     def __init__(self, **kwargs):
         super(Launcher, self).__init__()
         parser = kwargs.get("parser", argparse.ArgumentParser())
-        parser.add_argument("-s", "--server-address", type=str,
-                            default=kwargs.get("server_address", ""),
+        parser.add_argument("-m", "--master-address", type=str,
+                            default=kwargs.get("master_address", ""),
                             help="Workflow will be launched in client mode "
-                            "and connected to the server at the specified "
+                            "and connected to the master at the specified "
                             "address.")
         parser.add_argument("-l", "--listen-address", type=str,
                             default=kwargs.get("listen_address", ""),
@@ -79,8 +79,9 @@ class Launcher(logger.Logger):
                             default=kwargs.get("slaves", ""),
                             help="The list of slaves to launch remotely "
                                  "separated by a comma.")
-        self.args = parser.parse_args()
-        self.args.server_address = self.args.server_address.strip()
+
+        self.args, _ = parser.parse_known_args()
+        self.args.master_address = self.args.master_address.strip()
         self.args.listen_address = self.args.listen_address.strip()
         self.args.matplotlib_backend = self.args.matplotlib_backend.strip()
         self._slaves = [x.strip() for x in self.args.nodes.split(',')
@@ -123,7 +124,7 @@ class Launcher(logger.Logger):
 
     @property
     def is_slave(self):
-        return True if self.args.server_address else False
+        return True if self.args.master_address else False
 
     @property
     def is_standalone(self):
@@ -173,7 +174,7 @@ class Launcher(logger.Logger):
         workflow.thread_pool.register_on_shutdown(self._on_shutdown)
 
         if self.is_slave:
-            self._agent = client.Client(self.args.server_address, workflow)
+            self._agent = client.Client(self.args.master_address, workflow)
         else:
             if self.reports_web_status:
                 self.tornado_ioloop_thread = threading.Thread(

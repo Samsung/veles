@@ -63,7 +63,7 @@ class Test(unittest.TestCase):
         self.server = Launcher(listen_address="localhost:9999",
                                web_status=False)
         self.server.initialize(self.master_workflow)
-        self.client = Launcher(server_address="localhost:9999")
+        self.client = Launcher(master_address="localhost:9999")
         self.client.initialize(self.slave_workflow)
 
     def tearDown(self):
