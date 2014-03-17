@@ -10,10 +10,7 @@ import pickle
 from twisted.internet import reactor
 import unittest
 
-import config
-config.plotters_disabled = True
 import client
-import network_common
 import server
 import workflows
 
@@ -25,8 +22,8 @@ class TestWorkflow(workflows.Workflow):
     power_requested = False
     job_dropped = False
 
-    def __init__(self, workflow, **kwargs):
-        super(TestWorkflow, self).__init__(workflow, **kwargs)
+    def __init__(self, **kwargs):
+        super(TestWorkflow, self).__init__(self, **kwargs)
 
     def request_job(self, slave):
         TestWorkflow.job_requested = True
@@ -52,11 +49,26 @@ class TestWorkflow(workflows.Workflow):
         TestWorkflow.power_requested = True
         return 100
 
+    @property
+    def is_slave(self):
+        return False
+
+    @property
+    def is_master(self):
+        return False
+
+    @property
+    def is_standalone(self):
+        return True
+
+    def add_ref(self, workflow):
+        pass
+
 
 class Test(unittest.TestCase):
     def setUp(self):
-        self.master = TestWorkflow(None)
-        self.slave = TestWorkflow(None)
+        self.master = TestWorkflow()
+        self.slave = TestWorkflow()
         self.server = server.Server("127.0.0.1:5050", self.master)
         self.client = client.Client("127.0.0.1:5050", self.slave)
         reactor.callLater(0.1, reactor.stop)

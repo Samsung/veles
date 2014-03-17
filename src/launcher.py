@@ -195,11 +195,11 @@ class Launcher(logger.Logger):
         Links with the nested Workflow instance, so that we are able to
         initialize.
         """
+        workflow.thread_pool.register_on_shutdown(self.stop)
+        reactor.addSystemEventTrigger('before', 'shutdown', self._on_stop)
         self._workflow = workflow
         if self.is_slave or self.matplotlib_backend == "":
             workflow.plotters_are_enabled = False
-        workflow.thread_pool.register_on_shutdown(self._on_shutdown)
-
         if self.is_slave:
             self._agent = client.Client(self.args.master_address, workflow)
         else:
@@ -238,39 +238,15 @@ class Launcher(logger.Logger):
                 self._running = False
 
     @threadsafe
-    def stop(self, *args, **kwargs):
+    def stop(self):
         if not self._initialized:
-            raise RuntimeError("Launcher was not initialized")
-        if not self._running:
-            raise RuntimeError("Launcher is not running")
-        urgent = kwargs.get("urgent", False)
-        self._running = False
+            return
         self.info("Stopping everything (%s mode)", self.mode)
-        # Kill the Web status Server notification task and thread
-        if self.reports_web_status:
-            self._notify_task.stop()
-            IOLoop.instance().stop()
-            self.tornado_ioloop_thread.join()
-        # Wait for the own graphics client to terminate normally
-        if self.workflow.plotters_are_enabled:
-            attempt = 0
-            while self.graphics_client.poll() is None and attempt < 10:
-                self.graphics_server.shutdown()
-                attempt += 1
-                time.sleep(0.1)
-            if self.graphics_client.poll() is None:
-                self.graphics_client.terminate()
-                self.info("Graphics client has been terminated")
-            else:
-                self.info("Graphics client returned normally")
-        if self.is_standalone:
-            self._workflow.thread_pool.shutdown()
+        if not self._running:
+            self._on_stop()
+            return
         try:
-            if not urgent:
-                reactor.stop()
-            else:
-                reactor.crash()
-            reactor.getThreadPool().stop()
+            reactor.stop()
         except:
             self.exception("Failed to stop the reactor. There is going to be "
                            "a meltdown unless you immediately activate the "
@@ -291,13 +267,31 @@ class Launcher(logger.Logger):
                                     now=False)
         if self.is_standalone:
             darun = threads.deferToThreadPool(reactor,
-                                              self._workflow.thread_pool,
-                                              self._workflow.run)
-            darun.addCallback(self.stop)
+                                              self.workflow.thread_pool,
+                                              self.workflow.run)
+            darun.addCallback(self.workflow.thread_pool.shutdown)
 
-    def _on_shutdown(self):
-        if self.is_running:
-            self.stop(urgent=True)
+    def _on_stop(self):
+        self._initialized = False
+        self._running = False
+        # Kill the Web status Server notification task and thread
+        if self.reports_web_status:
+            self._notify_task.stop()
+            IOLoop.instance().stop()
+            self.tornado_ioloop_thread.join()
+        # Wait for the own graphics client to terminate normally
+        if self.workflow.plotters_are_enabled:
+            attempt = 0
+            while self.graphics_client.poll() is None and attempt < 10:
+                self.graphics_server.shutdown()
+                attempt += 1
+                time.sleep(0.1)
+            if self.graphics_client.poll() is None:
+                self.graphics_client.terminate()
+                self.info("Graphics client has been terminated")
+            else:
+                self.info("Graphics client returned normally")
+        self.workflow.thread_pool.shutdown()
 
     def _launch_status(self):
         if not self.reports_web_status:

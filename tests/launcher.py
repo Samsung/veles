@@ -26,8 +26,8 @@ class TestWorkflow(veles.workflows.Workflow):
     update_applied = False
     power_requested = False
 
-    def __init__(self, workflow, **kwargs):
-        super(TestWorkflow, self).__init__(workflow, **kwargs)
+    def __init__(self, launcher, **kwargs):
+        super(TestWorkflow, self).__init__(launcher, **kwargs)
 
     def request_job(self, slave):
         TestWorkflow.job_requested = True
@@ -57,25 +57,21 @@ class TestWorkflow(veles.workflows.Workflow):
 class Test(unittest.TestCase):
 
     def setUp(self):
-        self.master_workflow = TestWorkflow(None)
-        self.slave_workflow = TestWorkflow(None)
         veles.config.web_status_host = socket.gethostname()
         self.server = Launcher(listen_address="localhost:9999",
                                web_status=False)
-        self.server.initialize(self.master_workflow)
         self.client = Launcher(master_address="localhost:9999")
-        self.client.initialize(self.slave_workflow)
+        self.master_workflow = TestWorkflow(self.server)
+        self.slave_workflow = TestWorkflow(self.client)
 
     def tearDown(self):
         pass
 
     def testConnectivity(self):
-        reactor.callLater(0.1, self.server.stop)
+        reactor.callLater(0.1, reactor.stop)
         self.server.run()
         self.assertTrue(TestWorkflow.job_requested, "Job was not requested.")
         self.assertTrue(TestWorkflow.job_done, "Job was not done.")
-        self.assertTrue(TestWorkflow.job_dropped,
-                        "Job was not dropped in the end.")
         self.assertTrue(TestWorkflow.update_applied, "Update was not applied.")
         self.assertTrue(TestWorkflow.power_requested,
                         "Power was not requested.")
