@@ -285,7 +285,7 @@ class Launcher(logger.Logger):
             while self.graphics_client.poll() is None and attempt < 10:
                 self.graphics_server.shutdown()
                 attempt += 1
-                time.sleep(0.1)
+                time.sleep(0.2)
             if self.graphics_client.poll() is None:
                 self.graphics_client.terminate()
                 self.info("Graphics client has been terminated")
