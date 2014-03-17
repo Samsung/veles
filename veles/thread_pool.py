@@ -8,9 +8,9 @@ Created on Jan 21, 2014
 
 import copy
 import logging
+import signal
 import six
 from six.moves import queue
-import signal
 from six.moves import zip
 import sys
 import threading

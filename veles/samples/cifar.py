@@ -16,6 +16,7 @@ import sys
 
 import veles.config as config
 import veles.formats as formats
+import veles.launcher as launcher
 import veles.opencl as opencl
 import veles.opencl_types as opencl_types
 import veles.plotting_units as plotting_units
@@ -236,16 +237,17 @@ def main():
     rnd.default.seed(numpy.fromfile("%s/seed" % (os.path.dirname(__file__)),
                                     numpy.int32, 1024))
     # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
-    device = opencl.Device()
+    l = launcher.Launcher()
+    device = None if l.is_master else opencl.Device()
     try:
         fin = open("%s/cifar.pickle" % (config.snapshot_dir), "rb")
         w = pickle.load(fin)
         fin.close()
     except IOError:
-        w = Workflow(None, layers=[100, 10], device=device)
+        w = Workflow(l, layers=[100, 10], device=device)
     w.initialize(global_alpha=0.1, global_lambda=0.00005,
                  minibatch_maxsize=180, device=device)
-    w.run()
+    l.run()
 
     logging.info("End of job")
 

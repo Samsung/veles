@@ -97,13 +97,19 @@ class Workflow(workflows.OpenCLWorkflow):
         # plotters.Graphics().wait_finish()
         print('plotters.Graphics().wait_finish()   XZ!')
 
-    def __init__(self):
+    def __init__(self, workflow, **kwargs):
         """
         Workflow for NN use config.snapshot_prefix ,snapshot, ..
          and t.e. parametrs for experiments
         Workflow for NN use config.wf_nn
         Workflow for NN use config.wf_nn_train
         """
+        layers = kwargs.get("layers")
+        device = kwargs.get("device")
+        kwargs["layers"] = layers
+        kwargs["device"] = device
+        kwargs["name"] = kwargs.get("name", "MNIST")
+        super(Workflow, self).__init__(workflow, **kwargs)
         self.snapshot_prefix = getConfig(sconfig.snapshot_prefix, 'test_pr')
         self.snapshot = getConfig(sconfig.snapshot, 'test')
 

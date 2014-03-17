@@ -381,11 +381,10 @@ def main():
                     forward.bias.v.min(), forward.bias.v.max()))
             w.decision.just_snapshotted[0] = 1
     if fin is None:
-        w = Workflow(None, layers=[5103, 2889, 24 * 24], device=device)
+        w = Workflow(l, layers=[5103, 2889, 24 * 24], device=device)
     w.initialize(global_alpha=0.001, global_lambda=0.00005,
                  minibatch_maxsize=5103, device=device,
                  weights=weights, bias=bias)
-    l.initialize(w)
     l.run()
 
     logging.info("End of job")

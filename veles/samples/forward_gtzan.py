@@ -15,16 +15,21 @@ import sys
 
 from sound_feature_extraction.features_xml import FeaturesXml
 import veles.audio_file_loader as audio_file_loader
+import veles.launcher as launcher
+import veles.opencl as opencl
 import veles.snd_features as snd_features
 import veles.units as units
 import veles.workflows as workflows
 
 
-class Workflow(workflows.Workflow):
+class Workflow(workflows.OpenCLWorkflow):
     """Workflow.
     """
-    def __init__(self):
-        super(Workflow, self).__init__()
+    def __init__(self, workflow, **kwargs):
+
+        device = kwargs.get("device")
+        kwargs["device"] = device
+        super(Workflow, self).__init__(workflow, **kwargs)
 
         self.audio_loader = audio_file_loader.AudioFileLoader()
         self.audio_loader.link_from(self.start_point)
@@ -238,17 +243,18 @@ def main():
                         help="Visualization (0 - no, 1 - yes)")
     parser.add_argument("-snapshot", type=str, required=True,
         help="Snapshot with trained weights and bias.")
-    args = parser.parse_args()
+    l = launcher.Launcher(parser=parser)
+    args = l.args
 
     fin = open(args.snapshot, "rb")
     W, b = pickle.load(fin)
     fin.close()
-
-    w = Workflow()
+    device = None if l.is_master else opencl.Device()
+    w = Workflow(l, device=device)
     w.initialize(file=args.file, feature_file=args.features,
                  W=W, b=b, window_size=args.window_size,
                  shift_size=args.shift_size)
-    w.run()
+    l.run()
 
     if args.graphics:
         draw_plot("Points", w.forward.x, w.forward.y, w.forward.i_labels,

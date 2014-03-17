@@ -15,6 +15,7 @@ import os
 import pickle
 import sys
 
+import veles.launcher as launcher
 import veles.opencl as opencl
 import veles.plotting_units as plotting_units
 import veles.rnd as rnd
@@ -207,14 +208,15 @@ def main():
         help="Global Alpha (default 0.0001)", default=0.0001)
     parser.add_argument("-global_lambda", type=float,
         help="Global Lambda (default 0.00005)", default=0.00005)
-    args = parser.parse_args()
+    l = launcher.Launcher(parser=parser)
+    args = l.args
 
     rnd.default.seed(numpy.fromfile("%s/seed" % (os.path.dirname(__file__)),
                                     numpy.int32, 1024))
     # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
     W = []
     b = []
-    device = opencl.Device()
+    device = None if l.is_master else opencl.Device()
     try:
         fin = open(args.snapshot, "rb")
         W, b = pickle.load(fin)
@@ -230,7 +232,7 @@ def main():
     else:
         layers.append(layers[-2])
     logging.info("Will train with layers: %s" % (str(layers)))
-    w = Workflow(None, layers=layers, device=device)
+    w = Workflow(l, layers=layers, device=device)
     w.initialize(device=device, args=args)
     if len(W):
         logging.info("Will set weights to pretrained ones")
@@ -240,7 +242,7 @@ def main():
             w.forward[i].bias.map_invalidate()
             w.forward[i].bias.v[:] = b[i][:]
         logging.info("Done")
-    w.run()
+    l.run()
 
     logging.debug("End of job")
 

@@ -18,6 +18,7 @@ import re
 import sys
 
 import veles.config as config
+import veles.launcher as launcher
 import veles.opencl as opencl
 import veles.plotting_units as plotting_units
 import veles.rnd as rnd
@@ -219,7 +220,8 @@ def main():
     rnd.default.seed(numpy.fromfile("%s/seed" % (os.path.dirname(__file__)),
                                     numpy.int32, 1024))
     # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
-    device = opencl.Device()
+    l = launcher.Launcher()
+    device = None if l.is_master else opencl.Device()
     fnme = "%s/video_ae.pickle" % (config.cache_dir)
     fin = None
     try:
@@ -234,9 +236,9 @@ def main():
                          forward.bias.v.min(), forward.bias.v.max())
         w.decision.just_snapshotted[0] = 1
     else:
-        w = Workflow(None, layers=[9, 14400], device=device)
+        w = Workflow(l, layers=[9, 14400], device=device)
     w.initialize(global_alpha=0.0002, global_lambda=0.00005, device=device)
-    w.run()
+    l.run()
 
     logging.info("End of job")
 

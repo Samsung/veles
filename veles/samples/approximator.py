@@ -16,6 +16,7 @@ import sys
 
 import veles.config as config
 import veles.error as error
+import veles.launcher as launcher
 import veles.opencl as opencl
 import veles.opencl_types as opencl_types
 import veles.plotting_units as plotting_units
@@ -312,11 +313,12 @@ def main():
     rnd.default.seed(numpy.fromfile("%s/seed" % (os.path.dirname(__file__)),
                                     numpy.int32, 1024))
     # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 524288))
-    device = opencl.Device()
-    w = Workflow(None, layers=[810, 9], device=device)
+    l = launcher.Launcher()
+    device = None if l.is_master else opencl.Device()
+    w = Workflow(l, layers=[810, 9], device=device)
     w.initialize(global_alpha=0.01, global_lambda=0.00005,
                  minibatch_maxsize=81, device=device)
-    w.run()
+    l.run()
 
     logging.info("End of job")
 

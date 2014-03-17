@@ -2,7 +2,7 @@
 """
 Created on Mar 20, 2013
 
-File for MNIST dataset.
+File for MNIST dataset (NN with RELU activation).
 
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
@@ -10,17 +10,18 @@ File for MNIST dataset.
 
 import logging
 import numpy
-import os
 import struct
 import sys
+import os
 
 import veles.config as config
-import veles.error as error
 import veles.formats as formats
+import veles.error as error
 import veles.launcher as launcher
 import veles.opencl as opencl
 import veles.plotting_units as plotting_units
 import veles.rnd as rnd
+import veles.workflows as workflows
 import veles.znicz.all2all as all2all
 import veles.znicz.decision as decision
 import veles.znicz.evaluator as evaluator
@@ -101,11 +102,11 @@ class Loader(loader.FullBatchLoader):
         self.original_data = numpy.zeros([70000, 28, 28], dtype=numpy.float32)
 
         self.load_original(0, 10000,
-            "%s/MNIST/t10k-labels.idx1-ubyte" % (os.path.dirname(__file__)),
-            "%s/MNIST/t10k-images.idx3-ubyte" % (os.path.dirname(__file__)))
+                           "%s/MNIST/t10k-labels.idx1-ubyte" % (os.path.dirname(__file__)),
+                           "%s/MNIST/t10k-images.idx3-ubyte" % (os.path.dirname(__file__)))
         self.load_original(10000, 60000,
-            "%s/MNIST/train-labels.idx1-ubyte" % (os.path.dirname(__file__)),
-            "%s/MNIST/train-images.idx3-ubyte" % (os.path.dirname(__file__)))
+                           "%s/MNIST/train-labels.idx1-ubyte" % (os.path.dirname(__file__)),
+                           "%s/MNIST/train-images.idx3-ubyte" % (os.path.dirname(__file__)))
 
         self.class_samples[0] = 0
         self.class_samples[1] = 10000
@@ -116,9 +117,6 @@ class Loader(loader.FullBatchLoader):
         self.nextclass_offs[2] = 70000
 
         self.total_samples[0] = 70000
-
-
-import veles.workflows as workflows
 
 
 class Workflow(workflows.OpenCLWorkflow):
@@ -142,7 +140,7 @@ class Workflow(workflows.OpenCLWorkflow):
         del self.forward[:]
         for i in range(0, len(layers)):
             if i < len(layers) - 1:
-                aa = all2all.All2AllTanh(self, output_shape=[layers[i]],
+                aa = all2all.All2AllRELU(self, output_shape=[layers[i]],
                                          device=device,
                                          weights_magnitude=0.05)
             else:
@@ -168,7 +166,7 @@ class Workflow(workflows.OpenCLWorkflow):
 
         # Add decision unit
         self.decision = decision.Decision(self, snapshot_prefix="mnist",
-                                          fail_iterations=100)
+                                          fail_iterations=150)
         self.decision.link_from(self.ev)
         self.decision.minibatch_class = self.loader.minibatch_class
         self.decision.minibatch_last = self.loader.minibatch_last
@@ -192,7 +190,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.gd[-1].gate_skip = self.decision.gd_skip
         self.gd[-1].batch_size = self.loader.minibatch_size
         for i in range(len(self.forward) - 2, -1, -1):
-            self.gd[i] = gd.GDTanh(self, device=device)
+            self.gd[i] = gd.GDRELU(self, device=device)
             self.gd[i].link_from(self.gd[i + 1])
             self.gd[i].err_y = self.gd[i + 1].err_h
             self.gd[i].y = self.forward[i].output
@@ -213,9 +211,8 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt = []
         styles = ["r-", "b-", "k-"]
         for i in range(1, 3):
-            self.plt.append(plotting_units.SimplePlotter(self,
-                                                   name="num errors",
-                                                   plot_style=styles[i]))
+            self.plt.append(plotting_units.SimplePlotter(
+                self, name="num errors", plot_style=styles[i]))
             self.plt[-1].input = self.decision.epoch_n_err_pt
             self.plt[-1].input_field = i
             self.plt[-1].link_from(self.decision)
@@ -249,21 +246,20 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_err_y[-1].should_unlock_pipeline = True
 
     def initialize(self, global_alpha, global_lambda, device=None):
-        for g in self.gd:
-            g.global_alpha = global_alpha
-            g.global_lambda = global_lambda
+        for gd in self.gd:
+            gd.global_alpha = global_alpha
+            gd.global_lambda = global_lambda
         return super(Workflow, self).initialize(device=device)
 
 
 def main():
-    #if __debug__:
+    # if __debug__:
     #    logging.basicConfig(level=logging.DEBUG)
-    #else:
+    # else:
     logging.basicConfig(level=logging.INFO)
     logging.info("Logging level: %s", str(logging.root.level))
 
-    rnd.default.seed(numpy.fromfile("%s/seed" % (os.path.dirname(__file__)),
-                                    dtype=numpy.int32, count=1024))
+    rnd.default.seed("%s/seed" % (os.path.dirname(__file__)), numpy.int32, 1024)
     l = launcher.Launcher()
     device = None if l.is_master else opencl.Device()
     w = Workflow(l, layers=[100, 10], device=device)

@@ -15,6 +15,7 @@ import pickle
 import sys
 
 import veles.config as config
+import veles.launcher as launcher
 import veles.opencl as opencl
 import veles.opencl_types as opencl_types
 import veles.plotting_units as plotting_units
@@ -349,7 +350,8 @@ def main():
     rnd.default.seed(numpy.fromfile("%s/seed" % (os.path.dirname(__file__)),
                                     numpy.int32, 1024))
     # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
-    device = opencl.Device()
+    l = launcher.Launcher()
+    device = None if l.is_master else opencl.Device()
     try:
         fin = open("%s/xor_rbm.pickle" % (config.snapshot_dir), "rb")
         w0 = pickle.load(fin)
@@ -359,18 +361,18 @@ def main():
             layers.append(w0.forward[i].output.v.size //
                           w0.forward[i].output.v.shape[0])
         layers.append(2)
-        w = Workflow2(None, layers=layers, device=device)
+        w = Workflow2(l, layers=layers, device=device)
         w.initialize(global_alpha=0.001, global_lambda=0.00005)
         for i in range(0, len(w0.forward) - 1):
             w.forward[i].weights.map_invalidate()
             w.forward[i].weights.v[:] = w0.forward[i].weights.v[:]
             w.forward[i].bias.map_invalidate()
             w.forward[i].bias.v[:] = w0.forward[i].bias.v[:]
-        w.run()
+        l.run()
     except FileNotFoundError:
-        w = Workflow(None, layers=[8, 3], device=device)
+        w = Workflow(l, layers=[8, 3], device=device)
         w.initialize(global_alpha=0.001, global_lambda=0.00005)
-        w.run()
+        l.run()
 
     logging.debug("End of job")
 

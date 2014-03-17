@@ -14,6 +14,7 @@ import pickle
 import os
 import sys
 
+import veles.launcher as launcher
 import veles.config as config
 import veles.opencl as opencl
 import veles.plotting_units as plotting_units
@@ -187,20 +188,21 @@ def main():
                       "then rename best snapshot (with Weights and biases) "
                       "to mnist_rbm.pickle" % (config.snapshot_dir))
         sys.exit(1)
-    device = opencl.Device()
+    l = launcher.Launcher()
+    device = None if l.is_master else opencl.Device()
     layers = []
     for i in range(len(W) - 1):
         layers.append(len(b[i]))
     layers.append(2025)
     layers.append(10)
-    w = Workflow(None, layers=layers, device=device)
+    w = Workflow(l, layers=layers, device=device)
     w.initialize(global_alpha=0.001, global_lambda=0.00005)
     for i in range(len(W) - 1):
         w.forward[i].weights.map_invalidate()
         w.forward[i].weights.v[:] = W[i][:]
         w.forward[i].bias.map_invalidate()
         w.forward[i].bias.v[:] = b[i][:]
-    w.run()
+    l.run()
 
     logging.debug("End of job")
 

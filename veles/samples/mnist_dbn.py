@@ -19,6 +19,7 @@ import sys
 
 import veles.config as config
 import veles.formats as formats
+import veles.launcher as launcher
 import veles.opencl as opencl
 import veles.opencl_types as opencl_types
 import veles.plotting_units as plotting_units
@@ -336,7 +337,8 @@ def main():
         help="Global Alpha (default 0.001)", default=0.001)
     parser.add_argument("-global_lambda", type=float,
         help="Global Lambda (default 0.00005)", default=0.00005)
-    args = parser.parse_args()
+    l = launcher.Launcher(parser=parser)
+    args = l.args
 
     s_layers = re.split("\D+", args.layers)
     layers = []
@@ -349,16 +351,16 @@ def main():
                                     numpy.int32, 1024))
     rnd.default2.seed(numpy.fromfile("%s/seed2" % (os.path.dirname(__file__)),
                                     numpy.int32, 1024))
-    device = opencl.Device()
+    device = None if l.is_master else opencl.Device()
     try:
         fin = open(args.snapshot, "rb")
         w = pickle.load(fin)
         fin.close()
     except IOError:
-        w = Workflow(None, layers=layers, recursion_depth=args.recursion_depth,
+        w = Workflow(l, layers=layers, recursion_depth=args.recursion_depth,
                      device=device)
     w.initialize(device=device, args=args)
-    w.run()
+    l.run()
 
     logging.debug("End of job")
 

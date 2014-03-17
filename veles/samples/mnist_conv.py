@@ -249,7 +249,7 @@ def main():
         sys.exit(0)
         """
     else:
-        w = Workflow(None, layers=[
+        w = Workflow(l, layers=[
                      {"type": "conv", "n_kernels": 25, "kx": 9, "ky": 9},
                      100, 10], device=device)  # 0.99%
     # w = Workflow(None, layers=[
@@ -264,7 +264,6 @@ def main():
     #                     100, 10], device=device)
     w.initialize(global_alpha=0.005, global_lambda=0.00005,
                  minibatch_maxsize=540, device=device)
-    l.initialize(w)
     l.run()
 
     logging.info("End of job")

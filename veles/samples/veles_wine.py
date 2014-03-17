@@ -14,6 +14,7 @@ import pickle
 import sys
 
 from veles.config import sconfig
+import veles.launcher as launcher
 
 
 def main():
@@ -30,7 +31,8 @@ def main():
     """
     parser.add_argument("-config_file", type=str,
                         help="config file ", default='wine_config')
-    args = parser.parse_args()
+    l = launcher.Launcher(parser=parser)
+    args = l.args
     try:
         print(args.config_file)
 
@@ -64,7 +66,7 @@ def main():
             return -3
         if not (wflib is None):
             try:
-                w = wflib.Workflow()
+                w = wflib.Workflow(l)
             except:
                 print(" %s not Workflow "
                        % (sconfig.wf))
@@ -73,7 +75,7 @@ def main():
     print(" %s.initialize " % (sconfig.wf))
     w.initialize()
     print(" %s.run " % (sconfig.wf))
-    w.run()
+    l.run()
     w.wait_finish()  # plotters.Graphics().wait_finish()
     logging.debug("End of job")
     return 1

@@ -27,6 +27,7 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 import veles.config as config
 import veles.error as error
 import veles.formats as formats
+import veles.launcher as launcher
 import veles.image as image
 import veles.opencl as opencl
 import veles.plotting_units as plotting_units
@@ -758,7 +759,8 @@ def main():
         help="Filename for saving preprocessed data for training for "
         "later multipasses, if empty - will use hardcoded filename "
         "in the cache dir (default empty)")
-    args = parser.parse_args()
+    l = launcher.Launcher(parser=parser)
+    args = l.args
 
     s_layers = re.split("\D+", args.layers)
     layers = []
@@ -774,7 +776,7 @@ def main():
                                     numpy.int32, 1024))
     # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
     # rnd.default2.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
-    device = opencl.Device()
+    device = None if l.is_master else opencl.Device()
     w_neg = None
     try:
         fin = open(args.snapshot, "rb")
@@ -811,7 +813,7 @@ def main():
             logging.error("Valid snapshot should be provided if "
                           "find_negative supplied. Will now exit.")
             return
-        w = Workflow(None, layers=layers, device=device)
+        w = Workflow(l, layers=layers, device=device)
     w.initialize(global_alpha=args.global_alpha,
                  global_lambda=args.global_lambda,
                  minibatch_maxsize=args.minibatch_size, dirnme=args.dir,
@@ -827,7 +829,7 @@ def main():
     fout.close()
     logging.info("Done")
     logging.info("Will execute workflow now")
-    w.run()
+    l.run()
     logging.info("End of job")
 
 

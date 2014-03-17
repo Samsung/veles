@@ -14,6 +14,7 @@ import os
 import sys
 
 import veles.config as config
+import veles.launcher as launcher
 import veles.opencl as opencl
 import veles.rnd as rnd
 import veles.samples.mnist as mnist
@@ -30,16 +31,17 @@ def main():
                                     numpy.int32, 1024))
     rnd.default2.seed(numpy.fromfile("%s/seed2" % (os.path.dirname(__file__)),
                                      numpy.int32, 1024))
-    device = opencl.Device()
+    l = launcher.Launcher()
+    device = None if l.is_master else opencl.Device()
 
     logging.info("Will execute SoftMax workflow")
-    w = mnist.Workflow(None, layers=[100, 10], device=device)
+    w = mnist.Workflow(l, layers=[100, 10], device=device)
     w.initialize(device=device, global_alpha=0.1, global_lambda=0.0)
-    w.run()
+    l.run()
 
     logging.info("Will execute MSE workflow")
     w0 = w
-    w = mnist784.Workflow(None, layers=[100, 784, 784], device=device)
+    w = mnist784.Workflow(l, layers=[100, 784, 784], device=device)
     w.initialize(global_alpha=0.001, global_lambda=0.00005)
     w0.forward[0].weights.map_read()
     w0.forward[0].bias.map_read()
@@ -47,7 +49,7 @@ def main():
     w.forward[0].bias.map_invalidate()
     w.forward[0].weights.v[:] = w0.forward[0].weights.v[:]
     w.forward[0].bias.v[:] = w0.forward[0].bias.v[:]
-    w.run()
+    l.run()
 
     logging.debug("End of job")
 

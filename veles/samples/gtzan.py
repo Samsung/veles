@@ -21,6 +21,7 @@ import traceback
 import veles.config as config
 import veles.error as error
 import veles.formats as formats
+import veles.launcher as launcher
 import veles.opencl as opencl
 import veles.opencl_types as opencl_types
 import veles.plotting_units as plotting_units
@@ -373,7 +374,8 @@ def main():
         help="Global Lambda (default 0.00005)", default=0.00005)
     parser.add_argument("-window_size", type=int,
         help="Window size (default 100)", default=100)
-    args = parser.parse_args()
+    l = launcher.Launcher(parser=parser)
+    args = l.args
 
     s_layers = re.split("\D+", args.layers)
     layers = []
@@ -387,7 +389,7 @@ def main():
     rnd.default2.seed(numpy.fromfile("%s/seed2" % (os.path.dirname(__file__)),
                                     numpy.int32, 1024))
     # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
-    device = opencl.Device()
+    device = None if l.is_master else opencl.Device()
     try:
         fin = open(args.snapshot, "rb")
         w = pickle.load(fin)
@@ -407,11 +409,11 @@ def main():
                 logging.error("Error while exporting.")
             sys.exit(0)
     except IOError:
-        w = Workflow(None, layers=layers, device=device)
+        w = Workflow(l, layers=layers, device=device)
     w.initialize(device=device, args=args)
     logging.info("norm_add: %s" % (str(w.loader.norm_add)))
     logging.info("norm_mul: %s" % (str(w.loader.norm_mul)))
-    w.run()
+    l.run()
 
     logging.debug("End of job")
 
