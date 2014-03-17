@@ -44,7 +44,7 @@ class NetworkAgent(logger.Logger):
             if not self.address:
                 self.address = "0.0.0.0"
             self.port = int(configuration[idx_semicolon + 1:])
-        self.info("Network configuration: %s:%d", self.address, self.port)
+        self.debug("Network configuration: %s:%d", self.address, self.port)
 
     @property
     def pid(self):

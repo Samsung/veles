@@ -204,6 +204,7 @@ class Launcher(logger.Logger):
 
     def run(self):
         self._pre_run(daemonize=self.runs_in_background)
+        self.info("Starting the reactor...")
         try:
             reactor.run()
         except:

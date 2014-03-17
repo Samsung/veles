@@ -197,7 +197,7 @@ class VelesProtocolFactory(ReconnectingClientFactory):
         self.disconnect_time = None
 
     def startedConnecting(self, connector):
-        self.host.info('Connecting...')
+        self.host.info('Connecting to %s...', self.host.address)
 
     def buildProtocol(self, addr):
         return VelesProtocol(addr, self)

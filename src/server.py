@@ -62,6 +62,10 @@ class VelesProtocol(StringLineReceiver):
         self.host.debug("%s state: %s, %s -> %s",
                         self.id, e.event, e.src, e.dst)
 
+    def onIdentified(self, e):
+        self.host.info("New node %s joined (%s)",
+                       self.id, str(self.nodes[self.id]))
+
     def onJobObtained(self, e):
         self.nodes[self.id]["state"] = "Working"
 
@@ -69,6 +73,7 @@ class VelesProtocol(StringLineReceiver):
         self.nodes[self.id]["state"] = "Waiting"
 
     def onDropped(self, e):
+        self.host.warning("Lost connection with %s", self.id)
         if self.id in self.nodes:
             self.nodes[self.id]["state"] = "Offline"
 
@@ -87,6 +92,7 @@ class VelesProtocol(StringLineReceiver):
         ],
         'callbacks': {
             'onchangestate': onFSMStateChanged,
+            'onidentify': onIdentified,
             'onobtain_job': onJobObtained,
             'onreceive_update': setWaiting,
             'onWORK': setWaiting,
@@ -301,6 +307,8 @@ class Server(NetworkAgent):
         self.launcher = workflow.workflow
         self.factory = VelesProtocolFactory(self)
         reactor.listenTCP(self.port, self.factory, interface=self.address)
+        self.info("Accepting new connections on %s:%d",
+                  self.address, self.port)
         self.zmq_connection = ZmqRouter(self,
             ZmqEndpoint("bind", "inproc://veles"),
             ZmqEndpoint("bind", "rndipc://veles-ipc-:"),
