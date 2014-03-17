@@ -45,11 +45,13 @@ class Launcher(logger.Logger):
         parser                A custom argparse.ArgumentParser instance.
         master_address        The server's address (implies Slave mode).
         listen_address        The address to listen (implies Master mode).
-        backend               Matplotlib backend to use.
-        daemonize             Run as a daemon in background.
-        web_status            Report the status to the web server, launch it if
-                              necessary.
-        slaves                The list of slaves to launch remotely.
+        matplotlib_backend    Matplotlib backend to use (only in Master mode).
+        background            Run in background as a daemon.
+        stealth               Do not report the status to the web server,
+                              do not launch it if necessary (only in Master
+                              mode).
+        nodes                 The list of slaves to launch remotely (only in
+                              Master mode).
     """
 
     def __init__(self, **kwargs):
@@ -66,17 +68,20 @@ class Launcher(logger.Logger):
                                  "and will accept client connections at the "
                                  "specified address.")
         parser.add_argument("-p", "--matplotlib-backend", type=str,
-                            default=kwargs.get("backend",
+                            default=kwargs.get("matplotlib_backend",
                                                config.matplotlib_backend),
                             help="Matplotlib drawing backend.")
-        parser.add_argument("-b", "--background", type=bool,
-                            default=kwargs.get("daemonize", False),
-                            help="Run in background as a daemon.")
-        parser.add_argument("-w", "--web-status", type=bool,
-                            default=kwargs.get("web_status", True),
-                            help="Report own status to the Web Status Server.")
+        parser.add_argument("-b", "--background",
+                            default=kwargs.get("background", False),
+                            help="Run in background as a daemon.",
+                            action='store_true')
+        parser.add_argument("-s", "--stealth",
+                            default=kwargs.get("stealth", False),
+                            help="Do not report own status to the Web Status "
+                                 "Server.",
+                            action='store_true')
         parser.add_argument("-n", "--nodes", type=str,
-                            default=kwargs.get("slaves", ""),
+                            default=kwargs.get("nodes", ""),
                             help="The list of slaves to launch remotely "
                                  "separated by a comma.")
 
@@ -99,7 +104,7 @@ class Launcher(logger.Logger):
         return self._id
 
     @property
-    def daemonize(self):
+    def runs_in_background(self):
         return self.args.background
 
     @property
@@ -108,7 +113,7 @@ class Launcher(logger.Logger):
 
     @property
     def reports_web_status(self):
-        return self.args.web_status and not self.is_slave
+        return not self.args.stealth and not self.is_slave
 
     @property
     def slaves(self):
@@ -198,7 +203,7 @@ class Launcher(logger.Logger):
         pass
 
     def run(self):
-        self._pre_run(daemonize=self.daemonize)
+        self._pre_run(daemonize=self.runs_in_background)
         try:
             reactor.run()
         except:
