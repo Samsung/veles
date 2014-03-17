@@ -333,7 +333,6 @@ class OpenCLWorkflow(OpenCLUnit, Workflow):
         for obj in self.gd:
             if obj is not None:
                 obj.device = self.device
-        return super(OpenCLWorkflow, self).initialize()
 
     def export(self, filename):
         """Exports workflow for use on DTV.
