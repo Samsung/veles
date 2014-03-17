@@ -299,15 +299,17 @@ class Launcher(logger.Logger):
                    ', '.join(self.slaves))
         filtered_argv = []
         skip = False
+        ignored_args = {"-l", "--listen-address", "-n", "--nodes", "-p",
+                        "--matplotlib-backend", "-b", "--background",
+                        "-s", "--stealth"}
         for i in range(1, len(sys.argv)):
-            if filtered_argv[i] == "-l" or \
-               filtered_argv[i] == "--listen-address":
+            if sys.argv[i] in ignored_args:
                 skip = True
             elif not skip:
                 filtered_argv.append(sys.argv[i])
             else:
                 skip = False
-        filtered_argv.append("-s")
+        filtered_argv.append("-m")
         host = self.args.listen_address[0:self.args.listen_address.index(':')]
         port = self.args.listen_address[len(host) + 1:]
         # No way we can send 'localhost' or empty host name to a slave.
@@ -315,6 +317,7 @@ class Launcher(logger.Logger):
            host == "127.0.0.1":
             host = socket.gethostname()
         filtered_argv.append("%s:%s" % (host, port))
+        filtered_argv.append("-b")
         slave_args = " ".join(filtered_argv)
         self.debug("Slave args: %s", slave_args)
         for node in self.slaves:
