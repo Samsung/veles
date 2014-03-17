@@ -7,6 +7,7 @@ OpenCL helper classes.
 """
 import numpy
 import os
+import prettytable
 import six
 from six.moves import cPickle as pickle
 import sys
@@ -66,13 +67,18 @@ class Device(units.Pickleable):
         super(Device, self).__init__()
         self._get_some_device()
         self._fill_device_info_performance_values()
-        self.info("Will use the following device "
-                  "(guid: dtype, rating, BLOCK_SIZE, memalign, version):")
+        log_configs = "Selected the following OpenCL configurations:\n"
+        table = prettytable.PrettyTable("device", " dtype", "rating",
+                                        "BLOCK_SIZE", "memalign", "version")
+        table.align["device"] = "l"
+        table.align[" dtype"] = "l"
         for dtype in sorted(opencl_types.dtypes.keys()):
-            self.info("%s: %s, %.2f, %d, %d, %.1f" % (
-                self.device_info.guid, dtype, self.device_info.rating[dtype],
-                self.device_info.BLOCK_SIZE[dtype], self.device_info.memalign,
-                self.device_info.version))
+            table.add_row(self.device_info.desc, dtype,
+                          "%.2f" % self.device_info.rating[dtype],
+                          self.device_info.BLOCK_SIZE[dtype],
+                          self.device_info.memalign,
+                          self.device_info.version)
+        self.info(log_configs + str(table))
 
     def init_unpickled(self):
         super(Device, self).init_unpickled()
