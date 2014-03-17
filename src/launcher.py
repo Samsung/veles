@@ -94,6 +94,23 @@ class Launcher(logger.Logger):
         self.args.matplotlib_backend = self.args.matplotlib_backend.strip()
         self._slaves = [x.strip() for x in self.args.nodes.split(',')
                         if x.strip() != ""]
+        if self.runs_in_background:
+            self._daemon_context = daemon.DaemonContext()
+            self._daemon_context.working_directory = os.getcwd()
+            twisted_epollfd = None
+            for fd in os.listdir("/proc/self/fd"):
+                try:
+                    if os.readlink("/proc/self/fd/" + fd) == \
+                       "anon_inode:[eventpoll]":
+                        twisted_epollfd = int(fd)
+                except FileNotFoundError:
+                    pass
+            if twisted_epollfd is None:
+                raise RuntimeError("Twisted reactor was not imported")
+            self._daemon_context.files_preserve = list(range(
+                twisted_epollfd, twisted_epollfd + 3))
+            self.info("Daemonized")
+            self._daemon_context.open()
         if self.args.log_file != "":
             logger.Logger.duplicate_all_logging_to_file(self.args.log_file)
         self._lock = threading.Lock()
@@ -208,8 +225,8 @@ class Launcher(logger.Logger):
         pass
 
     def run(self):
-        self._pre_run(daemonize=self.runs_in_background)
-        self.info("Starting the reactor...")
+        self._pre_run()
+        reactor.callLater(0, self.info, "Reactor is running")
         try:
             reactor.run()
         except:
@@ -259,7 +276,6 @@ class Launcher(logger.Logger):
                            "a meltdown unless you immediately activate the "
                            "emergency graphite protection.")
 
-    @daemon.daemonize
     @threadsafe
     def _pre_run(self):
         if not self._initialized:
