@@ -62,6 +62,9 @@ class VelesProtocol(StringLineReceiver):
         self.host.debug("%s state: %s, %s -> %s",
                         self.id, e.event, e.src, e.dst)
 
+    def onConnected(self, e):
+        self.host.info("Accepted %s", self.address)
+
     def onIdentified(self, e):
         self.host.info("New node %s joined (%s)",
                        self.id, str(self.nodes[self.id]))
@@ -73,7 +76,7 @@ class VelesProtocol(StringLineReceiver):
         self.nodes[self.id]["state"] = "Waiting"
 
     def onDropped(self, e):
-        self.host.warning("Lost connection with %s", self.id)
+        self.host.warning("Lost connection with %s", self.id or self.address)
         if self.id in self.nodes:
             self.nodes[self.id]["state"] = "Offline"
 
@@ -92,6 +95,7 @@ class VelesProtocol(StringLineReceiver):
         ],
         'callbacks': {
             'onchangestate': onFSMStateChanged,
+            'onconnect': onConnected,
             'onidentify': onIdentified,
             'onobtain_job': onJobObtained,
             'onreceive_update': setWaiting,
@@ -128,6 +132,10 @@ class VelesProtocol(StringLineReceiver):
         self._id = value
         self.factory.protocols[self._id] = self
 
+    @property
+    def address(self):
+        return "%s:%d" % (self.addr.host, self.addr.port)
+
     def connectionMade(self):
         self.hip = self.transport.getHost().host
         self.state.connect()
@@ -139,7 +147,7 @@ class VelesProtocol(StringLineReceiver):
             del(self.factory.protocols[self._id])
             if len(self.nodes) == 0:
                 self.host.launcher.stop()
-        else:
+        elif self._id in self.nodes:
             threads.deferToThreadPool(reactor,
                                       self.host.workflow.thread_pool,
                                       self.host.workflow.drop_slave,
