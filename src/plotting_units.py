@@ -125,12 +125,12 @@ class MatrixPlotter(plotter.Plotter):
         num_columns = len(value[0]) + 2
         # First cell color
         rc = self.patches.Rectangle(
-            (0, (num_rows - 1) / num_rows),
+            (0, (num_rows - 1.0) / num_rows),
             1.0 / num_rows, 1.0 / num_columns, color='gray')
         main_axes.add_patch(rc)
         # First row last cell color
         rc = self.patches.Rectangle(
-            ((num_columns - 1) / num_columns, (num_rows - 1) / num_rows),
+            ((num_columns - 1.0) / num_columns, (num_rows - 1.0) / num_rows),
             1.0 / num_rows, 1.0 / num_columns, color='gray')
         main_axes.add_patch(rc)
         # First column last cell color
@@ -140,7 +140,7 @@ class MatrixPlotter(plotter.Plotter):
         main_axes.add_patch(rc)
         # Last cell color
         rc = self.patches.Rectangle(
-            ((num_columns - 1) / num_columns, 0),
+            ((num_columns - 1.0) / num_columns, 0),
             1.0 / num_rows, 1.0 / num_columns, color='silver')
         main_axes.add_patch(rc)
         # Data cells colors
@@ -163,22 +163,23 @@ class MatrixPlotter(plotter.Plotter):
                         color = 'cyan'
                 else:
                     if n_elem > 0:
-                        v = int(numpy.clip(
-                            numpy.round((1.0 - n_elem / max_vle) * 255.0),
+                        v = int(numpy.clip(numpy.round(
+                            (1.0 - (n_elem + 0.0) / max_vle) * 255.0),
                             0, 255))
                         color = "#FF%02X%02X" % (v, v)
                     else:
                         color = 'green'
                 rc = self.patches.Rectangle(
-                    (column / num_columns, (num_rows - row - 1) / num_rows),
+                    ((column + 0.0) / num_columns,
+                     (num_rows - row - 1.0) / num_rows),
                     1.0 / num_rows, 1.0 / num_columns, color=color)
                 main_axes.add_patch(rc)
 
         for row in range(num_rows):
-            y = row / num_rows
+            y = (row + 0.0) / num_rows
             main_axes.add_line(self.lines.Line2D([0, 1], [y, y]))
         for column in range(num_columns):
-            x = column / num_columns
+            x = (column + 0.0) / num_columns
             main_axes.add_line(self.lines.Line2D([x, x], [0, 1]))
 
         # First cell
