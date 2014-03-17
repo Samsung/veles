@@ -732,30 +732,30 @@ def main():
     logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-snapshot", type=str, default="",
+    parser.add_argument("--snapshot", type=str, default="",
         help="Snapshot with trained network (default empty)")
-    parser.add_argument("-export", type=bool,
+    parser.add_argument("--export", type=bool,
         help="Export trained network to C (default False)",
         default=False)
-    parser.add_argument("-dir", type=str, required=True,
+    parser.add_argument("--dir", type=str, required=True,
         help="Directory with channels")
-    parser.add_argument("-snapshot_prefix", type=str, required=True,
+    parser.add_argument("--snapshot-prefix", type=str, required=True,
         help="Snapshot prefix (Ex.: 108_24)")
-    parser.add_argument("-layers", type=str, required=True,
+    parser.add_argument("--layers", type=str, required=True,
         help="NN layer sizes, separated by any separator (Ex.: 108_24)")
-    parser.add_argument("-minibatch_size", type=int,
+    parser.add_argument("--minibatch-size", type=int,
         help="Minibatch size (default 81)", default=81)
-    parser.add_argument("-global_alpha", type=float,
+    parser.add_argument("--global-alpha", type=float,
         help="Global Alpha (default 0.01)", default=0.01)
-    parser.add_argument("-global_lambda", type=float,
+    parser.add_argument("--global-lambda", type=float,
         help="Global Lambda (default 0.00005)", default=0.00005)
-    parser.add_argument("-find_negative", type=int,
+    parser.add_argument("--find-negative", type=int,
         help="Extend negative dataset by at most this number of negative "
              "samples per image. -snapshot should be provided (default 0)",
         default=0)
-    parser.add_argument("-grayscale", type=bool,
+    parser.add_argument("--grayscale", type=bool,
         help="Use grayscale input (default False)", default=False)
-    parser.add_argument("-cache_fnme", type=str, default="",
+    parser.add_argument("--cache-fnme", type=str, default="",
         help="Filename for saving preprocessed data for training for "
         "later multipasses, if empty - will use hardcoded filename "
         "in the cache dir (default empty)")

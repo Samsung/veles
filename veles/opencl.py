@@ -10,7 +10,6 @@ OpenCL helper classes.
 import argparse
 import numpy
 import os
-import prettytable
 import six
 from six.moves import cPickle as pickle
 import sys
@@ -21,6 +20,7 @@ import opencl4py as cl
 import veles.config as config
 import veles.formats as formats
 import veles.opencl_types as opencl_types
+import veles.prettytable as prettytable
 import veles.rnd as rnd
 import veles.units as units
 
