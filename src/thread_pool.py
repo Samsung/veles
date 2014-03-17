@@ -147,7 +147,9 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
 
     @staticmethod
     def debug_deadlocks():
-        if hasattr(threading, "_active") and len(threading._active) > 1:
+        if threading.activeCount() > 1:
             logging.warning("There are currently more than 1 threads still "
                             "running. A deadlock is likely to happen.\n%s",
-                            str(threading._active))
+                            str(threading._active) \
+                            if hasattr(threading, "_active") \
+                            else "<unable to list active threads>")
