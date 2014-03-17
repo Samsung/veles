@@ -7,11 +7,13 @@ Created on Jan 21, 2014
 
 
 import copy
+import logging
 import six
 from six.moves import queue
 import signal
 from six.moves import zip
 import sys
+import threading
 import types
 from twisted.python import threadpool
 
@@ -142,3 +144,10 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         ThreadPool.shutdown_pools(execute_remaining=False, force=True)
         ThreadPool.sigint_initial(signal, frame)
+
+    @staticmethod
+    def debug_deadlocks():
+        if hasattr(threading, "_active") and len(threading._active) > 1:
+            logging.warning("There are currently more than 1 threads still "
+                            "running. A deadlock is likely to happen.\n%s",
+                            str(threading._active))
