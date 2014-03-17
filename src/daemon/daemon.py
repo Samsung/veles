@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 # daemon/daemon.py
 # Part of python-daemon, an implementation of PEP 3143.
 #
@@ -14,18 +13,19 @@
 # under the terms of the Python Software Foundation License, version 2 or
 # later as published by the Python Software Foundation.
 # No warranty expressed or implied. See the file LICENSE.PSF-2 for details.
-
 """ Daemon process behaviour.
     """
 
+import atexit
 import copy
-import os
-import sys
-import resource
 import errno
+import os
 import signal
 import socket
-import atexit
+import sys
+import threading
+
+import resource
 
 
 class DaemonError(Exception):
@@ -317,6 +317,10 @@ class DaemonContext(object):
             """
         if self.is_open:
             return
+
+        if threading.activeCount() != 1:
+            raise DaemonProcessDetachError("Attempted to fork in a "
+                                           "multithreaded application.")
 
         if self.chroot_directory is not None:
             change_root_directory(self.chroot_directory)
