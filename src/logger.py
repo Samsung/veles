@@ -37,7 +37,21 @@ class Logger(object):
                                       "%(message)s", "%Y-%m-%d %H:%M:%S")
         handler.setFormatter(formatter)
         self.logger_.info("Redirecting output to %s", file_name)
+        self.logger_.propagate = False
         self.logger_.addHandler(handler)
+        self.info("Redirected output")
+
+    @staticmethod
+    def duplicate_all_logging_to_file(file_name, max_bytes=1024 * 1024):
+        handler = logging.handlers.RotatingFileHandler(
+            filename=file_name, maxBytes=max_bytes
+        )
+        formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: "
+                                      "%(message)s", "%Y-%m-%d %H:%M:%S")
+        handler.setFormatter(formatter)
+        logging.info("Saving output to %s", file_name)
+        logging.getLogger().addHandler(handler)
+        logging.info("Continuing")
 
     def debug(self, msg, *args, **kwargs):
         self.logger_.debug(msg, *args, **kwargs)
