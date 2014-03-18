@@ -2,18 +2,23 @@
   path = veles/znicz
   branch = master
   url = ssh://alserver.rnd.samsung.ru:29418/Znicz.git
+  ignore = dirty
 [submodule "libSoundFeatureExtraction"]
   path = libSoundFeatureExtraction
   branch = master
   url = ssh://alserver.rnd.samsung.ru:29418/SoundFeatureExtraction.git
+  ignore = dirty
 [submodule "libVeles/libarchive"]
   path = libVeles/libarchive
   branch = master
   url = https://github.com/libarchive/libarchive.git
+  ignore = dirty
 [submodule "libVeles/zlib"]
   path = libVeles/zlib
   branch = master
   url = https://github.com/madler/zlib
+  ignore = dirty
 [submodule "web_status/viz.js"]
   path = web_status/viz.js
   url = https://github.com/vmarkovtsev/viz.js
+  ignore = dirty
