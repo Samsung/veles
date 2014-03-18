@@ -172,7 +172,10 @@ class GraphicsClient(Logger):
             plotter.patches = self.patches
             plotter.pp = self.pp
             plotter.show_figure = self.show_figure
-            plotter.redraw()
+            try:
+                plotter.redraw()
+            except KeyboardInterrupt:
+                pass
         else:
             self.debug("Received the command to terminate")
             self.shutdown()
