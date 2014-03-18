@@ -19,9 +19,9 @@ import threading
 import veles.benchmark as benchmark
 import veles.config as config
 import veles.formats as formats
-import veles.pydot as pydot
 from veles.units import Unit, OpenCLUnit, Repeater
-from veles.prettytable import PrettyTable
+import veles.external.pydot as pydot
+from veles.external.prettytable import PrettyTable
 
 
 class UttermostPoint(Unit):

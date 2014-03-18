@@ -1,3 +1,5 @@
 eclipse.preferences.version=1
 encoding//scripts/music_features.py=utf-8
 encoding//veles/daemon/__init__.py=utf-8
+encoding//veles/external/pydot.py=latin1
+encoding//veles/logging_service.py=utf-8
