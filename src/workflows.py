@@ -21,6 +21,7 @@ import formats
 import pydot
 import threading
 from units import Unit, OpenCLUnit, Repeater
+from prettytable import PrettyTable
 
 
 class UttermostPoint(Unit):
@@ -267,6 +268,13 @@ class Workflow(Unit):
         self.debug("Graphviz workflow scheme:\n" + desc[:-1])
         return desc
 
+    unit_group_colors = {"PLOTTER": "gold",
+                         "WORKER": "greenyellow",
+                         "LOADER": "cyan",
+                         "TRAINER": "coral",
+                         "EVALUATOR": "plum",
+                         "START_END": "lightgrey"}
+
     def print_stats(self, by_name=False, top_number=5):
         timers = {}
         for key, value in Unit.timers.items():
@@ -276,17 +284,12 @@ class Workflow(Unit):
             timers[uid] += value
         stats = sorted(timers.items(), key=lambda x: x[1], reverse=True)
         time_all = sum(timers.values())
-        self.info("Unit run time statistics top:")
+        table = PrettyTable("#", "%", "unit")
+        table.align["unit"] = "l"
         for i in range(1, min(top_number, len(stats)) + 1):
-            self.info("%d.  %s (%d%%)", i, stats[i - 1][0],
-                            stats[i - 1][1] * 100 / time_all)
-
-    unit_group_colors = {"PLOTTER": "gold",
-                         "WORKER": "greenyellow",
-                         "LOADER": "cyan",
-                         "TRAINER": "coral",
-                         "EVALUATOR": "plum",
-                         "START_END": "lightgrey"}
+            table.add_row(i, int(stats[i - 1][1] * 100 / time_all),
+                          stats[i - 1][0])
+        self.info("Unit run time statistics top:\n%s", str(table))
 
     def checksum(self):
         sha1 = hashlib.sha1()
