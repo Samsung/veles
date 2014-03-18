@@ -1,2 +1,3 @@
 .gitmodules merge=ours
 veles/znicz merge=ours
+veles/__init__.py filter=package
