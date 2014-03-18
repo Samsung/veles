@@ -236,4 +236,4 @@ class Client(NetworkAgent):
         self.workflow = workflow
         self.launcher = workflow.workflow
         self.factory = VelesProtocolFactory(self)
-        reactor.connectTCP(self.address, self.port, self.factory)
+        reactor.connectTCP(self.address, self.port, self.factory, timeout=300)
