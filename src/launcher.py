@@ -84,7 +84,10 @@ class Launcher(logger.Logger):
         parser.add_argument("-n", "--nodes", type=str,
                             default=kwargs.get("nodes", ""),
                             help="The list of slaves to launch remotely "
-                                 "separated by a comma.")
+                                 "separated by commas. Slave format is "
+                                 "host/OpenCLPlatformNumber:OpenCLDevice(s)xN,"
+                                  "examples: host/0:0, host/1:0-2, "
+                                  "host/0:2-3x3.")
         parser.add_argument("-f", "--log-file", type=str,
                             default=kwargs.get("log_file", ""),
                             help="The file name where logs will be copied.")
@@ -139,7 +142,7 @@ class Launcher(logger.Logger):
 
     @property
     def slaves(self):
-        return self._slaves if not self.is_slave else []
+        return self._slaves if self.is_master else []
 
     @property
     def webagg_port(self):
@@ -318,7 +321,7 @@ class Launcher(logger.Logger):
         skip = False
         ignored_args = {"-l", "--listen-address", "-n", "--nodes", "-p",
                         "--matplotlib-backend", "-b", "--background",
-                        "-s", "--stealth"}
+                        "-s", "--stealth", "-d", "--device"}
         for i in range(1, len(sys.argv)):
             if sys.argv[i] in ignored_args:
                 skip = True
@@ -338,8 +341,26 @@ class Launcher(logger.Logger):
         slave_args = " ".join(filtered_argv)
         self.debug("Slave args: %s", slave_args)
         for node in self.slaves:
-            self._launch_remote_program(
-                node, "%s %s" % (os.path.abspath(sys.argv[0]), slave_args))
+            host, devs = node.split('/')
+            marray = devs.split('x')
+            if len(marray) > 1:
+                multiplier = int(marray[1])
+            else:
+                multiplier = 1
+            oclpnums, ocldevnum = marray[0].split(':')
+            oclpnum = int(oclpnums)
+            ocldevarr = ocldevnum.split('-')
+            ocldevmin = int(ocldevarr[0])
+            if len(ocldevarr) > 1:
+                ocldevmax = int(ocldevarr[1])
+            else:
+                ocldevmax = ocldevmin
+            for _ in range(0, multiplier):
+                for d in range(ocldevmin, ocldevmax + 1):
+                    self._launch_remote_program(
+                        host, "%s %s -d %d:%d" % (os.path.abspath(sys.argv[0]),
+                                                  slave_args,
+                                                  oclpnum, d))
 
     def _launch_remote_program(self, host, prog):
         self.info("Launching \"%s\" on %s", prog, host)
