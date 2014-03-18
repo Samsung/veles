@@ -7,6 +7,7 @@ Created on Feb 10, 2014
 """
 
 
+import daemon
 import logging
 import multiprocessing as mp
 import socket
@@ -17,9 +18,8 @@ import tornado.ioloop as ioloop
 import tornado.web as web
 import uuid
 
-import config
-import daemon
-import logger
+import veles.config as config
+import veles.logger as logger
 
 
 debug_mode = False
