@@ -364,14 +364,15 @@ class Launcher(logger.Logger):
 
     def _launch_remote_program(self, host, prog):
         self.info("Launching \"%s\" on %s", prog, host)
+        client = paramiko.SSHClient()
         try:
-            client = paramiko.SSHClient()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(host, look_for_keys=True, timeout=0.1)
             client.exec_command("cd '%s' && %s" % (os.getcwd(), prog))
-            client.close()
         except:
             self.exception()
+        finally:
+            client.close()
 
     def _set_webagg_port(self, port):
         self.info("Found out the WebAgg port: %d", port)
