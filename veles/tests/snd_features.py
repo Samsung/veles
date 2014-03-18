@@ -8,7 +8,7 @@ Created on May 22, 2013
 import logging
 import numpy
 import unittest
-from snd_features import SoundFeatures
+from veles.snd_features import SoundFeatures
 from sound_feature_extraction.library import Library
 
 

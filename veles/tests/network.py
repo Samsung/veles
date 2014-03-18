@@ -1,7 +1,5 @@
-#!/usr/bin/python3
-
 """
-Created on Feb 14, 2014
+Created on Jan 23, 2014
 
 @author: Vadim Markovtsev <v.markovtsev@samsung.com>
 """
@@ -9,25 +7,23 @@ Created on Feb 14, 2014
 
 import logging
 import pickle
-import socket
-import time
 from twisted.internet import reactor
 import unittest
 
-import veles.config
-from veles.launcher import Launcher
-import veles.workflows
+import veles.client as client
+import veles.server as server
+import veles.workflows as workflows
 
 
-class TestWorkflow(veles.workflows.Workflow):
+class TestWorkflow(workflows.Workflow):
     job_requested = False
     job_done = False
-    job_dropped = False
     update_applied = False
     power_requested = False
+    job_dropped = False
 
-    def __init__(self, launcher, **kwargs):
-        super(TestWorkflow, self).__init__(launcher, **kwargs)
+    def __init__(self, **kwargs):
+        super(TestWorkflow, self).__init__(self, **kwargs)
 
     def request_job(self, slave):
         TestWorkflow.job_requested = True
@@ -53,28 +49,42 @@ class TestWorkflow(veles.workflows.Workflow):
         TestWorkflow.power_requested = True
         return 100
 
+    @property
+    def is_slave(self):
+        return False
+
+    @property
+    def is_master(self):
+        return False
+
+    @property
+    def is_standalone(self):
+        return True
+
+    def add_ref(self, workflow):
+        pass
+
 
 class Test(unittest.TestCase):
-
     def setUp(self):
-        veles.config.web_status_host = socket.gethostname()
-        self.server = Launcher(listen_address="localhost:9999",
-                               web_status=False)
-        self.client = Launcher(master_address="localhost:9999")
-        self.master_workflow = TestWorkflow(self.server)
-        self.slave_workflow = TestWorkflow(self.client)
+        self.master = TestWorkflow()
+        self.slave = TestWorkflow()
+        self.server = server.Server("127.0.0.1:5050", self.master)
+        self.client = client.Client("127.0.0.1:5050", self.slave)
+        reactor.callLater(0.1, reactor.stop)
 
     def tearDown(self):
         pass
 
-    def testConnectivity(self):
-        reactor.callLater(0.1, reactor.stop)
-        self.server.run()
+    def testWork(self):
+        reactor.run()
         self.assertTrue(TestWorkflow.job_requested, "Job was not requested.")
         self.assertTrue(TestWorkflow.job_done, "Job was not done.")
         self.assertTrue(TestWorkflow.update_applied, "Update was not applied.")
         self.assertTrue(TestWorkflow.power_requested,
                         "Power was not requested.")
+        self.assertTrue(TestWorkflow.job_dropped,
+                        "Job was not dropped in the end.")
 
 
 if __name__ == "__main__":

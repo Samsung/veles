@@ -7,7 +7,7 @@ Created on May 21, 2013
 
 import logging
 import unittest
-from snd_file_loader import SndFileLoader
+from veles.snd_file_loader import SndFileLoader
 
 
 class Test(unittest.TestCase):

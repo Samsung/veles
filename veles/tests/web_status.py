@@ -9,6 +9,7 @@ import logging
 import time
 import unittest
 
+import veles.config as config
 from veles.web_status import WebStatus
 
 
@@ -16,6 +17,7 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         logging.basicConfig(level=logging.INFO)
+        config.web_status_log_file = "/tmp/veles_web_status_test.log"
         self.ws = WebStatus()
         self.ws.run()
 

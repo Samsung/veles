@@ -17,7 +17,7 @@ import numpy
 import os
 import unittest
 
-import plotting_units
+from veles.plotting_units import MatrixPlotter
 
 
 class Test(unittest.TestCase):
@@ -25,7 +25,7 @@ class Test(unittest.TestCase):
         pass
 
     def testMatrixPlotter(self):
-        mp = plotting_units.MatrixPlotter(self, name="Matrix")
+        mp = MatrixPlotter(self, name="Matrix")
         mp.input = numpy.asarray([[[5753, 1, 22, 16, 10, 38, 32, 14, 30, 26],
                     [0, 6559, 32, 27, 20, 24, 15, 38, 76, 23],
                     [19, 35, 5554, 98, 36, 24, 21, 62, 39, 14],

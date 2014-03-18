@@ -5,13 +5,17 @@ Created on Jan 28, 2014
 """
 import logging
 import unittest
-import benchmark
+
+import veles.benchmark
 
 
 class Test(unittest.TestCase):
+    def add_ref(self, unit):
+        pass
+
     def testBenchmark(self):
         logging.basicConfig(level=logging.DEBUG)
-        self.bench = benchmark.OpenCLBenchmark(None)
+        self.bench = veles.benchmark.OpenCLBenchmark(self)
         logging.info("Result: %d points", self.bench.estimate())
 
 
