@@ -68,7 +68,8 @@ class Launcher(logger.Logger):
                             help="Workflow will be launched in server mode "
                                  "and will accept client connections at the "
                                  "specified address.")
-        parser.add_argument("-p", "--matplotlib-backend", type=str,
+        parser.add_argument("-p", "--matplotlib-backend", type=str, nargs='?',
+                            const="",
                             default=kwargs.get("matplotlib_backend",
                                                config.matplotlib_backend),
                             help="Matplotlib drawing backend.")
@@ -91,8 +92,9 @@ class Launcher(logger.Logger):
         parser.add_argument("-f", "--log-file", type=str,
                             default=kwargs.get("log_file", ""),
                             help="The file name where logs will be copied.")
-        parser.add_argument("-g", "--log-mongo", type=str,
-                            default=kwargs.get("log_mongo", ""),
+        parser.add_argument("-g", "--log-mongo", type=str, nargs='?',
+                            const="",
+                            default=kwargs.get("log_mongo", "no"),
                             help="Mongo ZMQ endpoint where logs will be "
                                  "copied.")
         parser.add_argument("-i", "--log-id", type=str,
@@ -151,7 +153,11 @@ class Launcher(logger.Logger):
 
     @property
     def logs_to_mongo(self):
-        return self.args.log_mongo != ""
+        return self.args.log_mongo != "no"
+
+    @property
+    def mongo_log_addr(self):
+        return self.args.log_mongo
 
     @property
     def matplotlib_backend(self):
@@ -417,6 +423,7 @@ class Launcher(logger.Logger):
                'time': "%02d:%02d:%02d" % (hours, mins, secs),
                'user': getpass.getuser(),
                'graph': self.workflow_graph,
+               'log_addr': self.mongo_log_addr,
                'slaves': self._agent.nodes if self.is_master else [],
                'plots': "http://%s:%d" % (socket.gethostname(),
                                           self.webagg_port),
