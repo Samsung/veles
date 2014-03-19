@@ -5,7 +5,9 @@ Created on Jul 12, 2013
 """
 
 
+from copy import copy
 import logging.handlers
+from pymongo import MongoClient
 
 
 class Logger(object):
@@ -53,6 +55,12 @@ class Logger(object):
         logging.getLogger().addHandler(handler)
         logging.info("Continuing")
 
+    @staticmethod
+    def duplicate_all_logging_to_mongo(addr, docid):
+        handler = MongoLogHandler(addr=addr, docid=docid)
+        logging.info("Saving output to Mongo on %s", addr)
+        logging.getLogger().addHandler(handler)
+
     def debug(self, msg, *args, **kwargs):
         self.logger_.debug(msg, *args, **kwargs)
 
@@ -70,3 +78,24 @@ class Logger(object):
 
     def critical(self, msg, *args, **kwargs):
         self.logger_.critical(msg, *args, **kwargs)
+
+
+class MongoLogHandler(logging.Handler):
+    def __init__(self, addr, docid, level=logging.NOTSET):
+        super(MongoLogHandler, self).__init__(level)
+        self._client = MongoClient("mongodb://" + addr)
+        self._db = self._client.veles
+        self._collection = self._db.logs
+        self._id = docid
+
+    @property
+    def id(self):
+        return self._id
+
+    def emit(self, record):
+        data = copy(record.__dict__)
+        for bs in "levelno", "funcName", "args", "msg", "module", \
+                  "processName", "msecs":
+            del(data[bs])
+        data["session"] = self.id
+        self._collection.insert(data)

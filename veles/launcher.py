@@ -91,6 +91,13 @@ class Launcher(logger.Logger):
         parser.add_argument("-f", "--log-file", type=str,
                             default=kwargs.get("log_file", ""),
                             help="The file name where logs will be copied.")
+        parser.add_argument("-g", "--log-mongo", type=str,
+                            default=kwargs.get("log_mongo", ""),
+                            help="Mongo ZMQ endpoint where logs will be "
+                                 "copied.")
+        parser.add_argument("-i", "--log-id", type=str,
+                            default=kwargs.get("log_id", ""),
+                            help="Log identifier (used my Mongo logger).")
         self.args, _ = parser.parse_known_args()
         self.args.master_address = self.args.master_address.strip()
         self.args.listen_address = self.args.listen_address.strip()
@@ -116,11 +123,17 @@ class Launcher(logger.Logger):
             self._daemon_context.open()
         if self.args.log_file != "":
             logger.Logger.duplicate_all_logging_to_file(self.args.log_file)
+
+        self._id = str(uuid.uuid4())
+        self._log_id = self.args.log_id or self.id
+        if self.logs_to_mongo:
+            logger.Logger.duplicate_all_logging_to_mongo(self.args.log_mongo,
+                                                         self._log_id)
+        self.info("My log ID is %s", self.log_id)
         self._lock = threading.Lock()
         self._webagg_port = 0
         self._agent = None
         self._workflow = None
-        self._id = str(uuid.uuid4())
         self._initialized = False
         self._running = False
 
@@ -129,8 +142,16 @@ class Launcher(logger.Logger):
         return self._id
 
     @property
+    def log_id(self):
+        return self._log_id
+
+    @property
     def runs_in_background(self):
         return self.args.background
+
+    @property
+    def logs_to_mongo(self):
+        return self.args.log_mongo != ""
 
     @property
     def matplotlib_backend(self):
@@ -338,6 +359,7 @@ class Launcher(logger.Logger):
             host = socket.gethostname()
         filtered_argv.append("%s:%s" % (host, port))
         filtered_argv.append("-b")
+        filtered_argv.append("-i %s" % self.log_id)
         slave_args = " ".join(filtered_argv)
         self.debug("Slave args: %s", slave_args)
         for node in self.slaves:
@@ -389,6 +411,7 @@ class Launcher(logger.Logger):
         mins, secs = divmod(time.time() - self.start_time, 60)
         hours, mins = divmod(mins, 60)
         ret = {'id': self.id,
+               'log_id': self.log_id,
                'name': self.workflow.name,
                'master': socket.gethostname(),
                'time': "%02d:%02d:%02d" % (hours, mins, secs),
