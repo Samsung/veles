@@ -102,6 +102,8 @@ graphics_multicast_address = "239.192.1.1"
 matplotlib_backend = "Qt4Agg"
 matplotlib_webagg_port = 8081
 
+mongodb_logging_address = "smaug:27017"
+
 slaves = ["markovtsevu64", "seresovu64", "seninu64", "kuznetsovu64",
           "kazantsevu64", "lpodoynitsinau64", "smaug", "smaug",
           "smaug", "smaug"]

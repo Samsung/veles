@@ -129,6 +129,8 @@ class Launcher(logger.Logger):
         self._id = str(uuid.uuid4())
         self._log_id = self.args.log_id or self.id
         if self.logs_to_mongo:
+            if self.mongo_log_addr == "":
+                self.args.log_mongo = config.mongodb_logging_address
             logger.Logger.duplicate_all_logging_to_mongo(self.args.log_mongo,
                                                          self._log_id)
         self.info("My log ID is %s", self.log_id)
