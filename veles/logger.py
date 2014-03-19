@@ -51,14 +51,14 @@ class Logger(object):
         formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: "
                                       "%(message)s", "%Y-%m-%d %H:%M:%S")
         handler.setFormatter(formatter)
-        logging.info("Saving output to %s", file_name)
+        logging.info("Saving logs to %s", file_name)
         logging.getLogger().addHandler(handler)
         logging.info("Continuing")
 
     @staticmethod
     def duplicate_all_logging_to_mongo(addr, docid):
         handler = MongoLogHandler(addr=addr, docid=docid)
-        logging.info("Saving output to Mongo on %s", addr)
+        logging.info("Saving logs to Mongo on %s", addr)
         logging.getLogger().addHandler(handler)
 
     def debug(self, msg, *args, **kwargs):
