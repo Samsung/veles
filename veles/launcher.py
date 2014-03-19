@@ -336,8 +336,10 @@ class Launcher(logger.Logger):
             self.info("Launching the web status server")
             self._launch_remote_program(
                 config.web_status_host,
-                os.path.abspath(os.path.join(config.this_dir,
-                                             "web_status.py")))
+                "PYTHONPATH=%s %s" % (
+                    os.path.dirname(os.path.abspath(config.this_dir)),
+                    os.path.abspath(os.path.join(config.this_dir,
+                                                 "web_status.py"))))
         else:
             self.info("Discovered an already running web status server")
 

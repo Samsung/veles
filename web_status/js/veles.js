@@ -29,7 +29,7 @@ function updateUI() {
   var msg = {
     request: "workflows",
     args: ["name", "master", "slaves", "time", "user", "graph", "description",
-           "plots", "custom_plots"]
+           "plots", "custom_plots", "log_id", "log_addr"]
   };
   $.ajax({
     url: "service",
@@ -81,7 +81,11 @@ function updateUI() {
           items += '</a></h4>\n';
           items += '<a class="view-plots" href="';
           items += workflow.plots;
-          items += '" target="_blank">view plots</a><br/>\n';
+          items += '" target="_blank">plots</a>';
+          items += '<span class="view-plots">&nbsp;</span>\n';
+          items += '<a class="view-plots" href=log_viewer.html?id="';
+          items += workflow.log_id;
+          items += '"target="_blank">logs</a><br/>\n';
           items += '<span class="list-group-item-text">Master: ';
           items += '<a href="#"><strong>';
           items += workflow.master;
@@ -154,6 +158,13 @@ function activateListItem(item_id) {
   details += 'onclick="showPlots(\'';
   details += item_id;
   details += '\')">View plots';
+  details += '</button>\n';  
+  details += '</div>\n';
+  details += '<div class="btn-group">\n';
+  details += '<button type="button" class="btn btn-default" ';
+  details += 'onclick="showLogs(\'';
+  details += item_id;
+  details += '\')">View logs';
   details += '</button>\n';
   details += '</div>\n';
   details += '<div class="btn-group">\n';
@@ -233,6 +244,7 @@ function activateListItem(item_id) {
   details += "</a> and has ";
   details += Object.keys(workflow.slaves).length;
   details += ' nodes.<br/>';
+  details += "Log ID: <strong>" + workflow.log_id + "</strong><br/>";
   details += 'ØMQ endpoints for custom plots:<br/><strong>';
   details += workflow.custom_plots;
   details += '</strong><br/><br/>';
@@ -246,6 +258,12 @@ function activateListItem(item_id) {
 }
 
 function showPlots(item_id) {
+  var workflow = listed_workflows[item_id];
+  var win = window.open(workflow.plots, '_blank');
+  win.focus();
+}
+
+function showLogs(item_id) {
   var workflow = listed_workflows[item_id];
   var win = window.open(workflow.plots, '_blank');
   win.focus();
