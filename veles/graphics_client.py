@@ -18,7 +18,7 @@ from twisted.internet import reactor
 import zmq
 from txzmq import ZmqConnection, ZmqEndpoint
 
-import veles.config as config
+from veles.config import root
 from veles.logger import Logger
 
 
@@ -74,7 +74,7 @@ class GraphicsClient(Logger):
             import matplotlib.lines as lines
             import matplotlib.patches as patches
             import matplotlib.pyplot as pp
-            import plotting_units  # important - do not remove
+            import veles.plotting_units as plotting_units  # important - do not remove
             pp.ion()
             self.matplotlib = matplotlib
             self.cm = cm
@@ -105,7 +105,7 @@ class GraphicsClient(Logger):
                 self.condition = threading.Condition()
                 with self.condition:
                     self.condition.wait()
-                    free_port = config.matplotlib_webagg_port - 1
+                    free_port = root.common.matplotlib_webagg_port - 1
                     result = 0
                     while result == 0:
                         free_port += 1

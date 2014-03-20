@@ -17,7 +17,7 @@ import yaml
 import threading
 
 import veles.benchmark as benchmark
-import veles.config as config
+from veles.config import root
 import veles.formats as formats
 from veles.units import Unit, OpenCLUnit, Repeater
 import veles.external.pydot as pydot
@@ -81,7 +81,7 @@ class Workflow(Unit):
         end_point: end point.
     """
     def __init__(self, workflow, **kwargs):
-        self._plotters_are_enabled = not config.plotters_disabled
+        self._plotters_are_enabled = not root.common.plotters_disabled
         super(Workflow, self).__init__(workflow, **kwargs)
         self.units = []
         self.start_point = StartPoint(self)
@@ -332,7 +332,7 @@ class OpenCLWorkflow(OpenCLUnit, Workflow):
         """Exports workflow for use on DTV.
         """
         # create temporary folder
-        tmppath = "%s/saver_tmp" % (config.cache_dir)
+        tmppath = os.path.join(root.common.cache_dir, "saver_tmp")
         if not os.path.exists(tmppath):
             os.makedirs(tmppath)
         files_to_save = []

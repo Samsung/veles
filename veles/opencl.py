@@ -17,12 +17,15 @@ import time
 import traceback
 import opencl4py as cl
 
-import veles.config as config
+from veles.config import root
 import veles.formats as formats
 import veles.opencl_types as opencl_types
 import veles.rnd as rnd
 import veles.units as units
 import veles.external.prettytable as prettytable
+
+
+PYVER = 3 if six.PY3 else 2
 
 
 class DeviceInfo(object):
@@ -108,50 +111,52 @@ class Device(units.Pickleable):
         device = context.devices[0]
         desc = "%s/%s/%d" % (device.vendor.strip(), device.name.strip(),
                              device.vendor_id)
-        self.device_info = DeviceInfo(desc=desc, memsize=device.memsize,
+        self.device_info = DeviceInfo(
+            desc=desc, memsize=device.memsize,
             memalign=device.memalign, version=device.version)
-        self.queue_ = context.create_queue(device,
-            cl.CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE)
+        self.queue_ = context.create_queue(
+            device, cl.CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE)
 
     def _fill_device_info_performance_values(self):
         device_infos = {}
         try:
-            fin = open("%s/device_infos.%d.pickle" % (config.cache_dir,
-                                                      3 if six.PY3 else 2),
+            fin = open(os.path.join(root.common.device_dir,
+                                    "device_infos.%d.pickle" % PYVER),
                        "rb")
+
+            # TODO(lyubov.p): recreate device_infos.*.pickle,
+            # then remove add_path.
 
             def add_path(path):
                 if path not in sys.path:
                     sys.path.append(path)
 
-            this_dir = os.path.dirname(__file__)
-            if not this_dir:
-                this_dir = "."
-            add_path("%s" % (this_dir))
+            add_path(root.common.opencl_dir)
 
             device_infos = pickle.load(fin)
 
             fin.close()
         except IOError:
-            self.info("%s/device_infos.%d.pickle was not found" %
-                      (config.cache_dir, 3 if six.PY3 else 2))
-        if (not config.test_known_device and
-            self.device_info.desc in device_infos.keys()):
+            self.info(os.path.join(root.common.device_dir,
+                                   "device_infos.%d.pickle" % PYVER),
+                      " was not found")
+        if (not root.common.test_known_device and
+           self.device_info.desc in device_infos):
             device_info = device_infos[self.device_info.desc]
             self.device_info.rating.update(device_info.rating)
             self.device_info.BLOCK_SIZE.update(device_info.BLOCK_SIZE)
             self.device_info.dt.update(device_info.dt)
             self.device_info.min_dt.update(device_info.min_dt)
             return
-        if not config.test_unknown_device:
+        if not root.common.test_unknown_device:
             return
         device_infos[self.device_info.desc] = self.device_info
         self._do_tests(device_infos)
         self.info("Saving found device performance values into "
-                        "%s/device_infos.%d.pickle" % (config.cache_dir,
-                                                       3 if six.PY3 else 2))
-        fout = open("%s/device_infos.%d.pickle" % (config.cache_dir,
-                                                   3 if six.PY3 else 2),
+                  (os.path.join(root.common.device_dir,
+                                "device_infos.%d.pickle" % PYVER)))
+        fout = open(os.path.join(root.common.device_dir,
+                                 "device_infos.%d.pickle" % PYVER),
                     "wb")
         pickle.dump(device_infos, fout)
         fout.close()
@@ -160,10 +165,12 @@ class Device(units.Pickleable):
     def _do_tests(self, device_infos):
         """Measure relative device performance.
         """
-        self.info("Will test device performance.\n"
-            "Results of the test will be saved to %s/device_infos.%d.pickle, "
-            "so this is one time process usually." % (config.cache_dir,
-                                                      3 if six.PY3 else 2))
+        self.info(
+            "Will test device performance.\n"
+            "Results of the test will be saved to",
+            os.path.join(root.common.device_dir,
+                         "device_infos.%d.pickle, " % PYVER),
+            "so this is one time process usually.")
 
         min_dt = {}
         dt_numpy = {}
@@ -182,8 +189,9 @@ class Device(units.Pickleable):
             for dtype in sorted(opencl_types.dtypes.keys()):
                 try:
                     self._prepare_test(BLOCK_SIZE, dtype, cc)
-                    key = "%s_%d_%d_%d" % (dtype, self.AB_WIDTH,
-                        self.B_HEIGHT, self.A_HEIGHT)
+                    key = ("%s_%d_%d_%d"
+                           % (dtype, self.AB_WIDTH,
+                              self.B_HEIGHT, self.A_HEIGHT))
                     if not key in cc.keys():
                         self.info("Numpy for dtype=%s" % (dtype))
                         dt = self._do_cpu_test(cc, key)
@@ -192,7 +200,8 @@ class Device(units.Pickleable):
                             dt_numpy[dtype] = dt
                         if dt_numpy[dtype] < min_dt[dtype]:
                             min_dt[dtype] = dt_numpy[dtype]
-                    self.info("Testing %s with BLOCK_SIZE = %d "
+                    self.info(
+                        "Testing %s with BLOCK_SIZE = %d "
                         "and dtype = %s" % (self.device_info.desc, BLOCK_SIZE,
                                             dtype))
                     dt = self._do_test(BLOCK_SIZE, dtype, 3)
@@ -201,20 +210,22 @@ class Device(units.Pickleable):
                         self.device_info.BLOCK_SIZE[dtype] = BLOCK_SIZE
                     if dt < min_dt[dtype]:
                         min_dt[dtype] = dt
-                    key = "%s_%d_%d_%d" % ("double2" if dtype[-1] == "2"
-                        else "double", self.AB_WIDTH,
-                        self.B_HEIGHT, self.A_HEIGHT)
+                    key = ("%s_%d_%d_%d" %
+                           ("double2" if dtype[-1] == "2" else "double",
+                            self.AB_WIDTH, self.B_HEIGHT, self.A_HEIGHT))
                     c = cc[key].copy()
                     c -= self.c.v
                     c = numpy.sqrt(numpy.square(numpy.real(c)) +
                                    numpy.square(numpy.imag(c)))
-                    self.info("Avg is %.3f seconds, MSE = %.6f, "
-                                    "max_diff = %.6f" % (
-                                    dt, numpy.sum(c) / c.size, c.max()))
+                    self.info(
+                        "Avg is %.3f seconds, MSE = %.6f, "
+                        "max_diff = %.6f" %
+                        (dt, numpy.sum(c) / c.size, c.max()))
                     self._cleanup_after_test()
                 except RuntimeError:
                     a, b, c = sys.exc_info()
-                    self.info("Program compilation or run failed for "
+                    self.info(
+                        "Program compilation or run failed for "
                         "BLOCK_SIZE = %d and dtype = %s "
                         "(details in stderr)" % (BLOCK_SIZE, dtype))
                     traceback.print_exception(a, b, c)
@@ -232,11 +243,13 @@ class Device(units.Pickleable):
                 rating = min_dt[dtype] / device_info.dt[dtype]
                 if device_info.rating[dtype] != rating:
                     if device_info.rating[dtype]:
-                        self.info("UPD Rating(%s): %.4f" % (device_info.desc,
-                                                                  rating))
+                        self.info(
+                            "UPD Rating(%s): %.4f" %
+                            (device_info.desc, rating))
                     else:
-                        self.info("NEW Rating(%s): %.4f" % (device_info.desc,
-                                                                  rating))
+                        self.info(
+                            "NEW Rating(%s): %.4f" %
+                            (device_info.desc, rating))
                 else:
                     self.info("Rating(%s): %.4f" % (device_info.desc, rating))
                 device_info.rating[dtype] = rating
@@ -315,8 +328,9 @@ class Device(units.Pickleable):
     def _do_cpu_test(self, cc, key):
         """Pure single core CPU test.
         """
-        dtype = (numpy.complex128 if self.a.v.dtype in (
-                    numpy.complex64, numpy.complex128) else numpy.float64)
+        dtype = (
+            numpy.complex128 if self.a.v.dtype in (
+                numpy.complex64, numpy.complex128) else numpy.float64)
         a = numpy.empty(self.a.v.shape, dtype=dtype)
         a[:] = self.a.v[:]
         bt = self.b.v.transpose()
@@ -357,7 +371,8 @@ class Device(units.Pickleable):
             "H": self.AB_WIDTH,
             "Y": self.B_HEIGHT,
             "BATCH": self.A_HEIGHT}
-        obj.build_program(defines, os.path.join(config.cache_dir, "test.cl"),
+        obj.build_program(defines, os.path.join(root.common.cache_dir,
+                                                "test.cl"),
                           dtype=dtype)
 
         krn = obj.get_kernel("feed_layer")
@@ -379,7 +394,8 @@ class Device(units.Pickleable):
         # Will skip the first iteration
         ev = None
         for i in range(iters + 1):
-            ev = self.queue_.execute_kernel(krn, global_size, local_size,
+            ev = self.queue_.execute_kernel(
+                krn, global_size, local_size,
                 wait_for=(None if ev is None else (ev,)))
             if i == 0:
                 self.queue_.flush()

@@ -11,7 +11,7 @@ import os
 import threading
 import opencl4py as cl
 
-import veles.config as config
+from veles.config import root
 import veles.error as error
 import veles.opencl_types as opencl_types
 import veles.units as units
@@ -216,8 +216,8 @@ class Vector(units.Pickleable):
         if self.device is None:
             return
         converted_dtype = self._converted_dtype(self.v.dtype)
-        if converted_dtype in (opencl_types.dtypes[config.dtype],
-                               opencl_types.dtypes[config.c_dtype]):
+        if converted_dtype in (opencl_types.dtypes[root.common.dtype],
+                               opencl_types.dtypes[root.common.precision_type]):
             self.v = self.v.astype(converted_dtype)
         self.v = cl.realign_array(self.v, self.device.device_info.memalign,
                                   numpy)

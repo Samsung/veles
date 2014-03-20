@@ -11,8 +11,8 @@ import logging
 import os
 from six.moves import cPickle as pickle
 
-from sound_feature_extraction.extractor import Extractor
-from sound_feature_extraction.feature import Feature
+from libSoundFeatureExtraction.python.sound_feature_extraction import extractor
+from libSoundFeatureExtraction.python.sound_feature_extraction import feature
 import veles.units as units
 
 

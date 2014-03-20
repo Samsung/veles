@@ -18,7 +18,7 @@ import sys
 import time
 import traceback
 
-import veles.config as config
+from veles.config import root
 import veles.error as error
 import veles.formats as formats
 import veles.launcher as launcher
@@ -40,12 +40,12 @@ class Loader(loader.Loader):
     """
     def __init__(self, workflow, **kwargs):
         pickle_fnme = kwargs.get("pickle_fnme", "")
-        minibatch_max_size = kwargs.get("minibatch_max_size", 100)
+        minibatch_maxsize = kwargs.get("minibatch_maxsize", 100)
         minibatches_in_epoch = kwargs.get("minibatches_in_epoch", 1000)
         window_size = kwargs.get("window_size", 100)
         rnd_ = kwargs.get("rnd", rnd.default2)
         kwargs["pickle_fnme"] = pickle_fnme
-        kwargs["minibatch_max_size"] = minibatch_max_size
+        kwargs["minibatch_maxsize"] = minibatch_maxsize
         kwargs["minibatches_in_epoch"] = minibatches_in_epoch
         kwargs["window_size"] = window_size
         kwargs["rnd"] = rnd_
@@ -160,7 +160,7 @@ class Loader(loader.Loader):
         self.minibatch_data.reset()
         sh = [self.minibatch_maxsize[0], nn * self.window_size]
         self.minibatch_data.v = numpy.zeros(sh,
-            dtype=opencl_types.dtypes[config.c_dtype])
+            dtype=opencl_types.dtypes[root.common.precision_type])
 
         self.minibatch_target.reset()
 
@@ -355,7 +355,8 @@ def main():
     parser.add_argument("-export", type=bool,
         help="Export trained network to C (default False)",
         default=False)
-    pickle_fnme = "%s/music/GTZAN/gtzan.pickle" % (config.test_dataset_root)
+    pickle_fnme = os.path.join(root.common.test_dataset_root,
+                               "music/GTZAN/gtzan.pickle")
     parser.add_argument("-pickle_fnme", type=str,
         help="Pickle with input data (default %s)." % (pickle_fnme),
         default=pickle_fnme)
@@ -381,9 +382,11 @@ def main():
     logging.info("Will train NN with layers: %s" % (" ".join(
                                         str(x) for x in layers)))
 
-    rnd.default.seed(numpy.fromfile("%s/seed" % (os.path.dirname(__file__)),
+    rnd.default.seed(numpy.fromfile(os.path.join(root.common.veles_dir,
+                                                 "veles/samples/seed"),
                                     numpy.int32, 1024))
-    rnd.default2.seed(numpy.fromfile("%s/seed2" % (os.path.dirname(__file__)),
+    rnd.default2.seed(numpy.fromfile(os.path.join(root.common.veles_dir,
+                                                 "veles/samples/seed2"),
                                     numpy.int32, 1024))
     # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
     device = None if l.is_master else opencl.Device()
@@ -396,7 +399,7 @@ def main():
             s = "%d.%02d.%02d_%02d.%02d.%02d" % (
                 tm.tm_year, tm.tm_mon, tm.tm_mday,
                 tm.tm_hour, tm.tm_min, tm.tm_sec)
-            fnme = "%s/channels_workflow_%s" % (config.snapshot_dir, s)
+            fnme = "%s/channels_workflow_%s" % (root.common.snapshot_dir, s)
             try:
                 w.export(fnme)
                 logging.info("Exported successfully to %s.tar.gz" % (fnme))
@@ -417,6 +420,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    if config.plotters_disabled:
-        os._exit(0)
     sys.exit(0)

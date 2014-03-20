@@ -7,7 +7,7 @@ Created on May 17, 2013
 
 import numpy
 
-import veles.config as config
+from veles.config import root
 import veles.formats as formats
 import veles.plotter as plotter
 import veles.opencl_types as opencl_types
@@ -580,7 +580,7 @@ class MSEHistogram(plotter.Plotter):
 
     def initialize(self):
         self.val_mse = numpy.zeros(self.n_bars,
-                                   dtype=opencl_types.dtypes[config.dtype])
+                                   dtype=opencl_types.dtypes[root.common.dtype])
 
     def redraw(self):
         fig = self.pp.figure(self.name)

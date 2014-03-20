@@ -8,7 +8,6 @@ File for korean channels recognition.
 """
 
 
-import argparse
 import glymur
 import logging
 import numpy
@@ -24,7 +23,7 @@ import traceback
 # FIXME(a.kazantsev): numpy.dot works 5 times faster with this option
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
-import veles.config as config
+from veles.config import root, get_config
 import veles.error as error
 import veles.formats as formats
 import veles.launcher as launcher
@@ -40,6 +39,33 @@ import veles.znicz.evaluator as evaluator
 import veles.znicz.gd as gd
 import veles.znicz.image_saver as image_saver
 import veles.znicz.loader as loader
+
+root.cache_fnme = get_config(
+    root.cache_fnme, os.path.join(root.common.cache_dir, "channels.pickle"))
+
+root.decision.fail_iterations = get_config(root.decision.fail_iterations, 1000)
+
+root.decision.snapshot_prefix = get_config(root.decision.snapshot_prefix,
+                                           "channles_108_24")
+
+root.decision.use_dynamic_alpha = get_config(root.decision.use_dynamic_alpha,
+                                             False)
+root.export = get_config(root.export, False)
+root.find_negative = get_config(root.find_negative, 0)
+root.global_alpha = get_config(root.global_alpha, 0.01)
+root.global_lambda = get_config(root.global_lambda, 0.00005)
+root.grayscale = get_config(root.grayscale, False)
+root.layers = get_config(root.layers, [108, 24])
+root.loader.minibatch_size = get_config(root.loader.minibatch_size, 81)
+root.loader.rect = get_config(root.loader.rect, (264, 129))
+root.n_threads = get_config(root.n_threads, 32)
+
+root.path_for_train_data = get_config(
+    root.path_for_train_data, "/data/veles/channels/korean_960_540/train")
+
+root.snapshot = get_config(root.snapshot, "")
+root.validation_procent = get_config(root.validation_procent, 0.15)
+root.weights_plotter.limit = get_config(root.weights_plotter.limit, 16)
 
 
 class Loader(loader.FullBatchLoader):
@@ -59,12 +85,12 @@ class Loader(loader.FullBatchLoader):
         self.top_conf_ = None
         # : Configuration from channels_dir/subdirectory/conf.py
         self.subdir_conf_ = {}
-        self.channels_dir = channels_dir
-        self.cache_fnme = cache_fnme
-        self.rect = rect
-        self.grayscale = grayscale
+        self.channels_dir = root.path_for_train_data
+        self.cache_fnme = root.cache_fnme
+        self.rect = root.loader.rect
+        self.grayscale = root.grayscale
         self.w_neg = None  # workflow for finding the negative dataset
-        self.find_negative = 0
+        self.find_negative = root.find_negative
         self.channel_map = None
         self.pos = {}
         self.sz = {}
@@ -216,7 +242,7 @@ class Loader(loader.FullBatchLoader):
                 # negative found
                 s = samples[i].reshape(sample.shape)
                 ii = self.append_sample(s, 0, fnme, n_negative, data_lock)
-                dirnme = "%s/found_negative_images" % (config.cache_dir)
+                dirnme = "%s/found_negative_images" % (root.common.cache_dir)
                 try:
                     os.mkdir(dirnme)
                 except OSError:
@@ -255,12 +281,14 @@ class Loader(loader.FullBatchLoader):
         if self.original_data is not None and self.original_labels is not None:
             return
 
-        cached_data_fnme = ("%s/%s_%s.pickle" % (
-            config.cache_dir, os.path.basename(__file__),
-                self.__class__.__name__) if not len(self.cache_fnme)
-            else self.cache_fnme)
-        self.info("Will try to load previously cached data from "
-                        "%s" % (cached_data_fnme))
+        cached_data_fnme = (
+            os.path.join(
+                root.common.cache_dir,
+                "%s_%s.pickle" %
+                (os.path.basename(__file__), self.__class__.__name__))
+            if not len(self.cache_fnme) else self.cache_fnme)
+        self.info("Will try to load previously cached data from " +
+                  cached_data_fnme)
         save_to_cache = True
         try:
             fin = open(cached_data_fnme, "rb")
@@ -268,7 +296,7 @@ class Loader(loader.FullBatchLoader):
             if obj["channels_dir"] != self.channels_dir:
                 save_to_cache = False
                 self.info("different dir found in cached data: %s" % (
-                                                        obj["channels_dir"]))
+                    obj["channels_dir"]))
                 fin.close()
                 raise FileNotFoundError()
             for k, v in obj.items():
@@ -324,7 +352,7 @@ class Loader(loader.FullBatchLoader):
             if not store_negative:
                 return
             self.info("Will search for a negative set at most %d "
-                            "samples per image" % (self.find_negative))
+                      "samples per image" % (self.find_negative))
             # Saving the old negative set
             self.info("Extracting the old negative set")
             self.file_map.clear()
@@ -347,7 +375,7 @@ class Loader(loader.FullBatchLoader):
 
         # Read top-level configuration
         try:
-            fin = open("%s/conf.py" % (self.channels_dir), "r")
+            fin = open(os.path.join(root.path_for_train_data, "conf.py"), "r")
             s = fin.read()
             fin.close()
             self.top_conf_ = {}
@@ -398,8 +426,8 @@ class Loader(loader.FullBatchLoader):
 
         self.info("Found rectangles:")
         for k in pos.keys():
-            self.info("%s: pos=(%.6f, %.6f) sz=(%.6f, %.6f)" % (k,
-                pos[k][0], pos[k][1], sz[k][0], sz[k][1]))
+            self.info("%s: pos=(%.6f, %.6f) sz=(%.6f, %.6f)" % (
+                k, pos[k][0], pos[k][1], sz[k][0], sz[k][1]))
 
         self.info("Adjusted rectangles:")
         for k in pos.keys():
@@ -411,8 +439,8 @@ class Loader(loader.FullBatchLoader):
             pos[k][1] = min(pos[k][1], 1.0 - sz[k][1])
             pos[k][0] = max(pos[k][0], 0.0)
             pos[k][1] = max(pos[k][1], 0.0)
-            self.info("%s: pos=(%.6f, %.6f) sz=(%.6f, %.6f)" % (k,
-                pos[k][0], pos[k][1], sz[k][0], sz[k][1]))
+            self.info("%s: pos=(%.6f, %.6f) sz=(%.6f, %.6f)" % (
+                k, pos[k][0], pos[k][1], sz[k][0], sz[k][1]))
 
         self.pos.clear()
         self.pos.update(pos)
@@ -430,8 +458,8 @@ class Loader(loader.FullBatchLoader):
                 relpath = "%s/%s" % (subdir, dirnme)
                 found_files = []
                 fordel = []
-                for basedir, dirlist, filelist in os.walk("%s/%s" % (
-                    self.channels_dir, relpath)):
+                for basedir, dirlist, filelist in os.walk(
+                        "%s/%s" % (self.channels_dir, relpath)):
                     for i, nme in enumerate(dirlist):
                         if baddir.search(nme) is not None:
                             fordel.append(i)
@@ -451,7 +479,7 @@ class Loader(loader.FullBatchLoader):
                                  count=1024))
         # FIXME(a.kazantsev): numpy.dot is thread-safe with this value
         # on ubuntu 13.10 (due to the static number of buffers in libopenblas)
-        n_threads = 32
+        n_threads = root.n_threads
         pool = thread_pool.ThreadPool(minthreads=1, maxthreads=n_threads,
                                       queue_size=n_threads)
         data_lock = threading.Lock()
@@ -466,8 +494,8 @@ class Loader(loader.FullBatchLoader):
                 self.info("Will load from %s" % (relpath))
                 lbl = self.get_label(dirnme)
                 for fnme in files[relpath]:
-                    pool.request(self.from_jp2_async, (fnme,
-                        pos[subdir], sz[subdir],
+                    pool.request(self.from_jp2_async, (
+                        fnme, pos[subdir], sz[subdir],
                         data_lock, stat_lock,
                         0 + i_sample, 0 + lbl, n_files, total_files,
                         n_negative, rand))
@@ -475,7 +503,7 @@ class Loader(loader.FullBatchLoader):
         pool.shutdown(execute_remaining=True)
 
         if (len(self.original_data) != len(self.original_labels) or
-            len(self.file_map) != len(self.original_labels)):
+                len(self.file_map) != len(self.original_labels)):
             raise Exception("Logic error")
 
         if self.w_neg is not None and self.find_negative > 0:
@@ -484,7 +512,7 @@ class Loader(loader.FullBatchLoader):
                 n_negative[0], 100.0 * n_negative[0] / n_positive))
 
         self.info("Loaded %d samples with resize and %d without" % (
-                        image.resize_count, image.asitis_count))
+            image.resize_count, image.asitis_count))
 
         self.class_samples[0] = 0
         self.class_samples[1] = 0
@@ -496,10 +524,10 @@ class Loader(loader.FullBatchLoader):
 
         # Saving all the samples
         """
-        self.info("Dumping all the samples to %s" % (config.cache_dir))
+        self.info("Dumping all the samples to %s" % (root.common.cache_dir))
         for i in self.shuffled_indexes:
             l = self.original_labels[i]
-            dirnme = "%s/%03d" % (config.cache_dir, l)
+            dirnme = "%s/%03d" % (root.common.cache_dir, l)
             try:
                 os.mkdir(dirnme)
             except OSError:
@@ -610,8 +638,10 @@ class Workflow(workflows.OpenCLWorkflow):
         self.ev.max_samples_per_epoch = self.loader.total_samples
 
         # Add decision unit
-        self.decision = decision.Decision(self, use_dynamic_alpha=False,
-                                          fail_iterations=1000)
+        self.decision = decision.Decision(
+            self, snapshot_prefix=root.decision.snapshot_prefix,
+            use_dynamic_alpha=root.decision.use_dynamic_alpha,
+            fail_iterations=root.decision.fail_iterations)
         self.decision.link_from(self.ev)
         self.decision.minibatch_class = self.loader.minibatch_class
         self.decision.minibatch_last = self.loader.minibatch_last
@@ -656,10 +686,9 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt = []
         styles = ["r-", "b-", "k-"]
         for i in range(1, 3):
-            self.plt.append(plotting_units.AccumulatingPlotter(self,
-                                                   name="num errors",
-                                                   plot_style=styles[i],
-                                                   ylim=(0, 100)))
+            self.plt.append(plotting_units.AccumulatingPlotter(
+				self, name="num errors", plot_style=styles[i],
+                ylim=(0, 100)))
             self.plt[-1].input = self.decision.epoch_n_err_pt
             self.plt[-1].input_field = i
             self.plt[-1].link_from(self.decision)
@@ -668,8 +697,9 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt[-1].redraw_plot = True
         # Weights plotter
         self.decision.vectors_to_sync[self.gd[0].weights] = 1
-        self.plt_w = plotting_units.Weights2D(self, name="First Layer Weights",
-                                        limit=16, yuv=True)
+        self.plt_w = plotting_units.Weights2D(
+            self, name="First Layer Weights", limit=root.weights_plotter.limit,
+            yuv=True)
         self.plt_w.input = [self.gd[0].weights.v]
         self.plt_w.get_shape_from = self.forward[0].input
         self.plt_w.input_field = 0
@@ -700,15 +730,9 @@ class Workflow(workflows.OpenCLWorkflow):
         self.gd[-1].link_from(self.decision)
 
     def initialize(self, global_alpha, global_lambda, minibatch_maxsize,
-                   dirnme, snapshot_prefix, w_neg, find_negative,
-                   grayscale, cache_fnme, device):
-        self.decision.snapshot_prefix = snapshot_prefix
-        self.loader.channels_dir = dirnme
+                   w_neg, device):
         self.loader.minibatch_maxsize[0] = minibatch_maxsize
         self.loader.w_neg = w_neg
-        self.loader.find_negative = find_negative
-        self.loader.grayscale = grayscale
-        self.loader.cache_fnme = cache_fnme
         self.ev.device = device
         for g in self.gd:
             g.device = device
@@ -725,63 +749,35 @@ def main():
     # else:
     logging.basicConfig(level=logging.INFO)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--snapshot", type=str, default="",
-        help="Snapshot with trained network (default empty)")
-    parser.add_argument("--export", type=bool,
-        help="Export trained network to C (default False)",
-        default=False)
-    parser.add_argument("--dir", type=str, required=True,
-        help="Directory with channels")
-    parser.add_argument("--snapshot-prefix", type=str, required=True,
-        help="Snapshot prefix (Ex.: 108_24)")
-    parser.add_argument("--layers", type=str, required=True,
-        help="NN layer sizes, separated by any separator (Ex.: 108_24)")
-    parser.add_argument("--minibatch-size", type=int,
-        help="Minibatch size (default 81)", default=81)
-    parser.add_argument("--global-alpha", type=float,
-        help="Global Alpha (default 0.01)", default=0.01)
-    parser.add_argument("--global-lambda", type=float,
-        help="Global Lambda (default 0.00005)", default=0.00005)
-    parser.add_argument("--find-negative", type=int,
-        help="Extend negative dataset by at most this number of negative "
-             "samples per image. -snapshot should be provided (default 0)",
-        default=0)
-    parser.add_argument("--grayscale", type=bool,
-        help="Use grayscale input (default False)", default=False)
-    parser.add_argument("--cache-fnme", type=str, default="",
-        help="Filename for saving preprocessed data for training for "
-        "later multipasses, if empty - will use hardcoded filename "
-        "in the cache dir (default empty)")
-    l = launcher.Launcher(parser=parser)
-    args = l.args
+    l = launcher.Launcher()
 
-    s_layers = re.split("\D+", args.layers)
     layers = []
-    for s in s_layers:
+    for s in root.layers:
         layers.append(int(s))
-    logging.info("Will train NN with layers: %s" % (" ".join(
-                                        str(x) for x in layers)))
+    logging.info("Will train NN with layers: %s"
+                 % (" ".join(str(x) for x in layers)))
 
-
-    rnd.default.seed(numpy.fromfile("%s/seed" % (os.path.dirname(__file__)),
+    rnd.default.seed(numpy.fromfile(os.path.join(root.common.veles_dir,
+                                                 "veles/samples/seed"),
                                     numpy.int32, 1024))
-    rnd.default2.seed(numpy.fromfile("%s/seed2" % (os.path.dirname(__file__)),
-                                    numpy.int32, 1024))
+    rnd.default2.seed(numpy.fromfile(os.path.join(root.common.veles_dir,
+                                                  "veles/samples/seed2"),
+                                     numpy.int32, 1024))
     # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
     # rnd.default2.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
     device = None if l.is_master else opencl.Device()
     w_neg = None
     try:
-        fin = open(args.snapshot, "rb")
+        fin = open(root.snapshot, "rb")
         w = pickle.load(fin)
         fin.close()
-        if args.export:
+        if root.export:
             tm = time.localtime()
             s = "%d.%02d.%02d_%02d.%02d.%02d" % (
                 tm.tm_year, tm.tm_mon, tm.tm_mday,
                 tm.tm_hour, tm.tm_min, tm.tm_sec)
-            fnme = "%s/channels_workflow_%s" % (config.snapshot_dir, s)
+            fnme = os.path.join(root.common.snapshot_dir,
+                                "channels_workflow_%s" % s)
             try:
                 w.export(fnme)
                 logging.info("Exported successfully to %s.tar.gz" % (fnme))
@@ -790,31 +786,31 @@ def main():
                 traceback.print_exception(a, b, c)
                 logging.error("Error while exporting.")
             sys.exit(0)
-        if args.find_negative > 0:
+        if root.find_negative > 0:
             if type(w) != tuple or len(w) != 2:
-                logging.error("Snapshot with weights and biases only "
+                logging.error(
+                    "Snapshot with weights and biases only "
                     "should be provided when find_negative is supplied. "
                     "Will now exit.")
                 return
             w_neg = w
             raise IOError()
     except IOError:
-        if args.export:
+        if root.export:
             logging.error("Valid snapshot should be provided if "
                           "export is True. Will now exit.")
             return
-        if (args.find_negative > 0 and w_neg is None):
+        if (root.find_negative > 0 and w_neg is None):
             logging.error("Valid snapshot should be provided if "
                           "find_negative supplied. Will now exit.")
             return
         w = Workflow(l, layers=layers, device=device)
-    w.initialize(global_alpha=args.global_alpha,
-                 global_lambda=args.global_lambda,
-                 minibatch_maxsize=args.minibatch_size, dirnme=args.dir,
-                 snapshot_prefix=args.snapshot_prefix,
-                 w_neg=w_neg, find_negative=args.find_negative, device=device,
-                 grayscale=args.grayscale, cache_fnme=args.cache_fnme)
-    fnme = "%s/%s.txt" % (config.cache_dir, args.snapshot_prefix)
+    w.initialize(global_alpha=root.global_alpha,
+                 global_lambda=root.global_lambda,
+                 minibatch_maxsize=root.loader.minibatch_size,
+                 w_neg=w_neg, device=device)
+    fnme = (os.path.join(root.common.cache_dir, root.decision.snapshot_prefix)
+            + ".txt")
     logging.info("Dumping file map to %s" % (fnme))
     fout = open(fnme, "w")
     file_map = w.loader.file_map

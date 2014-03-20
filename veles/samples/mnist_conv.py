@@ -15,6 +15,7 @@ import pickle
 import os
 import sys
 
+from veles.config import root, get_config
 import veles.error as error
 import veles.launcher as launcher
 import veles.opencl as opencl
@@ -32,6 +33,23 @@ import veles.znicz.gd_pooling as gd_pooling
 import veles.znicz.pooling as pooling
 
 
+root.update = {"decision": {"fail_iterations":
+                            get_config(root.decision.fail_iterations, 100),
+                            "snapshot_prefix":
+                            get_config(root.decision.snapshot_prefix,
+                                       "mnist_conv")},
+               "global_alpha": get_config(root.global_alpha, 0.005),
+               "global_lambda": get_config(root.global_lambda, 0.00005),
+               "layers_mnist_conv":
+               get_config(root.layers_mnist_conv,
+                          [{"type": "conv", "n_kernels": 25, "kx": 9, "ky": 9},
+                           100, 10]),
+               "loader": {"minibatch_maxsize":
+                          get_config(root.loader.minibatch_maxsize, 540)},
+               "weights_plotter": {"limit":
+                                   get_config(root.weights_plotter.limit, 64)}}
+
+
 class Workflow(workflows.OpenCLWorkflow):
     """Workflow for MNIST dataset (handwritten digits recognition).
     A deep learning method (advanced convolutional neural network) is used.
@@ -46,7 +64,8 @@ class Workflow(workflows.OpenCLWorkflow):
 
         self.rpt.link_from(self.start_point)
 
-        self.loader = mnist.Loader(self)
+        self.loader = mnist.Loader(
+            self, minibatch_maxsize=root.loader.minibatch_maxsize)
         self.loader.link_from(self.rpt)
 
         # Add forward units
@@ -62,19 +81,21 @@ class Workflow(workflows.OpenCLWorkflow):
                                              device=device)
             elif type(layer) == dict:
                 if layer["type"] == "conv":
-                    aa = conv.ConvTanh(self, n_kernels=layer["n_kernels"],
+                    aa = conv.ConvTanh(
+                        self, n_kernels=layer["n_kernels"],
                         kx=layer["kx"], ky=layer["ky"], device=device)
                 elif layer["type"] == "max_pooling":
-                    aa = pooling.MaxPooling(self,
-                        kx=layer["kx"], ky=layer["ky"], device=device)
+                    aa = pooling.MaxPooling(
+                        self, kx=layer["kx"], ky=layer["ky"], device=device)
                 elif layer["type"] == "avg_pooling":
-                    aa = pooling.AvgPooling(self,
-                        kx=layer["kx"], ky=layer["ky"], device=device)
+                    aa = pooling.AvgPooling(
+                        self, kx=layer["kx"], ky=layer["ky"], device=device)
                 else:
-                    raise error.ErrBadFormat("Unsupported layer type %s" % (
-                                                                layer["type"]))
+                    raise error.ErrBadFormat(
+                        "Unsupported layer type %s" % (layer["type"]))
             else:
-                raise error.ErrBadFormat("layers element type should be int "
+                raise error.ErrBadFormat(
+                    "layers element type should be int "
                     "for all-to-all or dictionary for "
                     "convolutional or pooling")
             self.forward.append(aa)
@@ -95,7 +116,9 @@ class Workflow(workflows.OpenCLWorkflow):
         self.ev.max_samples_per_epoch = self.loader.total_samples
 
         # Add decision unit
-        self.decision = decision.Decision(self, snapshot_prefix="mnist_conv")
+        self.decision = decision.Decision(
+            self, fail_iterations=root.decision.fail_iterations,
+            snapshot_prefix=root.decision.snapshot_prefix)
         self.decision.link_from(self.ev)
         self.decision.minibatch_class = self.loader.minibatch_class
         self.decision.minibatch_last = self.loader.minibatch_last
@@ -120,17 +143,18 @@ class Workflow(workflows.OpenCLWorkflow):
         self.gd[-1].batch_size = self.loader.minibatch_size
         for i in range(len(self.forward) - 2, -1, -1):
             if isinstance(self.forward[i], conv.Conv):
-                obj = gd_conv.GDTanh(self, n_kernels=self.forward[i].n_kernels,
+                obj = gd_conv.GDTanh(
+                    self, n_kernels=self.forward[i].n_kernels,
                     kx=self.forward[i].kx, ky=self.forward[i].ky,
                     device=device)
             elif isinstance(self.forward[i], pooling.MaxPooling):
-                obj = gd_pooling.GDMaxPooling(self,
-                    kx=self.forward[i].kx, ky=self.forward[i].ky,
+                obj = gd_pooling.GDMaxPooling(
+                    self, kx=self.forward[i].kx, ky=self.forward[i].ky,
                     device=device)
                 obj.h_offs = self.forward[i].input_offs
             elif isinstance(self.forward[i], pooling.AvgPooling):
-                obj = gd_pooling.GDAvgPooling(self,
-                    kx=self.forward[i].kx, ky=self.forward[i].ky,
+                obj = gd_pooling.GDAvgPooling(
+                    self, kx=self.forward[i].kx, ky=self.forward[i].ky,
                     device=device)
             else:
                 obj = gd.GDTanh(self, device=device)
@@ -154,9 +178,8 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt = []
         styles = ["r-", "b-", "k-"]
         for i in range(1, 3):
-            self.plt.append(plotting_units.AccumulatingPlotter(self,
-                                                   name="num errors",
-                                                   plot_style=styles[i]))
+            self.plt.append(plotting_units.AccumulatingPlotter(
+				self, name="num errors", plot_style=styles[i]))
             self.plt[-1].input = self.decision.epoch_n_err_pt
             self.plt[-1].input_field = i
             self.plt[-1].link_from(self.decision)
@@ -186,12 +209,12 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_err_y[-1].redraw_plot = True
         # Weights plotter
         self.decision.vectors_to_sync[self.gd[0].weights] = 1
-        self.plt_mx = plotting_units.Weights2D(self,
-                                         name="First Layer Weights",
-                                         limit=64)
+        self.plt_mx = plotting_units.Weights2D(
+            self, name="First Layer Weights", limit=root.weights_plotter.limit)
         self.plt_mx.input = self.gd[0].weights
         self.plt_mx.input_field = "v"
-        self.plt_mx.get_shape_from = ([self.forward[0].kx, self.forward[0].ky]
+        self.plt_mx.get_shape_from = (
+            [self.forward[0].kx, self.forward[0].ky]
             if isinstance(self.forward[0], conv.Conv)
             else self.forward[0].input)
         self.plt_mx.link_from(self.decision)
@@ -204,10 +227,10 @@ class Workflow(workflows.OpenCLWorkflow):
         for f in self.forward:
             f.device = device
         self.ev.device = device
-        for gd in self.gd:
-            gd.device = device
-            gd.global_alpha = global_alpha
-            gd.global_lambda = global_lambda
+        for g in self.gd:
+            g.device = device
+            g.global_alpha = global_alpha
+            g.global_lambda = global_lambda
         return super(Workflow, self).initialize(device=device)
 
 
@@ -223,7 +246,8 @@ def main():
     l = launcher.Launcher(parser=parser)
     args = l.args
 
-    rnd.default.seed(numpy.fromfile("%s/seed" % (os.path.dirname(__file__)),
+    rnd.default.seed(numpy.fromfile(os.path.join(root.common.veles_dir,
+                                                 "veles/samples/seed"),
                                     numpy.int32, 1024))
     # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
 
@@ -244,9 +268,7 @@ def main():
         sys.exit(0)
         """
     else:
-        w = Workflow(l, layers=[
-                     {"type": "conv", "n_kernels": 25, "kx": 9, "ky": 9},
-                     100, 10], device=device)  # 0.99%
+        w = Workflow(l, layers=root.layers_mnist_conv, device=device)  # 0.99%
     # w = Workflow(None, layers=[
     #                     {"type": "conv", "n_kernels": 25, "kx": 9, "ky": 9},
     #                     {"type": "avg_pooling", "kx": 2, "ky": 2},  # 0.98%
@@ -257,8 +279,10 @@ def main():
     #                     {"type": "conv", "n_kernels": 200, "kx": 3, "ky": 3},
     #                     {"type": "avg_pooling", "kx": 2, "ky": 2},  # 4
     #                     100, 10], device=device)
-    w.initialize(global_alpha=0.005, global_lambda=0.00005,
-                 minibatch_maxsize=540, device=device)
+    w.initialize(global_alpha=root.global_alpha,
+                 global_lambda=root.global_lambda,
+                 minibatch_maxsize=root.loader.minibatch_maxsize,
+                 device=device)
     l.run()
 
     logging.info("End of job")

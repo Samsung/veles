@@ -13,7 +13,7 @@ import numpy
 import pickle
 import sys
 
-from sound_feature_extraction.features_xml import FeaturesXml
+from libSoundFeatureExtraction.python.sound_feature_extraction.features_xml import FeaturesXml
 import veles.audio_file_loader as audio_file_loader
 import veles.launcher as launcher
 import veles.opencl as opencl
@@ -234,11 +234,11 @@ def main():
         help="Name of the plotter window", default="")
     parser.add_argument("-shift_size", type=float,
         help="Shift size", default=50)
-    parser.add_argument("-f", "--features", dest="features",
+    parser.add_argument("--features", dest="features",
                         help="name of the file with feature "
                         "descriptions [default: %(default)s]",
                         metavar="path", required=True)
-    parser.add_argument("-file", type=str, required=True, help="File name")
+    parser.add_argument("--file", type=str, required=True, help="File name")
     parser.add_argument("-graphics", type=int, required=True,
                         help="Visualization (0 - no, 1 - yes)")
     parser.add_argument("-snapshot", type=str, required=True,

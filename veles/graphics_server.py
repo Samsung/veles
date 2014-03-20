@@ -20,7 +20,7 @@ from twisted.internet import reactor
 from txzmq import ZmqConnection, ZmqEndpoint
 import zmq
 
-import veles.config as config
+from veles.config import root
 from veles.logger import Logger
 import veles.graphics_client as graphics_client
 
@@ -57,7 +57,7 @@ class GraphicsServer(Logger):
             interfaces.append(iface)
             zmq_endpoints.append(ZmqEndpoint(
                 "bind", "rndepgm://%s;%s:1024:65535:1" %
-                        (iface, config.graphics_multicast_address)))
+                        (iface, root.common.graphics_multicast_address)))
         self.zmq_connection = ZmqPublisher(zmq_endpoints)
 
         # tmpfn, *ports = self.zmq_connection.rnd_vals
@@ -69,7 +69,7 @@ class GraphicsServer(Logger):
                           "epgm": []}
         for port, iface in zip(ports, interfaces):
             self.endpoints["epgm"].append("epgm://%s;%s:%d" % \
-                (iface, config.graphics_multicast_address, port))
+                (iface, root.common.graphics_multicast_address, port))
         self.info("Publishing to %s", "; ".join([self.endpoints["inproc"],
                                                  self.endpoints["ipc"]] +
                                                 self.endpoints["epgm"]))

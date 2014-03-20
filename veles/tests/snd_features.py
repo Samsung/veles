@@ -9,7 +9,7 @@ import logging
 import numpy
 import unittest
 from veles.snd_features import SoundFeatures
-from sound_feature_extraction.library import Library
+from libSoundFeatureExtraction.python.sound_feature_extraction.library import Library
 
 
 class Test(unittest.TestCase):

@@ -10,11 +10,12 @@ File for kanji recognition.
 
 import logging
 import numpy
-import pickle
 import os
+import pickle
+import six
 import sys
 
-import veles.config as config
+from veles.config import root, get_config
 import veles.error as error
 import veles.formats as formats
 import veles.launcher as launcher
@@ -22,11 +23,45 @@ import veles.opencl as opencl
 import veles.opencl_types as opencl_types
 import veles.plotting_units as plotting_units
 import veles.rnd as rnd
+import veles.workflows as workflows
 import veles.znicz.all2all as all2all
 import veles.znicz.decision as decision
 import veles.znicz.evaluator as evaluator
 import veles.znicz.gd as gd
 import veles.znicz.loader as loader
+
+root.decision.fail_iterations = get_config(root.decision.fail_iterations, 1000)
+
+root.decision.snapshot_prefix = get_config(
+    root.decision.snapshot_prefix, "kanji")
+
+root.decision.store_samples_mse = get_config(
+    root.decision.store_samples_mse, True)
+
+root.dir_for_kanji_pickle = get_config(
+    root.dir_for_kanji_pickle,
+    os.path.join(root.common.snapshot_dir, "kanji.pickle"))
+
+root.global_alpha = get_config(root.global_alpha, 0.001)
+root.global_lambda = get_config(root.global_lambda, 0.00005)
+root.layers = get_config(root.layers, [5103, 2889, 24 * 24])
+root.loader.minibatch_maxsize = get_config(root.loader.minibatch_maxsize, 5103)
+
+root.path_for_target_data = get_config(
+    root.path_for_target_data,
+    os.path.join(root.common.test_dataset_root,
+                 ("kanji/target/targets.%d.pickle" % 3 if six.PY3 else 2)))
+
+root.path_for_train_data = get_config(
+    root.path_for_train_data,
+    os.path.join(root.common.test_dataset_root, "kanji/train"))
+
+root.index_map = get_config(
+    root.index_map, os.path.join(root.path_for_train_data,
+                                 "index_map.%d.pickle" % 3 if six.PY3 else 2))
+
+root.validation_procent = get_config(root.validation_procent, 0.15)
+root.weights_plotter.limit = get_config(root.weights_plotter.limit, 16)
 
 
 class Loader(loader.Loader):
@@ -49,11 +84,11 @@ class Loader(loader.Loader):
         Should be filled here:
             class_samples[].
         """
-        fin = open("%s/index_map.pickle" % (self.train_path), "rb")
+        fin = open(root.index_map, "rb")
         self.index_map = pickle.load(fin)
         fin.close()
 
-        fin = open("%s/%s" % (self.train_path, self.index_map[0]), "rb")
+        fin = open(os.path.join(self.train_path, self.index_map[0]), "rb")
         self.first_sample = pickle.load(fin)["data"]
         fin.close()
 
@@ -63,8 +98,8 @@ class Loader(loader.Loader):
         self.class_target.reset()
         sh = [len(targets)]
         sh.extend(targets[0].shape)
-        self.class_target.v = numpy.empty(sh,
-            dtype=opencl_types.dtypes[config.c_dtype])
+        self.class_target.v = numpy.empty(
+            sh, dtype=opencl_types.dtypes[root.common.precision_type])
         for i, target in enumerate(targets):
             self.class_target.v[i] = target
 
@@ -78,7 +113,7 @@ class Loader(loader.Loader):
         self.original_labels = numpy.empty(len(self.index_map),
                                            dtype=self.label_dtype)
         import re
-        lbl_re = re.compile("^(\d+)_\d+/(\d+)\.pickle$")
+        lbl_re = re.compile("^(\d+)_\d+/(\d+)\.\d\.pickle$")
         for i, fnme in enumerate(self.index_map):
             res = lbl_re.search(fnme)
             if res is None:
@@ -92,8 +127,9 @@ class Loader(loader.Loader):
                                          "from filename: %s " % (fnme))
 
         self.info("Found %d samples. Extracting 15%% for validation..." % (
-                                                        len(self.index_map)))
-        self.extract_validation_from_train(0.15, rnd.default2)
+            len(self.index_map)))
+        self.extract_validation_from_train(
+            root.validation_procent, rnd.default2)
         self.info("Extracted, resulting datasets are: [%s]" % (
             ", ".join(str(x) for x in self.class_samples)))
 
@@ -103,23 +139,24 @@ class Loader(loader.Loader):
         self.minibatch_data.reset()
         sh = [self.minibatch_maxsize[0]]
         sh.extend(self.first_sample.shape)
-        self.minibatch_data.v = numpy.zeros(sh,
-                dtype=opencl_types.dtypes[config.c_dtype])
+        self.minibatch_data.v = numpy.zeros(
+            sh, dtype=opencl_types.dtypes[root.common.precision_type])
 
         self.minibatch_target.reset()
         sh = [self.minibatch_maxsize[0]]
         sh.extend(self.class_target.v[0].shape)
-        self.minibatch_target.v = numpy.zeros(sh,
-            dtype=opencl_types.dtypes[config.c_dtype])
+        self.minibatch_target.v = numpy.zeros(
+            sh, dtype=opencl_types.dtypes[root.common.precision_type])
 
         self.minibatch_labels.reset()
         sh = [self.minibatch_maxsize[0]]
         self.minibatch_labels.v = numpy.zeros(sh, dtype=self.label_dtype)
 
         self.minibatch_indexes.reset()
-        self.minibatch_indexes.v = numpy.zeros(len(self.index_map),
+        self.minibatch_indexes.v = numpy.zeros(
+            len(self.index_map),
             dtype=opencl_types.itypes[opencl_types.get_itype_from_size(
-                                                        len(self.index_map))])
+                len(self.index_map))])
 
     def fill_minibatch(self):
         """Fill minibatch data labels and indexes according to current shuffle.
@@ -127,8 +164,8 @@ class Loader(loader.Loader):
         minibatch_size = self.minibatch_size[0]
 
         idxs = self.minibatch_indexes.v
-        idxs[:minibatch_size] = self.shuffled_indexes[self.minibatch_offs[0]:
-            self.minibatch_offs[0] + minibatch_size]
+        idxs[:minibatch_size] = self.shuffled_indexes[
+            self.minibatch_offs[0]:self.minibatch_offs[0] + minibatch_size]
 
         for i, ii in enumerate(idxs[:minibatch_size]):
             fnme = "%s/%s" % (self.train_path, self.index_map[ii])
@@ -140,9 +177,6 @@ class Loader(loader.Loader):
             self.minibatch_data.v[i] = data
             self.minibatch_labels.v[i] = lbl
             self.minibatch_target.v[i] = self.class_target[lbl]
-
-
-import veles.workflows as workflows
 
 
 class Workflow(workflows.OpenCLWorkflow):
@@ -158,10 +192,9 @@ class Workflow(workflows.OpenCLWorkflow):
 
         self.rpt.link_from(self.start_point)
 
-        self.loader = Loader(self,
-            train_path="%s/kanji/train" % (config.test_dataset_root),
-            target_path="%s/kanji/target/targets.pickle" % (
-                                            config.test_dataset_root))
+        self.loader = Loader(
+            self, train_path=root.path_for_train_data,
+            target_path=root.path_for_target_data)
         self.loader.link_from(self.rpt)
 
         # Add forward units
@@ -188,8 +221,10 @@ class Workflow(workflows.OpenCLWorkflow):
         self.ev.max_samples_per_epoch = self.loader.total_samples
 
         # Add decision unit
-        self.decision = decision.Decision(self, store_samples_mse=True,
-                                          snapshot_prefix="kanji")
+        self.decision = decision.Decision(
+            self, fail_iterations=root.decision.fail_iterations,
+            store_samples_mse=root.decision.store_samples_mse,
+            snapshot_prefix=root.decision.snapshot_prefix)
         self.decision.link_from(self.ev)
         self.decision.minibatch_class = self.loader.minibatch_class
         self.decision.minibatch_last = self.loader.minibatch_last
@@ -237,8 +272,8 @@ class Workflow(workflows.OpenCLWorkflow):
         for i in range(len(styles)):
             if not len(styles[i]):
                 continue
-            self.plt.append(plotting_units.AccumulatingPlotter(self, name="mse",
-                                                   plot_style=styles[i]))
+            self.plt.append(plotting_units.AccumulatingPlotter(
+				self, name="mse", plot_style=styles[i]))
             self.plt[-1].input = self.decision.epoch_metrics
             self.plt[-1].input_field = i
             self.plt[-1].link_from(self.decision)
@@ -246,9 +281,9 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt[0].clear_plot = True
         # Weights plotter
         self.decision.vectors_to_sync[self.gd[0].weights] = 1
-        self.plt_mx = plotting_units.Weights2D(self,
-                                         name="First Layer Weights",
-                                         limit=16)
+        self.plt_mx = plotting_units.Weights2D(
+            self, name="First Layer Weights",
+            limit=root.weights_plotter.limit)
         self.plt_mx.input = self.gd[0].weights
         self.plt_mx.input_field = "v"
         self.plt_mx.link_from(self.decision)
@@ -259,8 +294,8 @@ class Workflow(workflows.OpenCLWorkflow):
         for i in range(len(styles)):
             if not len(styles[i]):
                 continue
-            self.plt_max.append(plotting_units.AccumulatingPlotter(self, name="mse",
-                                                       plot_style=styles[i]))
+            self.plt_max.append(plotting_units.AccumulatingPlotter(
+				self, name="mse", plot_style=styles[i]))
             self.plt_max[-1].input = self.decision.epoch_metrics
             self.plt_max[-1].input_field = i
             self.plt_max[-1].input_offs = 1
@@ -272,8 +307,8 @@ class Workflow(workflows.OpenCLWorkflow):
         for i in range(len(styles)):
             if not len(styles[i]):
                 continue
-            self.plt_min.append(plotting_units.AccumulatingPlotter(self, name="mse",
-                                                       plot_style=styles[i]))
+            self.plt_min.append(plotting_units.AccumulatingPlotter(
+				self, name="mse", plot_style=styles[i]))
             self.plt_min[-1].input = self.decision.epoch_metrics
             self.plt_min[-1].input_field = i
             self.plt_min[-1].input_offs = 2
@@ -286,8 +321,8 @@ class Workflow(workflows.OpenCLWorkflow):
         for i in range(len(styles)):
             if not len(styles[i]):
                 continue
-            self.plt_n_err.append(plotting_units.AccumulatingPlotter(self,
-                                name="num errors", plot_style=styles[i]))
+            self.plt_n_err.append(plotting_units.AccumulatingPlotter(
+				self, name="num errors", plot_style=styles[i]))
             self.plt_n_err[-1].input = self.decision.epoch_n_err_pt
             self.plt_n_err[-1].input_field = i
             self.plt_n_err[-1].link_from(self.decision)
@@ -318,10 +353,10 @@ class Workflow(workflows.OpenCLWorkflow):
 
     def initialize(self, global_alpha, global_lambda, minibatch_maxsize,
                    device, weights, bias):
-        for gd in self.gd:
-            gd.global_alpha = global_alpha
-            gd.global_lambda = global_lambda
-            gd.device = device
+        for g in self.gd:
+            g.global_alpha = global_alpha
+            g.global_lambda = global_lambda
+            g.device = device
         for forward in self.forward:
             forward.device = device
         self.ev.device = device
@@ -343,12 +378,13 @@ def main():
     else:
         logging.basicConfig(level=logging.INFO)
 
-    rnd.default.seed(numpy.fromfile("%s/seed" % (os.path.dirname(__file__)),
+    rnd.default.seed(numpy.fromfile(os.path.join(root.common.veles_dir,
+                                                 "veles/samples/seed"),
                                     numpy.int32, 1024))
     # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 524288))
     l = launcher.Launcher()
     device = None if l.is_master else opencl.Device()
-    fnme = "%s/kanji.pickle" % (config.snapshot_dir)
+    fnme = root.dir_for_kanji_pickle
     fin = None
     try:
         fin = open(fnme, "rb")
@@ -373,10 +409,13 @@ def main():
                     forward.bias.v.min(), forward.bias.v.max()))
             w.decision.just_snapshotted[0] = 1
     if fin is None:
-        w = Workflow(l, layers=[5103, 2889, 24 * 24], device=device)
-    w.initialize(global_alpha=0.001, global_lambda=0.00005,
-                 minibatch_maxsize=5103, device=device,
-                 weights=weights, bias=bias)
+        w = Workflow(
+            l, layers=root.layers,
+            device=device)
+    w.initialize(global_alpha=root.global_alpha,
+                 global_lambda=root.global_lambda,
+                 minibatch_maxsize=root.loader.minibatch_maxsize,
+                 device=device, weights=weights, bias=bias)
     l.run()
 
     logging.info("End of job")

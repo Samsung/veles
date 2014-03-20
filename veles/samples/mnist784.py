@@ -14,7 +14,7 @@ import numpy
 import os
 import sys
 
-import veles.config as config
+from veles.config import root, get_config
 import veles.formats as formats
 import veles.launcher as launcher
 from veles.mutable import Bool
@@ -29,6 +29,25 @@ import veles.znicz.decision as decision
 import veles.znicz.evaluator as evaluator
 import veles.znicz.gd as gd
 import veles.znicz.image_saver as image_saver
+
+
+root.update = {"decision": {"fail_iterations":
+                            get_config(root.decision.fail_iterations, 100),
+                            "snapshot_prefix":
+                            get_config(root.decision.snapshot_prefix,
+                                       "mnist_784")},
+               "global_alpha": get_config(root.global_alpha, 0.001),
+               "global_lambda": get_config(root.global_lambda, 0.00005),
+               "layers_mnist784": get_config(root.layers_mnist784, [784, 784]),
+               "loader": {"minibatch_maxsize":
+                          get_config(root.loader.minibatch_maxsize, 100)},
+               "path_for_load_data":
+               get_config(root.path_for_load_data,
+                          os.path.join(root.common.test_dataset_root,
+                                       "arial.ttf")),
+               "weights_plotter": {"limit":
+                                   get_config(root.weights_plotter.limit, 16)}
+               }
 
 
 def do_plot(fontPath, text, size, angle, sx, sy,
@@ -82,8 +101,8 @@ def do_plot(fontPath, text, size, angle, sx, sy,
         y = int(numpy.floor((SY - height) * 0.5))
 
     img = numpy.zeros([SY, SX], dtype=numpy.uint8)
-    img[y:y + height, x: x + width] = numpy.array(bitmap.buffer,
-        dtype=numpy.uint8).reshape(height, width)
+    img[y:y + height, x: x + width] = numpy.array(
+        bitmap.buffer, dtype=numpy.uint8).reshape(height, width)
     if img.max() == img.min():
         logging.info("Font %s returned empty glyph" % (fontPath))
         return None
@@ -98,17 +117,17 @@ class Loader(mnist.Loader):
         """
         super(Loader, self).load_data()
         self.class_target.reset()
-        self.class_target.v = numpy.zeros([10, 784],
-            dtype=opencl_types.dtypes[config.dtype])
+        self.class_target.v = numpy.zeros(
+            [10, 784], dtype=opencl_types.dtypes[root.common.dtype])
         for i in range(0, 10):
-            img = do_plot("%s/arial.ttf" % (config.test_dataset_root,),
+            img = do_plot(root.path_for_load_data,
                           "%d" % (i,), 28, 0.0, 1.0, 1.0, False, 28, 28)
             self.class_target.v[i] = img.ravel().astype(
-                                opencl_types.dtypes[config.dtype])
+                opencl_types.dtypes[root.common.dtype])
             formats.normalize(self.class_target.v[i])
-        self.original_target = numpy.zeros([self.original_labels.shape[0],
-                                            self.class_target.v.shape[1]],
-            dtype=opencl_types.dtypes[config.dtype])
+        self.original_target = numpy.zeros(
+            [self.original_labels.shape[0], self.class_target.v.shape[1]],
+            dtype=opencl_types.dtypes[root.common.dtype])
         for i in range(0, self.original_labels.shape[0]):
             label = self.original_labels[i]
             self.original_target[i] = self.class_target.v[label]
@@ -126,7 +145,8 @@ class Workflow(workflows.OpenCLWorkflow):
 
         self.rpt.link_from(self.start_point)
 
-        self.loader = Loader(self)
+        self.loader = Loader(self,
+                             minibatch_maxsize=root.loader.minibatch_maxsize)
         self.loader.link_from(self.rpt)
 
         # Add forward units
@@ -153,7 +173,9 @@ class Workflow(workflows.OpenCLWorkflow):
         self.ev.max_samples_per_epoch = self.loader.total_samples
 
         # Add decision unit
-        self.decision = decision.Decision(self)
+        self.decision = decision.Decision(
+            self, snapshot_prefix=root.decision.snapshot_prefix,
+            fail_iterations=root.decision.fail_iterations)
         self.decision.link_from(self.ev)
         self.decision.minibatch_class = self.loader.minibatch_class
         self.decision.minibatch_last = self.loader.minibatch_last
@@ -208,8 +230,8 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt = []
         styles = ["r-", "b-", "k-"]
         for i in range(0, 3):
-            self.plt.append(plotting_units.AccumulatingPlotter(self, name="mse",
-                                                   plot_style=styles[i]))
+            self.plt.append(plotting_units.AccumulatingPlotter(
+				self, name="mse", plot_style=styles[i]))
             self.plt[-1].input = self.decision.epoch_metrics
             self.plt[-1].input_field = i
             self.plt[-1].link_from(self.decision if not i else
@@ -220,9 +242,8 @@ class Workflow(workflows.OpenCLWorkflow):
         # Weights plotter
         # """
         self.decision.vectors_to_sync[self.gd[0].weights] = 1
-        self.plt_mx = plotting_units.Weights2D(self,
-                                         name="First Layer Weights",
-                                         limit=16)
+        self.plt_mx = plotting_units.Weights2D(
+            self, name="First Layer Weights", limit=root.weights_plotter.limit)
         self.plt_mx.input = self.gd[0].weights
         self.plt_mx.input_field = "v"
         self.plt_mx.get_shape_from = self.forward[0].input
@@ -246,8 +267,8 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_max = []
         styles = ["r--", "b--", "k--"]
         for i in range(0, 3):
-            self.plt_max.append(plotting_units.AccumulatingPlotter(self, name="mse",
-                                                       plot_style=styles[i]))
+            self.plt_max.append(plotting_units.AccumulatingPlotter(
+				self, name="mse", plot_style=styles[i]))
             self.plt_max[-1].input = self.decision.epoch_metrics
             self.plt_max[-1].input_field = i
             self.plt_max[-1].input_offs = 1
@@ -257,20 +278,14 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_min = []
         styles = ["r:", "b:", "k:"]
         for i in range(0, 3):
-            self.plt_min.append(plotting_units.AccumulatingPlotter(self, name="mse",
-                                                       plot_style=styles[i]))
+            self.plt_min.append(plotting_units.AccumulatingPlotter(
+				self, name="mse", plot_style=styles[i]))
             self.plt_min[-1].input = self.decision.epoch_metrics
             self.plt_min[-1].input_field = i
             self.plt_min[-1].input_offs = 2
             self.plt_min[-1].link_from(self.plt_max[-1] if not i else
                                        self.plt_min[-2])
         self.plt_min[-1].redraw_plot = True
-
-    def initialize(self, global_alpha, global_lambda):
-        for g in self.gd:
-            g.global_alpha = global_alpha
-            g.global_lambda = global_lambda
-        return super(Workflow, self).initialize()
 
 
 def main():
@@ -279,13 +294,14 @@ def main():
     else:
         logging.basicConfig(level=logging.INFO)
 
-    rnd.default.seed(numpy.fromfile("%s/seed" % (os.path.dirname(__file__)),
+    rnd.default.seed(numpy.fromfile(os.path.join(root.common.veles_dir,
+                                                 "veles/samples/seed"),
                                     numpy.int32, 1024))
     # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
     l = launcher.Launcher()
     device = None if l.is_master else opencl.Device()
-    w = Workflow(l, layers=[784, 784], device=device)
-    w.initialize(global_alpha=0.001, global_lambda=0.00005)
+    w = Workflow(l, layers=root.layers_mnist784, device=device)
+    w.initialize()
     l.run()
 
     logging.info("End of job")

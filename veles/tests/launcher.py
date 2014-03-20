@@ -13,6 +13,7 @@ import socket
 from twisted.internet import reactor
 import unittest
 
+from veles.config import root
 from veles.launcher import Launcher
 import veles.workflows
 
@@ -55,7 +56,7 @@ class TestWorkflow(veles.workflows.Workflow):
 class Test(unittest.TestCase):
 
     def setUp(self):
-        veles.config.web_status_host = socket.gethostname()
+        root.common.web_status_host = socket.gethostname()
         self.server = Launcher(listen_address="localhost:9999",
                                web_status=False)
         self.client = Launcher(master_address="localhost:9999")

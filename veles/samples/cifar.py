@@ -14,7 +14,7 @@ import os
 import pickle
 import sys
 
-import veles.config as config
+from veles.config import root, get_config
 import veles.formats as formats
 import veles.launcher as launcher
 from veles.mutable import Bool
@@ -30,6 +30,30 @@ import veles.znicz.gd as gd
 import veles.znicz.image_saver as image_saver
 import veles.znicz.loader as loader
 
+root.update = {"decision": {"fail_iterations":
+                            get_config(root.decision.fail_iterations, 100),
+                            "snapshot_prefix":
+                            get_config(root.decision.snapshot_prefix,
+                                       "cifar")},
+               "global_alpha": get_config(root.global_alpha, 0.1),
+               "global_lambda": get_config(root.global_lambda, 0.00005),
+               "layers": get_config(root.layers, [100, 10]),
+               "loader": {"minibatch_maxsize":
+                          get_config(root.loader.minibatch_maxsize, 180)},
+               "path_for_out_data": get_config(root.path_for_out_data,
+                                               "/data/veles/cifar/tmpimg/"),
+               "path_for_train_data":
+               get_config(root.path_for_train_data,
+                          os.path.join(root.common.test_dataset_root,
+                                       "cifar/10")),
+               "path_for_valid_data":
+               get_config(root.path_for_valid_data,
+                          os.path.join(root.common.test_dataset_root,
+                                       "cifar/10/test_batch")),
+               "weights_plotter": {"limit":
+                                   get_config(root.weights_plotter.limit, 25)}
+               }
+
 
 class Loader(loader.FullBatchLoader):
     """Loads Cifar dataset.
@@ -40,13 +64,12 @@ class Loader(loader.FullBatchLoader):
         n_classes = 10
         self.original_data = numpy.zeros([60000, 3, 32, 32],
                                          dtype=numpy.float32)
-        self.original_labels = numpy.zeros(60000,
-            dtype=opencl_types.itypes[
+        self.original_labels = numpy.zeros(
+            60000, dtype=opencl_types.itypes[
                 opencl_types.get_itype_from_size(n_classes)])
 
         # Load Validation
-        fin = open("%s/cifar/10/test_batch" % (config.test_dataset_root),
-                   "rb")
+        fin = open(root.path_for_valid_data, "rb")
         u = pickle._Unpickler(fin)
         u.encoding = 'latin1'
         vle = u.load()
@@ -56,8 +79,8 @@ class Loader(loader.FullBatchLoader):
 
         # Load Train
         for i in range(1, 6):
-            fin = open("%s/cifar/10/data_batch_%d" % (config.test_dataset_root,
-                       i), "rb")
+            fin = open(os.path.join(root.path_for_train_data,
+                                    ("data_batch_%d" % i)), "rb")
             u = pickle._Unpickler(fin)
             u.encoding = 'latin1'
             vle = u.load()
@@ -91,7 +114,8 @@ class Workflow(workflows.OpenCLWorkflow):
 
         self.rpt.link_from(self.start_point)
 
-        self.loader = Loader(self)
+        self.loader = Loader(self,
+                             minibatch_maxsize=root.loader.minibatch_maxsize)
         self.loader.link_from(self.rpt)
 
         # Add forward units
@@ -113,9 +137,9 @@ class Workflow(workflows.OpenCLWorkflow):
 
         # Add Image Saver unit
         self.image_saver = image_saver.ImageSaver(self, out_dirs=[
-            "/data/veles/cifar/tmpimg/test",
-            "/data/veles/cifar/tmpimg/validation",
-            "/data/veles/cifar/tmpimg/train"])
+            os.path.join(root.path_for_out_data, "test"),
+            os.path.join(root.path_for_out_data, "validation"),
+            os.path.join(root.path_for_out_data, "train")])
         self.image_saver.link_from(self.forward[-1])
         self.image_saver.input = self.loader.minibatch_data
         self.image_saver.output = self.forward[-1].output
@@ -135,7 +159,9 @@ class Workflow(workflows.OpenCLWorkflow):
         self.ev.max_samples_per_epoch = self.loader.total_samples
 
         # Add decision unit
-        self.decision = decision.Decision(self, snapshot_prefix="cifar")
+        self.decision = decision.Decision(
+            self, fail_iterations=root.decision.fail_iterations,
+            snapshot_prefix=root.decision.snapshot_prefix)
         self.decision.link_from(self.ev)
         self.decision.minibatch_class = self.loader.minibatch_class
         self.decision.minibatch_last = self.loader.minibatch_last
@@ -180,9 +206,8 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt = []
         styles = ["r-", "b-", "k-"]
         for i in range(0, 3):
-            self.plt.append(plotting_units.AccumulatingPlotter(self,
-                                                   name="num errors",
-                                                   plot_style=styles[i]))
+            self.plt.append(plotting_units.AccumulatingPlotter(
+				self, name="num errors", plot_style=styles[i]))
             self.plt[-1].input = self.decision.epoch_n_err_pt
             self.plt[-1].input_field = i
             self.plt[-1].link_from(self.decision if not i else self.plt[-2])
@@ -193,8 +218,8 @@ class Workflow(workflows.OpenCLWorkflow):
         # Matrix plotter
         # """
         self.decision.vectors_to_sync[self.gd[0].weights] = 1
-        self.plt_w = plotting_units.Weights2D(self, name="First Layer Weights",
-                                        limit=25)
+        self.plt_w = plotting_units.Weights2D(
+            self, name="First Layer Weights", limit=root.weights_plotter.limit)
         self.plt_w.input = self.gd[0].weights
         self.plt_w.get_shape_from = self.forward[0].input
         self.plt_w.input_field = "v"
@@ -230,19 +255,23 @@ def main():
     else:
         logging.basicConfig(level=logging.INFO)
 
-    rnd.default.seed(numpy.fromfile("%s/seed" % (os.path.dirname(__file__)),
+    rnd.default.seed(numpy.fromfile(os.path.join(root.common.veles_dir,
+                                                 "veles/samples/seed"),
                                     numpy.int32, 1024))
     # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
     l = launcher.Launcher()
     device = None if l.is_master else opencl.Device()
     try:
-        fin = open("%s/cifar.pickle" % (config.snapshot_dir), "rb")
+        fin = open(os.path.join(root.common.snapshot_dir, "cifar.pickle"),
+                   "rb")
         w = pickle.load(fin)
         fin.close()
     except IOError:
-        w = Workflow(l, layers=[100, 10], device=device)
-    w.initialize(global_alpha=0.1, global_lambda=0.00005,
-                 minibatch_maxsize=180, device=device)
+        w = Workflow(l, layers=root.layers, device=device)
+    w.initialize(global_alpha=root.global_alpha,
+                 global_lambda=root.global_lambda,
+                 minibatch_maxsize=root.loader.minibatch_maxsize,
+                 device=device)
     l.run()
 
     logging.info("End of job")
@@ -250,6 +279,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    if config.plotters_disabled:
-        os._exit(0)
     sys.exit(0)

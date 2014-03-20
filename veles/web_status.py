@@ -18,7 +18,7 @@ import tornado.ioloop as ioloop
 import tornado.web as web
 import uuid
 
-import veles.config as config
+from veles.config import root
 import veles.logger as logger
 
 
@@ -61,34 +61,34 @@ class WebStatusServer(logger.Logger):
     def __init__(self, cmd_queue_in, cmd_queue_out):
         super(WebStatusServer, self).__init__()
         if not debug_mode:
-            self.redirect_logging_to_file(config.web_status_log_file)
+            self.redirect_logging_to_file(root.common.web_status_log_file)
         self.application = web.Application([
             ("/service", ServiceHandler, {"server": self}),
-            ("/" + config.web_status_update, UpdateHandler, {"server": self}),
+            ("/" + root.common.web_status_update, UpdateHandler, {"server": self}),
             (r"/(js/.*)", web.StaticFileHandler, {'path':
-                                                  config.web_status_root}),
+                                                  root.common.web_status_root}),
             (r"/(css/.*)", web.StaticFileHandler, {'path':
-                                                   config.web_status_root}),
+                                                   root.common.web_status_root}),
             (r"/(fonts/.*)", web.StaticFileHandler, {'path':
-                                                     config.web_status_root}),
+                                                     root.common.web_status_root}),
             (r"/(img/.*)", web.StaticFileHandler, {'path':
-                                                   config.web_status_root}),
+                                                   root.common.web_status_root}),
             (r"/(.+\.html)", web.StaticFileHandler, {'path':
-                                                     config.web_status_root}),
+                                                     root.common.web_status_root}),
             ("/(veles.png)", web.StaticFileHandler, {'path':
-                                                     config.web_status_root}),
+                                                     root.common.web_status_root}),
             ("/", web.RedirectHandler, {"url": "/status.html",
                                         "permanent": True}),
             ("", web.RedirectHandler, {"url": "/status.html",
                                        "permanent": True})
         ])
-        self.application.listen(config.web_status_port)
+        self.application.listen(root.common.web_status_port)
         self.cmd_queue_in = cmd_queue_in
         self.cmd_queue_out = cmd_queue_out
         self.cmd_thread = threading.Thread(target=self.cmd_loop)
         self.pending_requests = {}
         self.info("HTTP server is going to listen on %s:%s",
-                  socket.gethostname(), config.web_status_port)
+                  socket.gethostname(), root.common.web_status_port)
 
     def send_command(self, handler, cmd):
         request_id = uuid.uuid4()
@@ -139,7 +139,7 @@ class WebStatus(logger.Logger):
     def __init__(self):
         super(WebStatus, self).__init__()
         if not debug_mode:
-            self.redirect_logging_to_file(config.web_status_log_file)
+            self.redirect_logging_to_file(root.common.web_status_log_file)
         self.exiting = False
         self.masters = {}
         self.cmd_queue_in = mp.Queue()
@@ -202,7 +202,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     if not debug_mode:
         logger.Logger(logging.getLogger('root')).redirect_logging_to_file(
-            config.web_status_log_file)
+            root.common.web_status_log_file)
         with daemon.DaemonContext():
             ws = WebStatus()
             ws.run()

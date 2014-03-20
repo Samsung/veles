@@ -20,7 +20,7 @@ import sys
 import time
 import xml.etree.ElementTree as et
 
-import veles.config as config
+from veles.config import root
 import veles.formats as formats
 
 SX_ = 32
@@ -69,8 +69,9 @@ def do_plot(fontPath, text, size, angle, sx, sy,
         width = bitmap.width
         height = bitmap.rows
         if width < 1 or height < 1:
-            logging.warning("strange (width, height) = (%d, %d), skipping" % (
-                                                                width, height))
+            logging.warning(
+                "strange (width, height) = (%d, %d), skipping"
+                % (width, height))
             return None
         if width > SX or height > SY:
             j = j + 1
@@ -89,12 +90,14 @@ def do_plot(fontPath, text, size, angle, sx, sy,
 
     image = numpy.zeros([SY, SX], dtype=numpy.uint8)
     try:
-        image[y:y + height, x: x + width] = numpy.array(bitmap.buffer,
-            dtype=numpy.uint8).reshape(height, width)
+        image[y:y + height, x: x + width] = numpy.array(
+            bitmap.buffer, dtype=numpy.uint8).reshape(height, width)
     except ValueError:
-        logging.warning("Strange bitmap was generated: width=%d, height=%d, "
-            "len=%d but should be %d, skipping" % (bitmap.width, bitmap.rows,
-            len(bitmap.buffer), bitmap.width * bitmap.rows))
+        logging.warning(
+            "Strange bitmap was generated: width=%d, height=%d, "
+            "len=%d but should be %d, skipping" %
+            (bitmap.width, bitmap.rows, len(bitmap.buffer),
+             bitmap.width * bitmap.rows))
         return None
     if image.max() == image.min():
         logging.info("Font %s returned empty glyph" % (fontPath))
@@ -186,7 +189,8 @@ if __name__ == '__main__':
 
     numpy.random.seed(numpy.fromfile("seed", dtype=numpy.int32, count=1024))
 
-    db = sqlite3.connect("%s/kanji/kanji.db" % (config.test_dataset_root))
+    db = sqlite3.connect(os.path.join(root.common.test_dataset_root,
+                                      "kanji/kanji.db"))
 
     try:
         rs = db.execute("select count(*) from kanji")
@@ -200,15 +204,16 @@ if __name__ == '__main__':
     #         "order by grade asc, freq desc, idx asc limit %d" % (
     #                                                    KANJI_COUNT))
     query = ("select idx, literal from kanji where jlpt >= 2 "
-             "order by grade asc, freq desc, jlpt desc, idx asc limit %d" % (
-                                                                KANJI_COUNT))
+             "order by grade asc, freq desc, jlpt desc, idx asc limit %d"
+             % (KANJI_COUNT))
     rs = db.execute("select count(*) from (%s)" % (query))
     n_kanji = rs.fetchone()[0]
     logging.info("Kanji count: %d" % (n_kanji))
     if n_kanji < 1:
         sys.exit(0)
 
-    fonts = glob.glob("%s/kanji/fonts/*" % (config.test_dataset_root))
+    fonts = glob.glob(os.path.join(root.common.test_dataset_root,
+                                   "kanji/fonts/*"))
     fonts.sort()
 
     ok = {}
@@ -217,8 +222,8 @@ if __name__ == '__main__':
 
     rs = db.execute(query)
 
-    dirnme = "%s/kanji/train" % (config.test_dataset_root)
-    target_dirnme = "%s/kanji/target" % (config.test_dataset_root)
+    dirnme = os.path.join(root.common.test_dataset_root, "kanji/train")
+    target_dirnme = os.path.join(root.common.test_dataset_root, "kanji/target")
 
     logging.info("Be shure that %s and %s are empty" % (dirnme, target_dirnme))
     logging.info("Will continue in 15 seconds")

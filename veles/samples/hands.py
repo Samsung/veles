@@ -13,7 +13,7 @@ import numpy
 import os
 import sys
 
-import veles.config as config
+from veles.config import root, get_config
 import veles.formats as formats
 import veles.external.hog as hog
 import veles.launcher as launcher
@@ -27,6 +27,30 @@ import veles.znicz.decision as decision
 import veles.znicz.evaluator as evaluator
 import veles.znicz.gd as gd
 import veles.znicz.loader as loader
+
+
+root.update = {"decision": {"fail_iterations":
+                            get_config(root.decision.fail_iterations, 100),
+                            "snapshot_prefix":
+                            get_config(root.decision.snapshot_prefix,
+                                       "hands")},
+               "global_alpha": get_config(root.global_alpha, 0.05),
+               "global_lambda": get_config(root.global_lambda, 0.0),
+               "layers_hands": get_config(root.layers_hands, [30, 2]),
+               "loader": {"minibatch_maxsize":
+                          get_config(root.loader.minibatch_maxsize, 60)},
+               "path_for_train_data":
+               get_config(root.path_for_train_data,
+                          [os.path.join(root.common.test_dataset_root,
+                                        "hands/Positive/Training/*.raw"),
+                           os.path.join(root.common.test_dataset_root,
+                                        "hands/Negative/Training/*.raw")]),
+               "path_for_valid_data":
+               get_config(root.path_for_valid_data,
+                          [os.path.join(root.common.test_dataset_root,
+                                        "hands/Positive/Testing/*.raw"),
+                           os.path.join(root.common.test_dataset_root,
+                                        "hands/Negative/Testing/*.raw")])}
 
 
 class Loader(loader.ImageLoader):
@@ -56,12 +80,10 @@ class Workflow(workflows.OpenCLWorkflow):
 
         self.rpt.link_from(self.start_point)
 
-        self.loader = Loader(self, validation_paths=[
-            "%s/hands/Positive/Testing/*.raw" % (config.test_dataset_root,),
-            "%s/hands/Negative/Testing/*.raw" % (config.test_dataset_root,)],
-                             train_paths=[
-            "%s/hands/Positive/Training/*.raw" % (config.test_dataset_root,),
-            "%s/hands/Negative/Training/*.raw" % (config.test_dataset_root,)])
+        self.loader = Loader(
+            self, validation_paths=root.path_for_valid_data,
+            train_paths=root.path_for_train_data,
+            minibatch_maxsize=root.loader.minibatch_maxsize)
         self.loader.link_from(self.rpt)
 
         # Add forward units
@@ -91,7 +113,9 @@ class Workflow(workflows.OpenCLWorkflow):
         self.ev.max_samples_per_epoch = self.loader.total_samples
 
         # Add decision unit
-        self.decision = decision.Decision(self, snapshot_prefix="hands")
+        self.decision = decision.Decision(
+            self, snapshot_prefix=root.decision.snapshot_prefix,
+            fail_iterations=root.decision.fail_iterations)
         self.decision.link_from(self.ev)
         self.decision.minibatch_class = self.loader.minibatch_class
         self.decision.minibatch_last = self.loader.minibatch_last
@@ -133,9 +157,8 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt = []
         styles = ["r-", "b-", "k-"]
         for i in range(0, 3):
-            self.plt.append(plotting_units.AccumulatingPlotter(self,
-                                                   name="num errors",
-                                                   plot_style=styles[i]))
+            self.plt.append(plotting_units.AccumulatingPlotter(
+				self, name="num errors", plot_style=styles[i]))
             self.plt[-1].input = self.decision.epoch_n_err_pt
             self.plt[-1].input_field = i
             self.plt[-1].link_from(self.decision if not i else self.plt[-2])
@@ -153,12 +176,6 @@ class Workflow(workflows.OpenCLWorkflow):
             self.plt_mx[-1].link_from(self.decision)
             self.plt_mx[-1].gate_block = ~self.decision.epoch_ended
 
-    def initialize(self, global_alpha, global_lambda):
-        for g in self.gd:
-            g.global_alpha = global_alpha
-            g.global_lambda = global_lambda
-        return super(Workflow, self).initialize()
-
 
 def main():
     if __debug__:
@@ -166,13 +183,14 @@ def main():
     else:
         logging.basicConfig(level=logging.INFO)
 
-    rnd.default.seed(numpy.fromfile("%s/seed" % (os.path.dirname(__file__)),
+    rnd.default.seed(numpy.fromfile(os.path.join(root.common.veles_dir,
+                                                 "veles/samples/seed"),
                                     numpy.int32, 1024))
     # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
     l = launcher.Launcher()
     device = None if l.is_master else opencl.Device()
-    w = Workflow(l, layers=[30, 2], device=device)
-    w.initialize(global_alpha=0.05, global_lambda=0.0)
+    w = Workflow(l, layers=root.layers_hands, device=device)
+    w.initialize()
     l.run()
 
     logging.debug("End of job")
@@ -180,6 +198,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    if config.plotters_disabled:
-        os._exit(0)
     sys.exit(0)

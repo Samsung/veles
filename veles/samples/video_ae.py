@@ -17,7 +17,7 @@ import pickle
 import re
 import sys
 
-import veles.config as config
+from veles.config import root, get_config
 import veles.launcher as launcher
 import veles.opencl as opencl
 import veles.plotting_units as plotting_units
@@ -29,6 +29,25 @@ import veles.znicz.evaluator as evaluator
 import veles.znicz.gd as gd
 import veles.znicz.image_saver as image_saver
 import veles.znicz.loader as loader
+
+
+root.update = {"decision": {"fail_iterations":
+                            get_config(root.decision.fail_iterations, 100),
+                            "snapshot_prefix":
+                            get_config(root.decision.snapshot_prefix,
+                                       "video_ae")},
+               "global_alpha": get_config(root.global_alpha, 0.0002),
+               "global_lambda": get_config(root.global_lambda, 0.00005),
+               "layers": get_config(root.layers, [9, 14400]),
+               "loader": {"minibatch_maxsize":
+                          get_config(root.loader.minibatch_maxsize, 50)},
+               "path_for_load_data":
+               get_config(root.path_for_load_data,
+                          os.path.join(root.common.test_dataset_root,
+                                       "video/video_ae/img/*.png")),
+               "weights_plotter": {"limit":
+                                   get_config(root.weights_plotter.limit, 16)}
+               }
 
 
 class Loader(loader.ImageLoader):
@@ -61,10 +80,9 @@ class Workflow(workflows.OpenCLWorkflow):
 
         self.rpt.link_from(self.start_point)
 
-        self.loader = Loader(self,
-            train_paths=["%s/video/video_ae/img/*.png" % (
-                                config.test_dataset_root)],
-            minibatch_max_size=50)
+        self.loader = Loader(
+            self, train_paths=[root.path_for_load_data],
+            minibatch_maxsize=root.loader.minibatch_maxsize)
         self.loader.link_from(self.rpt)
 
         # Add forward units
@@ -100,7 +118,9 @@ class Workflow(workflows.OpenCLWorkflow):
         self.ev.max_samples_per_epoch = self.loader.total_samples
 
         # Add decision unit
-        self.decision = decision.Decision(self, snapshot_prefix="video_ae")
+        self.decision = decision.Decision(
+            self, snapshot_prefix=root.decision.snapshot_prefix,
+            fail_iterations=root.decision.fail_iterations)
         self.decision.link_from(self.ev)
         self.decision.minibatch_class = self.loader.minibatch_class
         self.decision.minibatch_last = self.loader.minibatch_last
@@ -153,8 +173,8 @@ class Workflow(workflows.OpenCLWorkflow):
         """
         # Matrix plotter
         self.decision.vectors_to_sync[self.gd[0].weights] = 1
-        self.plt_mx = plotting_units.Weights2D(self,
-                                        name="First Layer Weights")
+        self.plt_mx = plotting_units.Weights2D(
+            self, name="First Layer Weights", limit=root.weights_plotter.limit)
         self.plt_mx.get_shape_from = self.forward[0].input
         self.plt_mx.input = self.gd[0].weights
         self.plt_mx.input_field = "v"
@@ -193,16 +213,6 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_img.gate_block = ~self.decision.epoch_ended
         """
 
-    def initialize(self, global_alpha, global_lambda, device):
-        for g in self.gd:
-            g.global_alpha = global_alpha
-            g.global_lambda = global_lambda
-            g.device = device
-        for forward in self.forward:
-            forward.device = device
-        self.ev.device = device
-        return super(Workflow, self).initialize(device=device)
-
 
 def main():
     # if __debug__:
@@ -210,12 +220,13 @@ def main():
     # else:
     logging.basicConfig(level=logging.INFO)
 
-    rnd.default.seed(numpy.fromfile("%s/seed" % (os.path.dirname(__file__)),
+    rnd.default.seed(numpy.fromfile(os.path.join(root.common.veles_dir,
+                                                 "veles/samples/seed"),
                                     numpy.int32, 1024))
     # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
     l = launcher.Launcher()
     device = None if l.is_master else opencl.Device()
-    fnme = "%s/video_ae.pickle" % (config.cache_dir)
+    fnme = os.path.join(root.common.cache_dir, "video_ae.pickle")
     fin = None
     try:
         fin = open(fnme, "rb")
@@ -229,13 +240,13 @@ def main():
                          forward.bias.v.min(), forward.bias.v.max())
         w.decision.just_snapshotted[0] = 1
     else:
-        w = Workflow(l, layers=[9, 14400], device=device)
-    w.initialize(global_alpha=0.0002, global_lambda=0.00005, device=device)
-    l.run()
+        w = Workflow(l, layers=root.layers, device=device)
+        w.initialize()
+        l.run()
 
     logging.info("End of job")
 
 
 if __name__ == "__main__":
     main()
-    sys.exit()
+    sys.exit(0)

@@ -17,7 +17,6 @@ from txzmq import ZmqConnection, ZmqEndpoint
 import uuid
 import zmq
 
-import veles.config as config
 from veles.logger import Logger
 from veles.network_common import NetworkAgent, StringLineReceiver
 

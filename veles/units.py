@@ -10,7 +10,7 @@ import threading
 import time
 import traceback
 
-import veles.config as config
+from veles.config import root
 import veles.error as error
 import veles.logger as logger
 from veles.mutable import Bool

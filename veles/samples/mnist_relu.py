@@ -14,7 +14,7 @@ import struct
 import sys
 import os
 
-import veles.config as config
+from veles.config import root, get_config
 import veles.formats as formats
 import veles.error as error
 import veles.launcher as launcher
@@ -27,6 +27,34 @@ import veles.znicz.decision as decision
 import veles.znicz.evaluator as evaluator
 import veles.znicz.gd as gd
 import veles.znicz.loader as loader
+
+mnist_dir = os.path.join(root.common.veles_dir, "veles/samples/MNIST")
+
+root.update = {"all2all": {"weights_magnitude":
+                           get_config(root.all2all.weights_magnitude, 0.05)},
+               "decision": {"fail_iterations":
+                            get_config(root.decision.fail_iterations, 150),
+                            "snapshot_prefix":
+                            get_config(root.decision.snapshot_prefix,
+                                       "mnist_relu")},
+               "global_alpha": get_config(root.global_alpha, 0.01),
+               "global_lambda": get_config(root.global_lambda, 0.0),
+               "layers_mnist_relu": get_config(root.layers_mnist_relu,
+                                               [100, 10]),
+               "loader": {"minibatch_maxsize":
+                          get_config(root.loader.minibatch_maxsize, 60)},
+               "path_for_load_data_test_images":
+               get_config(root.path_for_load_data_test_images,
+                          os.path.join(mnist_dir, "t10k-images.idx3-ubyte")),
+               "path_for_load_data_test_label":
+               get_config(root.path_for_load_data_test_label,
+                          os.path.join(mnist_dir, "t10k-labels.idx1-ubyte")),
+               "path_for_load_data_train_images":
+               get_config(root.path_for_load_data_train_images,
+                          os.path.join(mnist_dir, "train-images.idx3-ubyte")),
+               "path_for_load_data_train_label":
+               get_config(root.path_for_load_data_train_label,
+                          os.path.join(mnist_dir, "train-labels.idx1-ubyte"))}
 
 
 class Loader(loader.FullBatchLoader):
@@ -86,12 +114,12 @@ class Loader(loader.FullBatchLoader):
 
         # Transforming images into float arrays and normalizing to [-1, 1]:
         images = pixels.astype(numpy.float32).reshape(n_images, n_rows, n_cols)
-        self.info("Original range: [%.1f, %.1f]" % (images.min(),
-                                                          images.max()))
+        self.info("Original range: [%.1f, %.1f]" %
+                  (images.min(), images.max()))
         for image in images:
             formats.normalize(image)
-        self.info("Range after normalization: [%.1f, %.1f]" % (
-                                            images.min(), images.max()))
+        self.info("Range after normalization: [%.1f, %.1f]" %
+                  (images.min(), images.max()))
         self.original_data[offs:offs + n_images] = images[:]
         self.info("Done")
 
@@ -101,22 +129,14 @@ class Loader(loader.FullBatchLoader):
         self.original_labels = numpy.zeros([70000], dtype=numpy.int8)
         self.original_data = numpy.zeros([70000, 28, 28], dtype=numpy.float32)
 
-        self.load_original(0, 10000,
-                           "%s/MNIST/t10k-labels.idx1-ubyte" % (os.path.dirname(__file__)),
-                           "%s/MNIST/t10k-images.idx3-ubyte" % (os.path.dirname(__file__)))
-        self.load_original(10000, 60000,
-                           "%s/MNIST/train-labels.idx1-ubyte" % (os.path.dirname(__file__)),
-                           "%s/MNIST/train-images.idx3-ubyte" % (os.path.dirname(__file__)))
+        self.load_original(0, 10000, root.path_for_load_data_test_label,
+                           root.path_for_load_data_test_images)
+        self.load_original(10000, 60000, root.path_for_load_data_train_label,
+                           root.path_for_load_data_train_images)
 
         self.class_samples[0] = 0
         self.class_samples[1] = 10000
         self.class_samples[2] = 60000
-
-        self.nextclass_offs[0] = 0
-        self.nextclass_offs[1] = 10000
-        self.nextclass_offs[2] = 70000
-
-        self.total_samples[0] = 70000
 
 
 class Workflow(workflows.OpenCLWorkflow):
@@ -133,20 +153,20 @@ class Workflow(workflows.OpenCLWorkflow):
         self.rpt.link_from(self.start_point)
 
         self.loader = Loader(self, name="Mnist fullbatch loader",
-                             minibatch_max_size=60)
+                             minibatch_maxsize=root.loader.minibatch_maxsize)
         self.loader.link_from(self.rpt)
 
         # Add forward units
         del self.forward[:]
         for i in range(0, len(layers)):
             if i < len(layers) - 1:
-                aa = all2all.All2AllRELU(self, output_shape=[layers[i]],
-                                         device=device,
-                                         weights_magnitude=0.05)
+                aa = all2all.All2AllRELU(
+                    self, output_shape=[layers[i]], device=device,
+                    weights_magnitude=root.all2all.weights_magnitude)
             else:
-                aa = all2all.All2AllSoftmax(self, output_shape=[layers[i]],
-                                            device=device,
-                                            weights_magnitude=0.05)
+                aa = all2all.All2AllSoftmax(
+                    self, output_shape=[layers[i]], device=device,
+                    weights_magnitude=root.all2all.weights_magnitude)
             self.forward.append(aa)
             if i:
                 self.forward[i].link_from(self.forward[i - 1])
@@ -165,8 +185,9 @@ class Workflow(workflows.OpenCLWorkflow):
         self.ev.max_samples_per_epoch = self.loader.total_samples
 
         # Add decision unit
-        self.decision = decision.Decision(self, snapshot_prefix="mnist",
-                                          fail_iterations=150)
+        self.decision = decision.Decision(
+            self, snapshot_prefix=root.decision.snapshot_prefix,
+            fail_iterations=root.decision.fail_iterations)
         self.decision.link_from(self.ev)
         self.decision.minibatch_class = self.loader.minibatch_class
         self.decision.minibatch_last = self.loader.minibatch_last
@@ -241,12 +262,6 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_err_y[-1].redraw_plot = True
         self.plt_err_y[-1].should_unlock_pipeline = True
 
-    def initialize(self, global_alpha, global_lambda, device=None):
-        for gd in self.gd:
-            gd.global_alpha = global_alpha
-            gd.global_lambda = global_lambda
-        return super(Workflow, self).initialize(device=device)
-
 
 def main():
     # if __debug__:
@@ -255,11 +270,12 @@ def main():
     logging.basicConfig(level=logging.INFO)
     logging.info("Logging level: %s", str(logging.root.level))
 
-    rnd.default.seed("%s/seed" % (os.path.dirname(__file__)), numpy.int32, 1024)
+    rnd.default.seed(os.path.join(root.common.veles_dir, "veles/samples/seed"),
+                     numpy.int32, 1024)
     l = launcher.Launcher()
     device = None if l.is_master else opencl.Device()
-    w = Workflow(l, layers=[100, 10], device=device)
-    w.initialize(device=device, global_alpha=0.01, global_lambda=0.0)
+    w = Workflow(l, layers=root.layers_mnist_relu, device=device)
+    w.initialize()
     l.run()
 
     logging.info("End of job")
@@ -267,8 +283,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    if config.plotters_disabled:
-        sys.stderr.flush()
-        sys.stdout.flush()
-        os._exit(0)
     sys.exit(0)

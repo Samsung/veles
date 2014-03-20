@@ -6,36 +6,20 @@ Console command line interface for Veles platform.
 
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
-import sys
-import os
+
+
 import cmd
 import logging
-import traceback
-import pickle
-
-
-# Imports for conveniece
 import numpy
+import os
+import pickle
+import sys
+import traceback
 import matplotlib.pyplot as pp
 import matplotlib.cm as cm
 
-
-def add_path(path):
-    if path not in sys.path:
-        sys.path.append(path)
-
-
-this_dir = os.path.dirname(__file__)
-if not this_dir:
-    this_dir = "."
-add_path("%s/../src" % (this_dir))
-add_path("%s/../Znicz" % (this_dir))
-add_path("%s/../Znicz/tests/functional" % (this_dir))
-
-
-import config
-import thread_pool
-import units
+import veles.thread_pool as thread_pool
+import veles.units as units
 
 
 class VelesShell(cmd.Cmd):

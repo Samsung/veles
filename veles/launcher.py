@@ -25,7 +25,7 @@ from twisted.web.html import escape
 import uuid
 
 import veles.client as client
-import veles.config as config
+from veles.config import root
 import veles.graphics_server as graphics_server
 import veles.logger as logger
 import veles.server as server
@@ -71,7 +71,7 @@ class Launcher(logger.Logger):
         parser.add_argument("-p", "--matplotlib-backend", type=str, nargs='?',
                             const="",
                             default=kwargs.get("matplotlib_backend",
-                                               config.matplotlib_backend),
+                                               root.common.matplotlib_backend),
                             help="Matplotlib drawing backend.")
         parser.add_argument("-b", "--background",
                             default=kwargs.get("background", False),
@@ -130,7 +130,7 @@ class Launcher(logger.Logger):
         self._log_id = self.args.log_id or self.id
         if self.logs_to_mongo:
             if self.mongo_log_addr == "":
-                self.args.log_mongo = config.mongodb_logging_address
+                self.args.log_mongo = root.common.mongodb_logging_address
             logger.Logger.duplicate_all_logging_to_mongo(self.args.log_mongo,
                                                          self._log_id)
         self.info("My log ID is %s", self.log_id)
@@ -295,7 +295,7 @@ class Launcher(logger.Logger):
         if self.reports_web_status:
             self.start_time = time.time()
             self.tornado_ioloop_thread.start()
-            self._notify_task.start(config.web_status_notification_interval,
+            self._notify_task.start(root.common.web_status_notification_interval,
                                     now=False)
         if self.is_standalone:
             darun = threads.deferToThreadPool(reactor,
@@ -329,17 +329,18 @@ class Launcher(logger.Logger):
         if not self.reports_web_status:
             return
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        result = sock.connect_ex((config.web_status_host,
-                                  config.web_status_port))
+        result = sock.connect_ex((root.common.web_status_host,
+                                  root.common.web_status_port))
         sock.close()
         if result != 0:
             self.info("Launching the web status server")
             self._launch_remote_program(
-                config.web_status_host,
+                root.common.web_status_host,
                 "PYTHONPATH=%s %s" % (
-                    os.path.dirname(os.path.abspath(config.this_dir)),
-                    os.path.abspath(os.path.join(config.this_dir,
-                                                 "web_status.py"))))
+                    os.path.dirname(os.path.abspath(
+                            os.path.join(root.common.veles_dir, "veles"))),
+                    os.path.abspath(os.path.join(root.common.veles_dir,
+                                                 "veles/web_status.py"))))
         else:
             self.info("Discovered an already running web status server")
 
@@ -413,7 +414,7 @@ class Launcher(logger.Logger):
     def _handle_notify_request(self, response):
         if response.error:
             self.warning("Failed to upload the status update to %s:%s",
-                         config.web_status_host, config.web_status_port)
+                         root.common.web_status_host, root.common.web_status_port)
         else:
             self.debug("Successfully updated the status")
 
@@ -434,11 +435,11 @@ class Launcher(logger.Logger):
                'custom_plots': "<br/>".join(self.plots_endpoints),
                'description': "<br />".join(escape(
                     self.workflow.__doc__).split("\n"))}
-        timeout = config.web_status_notification_interval / 2
+        timeout = root.common.web_status_notification_interval / 2
         self._notify_agent.fetch("http://%s:%d/%s" % (
-                                    config.web_status_host,
-                                    config.web_status_port,
-                                    config.web_status_update
+                                    root.common.web_status_host,
+                                    root.common.web_status_port,
+                                    root.common.web_status_update
                                  ),
                                  self._handle_notify_request,
                                  method='POST', headers=None,

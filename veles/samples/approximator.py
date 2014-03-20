@@ -14,7 +14,7 @@ import os
 import scipy.io
 import sys
 
-import veles.config as config
+from veles.config import root, get_config
 import veles.error as error
 import veles.launcher as launcher
 from veles.mutable import Bool
@@ -30,6 +30,27 @@ import veles.znicz.gd as gd
 import veles.znicz.loader as loader
 
 
+root.update = {"decision": {"fail_iterations":
+                            get_config(root.decision.fail_iterations, 1000),
+                            "snapshot_prefix":
+                            get_config(root.decision.snapshot_prefix,
+                                       "approximator"),
+                            "store_samples_mse":
+                            get_config(root.decision.store_samples_mse, True)},
+               "global_alpha": get_config(root.global_alpha, 0.01),
+               "global_lambda": get_config(root.global_lambda, 0.00005),
+               "layers": get_config(root.layers, [810, 9]),
+               "loader": {"minibatch_maxsize":
+                          get_config(root.loader.minibatch_maxsize, 81)},
+               "path_for_target_data":
+               get_config(root.path_for_target_data,
+                          ["/data/veles/approximator/all_org_appertures.mat"]),
+               "path_for_train_data":
+               get_config(root.path_for_train_data,
+                          ["/data/veles/approximator/all_dec_appertures.mat"])
+               }
+
+
 class Loader(loader.ImageLoader):
     def load_original(self, fnme):
         a = scipy.io.loadmat(fnme)
@@ -40,7 +61,7 @@ class Loader(loader.ImageLoader):
         else:
             raise error.ErrBadFormat("Could not find variable to import "
                                      "in %s" % (fnme))
-        aa = numpy.zeros(a.shape, dtype=opencl_types.dtypes[config.dtype])
+        aa = numpy.zeros(a.shape, dtype=opencl_types.dtypes[root.common.dtype])
         aa[:] = a[:]
         return (aa, [])
 
@@ -55,10 +76,9 @@ class Loader(loader.ImageLoader):
     def initialize(self):
         super(Loader, self).initialize()
         self.shuffle_validation_train()
-        self.info("data range: (%.6f, %.6f), "
-                        "target range: (%.6f, %.6f)" % (
-            self.original_data.min(), self.original_data.max(),
-            self.original_target.min(), self.original_target.max()))
+        self.info("data range: (%.6f, %.6f), target range: (%.6f, %.6f)"
+                  % (self.original_data.min(), self.original_data.max(),
+                     self.original_target.min(), self.original_target.max()))
         # Normalization
         for i in range(0, self.original_data.shape[0]):
             data = self.original_data[i]
@@ -74,9 +94,9 @@ class Loader(loader.ImageLoader):
             target *= 0.5
 
         self.info("norm data range: (%.6f, %.6f), "
-                        "norm target range: (%.6f, %.6f)" % (
-            self.original_data.min(), self.original_data.max(),
-            self.original_target.min(), self.original_target.max()))
+                  "norm target range: (%.6f, %.6f)"
+                  % (self.original_data.min(), self.original_data.max(),
+                     self.original_target.min(), self.original_target.max()))
         """
         train_data = self.original_data[self.nextclass_offs[1]:
                                         self.nextclass_offs[2]]
@@ -150,9 +170,10 @@ class Workflow(workflows.OpenCLWorkflow):
         super(Workflow, self).__init__(workflow, **kwargs)
         self.rpt.link_from(self.start_point)
 
-        self.loader = Loader(self,
-            train_paths=["/data/veles/approximator/all_dec_appertures.mat"],
-            target_paths=["/data/veles/approximator/all_org_appertures.mat"])
+        self.loader = Loader(
+            self, train_paths=root.path_for_train_data,
+            target_paths=root.path_for_target_data,
+            minibatch_maxsize=root.loader.minibatch_maxsize)
         self.loader.link_from(self.rpt)
 
         # Add forward units
@@ -177,8 +198,10 @@ class Workflow(workflows.OpenCLWorkflow):
         self.ev.max_samples_per_epoch = self.loader.total_samples
 
         # Add decision unit
-        self.decision = decision.Decision(self, store_samples_mse=True,
-                                          snapshot_prefix="approximator")
+        self.decision = decision.Decision(
+            self, fail_iterations=root.decision.fail_iterations,
+            store_samples_mse=root.decision.store_samples_mse,
+            snapshot_prefix=root.decision.snapshot_prefix)
         self.decision.link_from(self.ev)
         self.decision.minibatch_class = self.loader.minibatch_class
         self.decision.minibatch_last = self.loader.minibatch_last
@@ -224,8 +247,8 @@ class Workflow(workflows.OpenCLWorkflow):
         for i in range(0, len(styles)):
             if not len(styles[i]):
                 continue
-            self.plt_avg.append(plotting_units.AccumulatingPlotter(self, name="mse",
-                                                   plot_style=styles[i]))
+            self.plt_avg.append(plotting_units.AccumulatingPlotter(
+                self, name="mse", plot_style=styles[i]))
             self.plt_avg[-1].input = self.decision.epoch_metrics
             self.plt_avg[-1].input_field = i
             self.plt_avg[-1].link_from(self.plt_avg[-2] if j
@@ -241,8 +264,8 @@ class Workflow(workflows.OpenCLWorkflow):
         for i in range(0, len(styles)):
             if not len(styles[i]):
                 continue
-            self.plt_max.append(plotting_units.AccumulatingPlotter(self, name="mse",
-                                                       plot_style=styles[i]))
+            self.plt_max.append(plotting_units.AccumulatingPlotter(
+                self, name="mse", plot_style=styles[i]))
             self.plt_max[-1].input = self.decision.epoch_metrics
             self.plt_max[-1].input_field = i
             self.plt_max[-1].input_offs = 1
@@ -256,8 +279,8 @@ class Workflow(workflows.OpenCLWorkflow):
         for i in range(0, len(styles)):
             if not len(styles[i]):
                 continue
-            self.plt_min.append(plotting_units.AccumulatingPlotter(self, name="mse",
-                                                       plot_style=styles[i]))
+            self.plt_min.append(plotting_units.AccumulatingPlotter(
+                self, name="mse", plot_style=styles[i]))
             self.plt_min[-1].input = self.decision.epoch_metrics
             self.plt_min[-1].input_field = i
             self.plt_min[-1].input_offs = 2
@@ -288,18 +311,6 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt.link_from(self.decision)
         self.plt.gate_block = ~self.decision.epoch_ended
 
-    def initialize(self, global_alpha, global_lambda, minibatch_maxsize,
-                   device):
-        for gd in self.gd:
-            gd.global_alpha = global_alpha
-            gd.global_lambda = global_lambda
-            gd.device = device
-        for forward in self.forward:
-            forward.device = device
-        self.ev.device = device
-        self.loader.minibatch_maxsize[0] = minibatch_maxsize
-        return super(Workflow, self).initialize()
-
 
 def main():
     if __debug__:
@@ -307,14 +318,14 @@ def main():
     else:
         logging.basicConfig(level=logging.INFO)
 
-    rnd.default.seed(numpy.fromfile("%s/seed" % (os.path.dirname(__file__)),
+    rnd.default.seed(numpy.fromfile(os.path.join(root.common.veles_dir,
+                                                 "veles/samples/seed"),
                                     numpy.int32, 1024))
     # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 524288))
     l = launcher.Launcher()
     device = None if l.is_master else opencl.Device()
-    w = Workflow(l, layers=[810, 9], device=device)
-    w.initialize(global_alpha=0.01, global_lambda=0.00005,
-                 minibatch_maxsize=81, device=device)
+    w = Workflow(l, layers=root.layers, device=device)
+    w.initialize()
     l.run()
 
     logging.info("End of job")

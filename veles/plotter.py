@@ -7,7 +7,6 @@ Created on Mar 7, 2014
 
 import time
 
-import veles.config as config
 from veles.graphics_server import GraphicsServer
 from veles.units import Unit
 

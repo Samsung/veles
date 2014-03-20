@@ -13,7 +13,7 @@ import numpy
 import os
 import sys
 
-import veles.config as config
+from veles.config import get_config, root
 import veles.formats as formats
 import veles.launcher as launcher
 import veles.opencl as opencl
@@ -27,29 +27,50 @@ import veles.znicz.gd as gd
 import veles.znicz.loader as loader
 
 
+root.common.update = {"plotters_disabled":
+                      get_config(root.common.plotters_disabled, True)}
+
+root.update = {"decision": {"fail_iterations":
+                            get_config(root.decision.fail_iterations, 200),
+                            "snapshot_prefix":
+                            get_config(root.decision.snapshot_prefix,
+                                       "wine")},
+               "global_alpha": get_config(root.global_alpha, 0.5),
+               "global_lambda": get_config(root.global_lambda, 0.0),
+               "layers": get_config(root.layers, [8, 3]),
+               "loader": {"minibatch_maxsize":
+                          get_config(root.loader.minibatch_maxsize, 1000000)},
+               "path_for_load_data":
+               get_config(root.path_for_load_data,
+                          os.path.join(root.common.veles_dir,
+                                       "veles/samples/wine/wine.data"))
+               }
+
+
 class Loader(loader.FullBatchLoader):
     """Loads Wine dataset.
     """
     def load_data(self):
-        fin = open("%s/wine/wine.data" % (os.path.dirname(__file__)), "r")
-        aa = []
+        fin = open(root.path_for_load_data, "r")
+        lines = []
         max_lbl = 0
         while True:
             s = fin.readline()
             if not len(s):
                 break
-            aa.append(numpy.fromstring(s, sep=",",
-                dtype=opencl_types.dtypes[config.dtype]))
-            max_lbl = max(max_lbl, int(aa[-1][0]))
+            lines.append(numpy.fromstring(
+                s, sep=",", dtype=opencl_types.dtypes[root.common.dtype]))
+            max_lbl = max(max_lbl, int(lines[-1][0]))
         fin.close()
 
-        self.original_data = numpy.zeros([len(aa), aa[0].shape[0] - 1],
+        self.original_data = numpy.zeros([len(lines), lines[0].shape[0] - 1],
                                          dtype=numpy.float32)
-        self.original_labels = numpy.zeros([self.original_data.shape[0]],
+        self.original_labels = numpy.zeros(
+            [self.original_data.shape[0]],
             dtype=opencl_types.itypes[
                 opencl_types.get_itype_from_size(max_lbl)])
 
-        for i, a in enumerate(aa):
+        for i, a in enumerate(lines):
             self.original_data[i] = a[1:]
             self.original_labels[i] = int(a[0]) - 1
             # formats.normalize(self.original_data[i])
@@ -81,7 +102,8 @@ class Workflow(workflows.OpenCLWorkflow):
 
         self.rpt.link_from(self.start_point)
 
-        self.loader = Loader(self, name="Wine loader")
+        self.loader = Loader(self, name="Wine loader",
+                             minibatch_maxsize=root.loader.minibatch_maxsize)
         self.loader.link_from(self.rpt)
 
         # Add forward units
@@ -111,8 +133,10 @@ class Workflow(workflows.OpenCLWorkflow):
         self.ev.max_samples_per_epoch = self.loader.total_samples
 
         # Add decision unit
-        self.decision = decision.Decision(self, fail_iterations=250,
-                                          snapshot_prefix="wine")
+        self.decision = decision.Decision(
+            self,
+            fail_iterations=root.decision.fail_iterations,
+            snapshot_prefix=root.decision.snapshot_prefix)
         self.decision.link_from(self.ev)
         self.decision.minibatch_class = self.loader.minibatch_class
         self.decision.minibatch_last = self.loader.minibatch_last
@@ -153,26 +177,19 @@ class Workflow(workflows.OpenCLWorkflow):
 
         self.gd[-1].link_from(self.decision)
 
-    def initialize(self, global_alpha, global_lambda, device):
-        for gd in self.gd:
-            gd.global_alpha = global_alpha
-            gd.global_lambda = global_lambda
-        return super(Workflow, self).initialize(device=device)
-
 
 def main():
     if __debug__:
         logging.basicConfig(level=logging.DEBUG)
     else:
         logging.basicConfig(level=logging.INFO)
-
-    rnd.default.seed(numpy.fromfile("%s/seed" % (os.path.dirname(__file__)),
+    rnd.default.seed(numpy.fromfile(os.path.join(root.common.veles_dir,
+                                                 "veles/samples/seed"),
                                     dtype=numpy.int32, count=1024))
-    config.plotters_disabled = True
     l = launcher.Launcher()
     device = None if l.is_master else opencl.Device()
-    w = Workflow(l, layers=[8, 3], device=device)
-    w.initialize(global_alpha=0.5, global_lambda=0.0, device=device)
+    w = Workflow(l, layers=root.layers, device=device)
+    w.initialize()
     l.run()
 
     logging.info("End of job")
@@ -180,8 +197,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    if config.plotters_disabled:
-        sys.stderr.flush()
-        sys.stdout.flush()
-        os._exit(0)
     sys.exit(0)

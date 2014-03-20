@@ -5,14 +5,18 @@ Image Scale.
 
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
-import numpy
 
-import veles.config as config
+
+import numpy
+import os
+
+from veles.config import root
 import veles.error as error
 from ctypes import POINTER, c_byte, c_int, cdll
 
 
-handle = cdll.LoadLibrary("%s/libyuv.so" % (config.this_dir))
+handle = cdll.LoadLibrary(os.path.join(root.common.veles_dir,
+                                       "veles/libyuv.so"))
 handle.ScalePlane.argtypes = [POINTER(c_byte), c_int, c_int, c_int,
                               POINTER(c_byte), c_int, c_int, c_int, c_int]
 
