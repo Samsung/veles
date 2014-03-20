@@ -158,7 +158,7 @@ function activateListItem(item_id) {
   details += 'onclick="showPlots(\'';
   details += item_id;
   details += '\')">View plots';
-  details += '</button>\n';  
+  details += '</button>\n';
   details += '</div>\n';
   details += '<div class="btn-group">\n';
   details += '<button type="button" class="btn btn-default" ';
