@@ -5,6 +5,7 @@
 *.in
 *.pickle
 *.pyc
+*.pyo
 aclocal.m4
 autom4te.cache
 test-driver
@@ -26,5 +27,3 @@ cache
 !Veles.pc.in
 !Application.mk.in
 !Android.mk.in
-*.pyc
-*.pyo
