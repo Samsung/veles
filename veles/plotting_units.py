@@ -13,8 +13,11 @@ import veles.plotter as plotter
 import veles.opencl_types as opencl_types
 
 
-class SimplePlotter(plotter.Plotter):
-    """Accumulates supplied value and draws the accumulated plot.
+class AccumulatingPlotter(plotter.Plotter):
+    """Accumulates supplied values and draws the plot of the last "last"
+    points, as well as the whole picture in miniature. Optionally, approximates
+    the series with a polynomial of power "fit_poly_power" in terms of least
+    squares.
 
     Should be assigned before initialize():
         input
@@ -36,27 +39,33 @@ class SimplePlotter(plotter.Plotter):
         clear_plot: will clear plot at the beginning of redraw().
         redraw_plot: will redraw plot at the end of redraw().
         ylim: bounds of plot y-axis.
+        last: the number of ending points to show. If set to 0, always plot
+        all the accumulated points.
+        minimap_size: draw the miniature plot of the whole series in the upper
+        right corner of this size. If set to 0, no minimap is drawn.
+        fit_poly_power: the approximation polynomial's power. If set to 0,
+        do no approximation.
     """
     def __init__(self, workflow, **kwargs):
         name = kwargs.get("name", "Errors number")
-        plot_style = kwargs.get("plot_style", "k-")
-        clear_plot = kwargs.get("clear_plot", False)
-        redraw_plot = kwargs.get("redraw_plot", False)
-        ylim = kwargs.get("ylim")
+        self.plot_style = kwargs.get("plot_style", "k-")
+        self.clear_plot = kwargs.get("clear_plot", False)
+        self.redraw_plot = kwargs.get("redraw_plot", False)
+        self.ylim = kwargs.get("ylim")
+        self.last = kwargs.get("last", 11)
+        self.fit_poly_power = kwargs.get("fit_poly_power", 2)
+        self.minimap_size = kwargs.get("minimap", 0.25)
+        self.line_width = kwargs.get("line_width", 2.0)
         kwargs["name"] = name
-        kwargs["plot_style"] = plot_style
-        kwargs["clear_plot"] = clear_plot
-        kwargs["redraw_plot"] = redraw_plot
-        kwargs["ylim"] = ylim
-        super(SimplePlotter, self).__init__(workflow, **kwargs)
+        kwargs["plot_style"] = self.plot_style
+        kwargs["clear_plot"] = self.clear_plot
+        kwargs["redraw_plot"] = self.redraw_plot
+        kwargs["ylim"] = self.ylim
+        super(AccumulatingPlotter, self).__init__(workflow, **kwargs)
         self.values = []
         self.input = None  # Connector
         self.input_field = None
-        self.plot_style = plot_style
         self.input_offs = 0
-        self.clear_plot = clear_plot
-        self.redraw_plot = redraw_plot
-        self.ylim = ylim
 
     def redraw(self):
         self.pp.ioff()
@@ -64,16 +73,50 @@ class SimplePlotter(plotter.Plotter):
         if self.clear_plot:
             figure.clf()
         axes = figure.add_subplot(111)  # Main axes
-        if self.clear_plot:
-            axes.cla()
+        axes.grid(True)
         if self.ylim is not None:
             axes.set_ylim(self.ylim[0], self.ylim[1])
-        axes.plot(self.values, self.plot_style)
+        if self.last == 0:
+            axes.plot(self.values, self.plot_style)
+        else:
+            values = self.values[-self.last:]
+            if len(self.values) > self.last:
+                begindex = len(self.values) - self.last
+                values_range = numpy.arange(len(values)) + begindex
+                axes.xaxis.set_ticks(range(begindex, len(self.values)))
+                if self.fit_poly_power == 0:
+                    axes.plot(values_range, values, self.plot_style[:-1] + '-',
+                              linewidth=self.line_width, marker='o',
+                              markersize=self.line_width * 4)
+                else:
+                    interval = numpy.linspace(0, len(values) - 1, 100)
+                    smooth_vals = numpy.poly1d(numpy.polyfit(
+                        range(len(values)), values,
+                        self.fit_poly_power))(interval)
+                    axes.plot(interval + begindex, smooth_vals,
+                              self.plot_style, linewidth=self.line_width)
+                    axes.plot(values_range, values, self.plot_style[:-1] + 'o',
+                              linewidth=self.line_width * 4)
+                if self.minimap_size > 0:
+                    minimap = figure.add_axes((1 - self.minimap_size,
+                                               1 - self.minimap_size,
+                                               self.minimap_size,
+                                               self.minimap_size),
+                                              alpha=0.75)
+                    minimap.xaxis.set_visible(False)
+                    minimap.yaxis.set_visible(False)
+                    minimap.plot(self.values, self.plot_style,
+                                 linewidth=self.line_width)
+            else:
+                axes.xaxis.set_ticks(range(len(values)))
+                axes.plot(values, self.plot_style[:-1] + '-',
+                          linewidth=self.line_width, marker='o',
+                          markersize=self.line_width * 4)
         self.pp.ion()
         self.show_figure(figure)
         if self.redraw_plot:
             figure.canvas.draw()
-        super(SimplePlotter, self).redraw()
+        super(AccumulatingPlotter, self).redraw()
 
     def run(self):
         if type(self.input_field) == int:
@@ -85,7 +128,7 @@ class SimplePlotter(plotter.Plotter):
         if type(value) == numpy.ndarray:
             value = value[self.input_offs]
         self.values.append(float(value))
-        super(SimplePlotter, self).run()
+        super(AccumulatingPlotter, self).run()
 
 
 class MatrixPlotter(plotter.Plotter):

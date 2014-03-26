@@ -296,7 +296,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt = []
         styles = ["r-", "b-", "k-"]
         for i in range(0, 3):
-            self.plt.append(plotting_units.SimplePlotter(self,
+            self.plt.append(plotting_units.AccumulatingPlotter(self,
                                                    name="num errors",
                                                    plot_style=styles[i]))
             self.plt[-1].input = self.decision.epoch_n_err_pt
@@ -322,7 +322,7 @@ class Workflow(workflows.OpenCLWorkflow):
         # err_y plotter
         self.plt_err_y = []
         for i in range(0, 3):
-            self.plt_err_y.append(plotting_units.SimplePlotter(
+            self.plt_err_y.append(plotting_units.AccumulatingPlotter(
                 self, name="Last layer max gradient sum",
                 plot_style=styles[i]))
             self.plt_err_y[-1].input = self.decision.max_err_y_sums

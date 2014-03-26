@@ -211,14 +211,13 @@ class Workflow(workflows.OpenCLWorkflow):
 
         # Error plotter
         self.plt = []
-        styles = ["r-", "b-", "k-"]
+        styles = ["g-", "r-", "k-"]
         for i in range(1, 3):
-            self.plt.append(plotting_units.SimplePlotter(self,
-                                                   name="num errors",
-                                                   plot_style=styles[i]))
+            self.plt.append(plotting_units.AccumulatingPlotter(
+                self, name="Errors", plot_style=styles[i]))
             self.plt[-1].input = self.decision.epoch_n_err_pt
             self.plt[-1].input_field = i
-            self.plt[-1].link_from(self.decision)
+            self.plt[-1].link_from(self.decision if i == 1 else self.plt[-2])
             self.plt[-1].gate_block = self.decision.epoch_ended
             self.plt[-1].gate_block_not = [1]
         self.plt[0].clear_plot = True
@@ -236,9 +235,9 @@ class Workflow(workflows.OpenCLWorkflow):
         # err_y plotter
         self.plt_err_y = []
         for i in range(1, 3):
-            self.plt_err_y.append(plotting_units.SimplePlotter(
+            self.plt_err_y.append(plotting_units.AccumulatingPlotter(
                 self, name="Last layer max gradient sum",
-                plot_style=styles[i]))
+                fit_poly_power=3, plot_style=styles[i]))
             self.plt_err_y[-1].input = self.decision.max_err_y_sums
             self.plt_err_y[-1].input_field = i
             self.plt_err_y[-1].link_from(self.decision)
@@ -256,9 +255,9 @@ class Workflow(workflows.OpenCLWorkflow):
 
 
 def main():
-    #if __debug__:
+    # if __debug__:
     #    logging.basicConfig(level=logging.DEBUG)
-    #else:
+    # else:
     logging.basicConfig(level=logging.INFO)
     logging.info("Logging level: %s", str(logging.root.level))
 

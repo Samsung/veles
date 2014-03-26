@@ -238,7 +238,7 @@ class Workflow(workflows.OpenCLWorkflow):
         for i in range(len(styles)):
             if not len(styles[i]):
                 continue
-            self.plt.append(plotting_units.SimplePlotter(self, name="mse",
+            self.plt.append(plotting_units.AccumulatingPlotter(self, name="mse",
                                                    plot_style=styles[i]))
             self.plt[-1].input = self.decision.epoch_metrics
             self.plt[-1].input_field = i
@@ -262,7 +262,7 @@ class Workflow(workflows.OpenCLWorkflow):
         for i in range(len(styles)):
             if not len(styles[i]):
                 continue
-            self.plt_max.append(plotting_units.SimplePlotter(self, name="mse",
+            self.plt_max.append(plotting_units.AccumulatingPlotter(self, name="mse",
                                                        plot_style=styles[i]))
             self.plt_max[-1].input = self.decision.epoch_metrics
             self.plt_max[-1].input_field = i
@@ -276,7 +276,7 @@ class Workflow(workflows.OpenCLWorkflow):
         for i in range(len(styles)):
             if not len(styles[i]):
                 continue
-            self.plt_min.append(plotting_units.SimplePlotter(self, name="mse",
+            self.plt_min.append(plotting_units.AccumulatingPlotter(self, name="mse",
                                                        plot_style=styles[i]))
             self.plt_min[-1].input = self.decision.epoch_metrics
             self.plt_min[-1].input_field = i
@@ -291,7 +291,7 @@ class Workflow(workflows.OpenCLWorkflow):
         for i in range(len(styles)):
             if not len(styles[i]):
                 continue
-            self.plt_n_err.append(plotting_units.SimplePlotter(self,
+            self.plt_n_err.append(plotting_units.AccumulatingPlotter(self,
                                 name="num errors", plot_style=styles[i]))
             self.plt_n_err[-1].input = self.decision.epoch_n_err_pt
             self.plt_n_err[-1].input_field = i

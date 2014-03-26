@@ -99,26 +99,26 @@ class model_WF_wine(units.Pickleable):
         # ev.Index=t.Index
         ev.link_from(out)
 
-        plt_ok_train = plotting_units.SimplePlotter(device=dev,
+        plt_ok_train = plotting_units.AccumulatingPlotter(device=dev,
                                               name="train")
         plt_ok_train.input = ev.status
         plt_ok_train.input_field = 'n_ok'
         plt_ok_train.link_from(ev)
 
-        plt_total_train = plotting_units.SimplePlotter(device=dev,
+        plt_total_train = plotting_units.AccumulatingPlotter(device=dev,
                                                  name="train",
                                                  plot_style="blue")
         plt_total_train.input = ev.status
         plt_total_train.input_field = 'count_train'
         plt_total_train.link_from(ev)
 
-        plt_ok_valid = plotting_units.SimplePlotter(device=dev,
+        plt_ok_valid = plotting_units.AccumulatingPlotter(device=dev,
                                               name="validation")
         plt_ok_valid.input = ev.status
         plt_ok_valid.input_field = 'n_ok_v'
         plt_ok_valid.link_from(ev)
 
-        plt_total_valid = plotting_units.SimplePlotter(device=dev,
+        plt_total_valid = plotting_units.AccumulatingPlotter(device=dev,
                                                  name="validation",
                                                  plot_style="blue")
         plt_total_valid.input = ev.status

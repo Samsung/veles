@@ -224,7 +224,7 @@ class Workflow(workflows.OpenCLWorkflow):
         for i in range(0, len(styles)):
             if not len(styles[i]):
                 continue
-            self.plt_avg.append(plotting_units.SimplePlotter(self, name="mse",
+            self.plt_avg.append(plotting_units.AccumulatingPlotter(self, name="mse",
                                                    plot_style=styles[i]))
             self.plt_avg[-1].input = self.decision.epoch_metrics
             self.plt_avg[-1].input_field = i
@@ -242,7 +242,7 @@ class Workflow(workflows.OpenCLWorkflow):
         for i in range(0, len(styles)):
             if not len(styles[i]):
                 continue
-            self.plt_max.append(plotting_units.SimplePlotter(self, name="mse",
+            self.plt_max.append(plotting_units.AccumulatingPlotter(self, name="mse",
                                                        plot_style=styles[i]))
             self.plt_max[-1].input = self.decision.epoch_metrics
             self.plt_max[-1].input_field = i
@@ -257,7 +257,7 @@ class Workflow(workflows.OpenCLWorkflow):
         for i in range(0, len(styles)):
             if not len(styles[i]):
                 continue
-            self.plt_min.append(plotting_units.SimplePlotter(self, name="mse",
+            self.plt_min.append(plotting_units.AccumulatingPlotter(self, name="mse",
                                                        plot_style=styles[i]))
             self.plt_min[-1].input = self.decision.epoch_metrics
             self.plt_min[-1].input_field = i

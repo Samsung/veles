@@ -658,7 +658,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt = []
         styles = ["r-", "b-", "k-"]
         for i in range(1, 3):
-            self.plt.append(plotting_units.SimplePlotter(self,
+            self.plt.append(plotting_units.AccumulatingPlotter(self,
                                                    name="num errors",
                                                    plot_style=styles[i],
                                                    ylim=(0, 100)))
