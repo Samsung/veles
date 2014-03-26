@@ -227,8 +227,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.rpt.link_from(self.gd[0])
 
         self.end_point.link_from(self.gd[0])
-        self.end_point.gate_block = self.decision.complete
-        self.end_point.gate_block_not = [1]
+        self.end_point.gate_block = ~self.decision.complete
 
         self.loader.gate_block = self.decision.complete
 
@@ -243,8 +242,7 @@ class Workflow(workflows.OpenCLWorkflow):
             self.plt[-1].input = self.decision.epoch_metrics
             self.plt[-1].input_field = i
             self.plt[-1].link_from(self.decision)
-            self.plt[-1].gate_block = self.decision.epoch_ended
-            self.plt[-1].gate_block_not = [1]
+            self.plt[-1].gate_block = ~self.decision.epoch_ended
         self.plt[0].clear_plot = True
         # Weights plotter
         self.decision.vectors_to_sync[self.gd[0].weights] = 1
@@ -254,8 +252,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_mx.input = self.gd[0].weights
         self.plt_mx.input_field = "v"
         self.plt_mx.link_from(self.decision)
-        self.plt_mx.gate_block = self.decision.epoch_ended
-        self.plt_mx.gate_block_not = [1]
+        self.plt_mx.gate_block = ~self.decision.epoch_ended
         # Max plotter
         self.plt_max = []
         styles = ["", "", "k--"]  # ["r--", "b--", "k--"]
@@ -268,8 +265,7 @@ class Workflow(workflows.OpenCLWorkflow):
             self.plt_max[-1].input_field = i
             self.plt_max[-1].input_offs = 1
             self.plt_max[-1].link_from(self.decision)
-            self.plt_max[-1].gate_block = self.decision.epoch_ended
-            self.plt_max[-1].gate_block_not = [1]
+            self.plt_max[-1].gate_block = ~self.decision.epoch_ended
         # Min plotter
         self.plt_min = []
         styles = ["", "", "k:"]  # ["r:", "b:", "k:"]
@@ -282,8 +278,7 @@ class Workflow(workflows.OpenCLWorkflow):
             self.plt_min[-1].input_field = i
             self.plt_min[-1].input_offs = 2
             self.plt_min[-1].link_from(self.decision)
-            self.plt_min[-1].gate_block = self.decision.epoch_ended
-            self.plt_min[-1].gate_block_not = [1]
+            self.plt_min[-1].gate_block = ~self.decision.epoch_ended
         self.plt_min[-1].redraw_plot = True
         # Error plotter
         self.plt_n_err = []
@@ -296,8 +291,7 @@ class Workflow(workflows.OpenCLWorkflow):
             self.plt_n_err[-1].input = self.decision.epoch_n_err_pt
             self.plt_n_err[-1].input_field = i
             self.plt_n_err[-1].link_from(self.decision)
-            self.plt_n_err[-1].gate_block = self.decision.epoch_ended
-            self.plt_n_err[-1].gate_block_not = [1]
+            self.plt_n_err[-1].gate_block = ~self.decision.epoch_ended
         self.plt_n_err[0].clear_plot = True
         self.plt_n_err[-1].redraw_plot = True
         # Image plotter
@@ -313,15 +307,13 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_img.inputs.append(self.decision.sample_target)
         self.plt_img.input_fields.append(0)
         self.plt_img.link_from(self.decision)
-        self.plt_img.gate_block = self.decision.epoch_ended
-        self.plt_img.gate_block_not = [1]
+        self.plt_img.gate_block = ~self.decision.epoch_ended
         """
         # Histogram plotter
         self.plt_hist = plotting_units.MSEHistogram(self, name="Histogram")
         self.plt_hist.link_from(self.decision)
         self.plt_hist.mse = self.decision.epoch_samples_mse[2]
         self.plt_hist.gate_block = self.decision.epoch_ended
-        self.plt_hist.gate_block_not = [1]
         self.plt_hist.should_unlock_pipeline = True
 
     def initialize(self, global_alpha, global_lambda, minibatch_maxsize,

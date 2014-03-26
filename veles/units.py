@@ -13,6 +13,7 @@ import traceback
 import veles.config as config
 import veles.error as error
 import veles.logger as logger
+from veles.mutable import Bool
 import veles.opencl_types as opencl_types
 import veles.thread_pool as thread_pool
 
@@ -33,6 +34,7 @@ class Pickleable(logger.Logger):
     def init_unpickled(self):
         if hasattr(super(Pickleable, self), "init_unpickled"):
             super(Pickleable, self).init_unpickled()
+        self.stripped_pickle_ = False
 
     def __getstate__(self):
         """Selects the attributes to pickle.
@@ -50,6 +52,14 @@ class Pickleable(logger.Logger):
         """
         self.__dict__.update(state)
         self.init_unpickled()
+
+    @property
+    def stripped_pickle(self):
+        return self.stripped_pickle_
+
+    @stripped_pickle.setter
+    def stripped_pickle(self, value):
+        self.stripped_pickle_ = value
 
 
 class Distributable(object):
@@ -111,29 +121,23 @@ class Unit(Pickleable, Distributable):
     """General unit in data stream model.
 
     Attributes:
-        links_from: dictionary of units it depends on.
-        links_to: dictionary of dependent units.
-        is_initialized: is_initialized unit or not.
-        gate_lock_: lock.
-        run_lock_: lock.
-        gate_block: if [0] is true, open_gate() and run() will not be executed
-                    and notification will not be sent further
-                    ([0] can be a function).
-        gate_skip: if [0] is true, open_gate() and run() will not be executed,
-                   but notification will be sent further
-                   ([0] can be a function).
-        gate_block_not: if [0] is true, inverses conditions for gate_block
-                   ([0] can be a function).
-        gate_skip_not: if [0] is true, inverses conditions for gate_skip
-                   ([0] can be a function).
+        _links_from: dictionary of units it depends on.
+        _links_to: dictionary of dependent units.
+        _pool: the unique ThreadPool instance.
+        _pool_lock_: the lock for getting/setting _pool.
+        timers: performance timers for run().
+        _gate_block: if evaluates to True, open_gate() and run() are not
+                     executed and notification is not sent farther.
+        _gate_skip: if evaluates to True, open_gate() and run() will are
+                    executed, but notification is not sent farther.
     """
 
-    pool_ = None
-    pool_lock_ = threading.Lock()
+    _pool_ = None
+    _pool_lock_ = threading.Lock()
     timers = {}
 
     @staticmethod
-    def measure_time(fn, storage, key):
+    def _measure_time(fn, storage, key):
         def wrapped():
             sp = time.time()
             fn()
@@ -147,16 +151,12 @@ class Unit(Pickleable, Distributable):
         self.name = kwargs.get("name")
         self.view_group = kwargs.get("view_group")
         super(Unit, self).__init__()
-        self.links_from = {}
-        self.links_to = {}
-        self.gate_block = [0]
-        self.gate_skip = [0]
-        self.gate_block_not = [0]
-        self.gate_skip_not = [0]
-        self.applied_data_from_master_recursively = False
-        self.applied_data_from_slave_recursively = False
-        setattr(self, "run", Unit.measure_time(getattr(self, "run"),
-                                               Unit.timers, self))
+        self._links_from = {}
+        self._links_to = {}
+        self._gate_block = Bool(False)
+        self._gate_skip = Bool(False)
+        setattr(self, "run", Unit._measure_time(getattr(self, "run"),
+                                                Unit.timers, self))
         self.should_unlock_pipeline = False
         self._workflow = None
         self.workflow = workflow
@@ -165,8 +165,36 @@ class Unit(Pickleable, Distributable):
         super(Unit, self).init_unpickled()
         self.gate_lock_ = threading.Lock()
         self.run_lock_ = threading.Lock()
-        self.is_initialized = False
+        self._is_initialized = False
         Unit.timers[self] = 0
+
+    @property
+    def links_from(self):
+        return self._links_from
+
+    @property
+    def links_to(self):
+        return self._links_to
+
+    @property
+    def gate_block(self):
+        return self._gate_block
+
+    @gate_block.setter
+    def gate_block(self, value):
+        if not isinstance(value, Bool):
+            raise TypeError("veles.mutable.Bool type was expected")
+        self._gate_block = value
+
+    @property
+    def gate_skip(self):
+        return self._gate_skip
+
+    @gate_skip.setter
+    def gate_skip(self, value):
+        if not isinstance(value, Bool):
+            raise TypeError("veles.mutable.Bool type was expected")
+        self._gate_skip = value
 
     @property
     def workflow(self):
@@ -205,13 +233,25 @@ class Unit(Pickleable, Distributable):
 
     @property
     def thread_pool(self):
-        Unit.pool_lock_.acquire()
+        Unit._pool_lock_.acquire()
         try:
-            if Unit.pool_ is None:
-                Unit.pool_ = thread_pool.ThreadPool()
+            if Unit._pool_ is None:
+                Unit._pool_ = thread_pool.ThreadPool()
         finally:
-            Unit.pool_lock_.release()
-        return Unit.pool_
+            Unit._pool_lock_.release()
+        return Unit._pool_
+
+    @property
+    def is_initialized(self):
+        return self._is_initialized
+
+    def __getstate__(self):
+        state = super(Unit, self).__getstate__()
+        if self.stripped_pickle:
+            state["_links_from"] = {}
+            state["_links_to"] = {}
+            state["_workflow"] = None
+        return state
 
     def link_from(self, src):
         """Adds notification link.
@@ -219,56 +259,42 @@ class Unit(Pickleable, Distributable):
         self.links_from[src] = False
         src.links_to[self] = False
 
-    @staticmethod
-    def callvle(var):
-        return var() if callable(var) else var
-
     def check_gate_and_run(self, src):
         """Check gate state and run if it is open.
         """
         if not self.open_gate(src):  # gate has a priority over skip
             return
         # Optionally skip the execution
-        if ((Unit.callvle(self.gate_skip[0]) and
-             (not Unit.callvle(self.gate_skip_not[0]))) or
-            ((not Unit.callvle(self.gate_skip[0])) and
-             Unit.callvle(self.gate_skip_not[0]))):
-            self.run_dependent()
-            return
-        # If previous run has not yet finished, discard notification.
-        if not self.run_lock_.acquire(False):
-            return
-        try:
-            if not self.is_initialized:
-                self.initialize()
-                self.warning("%s is not initialized, performed the "
-                                   "initialization", self.name())
-                self.is_initialized = True
-            self.run()
-        finally:
-            self.run_lock_.release()
+        if not self.gate_skip:
+            # If previous run has not yet finished, discard notification.
+            if not self.run_lock_.acquire(False):
+                return
+            try:
+                if not self._is_initialized:
+                    self.initialize()
+                    self.warning("%s was not initialized, performed the "
+                                 "initialization", self.name)
+                self.run()
+            finally:
+                self.run_lock_.release()
         self.run_dependent()
 
     def initialize_dependent(self):
         """Invokes initialize() on dependent units on the same thread.
         """
         for dst in self.links_to.keys():
-            if dst.is_initialized:
+            if dst._is_initialized:
                 continue
             if not dst.open_gate(self):
                 continue
             dst.initialize()
-            dst.is_initialized = True
             dst.initialize_dependent()
 
     def run_dependent(self):
         """Invokes run() on dependent units on different threads.
         """
         for dst in self.links_to.keys():
-            if ((Unit.callvle(dst.gate_block[0]) and
-                 (not Unit.callvle(dst.gate_block_not[0]))) or
-                ((not Unit.callvle(dst.gate_block[0])) and
-                 Unit.callvle(dst.gate_block_not[0]))):
+            if dst.gate_block:
                 continue
             self.thread_pool.callInThread(dst.check_gate_and_run, self)
 
@@ -278,10 +304,10 @@ class Unit(Pickleable, Distributable):
         initialize() invoked in the same order as run(), including
         open_gate() and effects of gate_block and gate_skip.
 
-        If initialize() succeeds, self.is_initialized flag will be
+        If initialize() succeeds, self._is_initialized flag will be
         automatically set.
         """
-        pass
+        self._is_initialized = True
 
     def run(self):
         """Do the job here.
@@ -405,7 +431,7 @@ class OpenCLUnit(Unit):
     def build_program(self, defines=None, dump_filename=None, dtype=None):
         """Builds OpenCL program.
 
-        prg_ will be is_initialized with built program.
+        prg_ will be initialized to the built program.
         """
         if defines and not isinstance(defines, dict):
             raise RuntimeError("defines must be a dictionary")

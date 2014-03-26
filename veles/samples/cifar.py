@@ -17,6 +17,7 @@ import sys
 import veles.config as config
 import veles.formats as formats
 import veles.launcher as launcher
+from veles.mutable import Bool
 import veles.opencl as opencl
 import veles.opencl_types as opencl_types
 import veles.plotting_units as plotting_units
@@ -143,8 +144,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.decision.class_samples = self.loader.class_samples
         self.decision.workflow = self
 
-        self.image_saver.gate_skip = [0]  # self.decision.just_snapshotted
-        self.image_saver.gate_skip_not = [1]
+        self.image_saver.gate_skip = ~self.decision.just_snapshotted
         self.image_saver.snapshot_time = self.decision.snapshot_time
 
         # Add gradient descent units
@@ -172,8 +172,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.rpt.link_from(self.gd[0])
 
         self.end_point.link_from(self.decision)
-        self.end_point.gate_block = self.decision.complete
-        self.end_point.gate_block_not = [1]
+        self.end_point.gate_block = ~self.decision.complete
 
         self.loader.gate_block = self.decision.complete
 
@@ -187,9 +186,8 @@ class Workflow(workflows.OpenCLWorkflow):
             self.plt[-1].input = self.decision.epoch_n_err_pt
             self.plt[-1].input_field = i
             self.plt[-1].link_from(self.decision if not i else self.plt[-2])
-            self.plt[-1].gate_block = (self.decision.epoch_ended if not i
-                                       else [1])
-            self.plt[-1].gate_block_not = [1]
+            self.plt[-1].gate_block = (~self.decision.epoch_ended if not i
+                                       else Bool(False))
         self.plt[0].clear_plot = True
         self.plt[-1].redraw_plot = True
         # Matrix plotter
@@ -201,8 +199,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_w.get_shape_from = self.forward[0].input
         self.plt_w.input_field = "v"
         self.plt_w.link_from(self.decision)
-        self.plt_w.gate_block = self.decision.epoch_ended
-        self.plt_w.gate_block_not = [1]
+        self.plt_w.gate_block = ~self.decision.epoch_ended
         # """
         # Confusion matrix plotter
         self.plt_mx = []
@@ -212,8 +209,7 @@ class Workflow(workflows.OpenCLWorkflow):
             self.plt_mx[-1].input = self.decision.confusion_matrixes
             self.plt_mx[-1].input_field = i
             self.plt_mx[-1].link_from(self.plt[-1])
-            self.plt_mx[-1].gate_block = self.decision.epoch_ended
-            self.plt_mx[-1].gate_block_not = [1]
+            self.plt_mx[-1].gate_block = ~self.decision.epoch_ended
 
     def initialize(self, global_alpha, global_lambda, minibatch_maxsize,
                    device):

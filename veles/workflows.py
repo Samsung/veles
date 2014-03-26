@@ -68,14 +68,7 @@ class EndPoint(UttermostPoint):
         return True
 
     def apply_data_from_slave(self, data, slave):
-        if ((((not Unit.callvle(self.gate_block[0])) and
-              (not Unit.callvle(self.gate_block_not[0]))) or
-             (Unit.callvle(self.gate_block[0]) and
-              Unit.callvle(self.gate_block_not[0]))) and
-            (((not Unit.callvle(self.gate_skip[0])) and
-              (not Unit.callvle(self.gate_skip_not[0]))) or
-             (Unit.callvle(self.gate_skip[0]) and
-              Unit.callvle(self.gate_skip_not[0])))):
+        if not self.gate_block and not self.gate_skip:
             self.run()
 
 

@@ -17,6 +17,7 @@ import sys
 import veles.config as config
 import veles.formats as formats
 import veles.launcher as launcher
+from veles.mutable import Bool
 import veles.opencl as opencl
 import veles.opencl_types as opencl_types
 import veles.plotting_units as plotting_units
@@ -172,8 +173,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.image_saver.minibatch_class = self.loader.minibatch_class
         self.image_saver.minibatch_size = self.loader.minibatch_size
         self.image_saver.this_time = self.decision.snapshot_time
-        self.image_saver.gate_skip = self.decision.just_snapshotted
-        self.image_saver.gate_skip_not = [1]
+        self.image_saver.gate_skip = ~self.decision.just_snapshotted
 
         # Add gradient descent units
         self.gd.clear()
@@ -200,8 +200,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.rpt.link_from(self.gd[0])
 
         self.end_point.link_from(self.decision)
-        self.end_point.gate_block = self.decision.complete
-        self.end_point.gate_block_not = [1]
+        self.end_point.gate_block = ~self.decision.complete
 
         self.loader.gate_block = self.decision.complete
 
@@ -215,9 +214,8 @@ class Workflow(workflows.OpenCLWorkflow):
             self.plt[-1].input_field = i
             self.plt[-1].link_from(self.decision if not i else
                                    self.plt[-2])
-            self.plt[-1].gate_block = (self.decision.epoch_ended if not i
-                                       else [1])
-            self.plt[-1].gate_block_not = [1]
+            self.plt[-1].gate_block = (~self.decision.epoch_ended if not i
+                                       else Bool(False))
         self.plt[0].clear_plot = True
         # Weights plotter
         # """
@@ -229,8 +227,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_mx.input_field = "v"
         self.plt_mx.get_shape_from = self.forward[0].input
         self.plt_mx.link_from(self.decision)
-        self.plt_mx.gate_block = self.decision.epoch_ended
-        self.plt_mx.gate_block_not = [1]
+        self.plt_mx.gate_block = ~self.decision.epoch_ended
         # """
         # Image plotter
         self.decision.vectors_to_sync[self.forward[0].input] = 1
@@ -244,8 +241,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_img.inputs.append(self.decision.sample_target)
         self.plt_img.input_fields.append(0)
         self.plt_img.link_from(self.decision)
-        self.plt_img.gate_block = self.decision.epoch_ended
-        self.plt_img.gate_block_not = [1]
+        self.plt_img.gate_block = ~self.decision.epoch_ended
         # Max plotter
         self.plt_max = []
         styles = ["r--", "b--", "k--"]

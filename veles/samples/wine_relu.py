@@ -148,8 +148,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.rpt.link_from(self.gd[0])
 
         self.end_point.link_from(self.gd[0])
-        self.end_point.gate_block = self.decision.complete
-        self.end_point.gate_block_not = [1]
+        self.end_point.gate_block = ~self.decision.complete
 
         self.loader.gate_block = self.decision.complete
 

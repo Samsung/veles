@@ -17,6 +17,7 @@ import sys
 import veles.config as config
 import veles.error as error
 import veles.launcher as launcher
+from veles.mutable import Bool
 import veles.opencl as opencl
 import veles.opencl_types as opencl_types
 import veles.plotting_units as plotting_units
@@ -212,8 +213,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.rpt.link_from(self.gd[0])
 
         self.end_point.link_from(self.decision)
-        self.end_point.gate_block = self.decision.complete
-        self.end_point.gate_block_not = [1]
+        self.end_point.gate_block = ~self.decision.complete
 
         self.loader.gate_block = self.decision.complete
 
@@ -230,9 +230,8 @@ class Workflow(workflows.OpenCLWorkflow):
             self.plt_avg[-1].input_field = i
             self.plt_avg[-1].link_from(self.plt_avg[-2] if j
                                        else self.decision)
-            self.plt_avg[-1].gate_block = ([1] if j
-                                           else self.decision.epoch_ended)
-            self.plt_avg[-1].gate_block_not = [1]
+            self.plt_avg[-1].gate_block = (Bool(False) if j
+                                           else ~self.decision.epoch_ended)
             j += 1
         self.plt_avg[0].clear_plot = True
         # Max plotter
@@ -270,8 +269,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_hist = plotting_units.MSEHistogram(self, name="Histogram")
         self.plt_hist.link_from(self.decision)
         self.plt_hist.mse = self.decision.epoch_samples_mse[2]
-        self.plt_hist.gate_block = self.decision.epoch_ended
-        self.plt_hist.gate_block_not = [1]
+        self.plt_hist.gate_block = ~self.decision.epoch_ended
         # Plot
         self.plt = plotting_units.Plot(self, name="Plot", ylim=[-1.1, 1.1])
         self.plt.inputs.clear()
@@ -288,8 +286,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt.input_styles.append("g-")
         self.plt.input_styles.append("b-")
         self.plt.link_from(self.decision)
-        self.plt.gate_block = self.decision.epoch_ended
-        self.plt.gate_block_not = [1]
+        self.plt.gate_block = ~self.decision.epoch_ended
 
     def initialize(self, global_alpha, global_lambda, minibatch_maxsize,
                    device):

@@ -15,8 +15,9 @@ import sys
 
 import veles.config as config
 import veles.formats as formats
-import veles.hog as hog
+import veles.external.hog as hog
 import veles.launcher as launcher
+from veles.mutable import Bool
 import veles.opencl as opencl
 import veles.plotting_units as plotting_units
 import veles.rnd as rnd
@@ -124,8 +125,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.rpt.link_from(self.gd[0])
 
         self.end_point.link_from(self.decision)
-        self.end_point.gate_block = self.decision.complete
-        self.end_point.gate_block_not = [1]
+        self.end_point.gate_block = ~self.decision.complete
 
         self.loader.gate_block = self.decision.complete
 
@@ -139,9 +139,8 @@ class Workflow(workflows.OpenCLWorkflow):
             self.plt[-1].input = self.decision.epoch_n_err_pt
             self.plt[-1].input_field = i
             self.plt[-1].link_from(self.decision if not i else self.plt[-2])
-            self.plt[-1].gate_block = (self.decision.epoch_ended if not i
-                                       else [1])
-            self.plt[-1].gate_block_not = [1]
+            self.plt[-1].gate_block = (~self.decision.epoch_ended if not i
+                                       else Bool(False))
         self.plt[0].clear_plot = True
         self.plt[-1].redraw_plot = True
         # Confusion matrix plotter
@@ -152,8 +151,7 @@ class Workflow(workflows.OpenCLWorkflow):
             self.plt_mx[-1].input = self.decision.confusion_matrixes
             self.plt_mx[-1].input_field = i
             self.plt_mx[-1].link_from(self.decision)
-            self.plt_mx[-1].gate_block = self.decision.epoch_ended
-            self.plt_mx[-1].gate_block_not = [1]
+            self.plt_mx[-1].gate_block = ~self.decision.epoch_ended
 
     def initialize(self, global_alpha, global_lambda):
         for g in self.gd:

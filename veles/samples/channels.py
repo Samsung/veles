@@ -403,8 +403,8 @@ class Loader(loader.FullBatchLoader):
 
         self.info("Adjusted rectangles:")
         for k in pos.keys():
-            #sz[k][0] *= 1.01
-            #sz[k][1] *= 1.01
+            # sz[k][0] *= 1.01
+            # sz[k][1] *= 1.01
             pos[k][0] += (rpos[k][0] - pos[k][0] - sz[k][0]) * 0.5
             pos[k][1] += (rpos[k][1] - pos[k][1] - sz[k][1]) * 0.5
             pos[k][0] = min(pos[k][0], 1.0 - sz[k][0])
@@ -620,8 +620,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.decision.class_samples = self.loader.class_samples
         self.decision.workflow = self
 
-        self.image_saver.gate_skip = self.decision.just_snapshotted
-        self.image_saver.gate_skip_not = [1]
+        self.image_saver.gate_skip = ~self.decision.just_snapshotted
         self.image_saver.this_save_time = self.decision.snapshot_time
 
         # Add gradient descent units
@@ -649,8 +648,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.rpt.link_from(self.gd[0])
 
         self.end_point.link_from(self.decision)
-        self.end_point.gate_block = self.decision.complete
-        self.end_point.gate_block_not = [1]
+        self.end_point.gate_block = ~self.decision.complete
 
         self.loader.gate_block = self.decision.complete
 
@@ -665,8 +663,7 @@ class Workflow(workflows.OpenCLWorkflow):
             self.plt[-1].input = self.decision.epoch_n_err_pt
             self.plt[-1].input_field = i
             self.plt[-1].link_from(self.decision)
-            self.plt[-1].gate_block = self.decision.epoch_ended
-            self.plt[-1].gate_block_not = [1]
+            self.plt[-1].gate_block = ~self.decision.epoch_ended
         self.plt[0].clear_plot = True
         self.plt[-1].redraw_plot = True
         # Weights plotter
@@ -677,8 +674,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_w.get_shape_from = self.forward[0].input
         self.plt_w.input_field = 0
         self.plt_w.link_from(self.decision)
-        self.plt_w.gate_block = self.decision.epoch_ended
-        self.plt_w.gate_block_not = [1]
+        self.plt_w.gate_block = ~self.decision.epoch_ended
         # Image plottter
         self.decision.vectors_to_sync[self.forward[0].input] = 1
         self.decision.vectors_to_sync[self.ev.labels] = 1
@@ -688,8 +684,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_i.inputs.append(self.decision.sample_input)
         self.plt_i.input_fields.append(0)
         self.plt_i.link_from(self.decision)
-        self.plt_i.gate_block = self.decision.epoch_ended
-        self.plt_i.gate_block_not = [1]
+        self.plt_i.gate_block = ~self.decision.epoch_ended
         # Confusion matrix plotter
         """
         self.plt_mx = []
@@ -699,8 +694,7 @@ class Workflow(workflows.OpenCLWorkflow):
             self.plt_mx[-1].input = self.decision.confusion_matrixes
             self.plt_mx[-1].input_field = i
             self.plt_mx[-1].link_from(self.decision)
-            self.plt_mx[-1].gate_block = self.decision.epoch_ended
-            self.plt_mx[-1].gate_block_not = [1]
+            self.plt_mx[-1].gate_block = ~self.decision.epoch_ended
         self.gd[-1].link_from(self.plt_mx[-1])
         """
         self.gd[-1].link_from(self.decision)
