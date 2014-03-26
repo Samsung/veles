@@ -21,6 +21,7 @@ from txzmq import ZmqConnection, ZmqEndpoint
 import veles.config as config
 from veles.logger import Logger
 
+
 class ZmqSubscriber(ZmqConnection):
     socketType = zmq.constants.SUB
 
@@ -171,10 +172,7 @@ class GraphicsClient(Logger):
             plotter.patches = self.patches
             plotter.pp = self.pp
             plotter.show_figure = self.show_figure
-            try:
-                plotter.redraw()
-            except KeyboardInterrupt:
-                pass
+            reactor.callLater(0, plotter.redraw)
         else:
             self.debug("Received the command to terminate")
             self.shutdown()
