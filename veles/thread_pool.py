@@ -143,7 +143,10 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         Private method - handler for SIGINT.
         """
         ThreadPool.shutdown_pools(execute_remaining=False, force=True)
-        ThreadPool.sigint_initial(signal, frame)
+        try:
+            ThreadPool.sigint_initial(signal, frame)
+        except KeyboardInterrupt:
+            logging.getLogger("ThreadPool").critical("KeyboardInterrupt")
 
     @staticmethod
     def debug_deadlocks():

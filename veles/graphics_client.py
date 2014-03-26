@@ -207,7 +207,11 @@ class GraphicsClient(Logger):
 
     def _sigint_handler(self, signal, frame):
         self.shutdown(True)
-        self._sigint_initial(signal, frame)
+        try:
+            self._sigint_initial(signal, frame)
+        except KeyboardInterrupt:
+            self.critical("KeyboardInterrupt")
+            reactor.stop()
 
 
 if __name__ == "__main__":
