@@ -27,19 +27,31 @@ class Bool(object):
         bool(a), int(a)
     """
 
-    def __init__(self, value):
+    def __init__(self, value=False):
         self.__expr = [[None]]
-        self.__lshift__(value)
-
-    def __bool__(self):
-        value = None
-        for method in self.__expr:
-            value = method[0](value)
-        return value
+        self << value
 
     @property
     def expr(self):
         return self.__expr
+
+    def __bool__(self):
+        initial = self.expr[0][0]
+        value = initial if not callable(initial) else initial()
+        for method in self.expr[1:]:
+            value = method[1](method[0], value)
+        return value
+
+    def __lshift__(self, value):
+        if len(self.__expr) > 1:
+            raise RuntimeError("Derived expressions cannot be assigned to.")
+        if isinstance(value, Bool):
+            self.__expr = copy(value.__expr)
+            return
+        if isinstance(value, bool) or callable(value):
+            self.__expr[0][0] = value
+            return
+        raise TypeError("Value must be a boolean value or a function")
 
     def __derive(name):
         def wrapped(self):
@@ -52,81 +64,65 @@ class Bool(object):
 
     __derive = staticmethod(__derive)
 
-    def __lshift__(self, value):
-        if len(self.__expr) > 1:
-            raise RuntimeError("Derived expressions cannot be assigned to.")
-        if isinstance(value, Bool):
-            self.__expr = copy(value.__expr)
-            return
-        if isinstance(value, bool):
-            self.__expr[0][0] = Bool.__true if value else Bool.__false
-            return
-        if callable(value):
-            self.__expr[0][0] = value
-        raise TypeError("Value must be a boolean value or a function")
-
-    @staticmethod
-    def __true(value=None):
-        return True
-
-    @staticmethod
-    def __false(value=None):
-        return False
-
     def __binary_op(func):
         method = "_Bool" + func.__name__[:-2]
 
-        def wrapped(self, value=None):
+        def wrapped(self, value):
             if isinstance(value, bool):
                 res = func(value)
                 if res is not None:
                     return res
-                else:
-                    res.expr.append([getattr(Bool(value), method)])
             res = Bool(self)
-            res.expr.append([getattr(value or self, method)])
+            res.expr.append((value, getattr(Bool, method)))
             return res
         return wrapped
 
+    @staticmethod
     def __or(self, value):
-        return value or self.__bool__()
+        return value or bool(self)
 
     @__binary_op
     def __or__(self, value):
-        return True if value else self
+        return Bool(True) if value else self
 
+    @staticmethod
     def __and(self, value):
-        return value and self.__bool__()
+        return value and bool(self)
 
     @__binary_op
     def __and__(self, value):
-        return False if not value else self
+        return Bool(False) if not value else self
 
+    @staticmethod
     def __xor(self, value):
-        return value != self.__bool__()
+        return value != bool(self)
 
     @__binary_op
     def __xor__(self, value):
         return None
 
+    @staticmethod
     def __invert(self, value):
         return not value
 
-    @__binary_op
     def __invert__(self):
-        pass
+        res = Bool(self)
+        res.expr.append((None, Bool.__invert))
+        return res
 
     __binary_op = staticmethod(__binary_op)
 
     def __getstate__(self):
-        state = {"__expr": []}
+        state = {"__expr": [self.expr[0]]}
         es = state["__expr"]
-        for expr in self.expr:
-            es.append((expr[0].__name__, marshal.dumps(expr[0].__code__)))
+        for expr in self.expr[1:]:
+            es.append((expr[0], expr[1].__name__,
+                       marshal.dumps(expr[1].__code__)))
         return state
 
     def __setstate__(self, state):
-        es = self.__expr = []
-        for expr in state["__expr"]:
-            func_code = marshal.loads(expr[1])
-            es.append([types.FunctionType(func_code, globals(), expr[0])])
+        es = self.__expr = [state["__expr"][0]]
+        for expr in state["__expr"][1:]:
+            func_code = marshal.loads(expr[2])
+            es.append((expr[0],
+                       types.FunctionType(func_code, globals(), expr[1])))
