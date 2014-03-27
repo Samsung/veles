@@ -1,6 +1,6 @@
 #!/usr/bin/python3.3 -O
 """
-Created on Mart 21, 2014
+Created on Mart 26, 2014
 
 Example of Mnist config.
 
@@ -10,8 +10,6 @@ Example of Mnist config.
 
 import os
 from veles.config import root, Config
-
-mnist_dir = "/data/veles/Veles2/veles/samples/MNIST"
 
 root.all2all = Config()  # not necessary for execution (it will do it in real
 root.decision = Config()  # time any way) but good for Eclipse editor

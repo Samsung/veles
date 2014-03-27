@@ -6,20 +6,81 @@ Created on Dec 20, 2013.
 """
 
 
-import argparse
 import logging
 import matplotlib.pyplot as pp
 import numpy
 import pickle
+import os
 import sys
 
-from libSoundFeatureExtraction.python.sound_feature_extraction.features_xml import FeaturesXml
+from veles.config import root, get_config
+from libSoundFeatureExtraction.python.sound_feature_extraction import (
+    features_xml)
 import veles.audio_file_loader as audio_file_loader
 import veles.launcher as launcher
 import veles.opencl as opencl
 import veles.snd_features as snd_features
 import veles.units as units
 import veles.workflows as workflows
+
+gtzan_dir = os.path.join(root.common.test_dataset_root, "music/GTZAN")
+music_dir = os.path.join(root.common.test_dataset_root, "music")
+
+root.labels = get_config(root.labels, {"blues": 0,
+                                       "country": 1,
+                                       "jazz": 2,
+                                       "pop": 3,
+                                       "rock": 4,
+                                       "classical": 5,
+                                       "disco": 6,
+                                       "hiphop": 7,
+                                       "metal": 8,
+                                       "reggae": 9})
+
+root.norm_add = get_config(root.norm_add,
+                           {'Rolloff': (-4194.1299697454906),
+                            'Centroid': (-2029.2262731600895),
+                            'ZeroCrossings': (-55.22063408843276),
+                            'Flux': (-0.91969949785961735),
+                            'Energy': (-10533446.715802385)})
+root.norm_mul = get_config(root.norm_mul,
+                           {'Rolloff': 0.00016505214530598153,
+                            'Centroid': 0.00014461928085116515,
+                            'ZeroCrossings': 0.0025266602711760356,
+                            'Flux': 0.066174680046850856,
+                            'Energy': 3.2792848460441024e-09})
+
+root.update = {"colors": get_config(root.colors, ["blue",
+                                                  "pink",
+                                                  "green",
+                                                  "brown",
+                                                  "gold",
+                                                  "white",
+                                                  "red",
+                                                  "black",
+                                                  "gray",
+                                                  "orange"]),
+               "features":
+               get_config(root.features,
+                          ["Energy", "Centroid", "Flux", "Rolloff",
+                           "ZeroCrossings"]),
+               "file_name":
+               get_config(root.file_name,
+                          os.path.join(music_dir, "22.flac")),
+               "graphics": get_config(root.graphics, 1),
+               "limit": get_config(root.limit, 2000000000),
+               "path_for_features":
+               get_config(root.path_for_features,
+                          os.path.join(music_dir, "features.xml")),
+               "plotter_window_name": get_config(root.plotter_window_name, ""),
+               "shift_size": get_config(root.shift_size, 10),
+               "snapshot_forward":
+               get_config(root.snapshot_forward,
+                          os.path.join(gtzan_dir,
+                                       "gtzan_1000_500_10_28.88pt_Wb.pickle")),
+               "title_fontsize": get_config(root.title_fontsize, 23),
+               "window_size": get_config(root.window_size, 100)
+               }
 
 
 class Workflow(workflows.OpenCLWorkflow):
@@ -52,7 +113,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.forward.b = b
         self.forward.window_size = window_size
         self.forward.shift_size = shift_size
-        features = FeaturesXml.parse(feature_file)
+        features = features_xml.FeaturesXml.parse(feature_file)
         self.extr.add_features(features)
         return super(Workflow, self).initialize()
 
@@ -72,41 +133,23 @@ class Forward(units.Unit):
         ff = self.ff.__dict__[self.ff_key]
         ff = ff[0][0]
 
-        labels = {"blues": 0,
-                  "country": 1,
-                  "jazz": 2,
-                  "pop": 3,
-                  "rock": 4,
-                  "classical": 5,
-                  "disco": 6,
-                  "hiphop": 7,
-                  "metal": 8,
-                  "reggae": 9}
+        labels = root.labels
         self.i_labels = {}
         for k, v in labels.items():
             self.i_labels[v] = k
-        features = ["Energy", "Centroid", "Flux", "Rolloff", "ZeroCrossings"]
-        norm_add = {'Rolloff': (-4194.1299697454906),
-                    'Centroid': (-2029.2262731600895),
-                    'ZeroCrossings': (-55.22063408843276),
-                    'Flux': (-0.91969949785961735),
-                    'Energy': (-10533446.715802385)}
-
-        norm_mul = {'Rolloff': 0.00016505214530598153,
-                    'Centroid': 0.00014461928085116515,
-                    'ZeroCrossings': 0.0025266602711760356,
-                    'Flux': 0.066174680046850856,
-                    'Energy': 3.2792848460441024e-09}
-
-        limit = 2000000000
+        features = root.features
+        norm_add = root.norm_add
+        norm_mul = root.norm_mul
+        limit = root.limit
         for k in features:
             v = ff[k]
             limit = min(len(v), limit)
 
         inp = numpy.zeros(len(features) * self.window_size,
                           dtype=numpy.float64)
-        self.x = numpy.arange(0, limit - self.window_size + 1, self.shift_size,
-                     dtype=numpy.float64)
+        self.x = numpy.arange(
+            0, limit - self.window_size + 1, self.shift_size,
+            dtype=numpy.float64)
         self.x *= 0.01
         self.y = numpy.zeros([len(labels), len(self.x)], dtype=numpy.float64)
         self.yy = numpy.zeros([len(labels), len(self.x)], dtype=numpy.float64)
@@ -172,13 +215,11 @@ class Forward(units.Unit):
         genre = self.i_labels[self.outs_index[9]]
         procent = self.outs[self.outs_index[9]]
         logging.info("Best genre: %s (%s)" % (genre, procent))
-        logging.info("Best 3 genre: %s (%s), %s (%s), %s (%s)" % \
-                             (self.i_labels[self.outs_index[9]], \
-                              self.outs[self.outs_index[9]], \
-                              self.i_labels[self.outs_index[8]], \
-                              self.outs[self.outs_index[8]], \
-                              self.i_labels[self.outs_index[7]], \
-                              self.outs[self.outs_index[7]]))
+        logging.info(
+            "Best 3 genre: %s (%s), %s (%s), %s (%s)" %
+            (self.i_labels[self.outs_index[9]], self.outs[self.outs_index[9]],
+             self.i_labels[self.outs_index[8]], self.outs[self.outs_index[8]],
+             self.i_labels[self.outs_index[7]], self.outs[self.outs_index[7]]))
 
 
 def draw_plot(figure_label, x, y, i_labels, fnme, name, left_legend=False):
@@ -194,21 +235,12 @@ def draw_plot(figure_label, x, y, i_labels, fnme, name, left_legend=False):
         "metal": 8,
         "reggae": 9
     """
-    colors = ["blue",
-              "pink",
-              "green",
-              "brown",
-              "gold",
-              "white",
-              "red",
-              "black",
-              "gray",
-              "orange"]
+    colors = root.colors
 
     fig = pp.figure(figure_label)
     ax = fig.add_subplot(111)
     # ax.set_ylim(0, 1)
-    ax.set_title(name if len(name) else fnme, fontsize=23)
+    ax.set_title(name if len(name) else fnme, fontsize=root.title_fontsize)
     for i in range(len(y)):
         ax.plot(x, y[i], color=colors[i], label=i_labels[i], linewidth=4)
     ax.fill_between(x, y[0], 0, color=colors[0])
@@ -227,40 +259,22 @@ def main():
     # else:
     logging.basicConfig(level=logging.INFO)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-window_size", type=float,
-        help="Window size (default 100)", default=100)
-    parser.add_argument("-name", type=str,
-        help="Name of the plotter window", default="")
-    parser.add_argument("-shift_size", type=float,
-        help="Shift size", default=50)
-    parser.add_argument("--features", dest="features",
-                        help="name of the file with feature "
-                        "descriptions [default: %(default)s]",
-                        metavar="path", required=True)
-    parser.add_argument("--file", type=str, required=True, help="File name")
-    parser.add_argument("-graphics", type=int, required=True,
-                        help="Visualization (0 - no, 1 - yes)")
-    parser.add_argument("-snapshot", type=str, required=True,
-        help="Snapshot with trained weights and bias.")
-    l = launcher.Launcher(parser=parser)
-    args = l.args
-
-    fin = open(args.snapshot, "rb")
+    l = launcher.Launcher()
+    fin = open(root.snapshot_forward, "rb")
     W, b = pickle.load(fin)
     fin.close()
     device = None if l.is_master else opencl.Device()
     w = Workflow(l, device=device)
-    w.initialize(file=args.file, feature_file=args.features,
-                 W=W, b=b, window_size=args.window_size,
-                 shift_size=args.shift_size)
+    w.initialize(file=root.file_name, feature_file=root.path_for_features,
+                 W=W, b=b, window_size=root.window_size,
+                 shift_size=root.shift_size)
     l.run()
 
-    if args.graphics:
+    if root.graphics:
         draw_plot("Points", w.forward.x, w.forward.y, w.forward.i_labels,
-                  args.file, args.name)
+                  root.file_name, root.plotter_window_name)
         draw_plot("Incremental", w.forward.x, w.forward.yy, w.forward.i_labels,
-                  args.file, args.name, True)
+                  root.file_name, root.plotter_window_name, True)
 
         pp.show()
 

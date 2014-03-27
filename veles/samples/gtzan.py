@@ -8,7 +8,6 @@ File for GTZAN dataset.
 """
 
 
-import argparse
 import logging
 import numpy
 import os
@@ -18,7 +17,7 @@ import sys
 import time
 import traceback
 
-from veles.config import root
+from veles.config import root, get_config
 import veles.error as error
 import veles.formats as formats
 import veles.launcher as launcher
@@ -34,43 +33,66 @@ import veles.znicz.evaluator as evaluator
 import veles.znicz.gd as gd
 import veles.znicz.loader as loader
 
+root.labels = get_config(root.labels, {"blues": 0,
+                                       "country": 1,
+                                       "jazz": 2,
+                                       "pop": 3,
+                                       "rock": 4,
+                                       "classical": 5,
+                                       "disco": 6,
+                                       "hiphop": 7,
+                                       "metal": 8,
+                                       "reggae": 9})
+root.features_shape = get_config(root.features_shape, {"CRP": 12})
+
+root.update = {"decision": {"fail_iterations":
+                            get_config(root.decision.fail_iterations, 100),
+                            "snapshot_prefix":
+                            get_config(root.decision.snapshot_prefix,
+                                       "gtzan")},
+               "export": get_config(root.export, False),
+               "exports":
+               get_config(root.exports,
+                          ["features", "labels", "norm_add", "norm_mul"]),
+               "features":
+               get_config(root.features,
+                          ["Energy", "Centroid", "Flux", "Rolloff",
+                           "ZeroCrossings", "CRP"]),
+               "global_alpha": get_config(root.global_alpha, 0.01),
+               "global_lambda": get_config(root.global_lambda, 0.00005),
+               "layers_gtzan": get_config(root.layers_gtzan, [100, 500, 10]),
+               "minibatch_maxsize": get_config(root.minibatch_maxsize, 108),
+               "minibatches_in_epoch":
+               get_config(root.minibatches_in_epoch, 1000),
+               "pickle_fnme":
+               get_config(root.pickle_fnme,
+                          os.path.join(root.common.test_dataset_root,
+                                       "music/GTZAN/gtzan.pickle")),
+               "snapshot": get_config(root.snapshot, ""),
+               "window_size": get_config(root.window_size, 100)
+               }
+
 
 class Loader(loader.Loader):
     """Loads GTZAN dataset.
     """
     def __init__(self, workflow, **kwargs):
-        pickle_fnme = kwargs.get("pickle_fnme", "")
-        minibatch_maxsize = kwargs.get("minibatch_maxsize", 100)
-        minibatches_in_epoch = kwargs.get("minibatches_in_epoch", 1000)
-        window_size = kwargs.get("window_size", 100)
         rnd_ = kwargs.get("rnd", rnd.default2)
-        kwargs["pickle_fnme"] = pickle_fnme
-        kwargs["minibatch_maxsize"] = minibatch_maxsize
-        kwargs["minibatches_in_epoch"] = minibatches_in_epoch
-        kwargs["window_size"] = window_size
         kwargs["rnd"] = rnd_
         super(Loader, self).__init__(workflow, **kwargs)
-        self.pickle_fnme = pickle_fnme
-        self.minibatches_in_epoch = minibatches_in_epoch
+        self.pickle_fnme = root.pickle_fnme
+        self.minibatches_in_epoch = root.minibatches_in_epoch
         self.data = None
-        self.window_size = window_size
-        self.features = ["Energy", "Centroid", "Flux", "Rolloff",
-                         "ZeroCrossings", "CRP"]
+        self.window_size = root.window_size
+        self.features = root.features
         #                "MainBeat", "MainBeatStdDev"
-        self.features_shape = {"CRP": 12}
+        self.features_shape = root.features_shape
         self.norm_add = {}
         self.norm_mul = {}
-        self.labels = {"blues": 0,
-                       "country": 1,
-                       "jazz": 2,
-                       "pop": 3,
-                       "rock": 4,
-                       "classical": 5,
-                       "disco": 6,
-                       "hiphop": 7,
-                       "metal": 8,
-                       "reggae": 9}
-        self.exports = ["features", "labels", "norm_add", "norm_mul"]
+        self.labels = root.labels
+        self.exports = root.exports
+        self.pickle_fnme = root.pickle_fnme
+        self.minibatch_maxsize[0] = root.minibatch_maxsize
 
     def __getstate__(self):
         state = super(Loader, self).__getstate__()
@@ -105,9 +127,10 @@ class Loader(loader.Loader):
                 n = numpy.count_nonzero(numpy.isnan(vles))
                 if n:
                     was_nans = True
-                    self.error("%d NaNs occured for feature %s "
-                        "at index %d in file %s" % (n, k,
-                        numpy.isnan(vles).argmax(), fnme))
+                    self.error(
+                        "%d NaNs occured for feature %s "
+                        "at index %d in file %s" %
+                        (n, k, numpy.isnan(vles).argmax(), fnme))
                 sh = self.features_shape.get(k, 1)
                 if sh != 1:
                     vles = vles.reshape(vles.size // sh, sh)
@@ -115,9 +138,10 @@ class Loader(loader.Loader):
                 vles = features[k]["value"]
                 nn = min(len(vles), nn)
                 if nn < self.window_size:
-                    raise error.ErrBadFormat("window_size=%d is too large "
-                        "for feature %s with size %d in file %s" % (
-                        self.window_size, k, nn, fnme))
+                    raise error.ErrBadFormat(
+                        "window_size=%d is too large "
+                        "for feature %s with size %d in file %s" %
+                        (self.window_size, k, nn, fnme))
             v["limit"] = nn - self.window_size + 1
             for k in self.features:
                 vles = features[k]["value"][:nn]
@@ -159,21 +183,21 @@ class Loader(loader.Loader):
 
         self.minibatch_data.reset()
         sh = [self.minibatch_maxsize[0], nn * self.window_size]
-        self.minibatch_data.v = numpy.zeros(sh,
-            dtype=opencl_types.dtypes[root.common.precision_type])
+        self.minibatch_data.v = numpy.zeros(
+            sh, dtype=opencl_types.dtypes[root.common.precision_type])
 
         self.minibatch_target.reset()
 
         self.minibatch_labels.reset()
         sh = [self.minibatch_maxsize[0]]
-        self.minibatch_labels.v = numpy.zeros(sh,
-            dtype=numpy.int8)
+        self.minibatch_labels.v = numpy.zeros(
+            sh, dtype=numpy.int8)
 
         self.minibatch_indexes.reset()
         sh = [self.minibatch_maxsize[0]]
-        self.minibatch_indexes.v = numpy.zeros(sh,
-            dtype=opencl_types.itypes[opencl_types.get_itype_from_size(
-                                len(self.data["files"]))])
+        self.minibatch_indexes.v = numpy.zeros(
+            sh, dtype=opencl_types.itypes[
+                opencl_types.get_itype_from_size(len(self.data["files"]))])
 
     def shuffle_validation_train(self):
         pass
@@ -205,8 +229,8 @@ class Loader(loader.Loader):
             j = 0
             for k in self.features:
                 jj = j + self.norm_add[k].size * self.window_size
-                self.minibatch_data.v[i, j:jj] = features[k]["value"][
-                                                            offs:offs2].ravel()
+                self.minibatch_data.v[
+                    i, j:jj] = features[k]["value"][offs:offs2].ravel()
                 j = jj
 
 
@@ -214,9 +238,10 @@ class Workflow(workflows.OpenCLWorkflow):
     """Sample workflow for MNIST dataset.
     """
     def __init__(self, workflow, **kwargs):
-        layers = kwargs.get("layers")
+        #layers = kwargs.get("layers")
         device = kwargs.get("device")
-        kwargs["layers"] = layers
+        #kwargs["layers"] = layers
+        layers = root.layers_gtzan
         kwargs["device"] = device
         super(Workflow, self).__init__(workflow, **kwargs)
 
@@ -252,7 +277,9 @@ class Workflow(workflows.OpenCLWorkflow):
         self.ev.max_samples_per_epoch = self.loader.total_samples
 
         # Add decision unit
-        self.decision = decision.Decision(self, snapshot_prefix="gtzan")
+        self.decision = decision.Decision(
+            self, snapshot_prefix=root.decision.snapshot_prefix,
+            fail_iterations=root.decision.fail_iterations)
         self.decision.link_from(self.ev)
         self.decision.minibatch_class = self.loader.minibatch_class
         self.decision.minibatch_last = self.loader.minibatch_last
@@ -296,9 +323,8 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt = []
         styles = ["r-", "b-", "k-"]
         for i in range(0, 3):
-            self.plt.append(plotting_units.AccumulatingPlotter(self,
-                                                   name="num errors",
-                                                   plot_style=styles[i]))
+            self.plt.append(plotting_units.AccumulatingPlotter(
+                self, name="num errors", plot_style=styles[i]))
             self.plt[-1].input = self.decision.epoch_n_err_pt
             self.plt[-1].input_field = i
             self.plt[-1].link_from(self.decision if not i else self.plt[-2])
@@ -327,19 +353,15 @@ class Workflow(workflows.OpenCLWorkflow):
             self.plt_err_y[-1].input_field = i
             self.plt_err_y[-1].link_from(self.decision if not i
                                          else self.plt_err_y[-2])
-            self.plt_err_y[-1].gate_block = (~self.decision.epoch_ended if not i
-                                             else Bool(False))
+            self.plt_err_y[-1].gate_block = (~self.decision.epoch_ended if not
+                                             i else Bool(False))
         self.plt_err_y[0].clear_plot = True
         self.plt_err_y[-1].redraw_plot = True
 
-    def initialize(self, device, args):
-        self.loader.pickle_fnme = args.pickle_fnme
-        self.loader.minibatch_maxsize[0] = args.minibatch_size
-        self.loader.window_size = args.window_size
-        self.decision.snapshot_prefix = args.snapshot_prefix
+    def initialize(self, device):
         for g in self.gd:
-            g.global_alpha = args.global_alpha
-            g.global_lambda = args.global_lambda
+            g.global_alpha = root.global_alpha
+            g.global_lambda = root.global_lambda
         return super(Workflow, self).initialize(device=device)
 
 
@@ -347,59 +369,31 @@ def main():
     # if __debug__:
     #    logging.basicConfig(level=logging.DEBUG)
     # else:
+
     logging.basicConfig(level=logging.INFO)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-snapshot", type=str, default="",
-        help="Snapshot with trained network (default empty)")
-    parser.add_argument("-export", type=bool,
-        help="Export trained network to C (default False)",
-        default=False)
-    pickle_fnme = os.path.join(root.common.test_dataset_root,
-                               "music/GTZAN/gtzan.pickle")
-    parser.add_argument("-pickle_fnme", type=str,
-        help="Pickle with input data (default %s)." % (pickle_fnme),
-        default=pickle_fnme)
-    parser.add_argument("-snapshot_prefix", type=str, required=True,
-        help="Snapshot prefix (Ex.: gtzan_1000_500)")
-    parser.add_argument("-layers", type=str, required=True,
-        help="NN layer sizes, separated by any separator (Ex.: 1000_500_10)")
-    parser.add_argument("-minibatch_size", type=int,
-        help="Minibatch size (default 108)", default=108)
-    parser.add_argument("-global_alpha", type=float,
-        help="Global Alpha (default 0.01)", default=0.01)
-    parser.add_argument("-global_lambda", type=float,
-        help="Global Lambda (default 0.00005)", default=0.00005)
-    parser.add_argument("-window_size", type=int,
-        help="Window size (default 100)", default=100)
-    l = launcher.Launcher(parser=parser)
-    args = l.args
-
-    s_layers = re.split("\D+", args.layers)
-    layers = []
-    for s in s_layers:
-        layers.append(int(s))
-    logging.info("Will train NN with layers: %s" % (" ".join(
-                                        str(x) for x in layers)))
+    l = launcher.Launcher()
 
     rnd.default.seed(numpy.fromfile(os.path.join(root.common.veles_dir,
                                                  "veles/samples/seed"),
                                     numpy.int32, 1024))
-    rnd.default2.seed(numpy.fromfile(os.path.join(root.common.veles_dir,
-                                                 "veles/samples/seed2"),
-                                    numpy.int32, 1024))
+    rnd.default2.seed(
+        numpy.fromfile(
+            os.path.join(root.common.veles_dir,
+                         "veles/samples/seed2"), numpy.int32, 1024))
     # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
     device = None if l.is_master else opencl.Device()
     try:
-        fin = open(args.snapshot, "rb")
+        fin = open(root.snapshot, "rb")
         w = pickle.load(fin)
         fin.close()
-        if args.export:
+        if root.export:
             tm = time.localtime()
             s = "%d.%02d.%02d_%02d.%02d.%02d" % (
                 tm.tm_year, tm.tm_mon, tm.tm_mday,
                 tm.tm_hour, tm.tm_min, tm.tm_sec)
-            fnme = "%s/channels_workflow_%s" % (root.common.snapshot_dir, s)
+            fnme = os.path.join(root.common.snapshot_dir,
+                                "channels_workflow_%s" % s)
             try:
                 w.export(fnme)
                 logging.info("Exported successfully to %s.tar.gz" % (fnme))
@@ -409,8 +403,8 @@ def main():
                 logging.error("Error while exporting.")
             sys.exit(0)
     except IOError:
-        w = Workflow(l, layers=layers, device=device)
-    w.initialize(device=device, args=args)
+        w = Workflow(l, layers=root.layers_gtzan, device=device)
+    w.initialize(device=device)
     logging.info("norm_add: %s" % (str(w.loader.norm_add)))
     logging.info("norm_mul: %s" % (str(w.loader.norm_mul)))
     l.run()
