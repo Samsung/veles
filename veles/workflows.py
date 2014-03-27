@@ -98,7 +98,7 @@ class Workflow(Unit):
         super(Workflow, self).initialize()
         if not self.is_slave:
             self.generate_graph()
-        return self.start_point.initialize_dependent()
+        return self.start_point._initialize_dependent()
 
     def run(self):
         """Do the job here.
