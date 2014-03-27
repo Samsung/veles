@@ -441,7 +441,7 @@ class OpenCLUnit(Unit):
             lines.append("#include \"%s\"" % (fnme))
             my_defines.update(defs)
         if dtype is None:
-            dtype = config.c_dtype
+            dtype = root.common.precision_type
         elif type(dtype) != str:
             dtype = opencl_types.numpy_dtype_to_opencl(dtype)
         my_defines.update(opencl_types.cl_defines[dtype])
@@ -452,8 +452,8 @@ class OpenCLUnit(Unit):
         source = "\n".join(lines)
 
         try:
-            self.prg_ = self.device.queue_.context.create_program(source,
-                                                              config.ocl_dirs)
+            self.prg_ = self.device.queue_.context.create_program(
+                source, root.common.ocl_dirs)
         finally:
             if dump_filename is not None:
                 flog = open(dump_filename, "w")
