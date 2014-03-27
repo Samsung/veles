@@ -95,13 +95,15 @@ class Rand(object):
         if arr.dtype in (numpy.complex64, numpy.complex128):
             # Fill the circle in case of complex numbers.
             r = numpy.clip(numpy.random.normal(loc=center, scale=radius,
-                size=arr.size), vle_min, vle_max)
+                                               size=arr.size), vle_min,
+                           vle_max)
             a = numpy.random.rand(arr.size) * numpy.pi * 2.0
             arr.real[:] = r * numpy.cos(a)
             arr.imag[:] = r * numpy.sin(a)
         else:
             arr[:] = numpy.clip(numpy.random.normal(loc=center, scale=radius,
-                size=arr.size), vle_min, vle_max)[:]
+                                                    size=arr.size), vle_min,
+                                vle_max)[:]
         self.restore_state()
         _lock.release()
 

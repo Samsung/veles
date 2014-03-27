@@ -543,7 +543,7 @@ class Loader(loader.FullBatchLoader):
         if not save_to_cache:
             return
         self.info("Saving loaded data for later faster load to "
-                        "%s" % (cached_data_fnme))
+                  "%s" % (cached_data_fnme))
         fout = open(cached_data_fnme, "wb")
         obj = {}
         for name in self.attributes_for_cached_data:
@@ -687,7 +687,7 @@ class Workflow(workflows.OpenCLWorkflow):
         styles = ["r-", "b-", "k-"]
         for i in range(1, 3):
             self.plt.append(plotting_units.AccumulatingPlotter(
-				self, name="num errors", plot_style=styles[i],
+                self, name="num errors", plot_style=styles[i],
                 ylim=(0, 100)))
             self.plt[-1].input = self.decision.epoch_n_err_pt
             self.plt[-1].input_field = i

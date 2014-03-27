@@ -99,28 +99,26 @@ class model_WF_wine(units.Pickleable):
         # ev.Index=t.Index
         ev.link_from(out)
 
-        plt_ok_train = plotting_units.AccumulatingPlotter(device=dev,
-                                              name="train")
+        plt_ok_train = plotting_units.AccumulatingPlotter(
+            device=dev, name="train")
         plt_ok_train.input = ev.status
         plt_ok_train.input_field = 'n_ok'
         plt_ok_train.link_from(ev)
 
-        plt_total_train = plotting_units.AccumulatingPlotter(device=dev,
-                                                 name="train",
-                                                 plot_style="blue")
+        plt_total_train = plotting_units.AccumulatingPlotter(
+            device=dev, name="train", plot_style="blue")
         plt_total_train.input = ev.status
         plt_total_train.input_field = 'count_train'
         plt_total_train.link_from(ev)
 
-        plt_ok_valid = plotting_units.AccumulatingPlotter(device=dev,
-                                              name="validation")
+        plt_ok_valid = plotting_units.AccumulatingPlotter(
+            device=dev, name="validation")
         plt_ok_valid.input = ev.status
         plt_ok_valid.input_field = 'n_ok_v'
         plt_ok_valid.link_from(ev)
 
-        plt_total_valid = plotting_units.AccumulatingPlotter(device=dev,
-                                                 name="validation",
-                                                 plot_style="blue")
+        plt_total_valid = plotting_units.AccumulatingPlotter(
+            device=dev, name="validation", plot_style="blue")
         plt_total_valid.input = ev.status
         plt_total_valid.input_field = 'count_valid'
         plt_total_valid.link_from(ev)
@@ -183,10 +181,10 @@ class model_WF_wine(units.Pickleable):
         flog.write("\nSoftMax layer bias:\n")
         flog.write(" ".join(strf(x) for x in out.bias.v))
         flog.write("\n(min, max)(input, output, weights, bias) = "
-                   "((%f, %f), (%f, %f), (%f, %f), (%f, %f)\n" % \
-                   (out.input.batch.min(), out.input.batch.max(), \
-                    out.output.batch.min(), out.output.batch.max(), \
-                    out.weights.v.min(), out.weights.v.max(), \
+                   "((%f, %f), (%f, %f), (%f, %f), (%f, %f)\n" %
+                   (out.input.batch.min(), out.input.batch.max(),
+                    out.output.batch.min(), out.output.batch.max(),
+                    out.weights.v.min(), out.weights.v.max(),
                     out.bias.v.min(), out.bias.v.max()))
         flog.write("\n")
         flog.close()
@@ -208,10 +206,10 @@ class model_WF_wine(units.Pickleable):
         flog.write("\nGD SoftMax bias:\n")
         flog.write(" ".join(strf(x) for x in gdsm.bias.v))
         flog.write("\n(min, max)(err_y, err_h, weights, bias) = ((%f, %f), "
-                   "(%f, %f), (%f, %f), (%f, %f)\n" % \
-                   (gdsm.err_y.batch.min(), gdsm.err_y.batch.max(), \
-                    gdsm.err_h.batch.min(), gdsm.err_h.batch.max(), \
-                    gdsm.weights.v.min(), gdsm.weights.v.max(), \
+                   "(%f, %f), (%f, %f), (%f, %f)\n" %
+                   (gdsm.err_y.batch.min(), gdsm.err_y.batch.max(),
+                    gdsm.err_h.batch.min(), gdsm.err_h.batch.max(),
+                    gdsm.weights.v.min(), gdsm.weights.v.max(),
                     gdsm.bias.v.min(), gdsm.bias.v.max()))
         flog.write("\n")
         flog.close()
@@ -233,10 +231,10 @@ class model_WF_wine(units.Pickleable):
         flog.write("\nGD1 bias:\n")
         flog.write(" ".join(strf(x) for x in gd1.bias.v))
         flog.write("\n(min, max)(err_y, err_h, weights, bias) = ((%f, %f), "
-                   "(%f, %f), (%f, %f), (%f, %f)\n" % \
-                   (gd1.err_y.batch.min(), gd1.err_y.batch.max(), \
-                    gd1.err_h.batch.min(), gd1.err_h.batch.max(), \
-                    gd1.weights.v.min(), gd1.weights.v.max(), \
+                   "(%f, %f), (%f, %f), (%f, %f)\n" %
+                   (gd1.err_y.batch.min(), gd1.err_y.batch.max(),
+                    gd1.err_h.batch.min(), gd1.err_h.batch.max(),
+                    gd1.weights.v.min(), gd1.weights.v.max(),
                     gd1.bias.v.min(), gd1.bias.v.max()))
         flog.write("\n")
         flog.close()

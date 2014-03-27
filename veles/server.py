@@ -272,7 +272,7 @@ class VelesProtocol(StringLineReceiver):
         job.addCallback(self.jobRequestFinished)
 
     def jobRequestFinished(self, data):
-        if data != None:
+        if data is not None:
             self.state.obtain_job()
             self.host.debug("%s Job size: %d Kb", self.id, len(data) / 1000)
             self.host.zmq_connection.reply(self.id, data)
@@ -321,11 +321,10 @@ class Server(NetworkAgent):
         reactor.listenTCP(self.port, self.factory, interface=self.address)
         self.info("Accepting new connections on %s:%d",
                   self.address, self.port)
-        self.zmq_connection = ZmqRouter(self,
-            ZmqEndpoint("bind", "inproc://veles"),
+        self.zmq_connection = ZmqRouter(
+            self, ZmqEndpoint("bind", "inproc://veles"),
             ZmqEndpoint("bind", "rndipc://veles-ipc-:"),
-            ZmqEndpoint("bind", "rndtcp://*:1024:65535:1")
-        )
+            ZmqEndpoint("bind", "rndtcp://*:1024:65535:1"))
         self.zmq_ipc_fn, self.zmq_tcp_port = self.zmq_connection.rnd_vals
         self.zmq_endpoints = {"inproc": "inproc://veles",
                               "ipc": "ipc://%s" % self.zmq_ipc_fn,

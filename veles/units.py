@@ -425,8 +425,8 @@ class OpenCLUnit(Unit):
         else:
             self.cpu_run()
         self.run_executed = True
-        self.debug("%s in %.2f sec" % (self.__class__.__name__,
-                                             time.time() - t1))
+        self.debug("%s in %.2f sec" %
+                   (self.__class__.__name__, time.time() - t1))
 
     def build_program(self, defines=None, dump_filename=None, dtype=None):
         """Builds OpenCL program.

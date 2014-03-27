@@ -216,8 +216,9 @@ class Vector(units.Pickleable):
         if self.device is None:
             return
         converted_dtype = self._converted_dtype(self.v.dtype)
-        if converted_dtype in (opencl_types.dtypes[root.common.dtype],
-                               opencl_types.dtypes[root.common.precision_type]):
+        if (converted_dtype in
+                (opencl_types.dtypes[root.common.dtype],
+                 opencl_types.dtypes[root.common.precision_type])):
             self.v = self.v.astype(converted_dtype)
         self.v = cl.realign_array(self.v, self.device.device_info.memalign,
                                   numpy)
@@ -238,7 +239,7 @@ class Vector(units.Pickleable):
                 return
             self._unmap()
         if (flags == cl.CL_MAP_WRITE_INVALIDATE_REGION and
-            self.device.device_info.version < 1.1999):
+                self.device.device_info.version < 1.1999):
             # 'cause available only starting with 1.2
             flags = cl.CL_MAP_WRITE
         ev, self.map_arr_ = self.device.queue_.map_buffer(self.v_, flags,

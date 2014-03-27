@@ -46,8 +46,8 @@ class GraphicsServer(Logger):
         if self.initialized:
             return
         self.initialized = True
-        assert thread_pool is not None, \
-               "GraphicsServer was not previously initialized"
+        assert thread_pool is not None, (
+            "GraphicsServer was not previously initialized")
         super(GraphicsServer, self).__init__()
         thread_pool.register_on_shutdown(self.shutdown)
         zmq_endpoints = [ZmqEndpoint("bind", "inproc://veles-plots"),
@@ -68,7 +68,8 @@ class GraphicsServer(Logger):
                           "ipc": "ipc://" + tmpfn,
                           "epgm": []}
         for port, iface in zip(ports, interfaces):
-            self.endpoints["epgm"].append("epgm://%s;%s:%d" % \
+            self.endpoints["epgm"].append(
+                "epgm://%s;%s:%d" %
                 (iface, root.common.graphics_multicast_address, port))
         self.info("Publishing to %s", "; ".join([self.endpoints["inproc"],
                                                  self.endpoints["ipc"]] +

@@ -228,13 +228,15 @@ class MatrixPlotter(plotter.Plotter):
         # First cell
         column = 0
         row = 0
-        figure.text(label="0",
+        figure.text(
+            label="0",
             s="target",
             x=(column + 0.9) / num_columns,
             y=(num_rows - row - 0.33) / num_rows,
             verticalalignment="center",
             horizontalalignment="right")
-        figure.text(label="0",
+        figure.text(
+            label="0",
             s="value",
             x=(column + 0.1) / num_columns,
             y=(num_rows - row - 0.66) / num_rows,
@@ -388,12 +390,12 @@ class Weights2D(plotter.Plotter):
                 v = value[i].ravel()[:sz]
                 if color:
                     w = numpy.zeros([sy, sx, 3], dtype=v.dtype)
-                    w[:, :, 0:1] = v.reshape(3, sy, sx)[0:1, :, :].reshape(sy,
-                                                sx, 1)[:, :, 0:1]
-                    w[:, :, 1:2] = v.reshape(3, sy, sx)[1:2, :, :].reshape(sy,
-                                                sx, 1)[:, :, 0:1]
-                    w[:, :, 2:3] = v.reshape(3, sy, sx)[2:3, :, :].reshape(sy,
-                                                sx, 1)[:, :, 0:1]
+                    w[:, :, 0:1] = v.reshape(
+                        3, sy, sx)[0:1, :, :].reshape(sy, sx, 1)[:, :, 0:1]
+                    w[:, :, 1:2] = v.reshape(
+                        3, sy, sx)[1:2, :, :].reshape(sy, sx, 1)[:, :, 0:1]
+                    w[:, :, 2:3] = v.reshape(
+                        3, sy, sx)[2:3, :, :].reshape(sy, sx, 1)[:, :, 0:1]
                     ax.imshow(formats.norm_image(w, self.yuv[0]),
                               interpolation="nearest")
                 else:
@@ -450,12 +452,12 @@ class Image(plotter.Plotter):
                 sy = value.shape[1]
                 sx = value.shape[2]
                 w = numpy.zeros([sy, sx, 3], dtype=value.dtype)
-                w[:, :, 0:1] = value.reshape(3, sy, sx)[0:1, :, :].reshape(sy,
-                                                    sx, 1)[:, :, 0:1]
-                w[:, :, 1:2] = value.reshape(3, sy, sx)[1:2, :, :].reshape(sy,
-                                                    sx, 1)[:, :, 0:1]
-                w[:, :, 2:3] = value.reshape(3, sy, sx)[2:3, :, :].reshape(sy,
-                                                    sx, 1)[:, :, 0:1]
+                w[:, :, 0:1] = value.reshape(
+                    3, sy, sx)[0:1, :, :].reshape(sy, sx, 1)[:, :, 0:1]
+                w[:, :, 1:2] = value.reshape(
+                    3, sy, sx)[1:2, :, :].reshape(sy, sx, 1)[:, :, 0:1]
+                w[:, :, 2:3] = value.reshape(
+                    3, sy, sx)[2:3, :, :].reshape(sy, sx, 1)[:, :, 0:1]
                 color = True
             elif value.shape[2] == 3:
                 sy = value.shape[0]
@@ -579,8 +581,8 @@ class MSEHistogram(plotter.Plotter):
         self.mse = None  # formats.Vector()
 
     def initialize(self):
-        self.val_mse = numpy.zeros(self.n_bars,
-                                   dtype=opencl_types.dtypes[root.common.dtype])
+        self.val_mse = numpy.zeros(
+            self.n_bars, dtype=opencl_types.dtypes[root.common.dtype])
 
     def redraw(self):
         fig = self.pp.figure(self.name)
@@ -649,13 +651,11 @@ class MSEHistogram(plotter.Plotter):
 
         for x, y in zip(N, self.val_mse):
             if y > koef - l2 * 0.75:
-                self.pp.text(x + l1, y - l2 * 0.75, '%.0f' % y,
-                                   ha='center', va='bottom',
-                                   fontsize=l3, rotation=90)
+                self.pp.text(x + l1, y - l2 * 0.75, '%.0f' % y, ha='center',
+                             va='bottom', fontsize=l3, rotation=90)
             else:
-                self.pp.text(x + l1, t0, '%.0f' % y,
-                                   ha='center', va='bottom',
-                                   fontsize=l3, rotation=90)
+                self.pp.text(x + l1, t0, '%.0f' % y, ha='center', va='bottom',
+                             fontsize=l3, rotation=90)
 
         self.show_figure(fig)
         fig.canvas.draw()

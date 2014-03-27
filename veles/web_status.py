@@ -64,19 +64,20 @@ class WebStatusServer(logger.Logger):
             self.redirect_logging_to_file(root.common.web_status_log_file)
         self.application = web.Application([
             ("/service", ServiceHandler, {"server": self}),
-            ("/" + root.common.web_status_update, UpdateHandler, {"server": self}),
-            (r"/(js/.*)", web.StaticFileHandler, {'path':
-                                                  root.common.web_status_root}),
-            (r"/(css/.*)", web.StaticFileHandler, {'path':
-                                                   root.common.web_status_root}),
-            (r"/(fonts/.*)", web.StaticFileHandler, {'path':
-                                                     root.common.web_status_root}),
-            (r"/(img/.*)", web.StaticFileHandler, {'path':
-                                                   root.common.web_status_root}),
-            (r"/(.+\.html)", web.StaticFileHandler, {'path':
-                                                     root.common.web_status_root}),
-            ("/(veles.png)", web.StaticFileHandler, {'path':
-                                                     root.common.web_status_root}),
+            ("/" + root.common.web_status_update,
+             UpdateHandler, {"server": self}),
+            (r"/(js/.*)",
+             web.StaticFileHandler, {'path': root.common.web_status_root}),
+            (r"/(css/.*)",
+             web.StaticFileHandler, {'path': root.common.web_status_root}),
+            (r"/(fonts/.*)",
+             web.StaticFileHandler, {'path': root.common.web_status_root}),
+            (r"/(img/.*)",
+             web.StaticFileHandler, {'path': root.common.web_status_root}),
+            (r"/(.+\.html)",
+             web.StaticFileHandler, {'path': root.common.web_status_root}),
+            ("/(veles.png)",
+             web.StaticFileHandler, {'path': root.common.web_status_root}),
             ("/", web.RedirectHandler, {"url": "/status.html",
                                         "permanent": True}),
             ("", web.RedirectHandler, {"url": "/status.html",
@@ -175,8 +176,8 @@ class WebStatus(logger.Logger):
                         ret = {}
                         garbage = []
                         for mid, master in self.masters.items():
-                            if time.time() - master["last_update"] > \
-                                WebStatus.GARBAGE_TIMEOUT:
+                            if (time.time() - master["last_update"] >
+                                    WebStatus.GARBAGE_TIMEOUT):
                                 garbage.append(mid)
                                 continue
                             ret[mid] = {}

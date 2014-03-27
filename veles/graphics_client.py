@@ -74,7 +74,7 @@ class GraphicsClient(Logger):
             import matplotlib.lines as lines
             import matplotlib.patches as patches
             import matplotlib.pyplot as pp
-            import veles.plotting_units as plotting_units  # important - do not remove
+            import veles.plotting_units as plotting_units  # do not remove
             pp.ion()
             self.matplotlib = matplotlib
             self.cm = cm
@@ -110,7 +110,7 @@ class GraphicsClient(Logger):
                     while result == 0:
                         free_port += 1
                         sock = socket.socket(socket.AF_INET,
-                                              socket.SOCK_STREAM)
+                                             socket.SOCK_STREAM)
                         result = sock.connect_ex(("localhost", free_port))
                         sock.close()
                     self._webagg_port = free_port
@@ -165,7 +165,7 @@ class GraphicsClient(Logger):
     def update(self, plotter):
         """Processes one plotting event.
         """
-        if plotter != None:
+        if plotter is not None:
             plotter.matplotlib = self.matplotlib
             plotter.cm = self.cm
             plotter.lines = self.lines

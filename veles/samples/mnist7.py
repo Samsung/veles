@@ -170,7 +170,7 @@ class Workflow(workflows.OpenCLWorkflow):
         styles = ["r-", "b-", "k-"]
         for i in range(0, 3):
             self.plt.append(plotting_units.AccumulatingPlotter(
-				self, name="mse", plot_style=styles[i]))
+                self, name="mse", plot_style=styles[i]))
             self.plt[-1].input = self.decision.epoch_metrics
             self.plt[-1].input_field = i
             self.plt[-1].link_from(self.decision if not i else
@@ -193,8 +193,8 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_max = []
         styles = ["r--", "b--", "k--"]
         for i in range(0, 3):
-            self.plt_max.append(plotting_units.SimplePlotter(
-				self, name="mse", plot_style=styles[i]))
+            self.plt_max.append(plotting_units.AccumulatingPlotter(
+                self, name="mse", plot_style=styles[i]))
             self.plt_max[-1].input = self.decision.epoch_metrics
             self.plt_max[-1].input_field = i
             self.plt_max[-1].input_offs = 1
@@ -205,7 +205,7 @@ class Workflow(workflows.OpenCLWorkflow):
         styles = ["r:", "b:", "k:"]
         for i in range(0, 3):
             self.plt_min.append(plotting_units.AccumulatingPlotter(
-				self, name="mse", plot_style=styles[i]))
+                self, name="mse", plot_style=styles[i]))
             self.plt_min[-1].input = self.decision.epoch_metrics
             self.plt_min[-1].input_field = i
             self.plt_min[-1].input_offs = 2

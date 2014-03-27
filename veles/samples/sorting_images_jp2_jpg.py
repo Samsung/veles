@@ -7,6 +7,7 @@ Created on November 7, 2013
 
 
 import glymur
+import logging
 import numpy
 import os
 from PyQt4 import QtGui, QtCore
@@ -37,7 +38,7 @@ class MyWindow(QtGui.QWidget):
         thumbs_path = "/data/veles/channels/usa_stb/new/images/old"
         thumbs_none = "thumbs_none"
         self.thumbs = []
-        self.thumbs.append("%s/%s" % (thumbs_path, thumbs_none))
+        self.thumbs.append(os.path.join(thumbs_path, thumbs_none))
         fordel = []
         baddir = re.compile("bad", re.IGNORECASE)
         gooddir = re.compile("good", re.IGNORECASE)
@@ -47,13 +48,13 @@ class MyWindow(QtGui.QWidget):
         no_channeldir = re.compile("no channel", re.IGNORECASE)
         for root, dirs, files in os.walk(thumbs_path):
             for i, nme in enumerate(dirs):
-                if baddir.search(nme) is not None or gooddir.search(nme) is\
-                                        not None or diffdir.search(nme) is\
-                                        not None\
-                                        or deldir.search(nme) is not None\
-                                        or wrongdir.search(nme) is not None or\
-                                        no_channeldir.search(nme) is not None:
-                        fordel.append(i)
+                if (baddir.search(nme) is not None or
+                        gooddir.search(nme) is not None or
+                        diffdir.search(nme) is not None or
+                        deldir.search(nme) is not None or
+                        wrongdir.search(nme) is not None or
+                        no_channeldir.search(nme) is not None):
+                    fordel.append(i)
             while len(fordel) > 0:
                 dirs.pop(fordel.pop())
             for fn in files:
@@ -62,12 +63,12 @@ class MyWindow(QtGui.QWidget):
                         or fn.endswith(".jp2"):
                     fullurl = os.path.join(root, fn)
                     self.thumbs.append(fullurl)
-                    print("Loading other format", fn)
-        self.thumbs.append("%s/%s" % (thumbs_path, thumbs_none))
+                    logging.info("Loading other format %s" % fn)
+        self.thumbs.append(os.path.join(thumbs_path, thumbs_none))
         self.thumbs.sort()
 
         if len(self.thumbs) == 2:
-            print("Error: No image")
+            logging.info("Error: No image in folder")
         else:
 
             self.setWindowTitle('Sorting Images')
@@ -205,26 +206,26 @@ class MyWindow(QtGui.QWidget):
             self.hor_layout.addLayout(self.grid_layout)
 
             self.button2.clicked.connect(lambda: self.nextImage(self.thumbs))
-            self.button3.clicked.connect(lambda:\
+            self.button3.clicked.connect(lambda:
                                          self.previousImage(self.thumbs))
             self.button4.clicked.connect(lambda: self.goodImage(self.thumbs))
             self.button5.clicked.connect(lambda: self.badImage(self.thumbs))
             self.button6.clicked.connect(lambda: self.diffImage(self.thumbs))
-            self.button7.clicked.connect(lambda:\
-                                        self.no_channelImage(self.thumbs))
+            self.button7.clicked.connect(lambda:
+                                         self.no_channelImage(self.thumbs))
             self.button4.clicked.connect(lambda: self.PassLeft())
             self.button5.clicked.connect(lambda: self.PassLeft())
             self.button6.clicked.connect(lambda: self.PassLeft())
             self.button7.clicked.connect(lambda: self.PassLeft())
-            self.button8.clicked.connect(lambda: self.cancelLastMove(\
-                                                        self.last_action))
+            self.button8.clicked.connect(lambda:
+                                         self.cancelLastMove(self.last_action))
             self.button9.clicked.connect(lambda: self.scaleImage(1.25))
             self.button10.clicked.connect(lambda: self.scaleImage(0.8))
             self.button11.clicked.connect(lambda: self.stuck())
-            self.button12.clicked.connect(lambda:\
-                                        self.wrongImage(self.thumbs))
-            self.button13.clicked.connect(lambda:\
-                                        self.deleteImage(self.thumbs))
+            self.button12.clicked.connect(lambda:
+                                          self.wrongImage(self.thumbs))
+            self.button13.clicked.connect(lambda:
+                                          self.deleteImage(self.thumbs))
             self.button12.clicked.connect(lambda: self.PassLeft())
             self.button13.clicked.connect(lambda: self.PassLeft())
 
@@ -234,7 +235,7 @@ class MyWindow(QtGui.QWidget):
             self.nextImage(self.thumbs)
 
     def stuck(self):
-        if self.should_stuck == False:
+        if not self.should_stuck:
             self.should_stuck = True
         else:
             self.should_stuck = False
@@ -242,8 +243,8 @@ class MyWindow(QtGui.QWidget):
     def scaleImage(self, factor):
         self.scaleFactor *= factor
         self.label.resize(self.scaleFactor * 940, self.scaleFactor * 540)
-        self.current_image = self.current_image.scaled(self.scaleFactor * \
-                                              960, self.scaleFactor * 540)
+        self.current_image = self.current_image.scaled(self.scaleFactor * 960,
+                                                       self.scaleFactor * 540)
         self.label.setPixmap(self.current_image)
         self.adjustScrollBar(self.scrollArea.horizontalScrollBar(), factor)
         self.adjustScrollBar(self.scrollArea.verticalScrollBar(), factor)
@@ -264,7 +265,7 @@ class MyWindow(QtGui.QWidget):
 
     def adjustScrollBar(self, scrollBar, factor):
         scrollBar.setValue(int(factor * scrollBar.value()
-                                + ((factor - 1) * scrollBar.pageStep() / 2)))
+                               + ((factor - 1) * scrollBar.pageStep() / 2)))
 
     def numpyToQImage(self, path_name):
         bgra = self.from_jp2(path_name)
@@ -283,7 +284,7 @@ class MyWindow(QtGui.QWidget):
         return aa.astype(numpy.uint8)
 
     def PassLeft(self):
-        self.label2.setText("already sorted %s/left to sort %s"\
+        self.label2.setText("already sorted %s/left to sort %s"
                             % (self.passed_images, self.left_images - 2))
         self.label2.setStyleSheet('font-size: 12pt; font-family: Courier;')
         self.label2.setFixedHeight(20)
@@ -298,13 +299,13 @@ class MyWindow(QtGui.QWidget):
             return
         if event.key() == QtCore.Qt.Key_Escape:
             self.close()
-        print("KeyPressEvent", self.current_index)
+        logging.info("KeyPressEvent %s" % self.current_index)
 
     def setImage(self, file_name):
-        if file_name.endswith(".JPEG") or file_name.endswith(".png") or\
-                    file_name.endswith(".jpg") or file_name.endswith(".bmp"):
+        if (file_name.endswith(".JPEG") or file_name.endswith(".png") or
+                file_name.endswith(".jpg") or file_name.endswith(".bmp")):
             pixmap = QtGui.QPixmap(self.path_to_current_image)
-            if self.should_stuck == False:
+            if not self.should_stuck:
                 self.scaleFactor = 1
                 pixmap = pixmap.scaled(960, 540, QtCore.Qt.KeepAspectRatio)
                 self.current_image = pixmap
@@ -316,7 +317,7 @@ class MyWindow(QtGui.QWidget):
         if file_name.endswith(".jp2"):
             img = self.numpyToQImage(self.path_to_current_image)
             pixmap = QtGui.QPixmap.fromImage(img)
-            if self.should_stuck == False:
+            if not self.should_stuck:
                 self.scaleFactor = 1
                 pixmap = pixmap.scaled(960, 540, QtCore.Qt.KeepAspectRatio)
                 self.current_image = pixmap
@@ -325,17 +326,17 @@ class MyWindow(QtGui.QWidget):
             else:
                 self.current_image = pixmap
                 self.label.setPixmap(pixmap)
-        print("Change image ", self.current_index)
+        logging.info("Change image %s" % self.current_index)
 
     def changeImage(self, file_name):
         if self.comboBox2.currentIndexChanged[str]:
             self.should_change_image = True
-        if self.should_change_image == True:
-            self.path_to_current_image = "%s/%s" % \
-                    (self.path_to_current_dir, file_name)
+        if self.should_change_image:
+            self.path_to_current_image = os.path.join(self.path_to_current_dir,
+                                                      file_name)
             for i in range(len(self.thumbs)):
-                    if self.thumbs[i] == self.path_to_current_image:
-                        self.current_index = i
+                if self.thumbs[i] == self.path_to_current_image:
+                    self.current_index = i
             self.setImage(file_name)
 
     def changeDir(self, pathToImage):
@@ -358,7 +359,7 @@ class MyWindow(QtGui.QWidget):
             self.index += 1
             self.should_change_image = False
             self.comboBox2.setCurrentIndex(self.index)
-            print("Next Image", self.current_index)
+            logging.info("Next Image %s" % self.current_index)
         except:
             pass
 
@@ -374,7 +375,7 @@ class MyWindow(QtGui.QWidget):
             self.index -= 1
             self.should_change_image = False
             self.comboBox2.setCurrentIndex(self.index)
-            print("Previous Image", self.current_index)
+            logging.info("Previous Image %s" % self.current_index)
         except:
             pass
 
@@ -385,14 +386,14 @@ class MyWindow(QtGui.QWidget):
             path_image = thumbs[self.current_index]
             path_channel = path_image[:ind_path]
             current_file = path_image[ind_path + 1:]
-            path_channel_dir = "%s/%s" % (path_channel, name_dir)
+            path_channel_dir = os.path.join(path_channel, name_dir)
             try:
                 os.mkdir(path_channel_dir)
             except OSError:
                 pass
-            os.rename(path_image, "%s/%s" % (path_channel_dir, current_file))
-            self.last_move_file = "%s/%s" % (path_channel_dir, current_file)
-            while self.max_cache < 10 and self.should_append == True:
+            os.rename(path_image, os.path.join(path_channel_dir, current_file))
+            self.last_move_file = os.path.join(path_channel_dir, current_file)
+            while self.max_cache < 10 and self.should_append:
                 if name_dir not in self.last_files.keys():
                     self.last_files[name_dir] = []
                 self.last_files[name_dir].append(self.last_move_file)
@@ -406,7 +407,7 @@ class MyWindow(QtGui.QWidget):
             current_file = path_image[(path_image.rfind("/") + 1):]
             self.path_to_current_image = thumbs[self.current_index]
             self.setImage(current_file)
-            print(name_dir, " image", self.current_index)
+            logging.info("%s image %s" % (name_dir, self.current_index))
             self.passed_images += 1
             self.left_images -= 1
             self.last_action = "%s image" % (name_dir)
@@ -441,12 +442,13 @@ class MyWindow(QtGui.QWidget):
         current_file = path_image[ind_path + 1:]
         ind_path_ch = path_channel_dir.rfind("/")
         path_channel = path_image[:ind_path_ch]
-        os.rename(path_image, "%s/%s" % (path_channel, current_file))
+        os.rename(path_image, os.path.join(path_channel, current_file))
         self.should_change_image = False
         self.comboBox2.addItem("%s" % (current_file))
-        self.path_to_current_image = "%s/%s" % (path_channel, current_file)
+        self.path_to_current_image = os.path.join(path_channel, current_file)
         self.setImage(current_file)
-        print("Cancel move to %s Image" % (dirnme), self.current_index)
+        logging.info("Cancel move to %s Image %s" % (dirnme,
+                                                     self.current_index))
         self.passed_images -= 1
         self.left_images += 1
         self.last_files[dirnme].remove(self.last_move_file)
@@ -466,9 +468,13 @@ class MyWindow(QtGui.QWidget):
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     app.setApplicationName('MyWindow')
+    #if __debug__:
+    #    logging.basicConfig(level=logging.DEBUG)
+    #else:
+    logging.basicConfig(level=logging.INFO)
 
     main = MyWindow()
     main.show()
-    print("End of job")
+    logging.info("End of job")
 
     sys.exit(app.exec_())

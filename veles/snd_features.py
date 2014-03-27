@@ -59,16 +59,16 @@ class SoundFeatures(units.Unit):
         sorted_outputs = {}
         self.outputs = []
         for channels, grch in groupby(
-            sorted(self.inputs, key=lambda x: x["channels"]),
-                    lambda x: x["channels"]):
+                sorted(self.inputs, key=lambda x: x["channels"]),
+                lambda x: x["channels"]):
             sorted_inputs[channels] = {}
             for sampling_rate, grsr in groupby(
-                sorted(grch, key=lambda x: x["sampling_rate"]),
-                lambda x: x["sampling_rate"]):
+                    sorted(grch, key=lambda x: x["sampling_rate"]),
+                    lambda x: x["sampling_rate"]):
                 sorted_inputs[channels][sampling_rate] = {}
                 for size, grsz in groupby(
-                    sorted(grsr, key=lambda x: x["data"].size),
-                    lambda x: x["data"].size):
+                        sorted(grsr, key=lambda x: x["data"].size),
+                        lambda x: x["data"].size):
                     sorted_inputs[channels][sampling_rate][size] = list(grsz)
         for channels, grch in sorted_inputs.items():
             for sampling_rate, grsr in grch.items():

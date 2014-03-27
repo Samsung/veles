@@ -295,8 +295,8 @@ class Launcher(logger.Logger):
         if self.reports_web_status:
             self.start_time = time.time()
             self.tornado_ioloop_thread.start()
-            self._notify_task.start(root.common.web_status_notification_interval,
-                                    now=False)
+            self._notify_task.start(
+                root.common.web_status_notification_interval, now=False)
         if self.is_standalone:
             darun = threads.deferToThreadPool(reactor,
                                               self.workflow.thread_pool,
@@ -336,11 +336,12 @@ class Launcher(logger.Logger):
             self.info("Launching the web status server")
             self._launch_remote_program(
                 root.common.web_status_host,
-                "PYTHONPATH=%s %s" % (
-                    os.path.dirname(os.path.abspath(
-                            os.path.join(root.common.veles_dir, "veles"))),
-                    os.path.abspath(os.path.join(root.common.veles_dir,
-                                                 "veles/web_status.py"))))
+                "PYTHONPATH=%s %s" %
+                (os.path.dirname(
+                    os.path.abspath(
+                        os.path.join(root.common.veles_dir, "veles"))),
+                 os.path.abspath(os.path.join(root.common.veles_dir,
+                                              "veles/web_status.py"))))
         else:
             self.info("Discovered an already running web status server")
 
@@ -413,8 +414,9 @@ class Launcher(logger.Logger):
 
     def _handle_notify_request(self, response):
         if response.error:
-            self.warning("Failed to upload the status update to %s:%s",
-                         root.common.web_status_host, root.common.web_status_port)
+            self.warning(
+                "Failed to upload the status update to %s:%s",
+                root.common.web_status_host, root.common.web_status_port)
         else:
             self.debug("Successfully updated the status")
 
@@ -433,14 +435,13 @@ class Launcher(logger.Logger):
                'plots': "http://%s:%d" % (socket.gethostname(),
                                           self.webagg_port),
                'custom_plots': "<br/>".join(self.plots_endpoints),
-               'description': "<br />".join(escape(
-                    self.workflow.__doc__).split("\n"))}
+               'description':
+               "<br />".join(escape(self.workflow.__doc__).split("\n"))}
         timeout = root.common.web_status_notification_interval / 2
-        self._notify_agent.fetch("http://%s:%d/%s" % (
-                                    root.common.web_status_host,
-                                    root.common.web_status_port,
-                                    root.common.web_status_update
-                                 ),
+        self._notify_agent.fetch("http://%s:%d/%s" %
+                                 (root.common.web_status_host,
+                                  root.common.web_status_port,
+                                  root.common.web_status_update),
                                  self._handle_notify_request,
                                  method='POST', headers=None,
                                  connect_timeout=timeout,

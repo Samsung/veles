@@ -105,8 +105,9 @@ def evaluate_dataset(dataset, window_size, W, b):
             n_ok += 1
         else:
             n_fail += 1
-            logging.info("FAIL: %s as %s / %s" % (fnme, i_labels[mx],
-                " ".join("%.2f" % (x) for x in outs)))
+            logging.info("FAIL: %s as %s / %s" %
+                         (fnme, i_labels[mx],
+                          " ".join("%.2f" % (x) for x in outs)))
 
     logging.info("n_ok: %d" % (n_ok))
     logging.info("n_fail: %d" % (n_fail))
@@ -148,10 +149,12 @@ def main():
                                                 args.window_size, W, b)
 
     logging.info("###################################################")
-    logging.info("Test: %d errors (%.2f%%)" % (n_fail_test,
-        100.0 * n_fail_test / (n_ok_test + n_fail_test)))
-    logging.info("Train: %d errors (%.2f%%)" % (n_fail_train,
-        100.0 * n_fail_train / (n_ok_train + n_fail_train)))
+    logging.info("Test: %d errors (%.2f%%)" %
+                 (n_fail_test, 100.0 * n_fail_test / (n_ok_test +
+                                                      n_fail_test)))
+    logging.info("Train: %d errors (%.2f%%)" %
+                 (n_fail_train, 100.0 * n_fail_train / (n_ok_train +
+                                                        n_fail_train)))
 
 if __name__ == '__main__':
     main()

@@ -56,8 +56,7 @@ root.update = {"all2all": {"weights_magnitude":
                           os.path.join(mnist_dir, "train-images.idx3-ubyte")),
                "path_for_load_data_train_label":
                get_config(root.path_for_load_data_train_label,
-                          os.path.join(mnist_dir, "train-labels.idx1-ubyte"))
-              }
+                          os.path.join(mnist_dir, "train-labels.idx1-ubyte"))}
 
 
 class Loader(loader.FullBatchLoader):

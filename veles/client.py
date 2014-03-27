@@ -210,9 +210,9 @@ class VelesProtocolFactory(ReconnectingClientFactory):
         if self.state.current != 'ERROR':
             if not self.disconnect_time:
                 self.disconnect_time = time.time()
-            if (time.time() - self.disconnect_time) // \
-                VelesProtocolFactory.RECONNECTION_INTERVAL > \
-                VelesProtocolFactory.RECONNECTION_ATTEMPTS:
+            if ((time.time() - self.disconnect_time) //
+                    VelesProtocolFactory.RECONNECTION_INTERVAL >
+                    VelesProtocolFactory.RECONNECTION_ATTEMPTS):
                 self.host.error("Max reconnection attempts reached, exiting.")
                 self.host.launcher.stop()
                 return

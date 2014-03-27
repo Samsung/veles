@@ -104,8 +104,8 @@ def evaluate_file(fnme, ff, window_size, shift_size, W, b):
         outs += out
 
         mx = numpy.argmax(out)
-        logging.info("%s: %s" % (i_labels[mx],
-            " ".join("%.2f" % (x) for x in out)))
+        logging.info(
+            "%s: %s" % (i_labels[mx], " ".join("%.2f" % (x) for x in out)))
 
         y[0, i_shift] = out[0]
         yy[0, i_shift] = outs[0]
@@ -117,8 +117,8 @@ def evaluate_file(fnme, ff, window_size, shift_size, W, b):
     logging.info("###########################################################")
     logging.info("Was tested on: %s" % (fnme))
     mx = numpy.argmax(outs)
-    logging.info("%s: %s" % (i_labels[mx],
-        " ".join("%.2f" % (x) for x in outs)))
+    logging.info(
+        "%s: %s" % (i_labels[mx], " ".join("%.2f" % (x) for x in outs)))
     if mx == lbl:
         logging.info("Recognized")
     else:

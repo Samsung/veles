@@ -61,10 +61,10 @@ if __name__ == '__main__':
 
     not_f = set()
     stat = {"n_fail": 0,
-             "features_ok": 0,
-             "files_differ": 0,
-             "sizes_differ": 0,
-             "features_not_found": 0}
+            "features_ok": 0,
+            "files_differ": 0,
+            "sizes_differ": 0,
+            "features_not_found": 0}
 
     for af_ in sorted(a["files"].keys()):
         if af_ not in b["files"].keys():
@@ -86,11 +86,11 @@ if __name__ == '__main__':
             if "test" not in b.keys() or af_ not in b["test"].keys():
                 stat["files_differ"] += 1
                 if "test" in b.keys():
-                    logging.info("%s was not found in %s[test]"\
+                    logging.info("%s was not found in %s[test]"
                                  % (af_, args.B))
                 if af_ not in b["files"].keys():
-                    logging.info("%s was not found in %s[files]" % (
-                                                            af_, args.B))
+                    logging.info(
+                        "%s was not found in %s[files]" % (af_, args.B))
                     continue
                 bv_ = b["files"][af_]["features"]
             else:

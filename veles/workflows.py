@@ -273,7 +273,7 @@ class Workflow(Unit):
         self.info("Unit run time statistics top:")
         for i in range(1, min(top_number, len(stats)) + 1):
             self.info("%d.  %s (%d%%)", i, stats[i - 1][0],
-                            stats[i - 1][1] * 100 / time_all)
+                      stats[i - 1][1] * 100 / time_all)
 
     unit_group_colors = {"PLOTTER": "gold",
                          "WORKER": "greenyellow",
@@ -393,7 +393,7 @@ class OpenCLWorkflow(OpenCLUnit, Workflow):
             True if object is the class.
         """
         if isinstance(obj_to_check, (str, bytes, bool, int, float,
-                                     list, tuple)) == False:
+                                     list, tuple)) is False:
             return True
         return False
 

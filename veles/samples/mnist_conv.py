@@ -179,7 +179,7 @@ class Workflow(workflows.OpenCLWorkflow):
         styles = ["r-", "b-", "k-"]
         for i in range(1, 3):
             self.plt.append(plotting_units.AccumulatingPlotter(
-				self, name="num errors", plot_style=styles[i]))
+                self, name="num errors", plot_style=styles[i]))
             self.plt[-1].input = self.decision.epoch_n_err_pt
             self.plt[-1].input_field = i
             self.plt[-1].link_from(self.decision)

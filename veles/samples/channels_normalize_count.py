@@ -20,11 +20,14 @@ import time
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-dir", type=str, required=True,
+    parser.add_argument(
+        "-dir", type=str, required=True,
         help="Directory with channels")
-    parser.add_argument("-at_least", type=int, required=True,
+    parser.add_argument(
+        "-at_least", type=int, required=True,
         help="Minimum number of *.jp2 in each subfolder")
-    parser.add_argument("-seed", type=str, required=True,
+    parser.add_argument(
+        "-seed", type=str, required=True,
         help="File with seed for choosing of file to replicate")
     args = parser.parse_args()
 
