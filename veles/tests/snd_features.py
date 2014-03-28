@@ -9,15 +9,16 @@ import logging
 import numpy
 import unittest
 from veles.snd_features import SoundFeatures
-from libSoundFeatureExtraction.python.sound_feature_extraction.library import Library
+from libSoundFeatureExtraction.python.sound_feature_extraction import library
 
 
 class Test(unittest.TestCase):
 
     def setUp(self):
         logging.basicConfig(level=logging.DEBUG)
-        Library("/home/markhor/Development/SoundFeatureExtraction/build/src/"
-                ".libs/libSoundFeatureExtraction.so")
+        library.Library(
+            "/home/markhor/Development/SoundFeatureExtraction/build/src/"
+            ".libs/libSoundFeatureExtraction.so")
 
     def tearDown(self):
         pass
