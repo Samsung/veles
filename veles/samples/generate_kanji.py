@@ -8,7 +8,8 @@ File for generation of samples for kanji recognition.
 """
 
 
-from freetype import *
+from freetype import (Face, FT_Matrix,
+                      FT_LOAD_RENDER, FT_Vector, FT_Set_Transform, byref)
 import glob
 import logging
 import numpy
@@ -128,7 +129,7 @@ def create_tables(d):
 def fill_tables(d):
     logging.info("Will fill tables...")
     tree = et.parse("kanjidic2.xml")
-    root = tree.getroot()
+    root_ = tree.getroot()
     def_kanji = {
         "literal": "",
         "grade": 0,
@@ -143,7 +144,7 @@ def fill_tables(d):
         "meaning": "",
         "nanori": ""}
     kanji = def_kanji.copy()
-    for char in root.iter("character"):
+    for char in root_.iter("character"):
         kanji.update(def_kanji)
         for sub in char.iter():
             if sub.tag == "reading":
