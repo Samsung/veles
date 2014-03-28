@@ -31,8 +31,7 @@ class SoundFeatures(units.Unit):
     def add_feature(self, description):
         description = description.strip()
         logging.debug("Adding \"" + description + "\"")
-        feature = feature.Feature.from_string(description)
-        self.features.append(feature)
+        self.features.append(feature.Feature.from_string(description))
 
     def add_features(self, descriptions):
         for desc in descriptions:
@@ -95,13 +94,13 @@ class SoundFeatures(units.Unit):
             i = indices_map[j]
             label = labels[j]
             file_element = {"features": {}}
-            for feature in self.features:
-                feat_element = {"description": feature.description(
+            for features in self.features:
+                feat_element = {"description": features.description(
                     {"sampling_rate": self.outputs[i][1],
                      "channels": self.outputs[i][2]})}
                 if self.outputs[i]:
-                    feat_element["value"] = self.outputs[i][0][feature.name]
-                file_element["features"][feature.name] = feat_element
+                    feat_element["value"] = self.outputs[i][0][features.name]
+                file_element["features"][features.name] = feat_element
             root["files"][label] = file_element
         fout = open(file_name, "wb")
         pickle.dump(root, fout)

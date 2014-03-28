@@ -41,11 +41,11 @@ class GraphicsClient(Logger):
 
     ui_update_interval = 0.01
 
-    def __init__(self, backend, *endpoints, **kwargs):
+    def __init__(self, back, *endpoints, **kwargs):
         super(GraphicsClient, self).__init__()
         webagg_fifo = kwargs.get("webagg_fifo")
-        self.backend = backend
-        if self.backend == "WebAgg":
+        self.back = back
+        if self.back == "WebAgg":
             self._webagg_port = 0
         zmq_endpoints = []
         for ep in endpoints:
@@ -70,7 +70,7 @@ class GraphicsClient(Logger):
                 return
             self._started = True
             import matplotlib
-            matplotlib.use(self.backend)
+            matplotlib.use(self.back)
             import matplotlib.cm as cm
             import matplotlib.lines as lines
             import matplotlib.patches as patches
@@ -206,10 +206,10 @@ class GraphicsClient(Logger):
             # Not strictly necessary, but prevents from DoS
             self.zmq_connection.shutdown()
 
-    def _sigint_handler(self, signal, frame):
+    def _sigint_handler(self, sign, frame):
         self.shutdown(True)
         try:
-            self._sigint_initial(signal, frame)
+            self._sigint_initial(sign, frame)
         except KeyboardInterrupt:
             self.critical("KeyboardInterrupt")
             reactor.stop()

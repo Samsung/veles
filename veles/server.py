@@ -5,7 +5,6 @@ Created on Jan 14, 2014
 """
 
 
-from daemon import daemonize
 import fysom
 import json
 import six
@@ -16,7 +15,6 @@ from txzmq import ZmqConnection, ZmqEndpoint
 import uuid
 import zmq
 
-from veles.logger import Logger
 from veles.network_common import NetworkAgent, StringLineReceiver
 
 

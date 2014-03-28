@@ -138,13 +138,13 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         sys.exit(retcode)
 
     @staticmethod
-    def sigint_handler(signal, frame):
+    def sigint_handler(sign, frame):
         """
         Private method - handler for SIGINT.
         """
         ThreadPool.shutdown_pools(execute_remaining=False, force=True)
         try:
-            ThreadPool.sigint_initial(signal, frame)
+            ThreadPool.sigint_initial(sign, frame)
         except KeyboardInterrupt:
             logging.getLogger("ThreadPool").critical("KeyboardInterrupt")
 

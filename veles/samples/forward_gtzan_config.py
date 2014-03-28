@@ -8,7 +8,6 @@ Example of Mnist config.
 """
 
 
-import os
 from veles.config import root, Config
 
 root.all2all = Config()  # not necessary for execution (it will do it in real

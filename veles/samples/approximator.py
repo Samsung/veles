@@ -56,13 +56,14 @@ class Loader(loader.ImageLoader):
         a = scipy.io.loadmat(fnme)
         for key in a.keys():
             if key[0] != "_":
-                a = a[key]
+                vle = a[key]
                 break
         else:
             raise error.ErrBadFormat("Could not find variable to import "
                                      "in %s" % (fnme))
-        aa = numpy.zeros(a.shape, dtype=opencl_types.dtypes[root.common.dtype])
-        aa[:] = a[:]
+        aa = numpy.zeros(vle.shape, dtype=opencl_types.dtypes[
+            root.common.dtype])
+        aa[:] = vle[:]
         return (aa, [])
 
     def load_data(self):
@@ -295,16 +296,16 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_hist.gate_block = ~self.decision.epoch_ended
         # Plot
         self.plt = plotting_units.Plot(self, name="Plot", ylim=[-1.1, 1.1])
-        self.plt.inputs.clear()
+        del self.plt.inputs[:]
         self.plt.inputs.append(self.loader.minibatch_data)
         self.plt.inputs.append(self.loader.minibatch_target)
         self.decision.vectors_to_sync[self.forward[-1].output] = 1
         self.plt.inputs.append(self.forward[-1].output)
-        self.plt.input_fields.clear()
+        del self.plt.input_fields[:]
         self.plt.input_fields.append(0)
         self.plt.input_fields.append(0)
         self.plt.input_fields.append(0)
-        self.plt.input_styles.clear()
+        del self.plt.input_styles[:]
         self.plt.input_styles.append("k-")
         self.plt.input_styles.append("g-")
         self.plt.input_styles.append("b-")

@@ -66,6 +66,8 @@ class AccumulatingPlotter(plotter.Plotter):
         self.input = None  # Connector
         self.input_field = None
         self.input_offs = 0
+        self.pp = None
+        self.show_figure = self.nothing
 
     def redraw(self):
         self.pp.ioff()
@@ -149,6 +151,10 @@ class MatrixPlotter(plotter.Plotter):
         super(MatrixPlotter, self).__init__(workflow, **kwargs)
         self.input = None  # Connector
         self.input_field = None
+        self.pp = None
+        self.patches = None
+        self.lines = None
+        self.show_figure = self.nothing
 
     def redraw(self):
         self.pp.ioff()
@@ -333,6 +339,9 @@ class Weights2D(plotter.Plotter):
         self.limit = limit
         self.transposed = False
         self.yuv = [1 if yuv else 0]
+        self.cm = None
+        self.pp = None
+        self.show_figure = self.nothing
 
     def redraw(self):
         if type(self.input_field) == int:
@@ -435,6 +444,9 @@ class Image(plotter.Plotter):
         self.inputs = []
         self.input_fields = []
         self.yuv = [1 if yuv else 0]
+        self.cm = None
+        self.pp = None
+        self.show_figure = self.nothing
 
     def draw_image(self, ax, value):
         if type(value) != numpy.ndarray:
@@ -533,6 +545,8 @@ class Plot(plotter.Plotter):
         self.input_fields = []
         self.input_styles = []
         self.ylim = ylim
+        self.pp = None
+        self.show_figure = self.nothing
 
     def redraw(self):
         figure = self.pp.figure(self.name)
@@ -579,6 +593,8 @@ class MSEHistogram(plotter.Plotter):
         self.mse_max = None
         self.n_bars = n_bars
         self.mse = None  # formats.Vector()
+        self.pp = None
+        self.show_figure = self.nothing
 
     def initialize(self):
         self.val_mse = numpy.zeros(

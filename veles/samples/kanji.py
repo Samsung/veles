@@ -198,7 +198,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.loader.link_from(self.rpt)
 
         # Add forward units
-        self.forward.clear()
+        del self.forward[:]
         for i in range(0, len(layers)):
             aa = all2all.All2AllTanh(self, output_shape=[layers[i]],
                                      device=device)
@@ -238,7 +238,7 @@ class Workflow(workflows.OpenCLWorkflow):
         self.decision.should_unlock_pipeline = False
 
         # Add gradient descent units
-        self.gd.clear()
+        del self.gd[:]
         self.gd.extend(None for i in range(0, len(self.forward)))
         self.gd[-1] = gd.GDTanh(self, device=device)
         self.gd[-1].link_from(self.decision)
