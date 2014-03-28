@@ -152,7 +152,7 @@ class Device(units.Pickleable):
             return
         device_infos[self.device_info.desc] = self.device_info
         self._do_tests(device_infos)
-        self.info("Saving found device performance values into "
+        self.info("Saving found device performance values into %s" %
                   (os.path.join(root.common.device_dir,
                                 "device_infos.%d.pickle" % PYVER)))
         fout = open(os.path.join(root.common.device_dir,

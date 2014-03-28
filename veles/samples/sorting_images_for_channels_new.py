@@ -11,7 +11,7 @@ import logging
 import numpy
 import os
 from PyQt4 import QtGui, QtCore
-from PyQt4.QtGui import QImage, QColor
+from PyQt4.QtGui import QImage
 import re
 import sys
 
@@ -590,8 +590,8 @@ class MyWindow(QtGui.QWidget):
             self.path_to_current_image = os.path.join(self.path_to_current_dir,
                                                       file_name)
             for i in range(len(self.thumbs)):
-                    if self.thumbs[i] == self.path_to_current_image:
-                        self.current_index = i
+                if self.thumbs[i] == self.path_to_current_image:
+                    self.current_index = i
             self.setImage(file_name)
 
     def changeDir(self, pathToImage):

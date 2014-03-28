@@ -21,7 +21,6 @@ from veles.config import root
 import veles.formats as formats
 from veles.units import Unit, OpenCLUnit, Repeater
 import veles.external.pydot as pydot
-from veles.external.prettytable import PrettyTable
 
 
 class UttermostPoint(Unit):

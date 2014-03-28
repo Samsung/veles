@@ -5,7 +5,6 @@ Created on May 21, 2013
 """
 
 
-from decimal import Decimal
 from itertools import groupby
 import logging
 import os
@@ -32,7 +31,7 @@ class SoundFeatures(units.Unit):
     def add_feature(self, description):
         description = description.strip()
         logging.debug("Adding \"" + description + "\"")
-        feature = Feature.from_string(description)
+        feature = feature.Feature.from_string(description)
         self.features.append(feature)
 
     def add_features(self, descriptions):
@@ -73,8 +72,8 @@ class SoundFeatures(units.Unit):
         for channels, grch in sorted_inputs.items():
             for sampling_rate, grsr in grch.items():
                 for size, grsz in grsr.items():
-                    extr = Extractor(self.features, size, sampling_rate,
-                                     channels)
+                    extr = extractor.Extractor(self.features, size,
+                                               sampling_rate, channels)
                     for data in sorted_inputs[channels][sampling_rate][size]:
                         sorted_outputs[data["name"]] = (
                             self.extract(data["name"], data["data"], extr),

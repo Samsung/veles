@@ -7,7 +7,6 @@ Created on Jan 14, 2014
 
 from daemon import daemonize
 import fysom
-import getpass
 import json
 import six
 import socket

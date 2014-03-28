@@ -11,7 +11,7 @@ import logging
 import numpy
 import os
 from PyQt4 import QtGui, QtCore
-from PyQt4.QtGui import QImage, QColor
+from PyQt4.QtGui import QImage
 import re
 import sys
 

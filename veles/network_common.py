@@ -4,7 +4,7 @@ Created on Jan 22, 2014
 @author: Vadim Markovtsev <v.markovtsev@samsung.com>
 """
 
-import logging
+
 import os
 import six
 from twisted.protocols.basic import LineReceiver
