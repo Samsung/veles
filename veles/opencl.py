@@ -70,9 +70,9 @@ class Device(units.Pickleable):
         queue_: OpenCL device queue.
         pid_: process id.
     """
-    def __init__(self, parser=None):
+    def __init__(self):
         super(Device, self).__init__()
-        self._get_some_device(parser)
+        self._get_some_device()
         self._fill_device_info_performance_values()
         log_configs = "Selected the following OpenCL configurations:\n"
         table = prettytable.PrettyTable("device", " dtype", "rating",
@@ -92,14 +92,19 @@ class Device(units.Pickleable):
         self.queue_ = None
         self.pid_ = os.getpid()
 
-    def _get_some_device(self, parser=None):
-        """Gets some device from the available OpenCL devices.
-        """
-        parser = parser or argparse.ArgumentParser()
+    @staticmethod
+    def init_parser(**kwargs):
+        parser = kwargs.get("parser", argparse.ArgumentParser())
         parser.add_argument("-d", "--device", type=str,
                             default="", help="OpenCL device to use.")
-        platforms = cl.Platforms()
+        return parser
+
+    def _get_some_device(self, **kwargs):
+        """Gets some device from the available OpenCL devices.
+        """
+        parser = Device.init_parser(**kwargs)
         args, _ = parser.parse_known_args()
+        platforms = cl.Platforms()
         if args.device == "":
             context = platforms.create_some_context()
         else:

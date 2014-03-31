@@ -21,6 +21,7 @@ import sys
 import veles
 import veles.logger
 from veles.launcher import Launcher
+from veles.opencl import Device
 
 
 class Main(veles.logger.Logger):
@@ -45,6 +46,7 @@ class Main(veles.logger.Logger):
             description=Main.LOGO,
             formatter_class=argparse.RawDescriptionHelpFormatter)
         parser = Launcher.init_parser(parser=parser)
+        parser = Device.init_parser(parser=parser)
         parser.add_argument("--no-logo", default=False,
                             help="Do not print VELES version, copyright and "
                             "other information on startup.",
