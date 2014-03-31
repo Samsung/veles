@@ -229,10 +229,6 @@ class Launcher(logger.Logger):
         Links with the nested Workflow instance, so that we are able to
         initialize.
         """
-        workflow.thread_pool.register_on_shutdown(self.stop)
-        reactor.addSystemEventTrigger('before', 'shutdown', self._on_stop)
-        reactor.addSystemEventTrigger('after', 'shutdown',
-                                      self._print_elapsed_time)
         self._workflow = workflow
         if self.is_slave or self.matplotlib_backend == "":
             workflow.plotters_are_enabled = False
@@ -280,10 +276,10 @@ class Launcher(logger.Logger):
     def stop(self):
         if not self._initialized:
             return
-        self.info("Stopping everything (%s mode)", self.mode)
         if not self._running:
             self._on_stop()
             return
+        self.info("Stopping everything (%s mode)", self.mode)
         try:
             reactor.stop()
         except:
@@ -296,6 +292,8 @@ class Launcher(logger.Logger):
         if not self._initialized:
             raise RuntimeError("Launcher was not initialized")
         self._running = True
+        reactor.addSystemEventTrigger('before', 'shutdown', self._on_stop)
+        reactor.addSystemEventTrigger('after', 'shutdown', self._print_stats)
         self._start_time = time.time()
         if not self.is_slave:
             self.workflow_graph = self.workflow.generate_graph(
@@ -329,10 +327,10 @@ class Launcher(logger.Logger):
                 self.info("Graphics client has been terminated")
             else:
                 self.info("Graphics client returned normally")
-        self.workflow.print_stats()
         self.workflow.thread_pool.shutdown()
 
-    def _print_elapsed_time(self):
+    def _print_stats(self):
+        self.workflow.print_stats()
         if self._start_time is not None:
             self.info("Time elapsed: %s",
                       str(datetime.timedelta(
