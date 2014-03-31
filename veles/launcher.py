@@ -58,6 +58,54 @@ class Launcher(logger.Logger):
 
     def __init__(self, **kwargs):
         super(Launcher, self).__init__()
+        parser = Launcher.init_parser(**kwargs)
+        self.args, _ = parser.parse_known_args()
+        self.args.master_address = self.args.master_address.strip()
+        self.args.listen_address = self.args.listen_address.strip()
+        self.args.matplotlib_backend = self.args.matplotlib_backend.strip()
+        self._slaves = [x.strip() for x in self.args.nodes.split(',')
+                        if x.strip() != ""]
+        if self.runs_in_background:
+            self._daemon_context = daemon.DaemonContext()
+            self._daemon_context.working_directory = os.getcwd()
+            twisted_epollfd = None
+            for fd in os.listdir("/proc/self/fd"):
+                try:
+                    if os.readlink("/proc/self/fd/" + fd) == \
+                       "anon_inode:[eventpoll]":
+                        twisted_epollfd = int(fd)
+                except FileNotFoundError:
+                    pass
+            if twisted_epollfd is None:
+                raise RuntimeError("Twisted reactor was not imported")
+            self._daemon_context.files_preserve = list(range(
+                twisted_epollfd, twisted_epollfd + 3))
+            self.info("Daemonized")
+            self._daemon_context.open()
+        if self.args.log_file != "":
+            logger.Logger.duplicate_all_logging_to_file(self.args.log_file)
+
+        self._id = str(uuid.uuid4())
+        self._log_id = self.args.log_id or self.id
+        if self.logs_to_mongo:
+            if self.mongo_log_addr == "":
+                self.args.log_mongo = root.common.mongodb_logging_address
+            logger.Logger.duplicate_all_logging_to_mongo(self.args.log_mongo,
+                                                         self._log_id)
+        self.info("My log ID is %s", self.log_id)
+        self._lock = threading.Lock()
+        self._webagg_port = 0
+        self._agent = None
+        self._workflow = None
+        self._initialized = False
+        self._running = False
+        self._start_time = None
+
+    @staticmethod
+    def init_parser(**kwargs):
+        """
+        Initializes an instance of argparse.ArgumentParser.
+        """
         parser = kwargs.get("parser", argparse.ArgumentParser())
         parser.add_argument("-m", "--master-address", type=str,
                             default=kwargs.get("master_address", ""),
@@ -101,47 +149,7 @@ class Launcher(logger.Logger):
         parser.add_argument("-i", "--log-id", type=str,
                             default=kwargs.get("log_id", ""),
                             help="Log identifier (used my Mongo logger).")
-        self.args, _ = parser.parse_known_args()
-        self.args.master_address = self.args.master_address.strip()
-        self.args.listen_address = self.args.listen_address.strip()
-        self.args.matplotlib_backend = self.args.matplotlib_backend.strip()
-        self._slaves = [x.strip() for x in self.args.nodes.split(',')
-                        if x.strip() != ""]
-        if self.runs_in_background:
-            self._daemon_context = daemon.DaemonContext()
-            self._daemon_context.working_directory = os.getcwd()
-            twisted_epollfd = None
-            for fd in os.listdir("/proc/self/fd"):
-                try:
-                    if os.readlink("/proc/self/fd/" + fd) == \
-                       "anon_inode:[eventpoll]":
-                        twisted_epollfd = int(fd)
-                except FileNotFoundError:
-                    pass
-            if twisted_epollfd is None:
-                raise RuntimeError("Twisted reactor was not imported")
-            self._daemon_context.files_preserve = list(range(
-                twisted_epollfd, twisted_epollfd + 3))
-            self.info("Daemonized")
-            self._daemon_context.open()
-        if self.args.log_file != "":
-            logger.Logger.duplicate_all_logging_to_file(self.args.log_file)
-
-        self._id = str(uuid.uuid4())
-        self._log_id = self.args.log_id or self.id
-        if self.logs_to_mongo:
-            if self.mongo_log_addr == "":
-                self.args.log_mongo = root.common.mongodb_logging_address
-            logger.Logger.duplicate_all_logging_to_mongo(self.args.log_mongo,
-                                                         self._log_id)
-        self.info("My log ID is %s", self.log_id)
-        self._lock = threading.Lock()
-        self._webagg_port = 0
-        self._agent = None
-        self._workflow = None
-        self._initialized = False
-        self._running = False
-        self._start_time = None
+        return parser
 
     @property
     def id(self):

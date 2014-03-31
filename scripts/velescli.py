@@ -20,6 +20,7 @@ import sys
 
 import veles
 import veles.logger
+from veles.launcher import Launcher
 
 
 class Main(veles.logger.Logger):
@@ -43,12 +44,7 @@ class Main(veles.logger.Logger):
         parser = argparse.ArgumentParser(
             description=Main.LOGO,
             formatter_class=argparse.RawDescriptionHelpFormatter)
-    # TODO(g.kuznetsov): shall take args from launcher
-    #    parser.add_argument('-m', '--mode',
-    #                        help='workflow submission mode
-    #                        [default: %(default)s]',
-    #                        default='along',
-    #                        choices=['along', 'master', 'slave', 'cluster'])
+        parser = Launcher.init_parser(parser=parser)
         parser.add_argument("--no-logo", default=False,
                             help="Do not print VELES version, copyright and "
                             "other information on startup.",
@@ -64,7 +60,7 @@ class Main(veles.logger.Logger):
                             help='path to the configuration file')
         parser.add_argument('config_list',
                             help="list of configuration overloads like: \n"
-                            "root.global_alpha=0.006"
+                            "root.global_alpha=0.006\n"
                             "root.snapshot_prefix='test_pr'",
                             nargs='*', metavar="config,")
 
