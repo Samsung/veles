@@ -6,6 +6,18 @@
   __local dtype AS[BLOCK_SIZE][BLOCK_SIZE];
   __local dtype BS[BLOCK_SIZE][BLOCK_SIZE];
 
+// Checks if number of columns in first matrix is equal to rows in second one
+#if A_COLS != B_ROWS
+  #error "Number of columns in first matrix is not equal to rows in second one"
+#endif
+
+#undef ALIGNED
+// Defines ALIGNED if matrices are aligned with BLOCK_SIZE
+#if (A_COLS % BLOCK_SIZE == 0) && (A_ROWS % BLOCK_SIZE == 0) && \
+    (B_ROWS % BLOCK_SIZE == 0) && (B_COLS % BLOCK_SIZE == 0)
+  #define ALIGNED
+#endif
+
 // pre-calculates offsets to get matrix elements faster
 #ifdef A_COLS_DATA_PACK
   int A_offset = lx * A_ROWS + cur_row;
@@ -37,8 +49,13 @@
        A_idx += A_shift, B_idx += B_shift, ++iter_num, idx1 += BLOCK_SIZE, idx2 += BLOCK_SIZE) {
     // if current positions in shared matrices AS and BS are
     // out of range then set 0
+#ifndef ALIGNED
     AS[ly][lx] = (row_in_range && idx1 < A_COLS) ? A[A_idx] : 0;
     BS[ly][lx] = (col_in_range && idx2 < B_ROWS) ? B[B_idx] : 0;
+#else
+    AS[ly][lx] = A[A_idx];
+    BS[ly][lx] = B[B_idx];
+#endif
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
