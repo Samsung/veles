@@ -1,6 +1,8 @@
 #!/usr/bin/python3.3 -O
 """
-Created on November 18, 2013
+Created on Mart 31, 2014
+
+Unit test for global config
 
 @author: Lyubov Podoynitsina <lyubov.p@samsung.com>
 """
@@ -21,9 +23,8 @@ class TestConfig(unittest.TestCase):
                      " intermediate Config object")
         test = Config()
         test.test_.test_value = 5
-        max_diff = test.test_.test_value - 5
-        self.assertLess(max_diff, 0.0001,
-                        "Result differs by %.6f" % (max_diff))
+        self.assertEqual(test.test_.test_value, 5,
+                         "Not equal values on second level")
         logging.info("All ok")
 
     def test_update_multi_line(self):
