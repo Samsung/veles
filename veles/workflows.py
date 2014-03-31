@@ -49,19 +49,9 @@ class EndPoint(UttermostPoint):
 
     def init_unpickled(self):
         super(EndPoint, self).init_unpickled()
-        self.sem_ = threading.Semaphore(0)
 
     def run(self):
-        self.sem_.release()
-
-    def wait(self):
-        self.sem_.acquire()
-
-    def is_finished(self):
-        b = self.sem_.acquire(False)
-        if b:
-            self.sem_.release()
-        return b
+        self.workflow.on_workflow_finished()
 
     def generate_data_for_master(self):
         return True
@@ -100,14 +90,13 @@ class Workflow(Unit):
         return self.start_point._initialize_dependent()
 
     def run(self):
-        """Do the job here.
-
-        In the child class:
-            call the parent method at the end.
+        """Starts executing the workflow. This function is asynchronous,
+        parent's on_finished() method will be called.
         """
         self.start_point.run_dependent()
-        self.end_point.wait()
-        self.print_stats()
+
+    def on_workflow_finished(self):
+        self.workflow.on_workflow_finished()
 
     def add_ref(self, unit):
         if unit not in self.units:

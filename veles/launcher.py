@@ -10,6 +10,7 @@ Workflow launcher (server/client/standalone).
 
 import argparse
 import daemon
+import datetime
 import getpass
 import json
 import os
@@ -140,6 +141,7 @@ class Launcher(logger.Logger):
         self._workflow = None
         self._initialized = False
         self._running = False
+        self._start_time = None
 
     @property
     def id(self):
@@ -229,6 +231,8 @@ class Launcher(logger.Logger):
         """
         workflow.thread_pool.register_on_shutdown(self.stop)
         reactor.addSystemEventTrigger('before', 'shutdown', self._on_stop)
+        reactor.addSystemEventTrigger('after', 'shutdown',
+                                      self._print_elapsed_time)
         self._workflow = workflow
         if self.is_slave or self.matplotlib_backend == "":
             workflow.plotters_are_enabled = False
@@ -255,6 +259,9 @@ class Launcher(logger.Logger):
 
     def del_ref(self, workflow):
         pass
+
+    def on_workflow_finished(self):
+        reactor.callFromThread(self.stop)
 
     def run(self):
         self._pre_run()
@@ -289,6 +296,7 @@ class Launcher(logger.Logger):
         if not self._initialized:
             raise RuntimeError("Launcher was not initialized")
         self._running = True
+        self._start_time = time.time()
         if not self.is_slave:
             self.workflow_graph = self.workflow.generate_graph(
                 write_on_disk=False)
@@ -298,10 +306,8 @@ class Launcher(logger.Logger):
             self._notify_task.start(
                 root.common.web_status_notification_interval, now=False)
         if self.is_standalone:
-            darun = threads.deferToThreadPool(reactor,
-                                              self.workflow.thread_pool,
-                                              self.workflow.run)
-            darun.addCallback(self.workflow.thread_pool.shutdown)
+            threads.deferToThreadPool(reactor, self.workflow.thread_pool,
+                                      self.workflow.run)
 
     def _on_stop(self):
         self._initialized = False
@@ -323,7 +329,14 @@ class Launcher(logger.Logger):
                 self.info("Graphics client has been terminated")
             else:
                 self.info("Graphics client returned normally")
+        self.workflow.print_stats()
         self.workflow.thread_pool.shutdown()
+
+    def _print_elapsed_time(self):
+        if self._start_time is not None:
+            self.info("Time elapsed: %s",
+                      str(datetime.timedelta(
+                          seconds=(time.time() - self._start_time))))
 
     def _launch_status(self):
         if not self.reports_web_status:
