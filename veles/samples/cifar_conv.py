@@ -1,8 +1,8 @@
 #!/usr/bin/python3.3 -O
 """
-Created on Jul 3, 2013
+Created on Mar 31, 2014
 
-Cifar all2all.
+Cifar convolutional.
 
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
@@ -24,6 +24,11 @@ import veles.plotting_units as plotting_units
 import veles.rnd as rnd
 import veles.workflows as workflows
 import veles.znicz.all2all as all2all
+import veles.znicz.conv as conv
+import veles.znicz.pooling as pooling
+import veles.znicz.gd_conv as gd_conv
+import veles.znicz.gd_pooling as gd_pooling
+import veles.error as error
 import veles.znicz.decision as decision
 import veles.znicz.evaluator as evaluator
 import veles.znicz.gd as gd
@@ -37,9 +42,15 @@ root.update = {"decision": {"fail_iterations":
                                        "cifar")},
                "global_alpha": get_config(root.global_alpha, 0.1),
                "global_lambda": get_config(root.global_lambda, 0.00005),
-               "layers": get_config(root.layers, [100, 10]),
+               "layers_cifar_conv":
+               get_config(root.layers_cifar_conv,
+                    [{"type": "conv", "n_kernels": 50, "kx": 9, "ky": 9},
+                     {"type": "conv", "n_kernels": 100, "kx": 7, "ky": 7},
+                     {"type": "conv", "n_kernels": 200, "kx": 5, "ky": 5},
+                     {"type": "conv", "n_kernels": 400, "kx": 3, "ky": 3},
+                     100, 10]),
                "loader": {"minibatch_maxsize":
-                          get_config(root.loader.minibatch_maxsize, 180)},
+                          get_config(root.loader.minibatch_maxsize, 270)},
                "path_for_out_data": get_config(root.path_for_out_data,
                                                "/data/veles/cifar/tmpimg/"),
                "path_for_train_data":
@@ -120,14 +131,35 @@ class Workflow(workflows.OpenCLWorkflow):
         self.loader.link_from(self.rpt)
 
         # Add forward units
-        del self.forward[:]
+        self.forward.clear()
         for i in range(0, len(layers)):
-            if i < len(layers) - 1:
-                aa = all2all.All2AllTanh(self, output_shape=[layers[i]],
-                                         device=device)
+            layer = layers[i]
+            if type(layer) == int:
+                if i == len(layers) - 1:
+                    aa = all2all.All2AllSoftmax(self, output_shape=[layer],
+                                                device=device)
+                else:
+                    aa = all2all.All2AllTanh(self, output_shape=[layer],
+                                             device=device)
+            elif type(layer) == dict:
+                if layer["type"] == "conv":
+                    aa = conv.ConvTanh(
+                        self, n_kernels=layer["n_kernels"],
+                        kx=layer["kx"], ky=layer["ky"], device=device)
+                elif layer["type"] == "max_pooling":
+                    aa = pooling.MaxPooling(
+                        self, kx=layer["kx"], ky=layer["ky"], device=device)
+                elif layer["type"] == "avg_pooling":
+                    aa = pooling.AvgPooling(
+                        self, kx=layer["kx"], ky=layer["ky"], device=device)
+                else:
+                    raise error.ErrBadFormat(
+                        "Unsupported layer type %s" % (layer["type"]))
             else:
-                aa = all2all.All2AllSoftmax(self, output_shape=[layers[i]],
-                                            device=device)
+                raise error.ErrBadFormat(
+                    "layers element type should be int "
+                    "for all-to-all or dictionary for "
+                    "convolutional or pooling")
             self.forward.append(aa)
             if i:
                 self.forward[i].link_from(self.forward[i - 1])
@@ -170,13 +202,14 @@ class Workflow(workflows.OpenCLWorkflow):
         self.decision.minibatch_confusion_matrix = self.ev.confusion_matrix
         self.decision.class_samples = self.loader.class_samples
         self.decision.workflow = self
+        self.decision.should_unlock_pipeline = False
 
         self.image_saver.gate_skip = ~self.decision.just_snapshotted
         self.image_saver.snapshot_time = self.decision.snapshot_time
 
         # Add gradient descent units
-        del self.gd[:]
-        self.gd.extend(None for i in range(0, len(self.forward)))
+        self.gd.clear()
+        self.gd.extend(list(None for i in range(0, len(self.forward))))
         self.gd[-1] = gd.GDSM(self, device=device)
         self.gd[-1].link_from(self.decision)
         self.gd[-1].err_y = self.ev.err_y
@@ -187,7 +220,23 @@ class Workflow(workflows.OpenCLWorkflow):
         self.gd[-1].gate_skip = self.decision.gd_skip
         self.gd[-1].batch_size = self.loader.minibatch_size
         for i in range(len(self.forward) - 2, -1, -1):
-            self.gd[i] = gd.GDTanh(self, device=device)
+            if isinstance(self.forward[i], conv.Conv):
+                obj = gd_conv.GDTanh(
+                    self, n_kernels=self.forward[i].n_kernels,
+                    kx=self.forward[i].kx, ky=self.forward[i].ky,
+                    device=device)
+            elif isinstance(self.forward[i], pooling.MaxPooling):
+                obj = gd_pooling.GDMaxPooling(
+                    self, kx=self.forward[i].kx, ky=self.forward[i].ky,
+                    device=device)
+                obj.h_offs = self.forward[i].input_offs
+            elif isinstance(self.forward[i], pooling.AvgPooling):
+                obj = gd_pooling.GDAvgPooling(
+                    self, kx=self.forward[i].kx, ky=self.forward[i].ky,
+                    device=device)
+            else:
+                obj = gd.GDTanh(self, device=device)
+            self.gd[i] = obj
             self.gd[i].link_from(self.gd[i + 1])
             self.gd[i].err_y = self.gd[i + 1].err_h
             self.gd[i].y = self.forward[i].output
@@ -206,36 +255,39 @@ class Workflow(workflows.OpenCLWorkflow):
         # Error plotter
         self.plt = []
         styles = ["r-", "b-", "k-"]
-        for i in range(0, 3):
+        for i in range(1, 3):
             self.plt.append(plotting_units.AccumulatingPlotter(
                 self, name="num errors", plot_style=styles[i]))
             self.plt[-1].input = self.decision.epoch_n_err_pt
             self.plt[-1].input_field = i
-            self.plt[-1].link_from(self.decision if not i else self.plt[-2])
-            self.plt[-1].gate_block = (~self.decision.epoch_ended if not i
-                                       else Bool(False))
+            self.plt[-1].link_from(self.decision
+                if len(self.plt) == 1 else self.plt[-2])
+            self.plt[-1].gate_block = (~self.decision.epoch_ended
+                if len(self.plt) == 1 else Bool(False))
         self.plt[0].clear_plot = True
         self.plt[-1].redraw_plot = True
-        # Matrix plotter
-        # """
-        self.decision.vectors_to_sync[self.gd[0].weights] = 1
-        self.plt_w = plotting_units.Weights2D(
-            self, name="First Layer Weights", limit=root.weights_plotter.limit)
-        self.plt_w.input = self.gd[0].weights
-        self.plt_w.get_shape_from = self.forward[0].input
-        self.plt_w.input_field = "v"
-        self.plt_w.link_from(self.decision)
-        self.plt_w.gate_block = ~self.decision.epoch_ended
-        # """
         # Confusion matrix plotter
         self.plt_mx = []
-        for i in range(0, len(self.decision.confusion_matrixes)):
+        for i in range(1, len(self.decision.confusion_matrixes)):
             self.plt_mx.append(plotting_units.MatrixPlotter(
                 self, name=(("Test", "Validation", "Train")[i] + " matrix")))
             self.plt_mx[-1].input = self.decision.confusion_matrixes
             self.plt_mx[-1].input_field = i
             self.plt_mx[-1].link_from(self.plt[-1])
             self.plt_mx[-1].gate_block = ~self.decision.epoch_ended
+        # Weights plotter
+        self.decision.vectors_to_sync[self.gd[0].weights] = 1
+        self.plt_mx = plotting_units.Weights2D(
+            self, name="First Layer Weights", limit=root.weights_plotter.limit)
+        self.plt_mx.input = self.gd[0].weights
+        self.plt_mx.input_field = "v"
+        self.plt_mx.get_shape_from = (
+            [self.forward[0].kx, self.forward[0].ky]
+            if isinstance(self.forward[0], conv.Conv)
+            else self.forward[0].input)
+        self.plt_mx.link_from(self.decision)
+        self.plt_mx.gate_block = ~self.decision.epoch_ended
+        self.plt_mx.should_unlock_pipeline = True
 
     def initialize(self, global_alpha, global_lambda, minibatch_maxsize,
                    device):
@@ -263,12 +315,12 @@ def main():
     l = launcher.Launcher()
     device = None if l.is_master else opencl.Device()
     try:
-        fin = open(os.path.join(root.common.snapshot_dir, "cifar.pickle"),
+        fin = open(os.path.join(root.common.snapshot_dir, "cifar_conv.pickle"),
                    "rb")
         w = pickle.load(fin)
         fin.close()
     except IOError:
-        w = Workflow(l, layers=root.layers, device=device)
+        w = Workflow(l, layers=root.layers_cifar_conv, device=device)
     w.initialize(global_alpha=root.global_alpha,
                  global_lambda=root.global_lambda,
                  minibatch_maxsize=root.loader.minibatch_maxsize,

@@ -375,8 +375,14 @@ class Weights2D(plotter.Plotter):
                 sx = self.get_shape_from.v.shape[2]
                 sy = self.get_shape_from.v.shape[1]
             else:
-                sx = self.get_shape_from.v.shape[3]
-                sy = self.get_shape_from.v.shape[2]
+                if self.get_shape_from.v.shape[-1] == 3:
+                    sx = self.get_shape_from.v.shape[-2]
+                    sy = self.get_shape_from.v.shape[-3]
+                    interleave = False
+                else:
+                    sx = self.get_shape_from.v.shape[-3]
+                    sy = self.get_shape_from.v.shape[-2]
+                    interleave = True
                 color = True
         else:
             sx = self.get_shape_from.shape[1]
@@ -398,13 +404,10 @@ class Weights2D(plotter.Plotter):
                 ax.axis('off')
                 v = value[i].ravel()[:sz]
                 if color:
-                    w = numpy.zeros([sy, sx, 3], dtype=v.dtype)
-                    w[:, :, 0:1] = v.reshape(
-                        3, sy, sx)[0:1, :, :].reshape(sy, sx, 1)[:, :, 0:1]
-                    w[:, :, 1:2] = v.reshape(
-                        3, sy, sx)[1:2, :, :].reshape(sy, sx, 1)[:, :, 0:1]
-                    w[:, :, 2:3] = v.reshape(
-                        3, sy, sx)[2:3, :, :].reshape(sy, sx, 1)[:, :, 0:1]
+                    if interleave:
+                        w = formats.interleave(v.reshape(3, sy, sx))
+                    else:
+                        w = v.reshape(sy, sx, 3)
                     ax.imshow(formats.norm_image(w, self.yuv[0]),
                               interpolation="nearest")
                 else:

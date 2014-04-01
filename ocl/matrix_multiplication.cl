@@ -62,6 +62,12 @@
 #ifndef B_REAL_OFFS
 #define B_REAL_OFFS b_offs
 #endif
+#ifndef A_REAL_OFFS_VALID
+#define A_REAL_OFFS_VALID 1
+#endif
+#ifndef B_REAL_OFFS_VALID
+#define B_REAL_OFFS_VALID 1
+#endif
 
   __local c_dtype AS[BLOCK_SIZE][BLOCK_SIZE]; // shared submatrix of A
   __local c_dtype BS[BLOCK_SIZE][BLOCK_SIZE]; // shared submatrix of B
@@ -114,11 +120,11 @@
     for (int i = N_BLOCKS * i_sum / N_SUM; i < N_BLOCKS * (i_sum + 1) / N_SUM; i++,
          a_offs += A_OFFS, b_offs += B_OFFS) {
       #ifdef ALIGNED
-      AS[ty][tx] = A[A_REAL_OFFS];
-      BS[ty][tx] = B[B_REAL_OFFS];
+      AS[ty][tx] = A_REAL_OFFS_VALID ? A[A_REAL_OFFS] : 0;
+      BS[ty][tx] = B_REAL_OFFS_VALID ? B[B_REAL_OFFS] : 0;
       #else
-      AS[ty][tx] = ((a_offs < A_LIMIT) && (a_x < A_LIMIT_X)) ? A[A_REAL_OFFS] : 0;
-      BS[ty][tx] = ((b_offs < B_LIMIT) && (b_x < B_LIMIT_X)) ? B[B_REAL_OFFS] : 0;
+      AS[ty][tx] = ((A_REAL_OFFS_VALID) && (a_offs < A_LIMIT) && (a_x < A_LIMIT_X)) ? A[A_REAL_OFFS] : 0;
+      BS[ty][tx] = ((B_REAL_OFFS_VALID) && (b_offs < B_LIMIT) && (b_x < B_LIMIT_X)) ? B[B_REAL_OFFS] : 0;
       a_x += A_INC_X;
       b_x += B_INC_X;
       #endif
@@ -164,11 +170,13 @@
   #undef A_INC_X
   #undef A_OFFS
   #undef A_REAL_OFFS
+  #undef A_REAL_OFFS_VALID
   #undef B_LIMIT
   #undef B_LIMIT_X
   #undef B_INC_X
   #undef B_OFFS
   #undef B_REAL_OFFS
+  #undef B_REAL_OFFS_VALID
   #undef N_BLOCKS
   #undef N_SUM
 

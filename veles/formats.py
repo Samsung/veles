@@ -55,6 +55,26 @@ def reshape(a, shape):
     return b
 
 
+def interleave(a):
+    """Returns interleaved array.
+
+    Example:
+        [10000, 3, 32, 32] => [10000, 32, 32, 3].
+    """
+    sh = list(a.shape)
+    sh.append(sh.pop(-3))
+    b = numpy.empty(sh, dtype=a.dtype)
+    if len(b.shape) == 4:
+        for i in range(sh[-1]):
+            b[:, :, :, i] = a[:, i, :, :]
+    elif len(b.shape) == 3:
+        for i in range(sh[-1]):
+            b[:, :, i] = a[i, :, :]
+    else:
+        raise error.ErrBadFormat("a should be of shape 4 or 3.")
+    return b
+
+
 def real_normalize(a):
     """Normalizes real array to [-1, 1] in-place.
     """
