@@ -254,11 +254,6 @@ def draw_plot(figure_label, x, y, i_labels, fnme, name, left_legend=False):
 
 
 def main():
-    # if __debug__:
-    #    logging.basicConfig(level=logging.DEBUG)
-    # else:
-    logging.basicConfig(level=logging.INFO)
-
     l = launcher.Launcher()
     fin = open(root.snapshot_forward, "rb")
     W, b = pickle.load(fin)

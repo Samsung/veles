@@ -235,21 +235,11 @@ class Workflow(workflows.OpenCLWorkflow):
 
 
 def main():
-    if __debug__:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.basicConfig(level=logging.INFO)
-
     parser = argparse.ArgumentParser()
     parser.add_argument("-snapshot", type=str, default="",
                         help="Snapshot with trained network.")
     l = launcher.Launcher(parser=parser)
     args = l.args
-
-    rnd.default.seed(numpy.fromfile(os.path.join(root.common.veles_dir,
-                                                 "veles/samples/seed"),
-                                    numpy.int32, 1024))
-    # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
 
     device = None if l.is_master else opencl.Device()
     if len(args.snapshot):
@@ -284,8 +274,6 @@ def main():
                  minibatch_maxsize=root.loader.minibatch_maxsize,
                  device=device)
     l.run()
-
-    logging.info("End of job")
 
 
 if __name__ == "__main__":

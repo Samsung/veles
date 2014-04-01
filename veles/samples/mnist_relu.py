@@ -264,21 +264,11 @@ class Workflow(workflows.OpenCLWorkflow):
 
 
 def main():
-    # if __debug__:
-    #    logging.basicConfig(level=logging.DEBUG)
-    # else:
-    logging.basicConfig(level=logging.INFO)
-    logging.info("Logging level: %s", str(logging.root.level))
-
-    rnd.default.seed(os.path.join(root.common.veles_dir, "veles/samples/seed"),
-                     numpy.int32, 1024)
     l = launcher.Launcher()
     device = None if l.is_master else opencl.Device()
     w = Workflow(l, layers=root.layers_mnist_relu, device=device)
     w.initialize()
     l.run()
-
-    logging.info("End of job")
 
 
 if __name__ == "__main__":

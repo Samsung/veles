@@ -373,15 +373,6 @@ class Workflow(workflows.OpenCLWorkflow):
 
 
 def main():
-    if __debug__:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.basicConfig(level=logging.INFO)
-
-    rnd.default.seed(numpy.fromfile(os.path.join(root.common.veles_dir,
-                                                 "veles/samples/seed"),
-                                    numpy.int32, 1024))
-    # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 524288))
     l = launcher.Launcher()
     device = None if l.is_master else opencl.Device()
     fnme = root.dir_for_kanji_pickle
@@ -417,8 +408,6 @@ def main():
                  minibatch_maxsize=root.loader.minibatch_maxsize,
                  device=device, weights=weights, bias=bias)
     l.run()
-
-    logging.info("End of job")
 
 
 if __name__ == "__main__":

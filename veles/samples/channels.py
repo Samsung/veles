@@ -744,11 +744,6 @@ class Workflow(workflows.OpenCLWorkflow):
 
 
 def main():
-    # if __debug__:
-    #    logging.basicConfig(level=logging.DEBUG)
-    # else:
-    logging.basicConfig(level=logging.INFO)
-
     l = launcher.Launcher()
 
     layers = []
@@ -757,14 +752,6 @@ def main():
     logging.info("Will train NN with layers: %s"
                  % (" ".join(str(x) for x in layers)))
 
-    rnd.default.seed(numpy.fromfile(os.path.join(root.common.veles_dir,
-                                                 "veles/samples/seed"),
-                                    numpy.int32, 1024))
-    rnd.default2.seed(numpy.fromfile(os.path.join(root.common.veles_dir,
-                                                  "veles/samples/seed2"),
-                                     numpy.int32, 1024))
-    # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
-    # rnd.default2.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
     device = None if l.is_master else opencl.Device()
     w_neg = None
     try:
@@ -820,7 +807,6 @@ def main():
     logging.info("Done")
     logging.info("Will execute workflow now")
     l.run()
-    logging.info("End of job")
 
 
 if __name__ == "__main__":

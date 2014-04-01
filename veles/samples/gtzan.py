@@ -238,9 +238,9 @@ class Workflow(workflows.OpenCLWorkflow):
     """Sample workflow for MNIST dataset.
     """
     def __init__(self, workflow, **kwargs):
-        #layers = kwargs.get("layers")
+        # layers = kwargs.get("layers")
         device = kwargs.get("device")
-        #kwargs["layers"] = layers
+        # kwargs["layers"] = layers
         layers = root.layers_gtzan
         kwargs["device"] = device
         super(Workflow, self).__init__(workflow, **kwargs)
@@ -366,22 +366,8 @@ class Workflow(workflows.OpenCLWorkflow):
 
 
 def main():
-    # if __debug__:
-    #    logging.basicConfig(level=logging.DEBUG)
-    # else:
-
-    logging.basicConfig(level=logging.INFO)
-
     l = launcher.Launcher()
 
-    rnd.default.seed(numpy.fromfile(os.path.join(root.common.veles_dir,
-                                                 "veles/samples/seed"),
-                                    numpy.int32, 1024))
-    rnd.default2.seed(
-        numpy.fromfile(
-            os.path.join(root.common.veles_dir,
-                         "veles/samples/seed2"), numpy.int32, 1024))
-    # rnd.default.seed(numpy.fromfile("/dev/urandom", numpy.int32, 1024))
     device = None if l.is_master else opencl.Device()
     try:
         fin = open(root.snapshot, "rb")
@@ -408,8 +394,6 @@ def main():
     logging.info("norm_add: %s" % (str(w.loader.norm_add)))
     logging.info("norm_mul: %s" % (str(w.loader.norm_mul)))
     l.run()
-
-    logging.debug("End of job")
 
 
 if __name__ == "__main__":
