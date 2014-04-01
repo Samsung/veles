@@ -93,10 +93,36 @@ class Device(units.Pickleable):
         self.pid_ = os.getpid()
 
     @staticmethod
+    def arg_completer(prefix, **kwargs):
+        def format_device(platform, device):
+            return "%s - %s on %s" % (device.path, device.name.strip(),
+                                      platform.name)
+
+        if prefix.strip() == "":
+            platforms = cl.Platforms().platforms
+            if len(platforms) == 1 and len(platforms[0].devices) == 1:
+                return ["0:0"]
+            result = []
+            for platform in platforms:
+                for device in platform:
+                    result.append(format_device(platform, device))
+            return result
+        parsed = [p for p in prefix.split(':') if p.strip() != ""]
+        platform = cl.Platforms().platforms[int(parsed[0].strip())]
+        if len(parsed) == 1:
+            if len(platform.devices) == 1:
+                return [platform.devices[0].path]
+            result = []
+            for device in platform:
+                result.append(format_device(platform, device))
+            return result
+
+    @staticmethod
     def init_parser(**kwargs):
         parser = kwargs.get("parser", argparse.ArgumentParser())
         parser.add_argument("-d", "--device", type=str,
-                            default="", help="OpenCL device to use.")
+                            default="", help="OpenCL device to use.") \
+                            .completer = Device.arg_completer
         return parser
 
     def _get_some_device(self, **kwargs):
