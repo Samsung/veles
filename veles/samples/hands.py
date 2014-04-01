@@ -177,14 +177,6 @@ class Workflow(workflows.OpenCLWorkflow):
             self.plt_mx[-1].gate_block = ~self.decision.epoch_ended
 
 
-def main():
-    l = launcher.Launcher()
-    device = None if l.is_master else opencl.Device()
-    w = Workflow(l, layers=root.layers_hands, device=device)
-    w.initialize()
-    l.run()
-
-
-if __name__ == "__main__":
-    main()
-    sys.exit(0)
+if __name__ == "__run__":
+    globals()["load"](Workflow, layers=root.layers_hands)
+    globals()["main"]()

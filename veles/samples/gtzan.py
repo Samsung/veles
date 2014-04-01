@@ -365,37 +365,23 @@ class Workflow(workflows.OpenCLWorkflow):
         return super(Workflow, self).initialize(device=device)
 
 
-def main():
-    l = launcher.Launcher()
-
-    device = None if l.is_master else opencl.Device()
-    try:
-        fin = open(root.snapshot, "rb")
-        w = pickle.load(fin)
-        fin.close()
-        if root.export:
-            tm = time.localtime()
-            s = "%d.%02d.%02d_%02d.%02d.%02d" % (
-                tm.tm_year, tm.tm_mon, tm.tm_mday,
-                tm.tm_hour, tm.tm_min, tm.tm_sec)
-            fnme = os.path.join(root.common.snapshot_dir,
-                                "channels_workflow_%s" % s)
-            try:
-                w.export(fnme)
-                logging.info("Exported successfully to %s.tar.gz" % (fnme))
-            except:
-                a, b, c = sys.exc_info()
-                traceback.print_exception(a, b, c)
-                logging.error("Error while exporting.")
-            sys.exit(0)
-    except IOError:
-        w = Workflow(l, layers=root.layers_gtzan, device=device)
-    w.initialize(device=device)
+if __name__ == "__run__":
+    w, _ = globals()["load"](Workflow, layers=root.layers_gtzan)
+    if root.export:
+        tm = time.localtime()
+        s = "%d.%02d.%02d_%02d.%02d.%02d" % (
+            tm.tm_year, tm.tm_mon, tm.tm_mday,
+            tm.tm_hour, tm.tm_min, tm.tm_sec)
+        fnme = os.path.join(root.common.snapshot_dir,
+                            "channels_workflow_%s" % s)
+        try:
+            w.export(fnme)
+            logging.info("Exported successfully to %s.tar.gz" % (fnme))
+        except:
+            a, b, c = sys.exc_info()
+            traceback.print_exception(a, b, c)
+            logging.error("Error while exporting.")
+            return
     logging.info("norm_add: %s" % (str(w.loader.norm_add)))
     logging.info("norm_mul: %s" % (str(w.loader.norm_mul)))
-    l.run()
-
-
-if __name__ == "__main__":
-    main()
-    sys.exit(0)
+    globals()["main"]()

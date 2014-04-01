@@ -265,15 +265,6 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_err_y[-1].should_unlock_pipeline = True
 
 
-def main():
-    l = launcher.Launcher()
-    device = None if l.is_master else opencl.Device()
-    w = Workflow(l, layers=root.layers_mnist,
-                 device=device)
-    w.initialize()
-    l.run()
-
-
-if __name__ == "__main__":
-    main()
-    sys.exit(0)
+if __name__ == "__run__":
+    globals()["load"](Workflow, layers=root.layers_mnist)
+    globals()["main"]()

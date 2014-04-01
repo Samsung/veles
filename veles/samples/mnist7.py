@@ -214,14 +214,6 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_min[-1].redraw_plot = True
 
 
-def main():
-    l = launcher.Launcher()
-    device = None if l.is_master else opencl.Device()
-    w = Workflow(l, layers=root.layers_mnist7, device=device)
-    w.initialize()
-    l.run()
-
-
-if __name__ == "__main__":
-    main()
-    sys.exit(0)
+if __name__ == "__run__":
+    globals()["load"](Workflow, layers=root.layers_mnist7)
+    globals()["main"]()

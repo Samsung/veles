@@ -250,23 +250,8 @@ class Workflow(workflows.OpenCLWorkflow):
         return super(Workflow, self).initialize()
 
 
-def main():
-    l = launcher.Launcher()
-    device = None if l.is_master else opencl.Device()
-    try:
-        fin = open(os.path.join(root.common.snapshot_dir, "cifar.pickle"),
-                   "rb")
-        w = pickle.load(fin)
-        fin.close()
-    except IOError:
-        w = Workflow(l, layers=root.layers, device=device)
-    w.initialize(global_alpha=root.global_alpha,
-                 global_lambda=root.global_lambda,
-                 minibatch_maxsize=root.loader.minibatch_maxsize,
-                 device=device)
-    l.run()
-
-
-if __name__ == "__main__":
-    main()
-    sys.exit(0)
+if __name__ == "__run__":
+    globals()["load"](Workflow, layers=root.layers)
+    globals()["main"](global_alpha=root.global_alpha,
+                      global_lambda=root.global_lambda,
+                      minibatch_maxsize=root.loader.minibatch_maxsize)

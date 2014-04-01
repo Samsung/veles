@@ -17,6 +17,7 @@ import errno
 import logging
 import numpy
 import os
+import pickle
 import runpy
 import sys
 
@@ -85,6 +86,8 @@ class Main(veles.logger.Logger):
                             help="set random seed, e.g. "
                                  "veles/samples/seed:1024,:1024 or "
                                  "/dev/urandom:16:uint32")
+        parser.add_argument('-w', '--snapshot', default="",
+                            help='workflow snapshot')
         parser.add_argument('workflow',
                             help='path to the Python script with workflow')
         parser.add_argument('config', default="-",
@@ -157,9 +160,43 @@ class Main(veles.logger.Logger):
                                fname)
                 sys.exit(Main.EXIT_FAILURE)
 
-    def _run_workflow(self, fname_workflow):
+    def _load_workflow(self, fname_snapshot):
+        if os.path.exists(fname_snapshot):
+            with open(fname_snapshot, "rb") as fin:
+                return pickle.load(fin)
+        if fname_snapshot.strip() == "":
+            self.warning("Workflow snapshot %s does not exist",
+                         fname_snapshot)
+        return None
+
+    def _load(self, Workflow, **kwargs):
+        self.load_called = True
+        self.launcher = Launcher()
+        self.device = None if self.launcher.is_master else Device()
+        self.workflow = self._load_workflow(self.snapshot_file_name)
+        snapshot = self.workflow is not None
+        if not snapshot:
+            self.workflow = Workflow(self.launcher, device=self.device,
+                                     **kwargs)
+        return self.workflow, snapshot
+
+    def _main(self, **kwargs):
+        if not self.load_called:
+            self.critical("Call load() first in __run__")
+            raise RuntimeError()
+        self.main_called = True
+        self.workflow.initialize(device=self.device, **kwargs)
+        self.launcher.run()
+
+    def _run_workflow(self, fname_workflow, fname_snapshot):
+        self.snapshot_file_name = fname_snapshot
+        self.load_called = False
+        self.main_called = False
         try:
-            runpy.run_path(fname_workflow, run_name="__main__")
+            runpy.run_path(fname_workflow,
+                           init_globals={"load": self._load,
+                                         "main": self._main},
+                           run_name="__run__")
         except FileNotFoundError:
             self.exception("Workflow does not exist: \"%s\"", fname_workflow)
             sys.exit(errno.ENOENT)
@@ -170,9 +207,12 @@ class Main(veles.logger.Logger):
             self.exception("Cannot read workflow \"%s\"", fname_workflow)
             sys.exit(errno.EACCES)
         except:
-            self.exception("Failed to run the workflow \"%s\"",
+            self.exception("Failed to load the workflow \"%s\"",
                            fname_workflow)
             sys.exit(Main.EXIT_FAILURE)
+        if not self.main_called:
+            self.warning("main() was not called by __run__ in %s",
+                         fname_workflow)
 
     def run(self):
         """VELES Machine Learning Platform Command Line Interface
@@ -189,7 +229,7 @@ class Main(veles.logger.Logger):
         self._seed_random(args.random_seed)
 
         self._apply_config(os.path.abspath(fname_config), args.config_list)
-        self._run_workflow(os.path.abspath(args.workflow))
+        self._run_workflow(os.path.abspath(args.workflow), args.snapshot)
 
         self.info("End of job")
         return Main.EXIT_SUCCESS

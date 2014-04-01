@@ -215,28 +215,11 @@ class Workflow(workflows.OpenCLWorkflow):
         """
 
 
-def main():
-    l = launcher.Launcher()
-    device = None if l.is_master else opencl.Device()
-    fnme = os.path.join(root.common.cache_dir, "video_ae.pickle")
-    fin = None
-    try:
-        fin = open(fnme, "rb")
-    except IOError:
-        pass
-    if fin is not None:
-        w = pickle.load(fin)
-        fin.close()
+if __name__ == "__run__":
+    w, snapshot = globals()["load"](Workflow, layers=root.layers)
+    if snapshot:
         for forward in w.forward:
             logging.info(forward.weights.v.min(), forward.weights.v.max(),
                          forward.bias.v.min(), forward.bias.v.max())
-        w.decision.just_snapshotted[0] = 1
-    else:
-        w = Workflow(l, layers=root.layers, device=device)
-        w.initialize()
-        l.run()
-
-
-if __name__ == "__main__":
-    main()
-    sys.exit(0)
+        w.decision.just_snapshotted << True
+    globals()["main"]()

@@ -372,25 +372,15 @@ class Workflow(workflows.OpenCLWorkflow):
                 forward.bias.v[:] = bias[i][:]
 
 
-def main():
-    l = launcher.Launcher()
-    device = None if l.is_master else opencl.Device()
-    fnme = root.dir_for_kanji_pickle
-    fin = None
-    try:
-        fin = open(fnme, "rb")
-    except IOError:
-        pass
+if __name__ == "__run__":
     weights = None
     bias = None
-    if fin is not None:
-        w = pickle.load(fin)
-        fin.close()
+    w, snapshot = globals()["load"](Workflow, layers=root.layers)
+    if snapshot:
         if type(w) == tuple:
             logging.info("Will load weights")
             weights = w[0]
             bias = w[1]
-            fin = None
         else:
             logging.info("Will load workflow")
             logging.info("Weights and bias ranges per layer are:")
@@ -398,18 +388,8 @@ def main():
                 logging.info("%f %f %f %f" % (
                     forward.weights.v.min(), forward.weights.v.max(),
                     forward.bias.v.min(), forward.bias.v.max()))
-            w.decision.just_snapshotted[0] = 1
-    if fin is None:
-        w = Workflow(
-            l, layers=root.layers,
-            device=device)
-    w.initialize(global_alpha=root.global_alpha,
-                 global_lambda=root.global_lambda,
-                 minibatch_maxsize=root.loader.minibatch_maxsize,
-                 device=device, weights=weights, bias=bias)
-    l.run()
-
-
-if __name__ == "__main__":
-    main()
-    sys.exit(0)
+            w.decision.just_snapshotted << True
+    globals()["main"](global_alpha=root.global_alpha,
+                      global_lambda=root.global_lambda,
+                      minibatch_maxsize=root.loader.minibatch_maxsize,
+                      weights=weights, bias=bias)

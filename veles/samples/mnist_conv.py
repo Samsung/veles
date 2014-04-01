@@ -234,31 +234,19 @@ class Workflow(workflows.OpenCLWorkflow):
         return super(Workflow, self).initialize(device=device)
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-snapshot", type=str, default="",
-                        help="Snapshot with trained network.")
-    l = launcher.Launcher(parser=parser)
-    args = l.args
-
-    device = None if l.is_master else opencl.Device()
-    if len(args.snapshot):
-        fin = open(args.snapshot, "rb")
-        w = pickle.load(fin)
-        fin.close()
-        """
-        W = []
-        b = []
-        for f in w.forward:
-            W.append(f.weights.v)
-            b.append(f.bias.v)
-        fout = open("/tmp/Wb.pickle", "wb")
-        pickle.dump((W, b), fout)
-        fout.close()
-        sys.exit(0)
-        """
-    else:
-        w = Workflow(l, layers=root.layers_mnist_conv, device=device)  # 0.99%
+if __name__ == "__run__":
+    globals()["load"](layers=root.layers_mnist_conv)
+    """
+    W = []
+    b = []
+    for f in w.forward:
+        W.append(f.weights.v)
+        b.append(f.bias.v)
+    fout = open("/tmp/Wb.pickle", "wb")
+    pickle.dump((W, b), fout)
+    fout.close()
+    sys.exit(0)
+    """
     # w = Workflow(None, layers=[
     #                     {"type": "conv", "n_kernels": 25, "kx": 9, "ky": 9},
     #                     {"type": "avg_pooling", "kx": 2, "ky": 2},  # 0.98%
@@ -269,13 +257,6 @@ def main():
     #                     {"type": "conv", "n_kernels": 200, "kx": 3, "ky": 3},
     #                     {"type": "avg_pooling", "kx": 2, "ky": 2},  # 4
     #                     100, 10], device=device)
-    w.initialize(global_alpha=root.global_alpha,
-                 global_lambda=root.global_lambda,
-                 minibatch_maxsize=root.loader.minibatch_maxsize,
-                 device=device)
-    l.run()
-
-
-if __name__ == "__main__":
-    main()
-    sys.exit(0)
+    globals()["main"](global_alpha=root.global_alpha,
+                      global_lambda=root.global_lambda,
+                      minibatch_maxsize=root.loader.minibatch_maxsize)

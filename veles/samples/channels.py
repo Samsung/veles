@@ -743,21 +743,16 @@ class Workflow(workflows.OpenCLWorkflow):
         return super(Workflow, self).initialize()
 
 
-def main():
-    l = launcher.Launcher()
-
+if __name__ == "__run__":
     layers = []
     for s in root.layers:
         layers.append(int(s))
     logging.info("Will train NN with layers: %s"
                  % (" ".join(str(x) for x in layers)))
 
-    device = None if l.is_master else opencl.Device()
     w_neg = None
     try:
-        fin = open(root.snapshot, "rb")
-        w = pickle.load(fin)
-        fin.close()
+        w, _ = globals()["load"](Workflow, layers=root.layers)
         if root.export:
             tm = time.localtime()
             s = "%d.%02d.%02d_%02d.%02d.%02d" % (
@@ -772,7 +767,7 @@ def main():
                 a, b, c = sys.exc_info()
                 traceback.print_exception(a, b, c)
                 logging.error("Error while exporting.")
-            sys.exit(0)
+            return
         if root.find_negative > 0:
             if type(w) != tuple or len(w) != 2:
                 logging.error(
@@ -791,11 +786,6 @@ def main():
             logging.error("Valid snapshot should be provided if "
                           "find_negative supplied. Will now exit.")
             return
-        w = Workflow(l, layers=layers, device=device)
-    w.initialize(global_alpha=root.global_alpha,
-                 global_lambda=root.global_lambda,
-                 minibatch_maxsize=root.loader.minibatch_size,
-                 w_neg=w_neg, device=device)
     fnme = (os.path.join(root.common.cache_dir, root.decision.snapshot_prefix)
             + ".txt")
     logging.info("Dumping file map to %s" % (fnme))
@@ -806,9 +796,7 @@ def main():
     fout.close()
     logging.info("Done")
     logging.info("Will execute workflow now")
-    l.run()
-
-
-if __name__ == "__main__":
-    main()
-    sys.exit(0)
+    globals()["main"](global_alpha=root.global_alpha,
+                      global_lambda=root.global_lambda,
+                      minibatch_maxsize=root.loader.minibatch_size,
+                      w_neg=w_neg)
