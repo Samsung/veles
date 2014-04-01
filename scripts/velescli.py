@@ -85,13 +85,13 @@ class Main(veles.logger.Logger):
                                  "/dev/urandom:16:uint32")
         parser.add_argument('workflow',
                             help='path to the Python script with workflow')
-        parser.add_argument('config',
+        parser.add_argument('config', default="-",
                             help='path to the configuration file')
         parser.add_argument('config_list',
                             help="list of configuration overloads like: \n"
                             "root.global_alpha=0.006\n"
                             "root.snapshot_prefix='test_pr'",
-                            nargs='*', metavar="config,")
+                            nargs='*', metavar="configs...")
         return parser
 
     def _apply_config(self, fname_config, config_list):
@@ -176,13 +176,16 @@ class Main(veles.logger.Logger):
         """
         parser = self._init_parser()
         args = parser.parse_args()
+        fname_config = args.config
+        if fname_config == "-":
+            fname_config = "%s_config%s" % os.path.splitext(args.workflow)
 
         if not args.no_logo:
             print(Main.LOGO_OPT)
         logging.basicConfig(level=Main.LOG_LEVEL_MAP[args.verbose])
         self._seed_random(args.random_seed)
 
-        self._apply_config(os.path.abspath(args.config), args.config_list)
+        self._apply_config(os.path.abspath(fname_config), args.config_list)
         self._run_workflow(os.path.abspath(args.workflow))
 
         self.info("End of job")
