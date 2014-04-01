@@ -11,6 +11,7 @@ executes user script (called experiment)
 
 
 import argparse
+from email.utils import formatdate
 import errno
 import logging
 import os
@@ -18,7 +19,6 @@ import runpy
 import sys
 
 
-import veles
 import veles.logger
 from veles.launcher import Launcher
 from veles.opencl import Device
@@ -28,22 +28,46 @@ class Main(veles.logger.Logger):
     EXIT_SUCCESS = 0
     EXIT_FAILURE = 1
     LOGO = r" _   _ _____ _     _____ _____  " "\n" \
-            r"| | | |  ___| |   |  ___/  ___| " + \
-            (" Version %s\n" % veles.__version__) + \
-            r"| | | | |__ | |   | |__ \ `--.  " + \
-            (" Copyright %s\n" % veles.__copyright__) + \
-            r"| | | |  __|| |   |  __| `--. \ " \
-            " All rights reserved. Any unauthorized use of\n" \
-            r"\ \_/ / |___| |___| |___/\__/ / " \
-            " this software is strictly prohibited and\n" \
-            r" \___/\____/\_____|____/\____/  " \
-            " is a subject of your country's laws.\n"
+           r"| | | |  ___| |   |  ___/  ___| " + \
+           (" Version %s" % veles.__version__) + \
+           (" %s\n" % formatdate(veles.__date__, True)) + \
+           r"| | | | |__ | |   | |__ \ `--.  " + \
+           (" Copyright %s\n" % veles.__copyright__) + \
+           r"| | | |  __|| |   |  __| `--. \ " \
+           " All rights reserved. Any unauthorized use of\n" \
+           r"\ \_/ / |___| |___| |___/\__/ / " \
+           " this software is strictly prohibited and is\n" \
+           r" \___/\____/\_____|____/\____/  " \
+           " a subject of your country's laws.\n"
+
+    LOGO_COLORED = "\033" r"[1;32m _   _ _____ _     _____ _____  " \
+                   "\033[0m\n" \
+                   "\033" r"[1;32m| | | |  ___| |   |  ___/  ___| " \
+                   "\033[0m" + \
+                   (" Version \033[1;36m%s\033[0m" % veles.__version__) + \
+                   (" %s\n" % formatdate(veles.__date__, True)) + \
+                   "\033" r"[1;32m| | | | |__ | |   | |__ \ `--.  " \
+                   "\033[0m" + ("\033[0;37m Copyright %s\033[0m\n" %
+                                veles.__copyright__) + \
+                   "\033" r"[1;32m| | | |  __|| |   |  __| `--. \ " "\033[0m" \
+                   "\033[0;37m All rights reserved. Any unauthorized use of" \
+                   "\033[0m\n" \
+                   "\033" r"[1;32m\ \_/ / |___| |___| |___/\__/ / " "\033[0m" \
+                   "\033[0;37m this software is strictly prohibited and is" \
+                   "\033[0m\n" \
+                   "\033" r"[1;32m \___/\____/\_____|____/\____/  " "\033[0m" \
+                   "\033[0;37m a subject of your country's laws.\033[0m\n"
+
+    LOGO_OPT = LOGO_COLORED if sys.stdout.isatty() else LOGO
+
+    def print_logo(self):
+        print(Main.LOGO_OPT)
 
     def run(self):
         """VELES Machine Learning Platform Command Line Interface
         """
         parser = argparse.ArgumentParser(
-            description=Main.LOGO,
+            description=Main.LOGO_OPT,
             formatter_class=argparse.RawDescriptionHelpFormatter)
         parser = Launcher.init_parser(parser=parser)
         parser = Device.init_parser(parser=parser)
@@ -74,7 +98,7 @@ class Main(veles.logger.Logger):
         logging.basicConfig(level=log_level_map[args.verbose])
 
         if not args.no_logo:
-            print(Main.LOGO)
+            self.print_logo()
         try:
             runpy.run_path(fname_config)
         except FileNotFoundError:
