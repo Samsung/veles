@@ -55,11 +55,12 @@ class VelesProtocol(StringLineReceiver):
         'initial': 'INIT',
         'events': [
             {'name': 'disconnect', 'src': '*', 'dst': 'ERROR'},
+            {'name': 'reconnect', 'src': '*', 'dst': 'INIT'},
             {'name': 'request_id', 'src': ['INIT', 'WAIT'], 'dst': 'WAIT'},
             {'name': 'request_job', 'src': ['WAIT', 'GETTING_JOB'],
                                     'dst': 'GETTING_JOB'},
             {'name': 'obtain_job', 'src': 'GETTING_JOB', 'dst': 'BUSY'},
-            {'name': 'refuse_job', 'src': 'GETTING_JOB', 'dst': 'GETTING_JOB'},
+            {'name': 'refuse_job', 'src': 'GETTING_JOB', 'dst': 'END'},
             {'name': 'wait_update_notification', 'src': 'BUSY', 'dst': 'WAIT'},
         ],
         'callbacks': {
@@ -85,6 +86,7 @@ class VelesProtocol(StringLineReceiver):
 
     def connectionMade(self):
         self.factory.host.info("Connected")
+        self.factory.disconnect_time = None
         if self.state.current == "INIT" or self.state.current == "WAIT":
             self.request_id()
             return
@@ -135,16 +137,15 @@ class VelesProtocol(StringLineReceiver):
         if job == bytes(False):
             self.factory.host.info("Job was refused.")
             self.state.refuse_job()
-            self.factory.host.stop()
+            self.factory.host.launcher.stop()
             return
-        else:
-            djob = threads.deferToThreadPool(
-                reactor,
-                self.factory.host.workflow.thread_pool,
-                self.factory.host.workflow.do_job,
-                job)
-            djob.addCallback(self.job_finished)
-            self.state.obtain_job()
+        djob = threads.deferToThreadPool(
+            reactor,
+            self.factory.host.workflow.thread_pool,
+            self.factory.host.workflow.do_job,
+            job)
+        djob.addCallback(self.job_finished)
+        self.state.obtain_job()
 
     def job_finished(self, update):
         if self.state.current == "BUSY":
@@ -207,7 +208,8 @@ class VelesProtocolFactory(ReconnectingClientFactory):
         return VelesProtocol(addr, self)
 
     def clientConnectionLost(self, connector, reason):
-        if self.state.current != 'ERROR':
+        if self.state.current not in ['ERROR', 'END']:
+            self.state.reconnect()
             if not self.disconnect_time:
                 self.disconnect_time = time.time()
             if ((time.time() - self.disconnect_time) //
@@ -221,7 +223,8 @@ class VelesProtocolFactory(ReconnectingClientFactory):
                               connector.connect)
         else:
             self.host.info("Disconnected.")
-            self.host.launcher.stop()
+            if self.state.current == 'ERROR':
+                self.host.launcher.stop()
 
     def clientConnectionFailed(self, connector, reason):
         self.host.warning('Connection failed. Reason: %s', reason)
