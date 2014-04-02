@@ -238,6 +238,8 @@ class Launcher(logger.Logger):
         initialize.
         """
         self._workflow = workflow
+        if not self.is_standalone:
+            workflow.thread_pool.register_on_shutdown(self.stop)
         if self.is_slave or self.matplotlib_backend == "":
             workflow.plotters_are_enabled = False
         if self.is_slave:
