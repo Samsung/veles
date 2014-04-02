@@ -8,19 +8,14 @@ File for MNIST dataset (NN with RELU activation).
 """
 
 
-import logging
 import numpy
 import struct
-import sys
 import os
 
 from veles.config import root, get_config
 import veles.formats as formats
 import veles.error as error
-import veles.launcher as launcher
-import veles.opencl as opencl
 import veles.plotting_units as plotting_units
-import veles.rnd as rnd
 import veles.workflows as workflows
 import veles.znicz.all2all as all2all
 import veles.znicz.decision as decision

@@ -8,20 +8,15 @@ Cifar all2all.
 """
 
 
-import logging
 import numpy
 import os
 import pickle
-import sys
 
 from veles.config import root, get_config
 import veles.formats as formats
-import veles.launcher as launcher
 from veles.mutable import Bool
-import veles.opencl as opencl
 import veles.opencl_types as opencl_types
 import veles.plotting_units as plotting_units
-import veles.rnd as rnd
 import veles.workflows as workflows
 import veles.znicz.all2all as all2all
 import veles.znicz.decision as decision
@@ -251,6 +246,5 @@ class Workflow(workflows.OpenCLWorkflow):
 
 def run(load, main):
     load(Workflow, layers=root.layers)
-    main(global_alpha=root.global_alpha,
-                      global_lambda=root.global_lambda,
-                      minibatch_maxsize=root.loader.minibatch_maxsize)
+    main(global_alpha=root.global_alpha, global_lambda=root.global_lambda,
+         minibatch_maxsize=root.loader.minibatch_maxsize)

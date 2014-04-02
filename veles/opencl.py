@@ -120,9 +120,9 @@ class Device(units.Pickleable):
     @staticmethod
     def init_parser(**kwargs):
         parser = kwargs.get("parser", argparse.ArgumentParser())
-        parser.add_argument("-d", "--device", type=str,
-                            default="", help="OpenCL device to use.") \
-                            .completer = Device.arg_completer
+        parser.add_argument(
+            "-d", "--device", type=str, default="",
+            help="OpenCL device to use.").completer = Device.arg_completer
         return parser
 
     def _get_some_device(self, **kwargs):

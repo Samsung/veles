@@ -8,17 +8,12 @@ File for Wine dataset.
 """
 
 
-import logging
 import numpy
 import os
-import sys
 
 from veles.config import get_config, root
 import veles.formats as formats
-import veles.launcher as launcher
-import veles.opencl as opencl
 import veles.opencl_types as opencl_types
-import veles.rnd as rnd
 import veles.workflows as workflows
 import veles.znicz.all2all as all2all
 import veles.znicz.decision as decision

@@ -13,16 +13,12 @@ from freetype import (Face, FT_Matrix,
 import logging
 import numpy
 import os
-import sys
 
 from veles.config import root, get_config
 import veles.formats as formats
-import veles.launcher as launcher
 from veles.mutable import Bool
-import veles.opencl as opencl
 import veles.opencl_types as opencl_types
 import veles.plotting_units as plotting_units
-import veles.rnd as rnd
 import veles.samples.mnist as mnist
 import veles.workflows as workflows
 import veles.znicz.all2all as all2all

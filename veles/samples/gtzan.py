@@ -20,9 +20,7 @@ import traceback
 from veles.config import root, get_config
 import veles.error as error
 import veles.formats as formats
-import veles.launcher as launcher
 from veles.mutable import Bool
-import veles.opencl as opencl
 import veles.opencl_types as opencl_types
 import veles.plotting_units as plotting_units
 import veles.rnd as rnd

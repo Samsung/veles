@@ -8,20 +8,15 @@ Cifar convolutional.
 """
 
 
-import logging
 import numpy
 import os
 import pickle
-import sys
 
 from veles.config import root, get_config
 import veles.formats as formats
-import veles.launcher as launcher
 from veles.mutable import Bool
-import veles.opencl as opencl
 import veles.opencl_types as opencl_types
 import veles.plotting_units as plotting_units
-import veles.rnd as rnd
 import veles.workflows as workflows
 import veles.znicz.all2all as all2all
 import veles.znicz.conv as conv
@@ -44,11 +39,14 @@ root.update = {"decision": {"fail_iterations":
                "global_lambda": get_config(root.global_lambda, 0.00005),
                "layers_cifar_conv":
                get_config(root.layers_cifar_conv,
-                    [{"type": "conv", "n_kernels": 50, "kx": 9, "ky": 9},
-                     {"type": "conv", "n_kernels": 100, "kx": 7, "ky": 7},
-                     {"type": "conv", "n_kernels": 200, "kx": 5, "ky": 5},
-                     {"type": "conv", "n_kernels": 400, "kx": 3, "ky": 3},
-                     100, 10]),
+                          [{"type": "conv", "n_kernels": 50,
+                            "kx": 9, "ky": 9},
+                           {"type": "conv", "n_kernels": 100,
+                            "kx": 7, "ky": 7},
+                           {"type": "conv", "n_kernels": 200,
+                            "kx": 5, "ky": 5},
+                           {"type": "conv", "n_kernels": 400,
+                            "kx": 3, "ky": 3}, 100, 10]),
                "loader": {"minibatch_maxsize":
                           get_config(root.loader.minibatch_maxsize, 270)},
                "path_for_out_data": get_config(root.path_for_out_data,
@@ -259,9 +257,9 @@ class Workflow(workflows.OpenCLWorkflow):
             self.plt[-1].input = self.decision.epoch_n_err_pt
             self.plt[-1].input_field = i
             self.plt[-1].link_from(self.decision
-                if len(self.plt) == 1 else self.plt[-2])
+                                   if len(self.plt) == 1 else self.plt[-2])
             self.plt[-1].gate_block = (~self.decision.epoch_ended
-                if len(self.plt) == 1 else Bool(False))
+                                       if len(self.plt) == 1 else Bool(False))
         self.plt[0].clear_plot = True
         self.plt[-1].redraw_plot = True
         # Confusion matrix plotter
@@ -301,6 +299,5 @@ class Workflow(workflows.OpenCLWorkflow):
 
 def run(load, main):
     load(Workflow, layers=root.layers_cifar_conv)
-    main(global_alpha=root.global_alpha,
-         global_lambda=root.global_lambda,
+    main(global_alpha=root.global_alpha, global_lambda=root.global_lambda,
          minibatch_maxsize=root.loader.minibatch_maxsize)

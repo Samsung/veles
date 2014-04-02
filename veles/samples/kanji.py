@@ -13,13 +13,10 @@ import numpy
 import os
 import pickle
 import six
-import sys
 
 from veles.config import root, get_config
 import veles.error as error
 import veles.formats as formats
-import veles.launcher as launcher
-import veles.opencl as opencl
 import veles.opencl_types as opencl_types
 import veles.plotting_units as plotting_units
 import veles.rnd as rnd
@@ -386,7 +383,6 @@ def run(load, main):
                     forward.weights.v.min(), forward.weights.v.max(),
                     forward.bias.v.min(), forward.bias.v.max()))
             w.decision.just_snapshotted << True
-    main(global_alpha=root.global_alpha,
-                      global_lambda=root.global_lambda,
-                      minibatch_maxsize=root.loader.minibatch_maxsize,
-                      weights=weights, bias=bias)
+    main(global_alpha=root.global_alpha, global_lambda=root.global_lambda,
+         minibatch_maxsize=root.loader.minibatch_maxsize,
+         weights=weights, bias=bias)

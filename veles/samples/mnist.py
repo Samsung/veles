@@ -8,19 +8,14 @@ File for MNIST dataset.
 """
 
 
-import logging
 import numpy
 import os
 import struct
-import sys
 
 from veles.config import get_config, root
 import veles.error as error
 import veles.formats as formats
-import veles.launcher as launcher
-import veles.opencl as opencl
 import veles.plotting_units as plotting_units
-import veles.rnd as rnd
 import veles.workflows as workflows
 import veles.znicz.all2all as all2all
 import veles.znicz.decision as decision

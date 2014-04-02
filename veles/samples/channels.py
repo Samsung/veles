@@ -26,9 +26,7 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 from veles.config import root, get_config
 import veles.error as error
 import veles.formats as formats
-import veles.launcher as launcher
 import veles.image as image
-import veles.opencl as opencl
 import veles.plotting_units as plotting_units
 import veles.rnd as rnd
 import veles.thread_pool as thread_pool
@@ -795,7 +793,5 @@ def run(load, main):
     fout.close()
     logging.info("Done")
     logging.info("Will execute workflow now")
-    main(global_alpha=root.global_alpha,
-                      global_lambda=root.global_lambda,
-                      minibatch_maxsize=root.loader.minibatch_size,
-                      w_neg=w_neg)
+    main(global_alpha=root.global_alpha, global_lambda=root.global_lambda,
+         minibatch_maxsize=root.loader.minibatch_size, w_neg=w_neg)

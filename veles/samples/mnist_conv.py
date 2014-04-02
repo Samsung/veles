@@ -8,19 +8,9 @@ MNIST with Convolutional layer.
 """
 
 
-import argparse
-import logging
-import numpy
-import pickle
-import os
-import sys
-
 from veles.config import root, get_config
 import veles.error as error
-import veles.launcher as launcher
-import veles.opencl as opencl
 import veles.plotting_units as plotting_units
-import veles.rnd as rnd
 from veles.samples import mnist as mnist
 import veles.workflows as workflows
 import veles.znicz.all2all as all2all
@@ -255,5 +245,5 @@ def run(load, main):
     #                     {"type": "avg_pooling", "kx": 2, "ky": 2},  # 4
     #                     100, 10], device=device)
     main(global_alpha=root.global_alpha,
-                      global_lambda=root.global_lambda,
-                      minibatch_maxsize=root.loader.minibatch_maxsize)
+         global_lambda=root.global_lambda,
+         minibatch_maxsize=root.loader.minibatch_maxsize)
