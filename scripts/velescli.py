@@ -178,6 +178,8 @@ class Main(veles.logger.Logger):
         if not snapshot:
             self.workflow = Workflow(self.launcher, device=self.device,
                                      **kwargs)
+        else:
+            self.workflow.workflow = self.launcher
         return self.workflow, snapshot
 
     def _main(self, **kwargs):
