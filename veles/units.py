@@ -22,18 +22,16 @@ class Pickleable(logger.Logger):
     """Will save attributes ending with _ as None when pickling and will call
     constructor upon unpickling.
     """
-    def __init__(self):
+    def __init__(self, **kwargs):
         """Calls init_unpickled() to initialize the attributes which are not
         pickled.
         """
-        super(Pickleable, self).__init__()
-        # self.init_unpickled()  # already called in Logger()
+        super(Pickleable, self).__init__(**kwargs)
+        self.init_unpickled()
 
     """This function is called if the object has just been unpickled.
     """
     def init_unpickled(self):
-        if hasattr(super(Pickleable, self), "init_unpickled"):
-            super(Pickleable, self).init_unpickled()
         self.stripped_pickle_ = False
 
     def __getstate__(self):
@@ -51,6 +49,7 @@ class Pickleable(logger.Logger):
         """Recovers the object after unpickling.
         """
         self.__dict__.update(state)
+        super(Pickleable, self).__init__()
         self.init_unpickled()
 
     @property
@@ -62,7 +61,50 @@ class Pickleable(logger.Logger):
         self.stripped_pickle_ = value
 
 
-class Distributable(object):
+class Distributable(Pickleable):
+    def _data_threadsafe(self, fn):
+        def wrapped(*args, **kwargs):
+            self._data_lock_.acquire()
+            result = None
+            try:
+                result = fn(*args, **kwargs)
+            finally:
+                self._data_lock_.release()
+            return result
+
+        return wrapped
+
+    def __init__(self, **kwargs):
+        super(Distributable, self).__init__(**kwargs)
+        if kwargs.get("generate_data_for_slave_threadsafe", False):
+            self.generate_data_for_slave = \
+                self._data_threadsafe(self.generate_data_for_slave)
+        if kwargs.get("apply_data_from_slave_threadsafe", True):
+            self.apply_data_from_slave = \
+                self._data_threadsafe(self.apply_data_from_slave)
+            self.drop_slave = \
+                self._data_threadsafe(self.drop_slave)
+
+    def init_unpickled(self):
+        super(Distributable, self).init_unpickled()
+        self._data_lock_ = threading.Lock()
+        self._data_event_ = threading.Event()
+        self._data_event_.set()
+
+    @property
+    def has_data_for_slave(self):
+        return self._data_event_.is_set()
+
+    @has_data_for_slave.setter
+    def has_data_for_slave(self, value):
+        if value:
+            self._data_event_.set()
+        else:
+            self._data_event_.clear()
+
+    def wait_for_data_for_slave(self):
+        self._data_event_.wait()
+
     """Callbacks for working in distributed environment.
     """
     def generate_data_for_master(self):
@@ -77,6 +119,8 @@ class Distributable(object):
     def generate_data_for_slave(self, slave=None):
         """Data for slave should be generated here. This function is executed
         on a master instance.
+        This method is guaranteed to be threadsafe if
+        generate_data_for_slave_threadsafe is set to True in __init__.
 
         Parameters:
             slave: some information about the slave (may be None).
@@ -102,6 +146,8 @@ class Distributable(object):
     def apply_data_from_slave(self, data, slave=None):
         """Data from slave should be applied here. This function is executed
         on a master instance.
+        This method is guaranteed to be threadsafe if
+        apply_data_from_slave_threadsafe is set to True in __init__ (default).
 
         Parameters:
             slave: some information about the slave (may be None).
@@ -113,11 +159,13 @@ class Distributable(object):
 
     def drop_slave(self, slave=None):
         """Unexpected slave disconnection leads to this function call.
+        This method is guaranteed to be threadsafe if
+        apply_data_from_slave_threadsafe is set to True in __init__ (default).
         """
         pass
 
 
-class Unit(Pickleable, Distributable):
+class Unit(Distributable):
     """General unit in data stream model.
 
     Attributes:

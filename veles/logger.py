@@ -15,20 +15,16 @@ class Logger(object):
     Provides logging facilities to derived classes.
     """
 
-    def __init__(self, logger=None):
-        if logger is None:
-            self.init_unpickled()
-        else:
-            self.logger_ = logger
-
-    def init_unpickled(self):
-        self.logger_ = logging.getLogger(self.__class__.__name__)
+    def __init__(self, **kwargs):
+        super(Logger, self).__init__()
+        self._logger_ = kwargs.get("logger",
+                                   logging.getLogger(self.__class__.__name__))
 
     @property
     def log(self):
         """Returns the logger associated with this object.
         """
-        return self.logger_
+        return self._logger_
 
     def redirect_logging_to_file(self, file_name, max_bytes=1024 * 1024,
                                  backups=9):
@@ -38,9 +34,9 @@ class Logger(object):
         formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: "
                                       "%(message)s", "%Y-%m-%d %H:%M:%S")
         handler.setFormatter(formatter)
-        self.logger_.info("Redirecting output to %s", file_name)
-        self.logger_.propagate = False
-        self.logger_.addHandler(handler)
+        self.log.info("Redirecting output to %s", file_name)
+        self.log.propagate = False
+        self.log.addHandler(handler)
         self.info("Redirected output")
 
     @staticmethod
@@ -62,22 +58,22 @@ class Logger(object):
         logging.getLogger().addHandler(handler)
 
     def debug(self, msg, *args, **kwargs):
-        self.logger_.debug(msg, *args, **kwargs)
+        self.log.debug(msg, *args, **kwargs)
 
     def info(self, msg, *args, **kwargs):
-        self.logger_.info(msg, *args, **kwargs)
+        self.log.info(msg, *args, **kwargs)
 
     def warning(self, msg, *args, **kwargs):
-        self.logger_.warning(msg, *args, **kwargs)
+        self.log.warning(msg, *args, **kwargs)
 
     def error(self, msg, *args, **kwargs):
-        self.logger_.error(msg, *args, **kwargs)
+        self.log.error(msg, *args, **kwargs)
 
     def exception(self, msg="Exception", *args, **kwargs):
-        self.logger_.exception(msg, *args, **kwargs)
+        self.log.exception(msg, *args, **kwargs)
 
     def critical(self, msg, *args, **kwargs):
-        self.logger_.critical(msg, *args, **kwargs)
+        self.log.critical(msg, *args, **kwargs)
 
 
 class MongoLogHandler(logging.Handler):
