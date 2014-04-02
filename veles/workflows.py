@@ -76,6 +76,7 @@ class Workflow(Unit):
         self.start_point = StartPoint(self)
         self.end_point = EndPoint(self)
         self.thread_pool.register_on_shutdown(self.stop)
+        self._is_finished = False
 
     def init_unpickled(self):
         super(Workflow, self).init_unpickled()
@@ -93,9 +94,11 @@ class Workflow(Unit):
         """Starts executing the workflow. This function is asynchronous,
         parent's on_finished() method will be called.
         """
+        self._is_finished = False
         self.start_point.run_dependent()
 
     def on_workflow_finished(self):
+        self._is_finished = True
         self.workflow.on_workflow_finished()
 
     def add_ref(self, unit):
@@ -144,7 +147,7 @@ class Workflow(Unit):
 
     def generate_data_for_slave(self, slave):
         self.lock_pipeline()
-        if self.is_finished():
+        if self.is_finished:
             self.unlock_pipeline()
             return None
         data = []
@@ -175,13 +178,14 @@ class Workflow(Unit):
         """
         Produces a new job, when a slave asks for it. Run by a master.
         """
-        if self.is_finished():
+        if self.is_finished:
             return None
         data = self.generate_data_for_slave(slave)
         return pickle.dumps(data) if data is not None else None
 
+    @property
     def is_finished(self):
-        return self.end_point.is_finished()
+        return self._is_finished
 
     @property
     def plotters_are_enabled(self):
