@@ -10,7 +10,10 @@ executes user script (called experiment)
 '''
 
 
-import argcomplete
+try:
+    import argcomplete
+except:
+    pass
 import argparse
 from email.utils import formatdate
 import errno
@@ -97,7 +100,10 @@ class Main(veles.logger.Logger):
                             "root.global_alpha=0.006\n"
                             "root.snapshot_prefix='test_pr'",
                             nargs='*', metavar="configs...")
-        argcomplete.autocomplete(parser, escape_symbols=False)
+        try:
+            argcomplete.autocomplete(parser, escape_symbols=False)
+        except:
+            pass
         return parser
 
     def _apply_config(self, fname_config, config_list):
