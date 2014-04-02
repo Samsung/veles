@@ -214,6 +214,6 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_min[-1].redraw_plot = True
 
 
-if __name__ == "__run__":
-    globals()["load"](Workflow, layers=root.layers_mnist7)
-    globals()["main"]()
+def run(load, main):
+    load(Workflow, layers=root.layers_mnist7)
+    main()

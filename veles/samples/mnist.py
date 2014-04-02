@@ -265,6 +265,6 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_err_y[-1].should_unlock_pipeline = True
 
 
-if __name__ == "__run__":
-    globals()["load"](Workflow, layers=root.layers_mnist)
-    globals()["main"]()
+def run(load, main):
+    load(Workflow, layers=root.layers_mnist)
+    main()

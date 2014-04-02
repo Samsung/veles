@@ -215,11 +215,11 @@ class Workflow(workflows.OpenCLWorkflow):
         """
 
 
-if __name__ == "__run__":
-    w, snapshot = globals()["load"](Workflow, layers=root.layers)
+def run(load, main):
+    w, snapshot = load(Workflow, layers=root.layers)
     if snapshot:
         for forward in w.forward:
             logging.info(forward.weights.v.min(), forward.weights.v.max(),
                          forward.bias.v.min(), forward.bias.v.max())
         w.decision.just_snapshotted << True
-    globals()["main"]()
+    main()

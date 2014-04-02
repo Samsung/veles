@@ -313,6 +313,6 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt.gate_block = ~self.decision.epoch_ended
 
 
-if __name__ == "__run__":
-    globals()["load"](Workflow, layers=root.layers)
-    globals()["main"]()
+def run(load, main):
+    load(Workflow, layers=root.layers)
+    main()

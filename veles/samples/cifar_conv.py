@@ -302,8 +302,8 @@ class Workflow(workflows.OpenCLWorkflow):
         return super(Workflow, self).initialize()
 
 
-if __name__ == "__run__":
-    globals()["load"](Workflow, layers=root.layers_cifar_conv)
-    globals()["main"](global_alpha=root.global_alpha,
+def run(load, main):
+    load(Workflow, layers=root.layers_cifar_conv)
+    main(global_alpha=root.global_alpha,
                       global_lambda=root.global_lambda,
                       minibatch_maxsize=root.loader.minibatch_maxsize)

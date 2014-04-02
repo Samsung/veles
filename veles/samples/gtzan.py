@@ -365,8 +365,8 @@ class Workflow(workflows.OpenCLWorkflow):
         return super(Workflow, self).initialize(device=device)
 
 
-if __name__ == "__run__":
-    w, _ = globals()["load"](Workflow, layers=root.layers_gtzan)
+def run(load, main):
+    w, _ = load(Workflow, layers=root.layers_gtzan)
     if root.export:
         tm = time.localtime()
         s = "%d.%02d.%02d_%02d.%02d.%02d" % (
@@ -384,4 +384,4 @@ if __name__ == "__run__":
             return
     logging.info("norm_add: %s" % (str(w.loader.norm_add)))
     logging.info("norm_mul: %s" % (str(w.loader.norm_mul)))
-    globals()["main"]()
+    main()

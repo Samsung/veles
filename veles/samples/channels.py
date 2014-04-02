@@ -743,7 +743,7 @@ class Workflow(workflows.OpenCLWorkflow):
         return super(Workflow, self).initialize()
 
 
-if __name__ == "__run__":
+def run(load, main):
     layers = []
     for s in root.layers:
         layers.append(int(s))
@@ -752,7 +752,7 @@ if __name__ == "__run__":
 
     w_neg = None
     try:
-        w, _ = globals()["load"](Workflow, layers=root.layers)
+        w, _ = load(Workflow, layers=root.layers)
         if root.export:
             tm = time.localtime()
             s = "%d.%02d.%02d_%02d.%02d.%02d" % (
@@ -796,7 +796,7 @@ if __name__ == "__run__":
     fout.close()
     logging.info("Done")
     logging.info("Will execute workflow now")
-    globals()["main"](global_alpha=root.global_alpha,
+    main(global_alpha=root.global_alpha,
                       global_lambda=root.global_lambda,
                       minibatch_maxsize=root.loader.minibatch_size,
                       w_neg=w_neg)

@@ -234,8 +234,8 @@ class Workflow(workflows.OpenCLWorkflow):
         return super(Workflow, self).initialize(device=device)
 
 
-if __name__ == "__run__":
-    globals()["load"](layers=root.layers_mnist_conv)
+def run(load, main):
+    load(layers=root.layers_mnist_conv)
     """
     W = []
     b = []
@@ -257,6 +257,6 @@ if __name__ == "__run__":
     #                     {"type": "conv", "n_kernels": 200, "kx": 3, "ky": 3},
     #                     {"type": "avg_pooling", "kx": 2, "ky": 2},  # 4
     #                     100, 10], device=device)
-    globals()["main"](global_alpha=root.global_alpha,
+    main(global_alpha=root.global_alpha,
                       global_lambda=root.global_lambda,
                       minibatch_maxsize=root.loader.minibatch_maxsize)

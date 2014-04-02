@@ -184,7 +184,7 @@ class Main(veles.logger.Logger):
 
     def _main(self, **kwargs):
         if not self.load_called:
-            self.critical("Call load() first in __run__")
+            self.critical("Call load() first in run()")
             raise RuntimeError()
         self.main_called = True
         self.workflow.initialize(device=self.device, **kwargs)
@@ -195,10 +195,9 @@ class Main(veles.logger.Logger):
         self.load_called = False
         self.main_called = False
         try:
-            runpy.run_path(fname_workflow,
-                           init_globals={"load": self._load,
-                                         "main": self._main},
-                           run_name="__run__")
+            sys.path.append(os.path.dirname(fname_workflow))
+            module = __import__(
+                os.path.splitext(os.path.basename(fname_workflow))[0])
         except FileNotFoundError:
             self.exception("Workflow does not exist: \"%s\"", fname_workflow)
             sys.exit(errno.ENOENT)
@@ -212,8 +211,10 @@ class Main(veles.logger.Logger):
             self.exception("Failed to load the workflow \"%s\"",
                            fname_workflow)
             sys.exit(Main.EXIT_FAILURE)
+
+        module.run(self._load, self._main)
         if not self.main_called:
-            self.warning("main() was not called by __run__ in %s",
+            self.warning("main() was not called by run() in %s",
                          fname_workflow)
 
     def run(self):

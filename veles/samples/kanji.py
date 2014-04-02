@@ -372,10 +372,10 @@ class Workflow(workflows.OpenCLWorkflow):
                 forward.bias.v[:] = bias[i][:]
 
 
-if __name__ == "__run__":
+def run(load, main):
     weights = None
     bias = None
-    w, snapshot = globals()["load"](Workflow, layers=root.layers)
+    w, snapshot = load(Workflow, layers=root.layers)
     if snapshot:
         if type(w) == tuple:
             logging.info("Will load weights")
@@ -389,7 +389,7 @@ if __name__ == "__run__":
                     forward.weights.v.min(), forward.weights.v.max(),
                     forward.bias.v.min(), forward.bias.v.max()))
             w.decision.just_snapshotted << True
-    globals()["main"](global_alpha=root.global_alpha,
+    main(global_alpha=root.global_alpha,
                       global_lambda=root.global_lambda,
                       minibatch_maxsize=root.loader.minibatch_maxsize,
                       weights=weights, bias=bias)
