@@ -184,35 +184,22 @@ class Unit(Distributable):
     _pool_lock_ = threading.Lock()
     timers = {}
 
-    @staticmethod
-    def _measure_time(fn, storage, key):
-        def wrapped():
-            sp = time.time()
-            fn()
-            fp = time.time()
-            if key in storage:
-                storage[key] += fp - sp
-
-        return wrapped
-
     def __init__(self, workflow, **kwargs):
         self.name = kwargs.get("name")
         self.view_group = kwargs.get("view_group")
-        super(Unit, self).__init__()
+        super(Unit, self).__init__(**kwargs)
         self._links_from = {}
         self._links_to = {}
         self._gate_block = Bool(False)
         self._gate_skip = Bool(False)
-        setattr(self, "run", Unit._measure_time(getattr(self, "run"),
-                                                Unit.timers, self))
-        self.should_unlock_pipeline = False
+        self.run = self._measure_time(self.run, Unit.timers)
         self._workflow = None
         self.workflow = workflow
 
     def init_unpickled(self):
         super(Unit, self).init_unpickled()
-        self.gate_lock_ = threading.Lock()
-        self.run_lock_ = threading.Lock()
+        self._gate_lock_ = threading.Lock()
+        self._run_lock_ = threading.Lock()
         self._is_initialized = False
         Unit.timers[self] = 0
 
@@ -293,6 +280,18 @@ class Unit(Distributable):
     def is_initialized(self):
         return self._is_initialized
 
+    @property
+    def is_master(self):
+        return self.workflow.is_master
+
+    @property
+    def is_slave(self):
+        return self.workflow.is_slave
+
+    @property
+    def is_standalone(self):
+        return self.workflow.is_standalone
+
     def __getstate__(self):
         state = super(Unit, self).__getstate__()
         if self.stripped_pickle:
@@ -317,7 +316,7 @@ class Unit(Distributable):
         # Optionally skip the execution
         if not self.gate_skip:
             # If previous run has not yet finished, discard notification.
-            if not self.run_lock_.acquire(False):
+            if not self._run_lock_.acquire(False):
                 return
             try:
                 if not self._is_initialized:
@@ -326,7 +325,7 @@ class Unit(Distributable):
                                  "initialization", self.name)
                 self.run()
             finally:
-                self.run_lock_.release()
+                self._run_lock_.release()
         self.run_dependent()
 
     def _initialize_dependent(self):
@@ -369,41 +368,41 @@ class Unit(Distributable):
             True: gate is open, can call run() or initialize().
             False: gate is closed, run() and initialize() shouldn't be called.
         """
-        self.gate_lock_.acquire()
+        self._gate_lock_.acquire()
         if not len(self.links_from):
-            self.gate_lock_.release()
+            self._gate_lock_.release()
             return True
         if src in self.links_from:
             self.links_from[src] = True
         if not all(self.links_from.values()):
-            self.gate_lock_.release()
+            self._gate_lock_.release()
             return False
         for src in self.links_from:  # reset activation flags
             self.links_from[src] = False
-        self.gate_lock_.release()
+        self._gate_lock_.release()
         return True
 
     def unlink_from_all(self):
         """Unlinks self from other units.
         """
-        self.gate_lock_.acquire()
+        self._gate_lock_.acquire()
         for src in self.links_from:
             del(src.links_to[self])
         for dst in self.links_to:
             del(dst.links_from[self])
         self.links_from.clear()
         self.links_to.clear()
-        self.gate_lock_.release()
+        self._gate_lock_.release()
 
     def unlink_from(self, src):
         """Unlinks self from src.
         """
-        self.gate_lock_.acquire()
+        self._gate_lock_.acquire()
         if self in src.links_to:
             del src.links_to[self]
         if src in self.links_from:
             del self.links_from[src]
-        self.gate_lock_.release()
+        self._gate_lock_.release()
 
     def nothing(self, *args, **kwargs):
         """Function that do nothing.
@@ -421,17 +420,15 @@ class Unit(Distributable):
             exc_info = kwargs["exc_info"]
             traceback.print_exception(exc_info[0], exc_info[1], exc_info[2])
 
-    @property
-    def is_master(self):
-        return self.workflow.is_master
+    def _measure_time(self, fn, storage):
+        def wrapped():
+            sp = time.time()
+            fn()
+            fp = time.time()
+            if self in storage:
+                storage[self] += fp - sp
 
-    @property
-    def is_slave(self):
-        return self.workflow.is_slave
-
-    @property
-    def is_standalone(self):
-        return self.workflow.is_standalone
+        return wrapped
 
 
 class OpenCLUnit(Unit):
