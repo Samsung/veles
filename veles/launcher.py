@@ -238,8 +238,6 @@ class Launcher(logger.Logger):
         initialize.
         """
         self._workflow = workflow
-        if not self.is_standalone:
-            workflow.thread_pool.register_on_shutdown(self.stop)
         if self.is_slave or self.matplotlib_backend == "":
             workflow.plotters_are_enabled = False
         if self.is_slave:
@@ -313,7 +311,7 @@ class Launcher(logger.Logger):
             self.tornado_ioloop_thread.start()
             self._notify_task.start(
                 root.common.web_status_notification_interval, now=False)
-        if self.is_standalone:
+        if not self.is_slave:
             threads.deferToThreadPool(reactor, self.workflow.thread_pool,
                                       self.workflow.run)
 

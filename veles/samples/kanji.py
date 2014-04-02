@@ -234,8 +234,6 @@ class Workflow(workflows.OpenCLWorkflow):
         self.decision.minibatch_offs = self.loader.minibatch_offs
         self.decision.minibatch_size = self.loader.minibatch_size
         self.decision.class_samples = self.loader.class_samples
-        self.decision.workflow = self
-        self.decision.should_unlock_pipeline = False
 
         # Add gradient descent units
         del self.gd[:]
@@ -349,7 +347,6 @@ class Workflow(workflows.OpenCLWorkflow):
         self.plt_hist.link_from(self.decision)
         self.plt_hist.mse = self.decision.epoch_samples_mse[2]
         self.plt_hist.gate_block = self.decision.epoch_ended
-        self.plt_hist.should_unlock_pipeline = True
 
     def initialize(self, global_alpha, global_lambda, minibatch_maxsize,
                    device, weights, bias):

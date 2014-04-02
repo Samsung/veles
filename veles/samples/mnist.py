@@ -197,8 +197,6 @@ class Workflow(workflows.OpenCLWorkflow):
         self.decision.minibatch_confusion_matrix = self.ev.confusion_matrix
         self.decision.minibatch_max_err_y_sum = self.ev.max_err_y_sum
         self.decision.class_samples = self.loader.class_samples
-        self.decision.workflow = self
-        self.decision.should_unlock_pipeline = False
 
         # Add gradient descent units
         del self.gd[:]
@@ -262,7 +260,6 @@ class Workflow(workflows.OpenCLWorkflow):
             self.plt_err_y[-1].gate_block = ~self.decision.epoch_ended
         self.plt_err_y[0].clear_plot = True
         self.plt_err_y[-1].redraw_plot = True
-        self.plt_err_y[-1].should_unlock_pipeline = True
 
 
 def run(load, main):

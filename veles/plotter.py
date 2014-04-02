@@ -37,8 +37,6 @@ class Plotter(Unit):
             self.stripped_pickle = True
             GraphicsServer().enqueue(self)
             self.stripped_pickle = False
-            if self.should_unlock_pipeline:
-                self.workflow.unlock_pipeline()
 
     def generate_data_for_master(self):
         return True

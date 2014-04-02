@@ -143,7 +143,7 @@ class VelesProtocol(StringLineReceiver):
 
     def connectionLost(self, reason):
         self.state.drop()
-        if self.host.workflow.is_finished():
+        if not self.host.workflow.is_running:
             del(self.nodes[self.id])
             del(self.factory.protocols[self._id])
             if len(self.nodes) == 0:

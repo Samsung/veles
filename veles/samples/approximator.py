@@ -211,7 +211,6 @@ class Workflow(workflows.OpenCLWorkflow):
         self.decision.minibatch_offs = self.loader.minibatch_offs
         self.decision.minibatch_size = self.loader.minibatch_size
         self.decision.class_samples = self.loader.class_samples
-        self.decision.workflow = self
 
         # Add gradient descent units
         self.gd = list(None for i in range(0, len(self.forward)))

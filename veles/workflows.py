@@ -53,13 +53,6 @@ class EndPoint(UttermostPoint):
     def run(self):
         self.workflow.on_workflow_finished()
 
-    def generate_data_for_master(self):
-        return True
-
-    def apply_data_from_slave(self, data, slave):
-        if not self.gate_block and not self.gate_skip:
-            self.run()
-
 
 class Workflow(Unit):
     """Base class for unit sets which are logically connected and belong to
@@ -71,18 +64,31 @@ class Workflow(Unit):
     """
     def __init__(self, workflow, **kwargs):
         self._plotters_are_enabled = not root.common.plotters_disabled
-        super(Workflow, self).__init__(workflow, **kwargs)
+        super(Workflow, self).__init__(workflow,
+                                       generate_data_for_slave_threadsafe=True,
+                                       apply_data_from_slave_threadsafe=False,
+                                       **kwargs)
         self.units = []
         self.start_point = StartPoint(self)
         self.end_point = EndPoint(self)
         self.thread_pool.register_on_shutdown(self.stop)
-        self._is_finished = False
 
     def init_unpickled(self):
         super(Workflow, self).init_unpickled()
-        self.master_pipeline_lock_ = threading.Lock()
-        self.master_data_lock_ = threading.Lock()
+        self._is_running = False
         del(Unit.timers[self])
+
+    @property
+    def is_running(self):
+        return self._is_running
+
+    @property
+    def plotters_are_enabled(self):
+        return self._plotters_are_enabled
+
+    @plotters_are_enabled.setter
+    def plotters_are_enabled(self, value):
+        self._plotters_are_enabled = value
 
     def initialize(self):
         super(Workflow, self).initialize()
@@ -92,14 +98,19 @@ class Workflow(Unit):
 
     def run(self):
         """Starts executing the workflow. This function is asynchronous,
-        parent's on_finished() method will be called.
+        parent's on_workflow_finished() method will be called.
         """
-        self._is_finished = False
-        self.start_point.run_dependent()
+        self._is_running = True
+        if not self.is_master:
+            self.start_point.run_dependent()
+
+    def stop(self):
+        self.on_workflow_finished()
 
     def on_workflow_finished(self):
-        self._is_finished = True
-        self.workflow.on_workflow_finished()
+        self._is_running = False
+        if not self.is_slave:
+            self.workflow.on_workflow_finished()
 
     def add_ref(self, unit):
         if unit not in self.units:
@@ -109,36 +120,6 @@ class Workflow(Unit):
         if unit in self.units:
             self.units.remove(unit)
 
-    def lock_pipeline(self):
-        """Locks master=>slave pipeline execution.
-        """
-        self.master_pipeline_lock_.acquire()
-
-    def unlock_pipeline(self):
-        """Unlocks master=>slave pipeline execution.
-        """
-        try:
-            self.master_pipeline_lock_.release()
-        except:
-            self.warning("Double unlock in unlock_pipeline")
-
-    def lock_data(self):
-        """Locks master-slave data update.
-
-        Read weights, apply gradients for example.
-        """
-        self.master_data_lock_.acquire()
-
-    def unlock_data(self):
-        """Unlocks master-slave data update.
-
-        Read weights, apply gradients for example.
-        """
-        try:
-            self.master_data_lock_.release()
-        except:
-            self.warning("Double unlock in unlock_data")
-
     def generate_data_for_master(self):
         data = []
         for unit in self.units:
@@ -146,11 +127,9 @@ class Workflow(Unit):
         return data
 
     def generate_data_for_slave(self, slave):
-        self.lock_pipeline()
-        if self.is_finished:
-            self.unlock_pipeline()
-            return None
         data = []
+        for unit in self.units:
+            unit.wait_for_data_for_slave()
         for unit in self.units:
             data.append(unit.generate_data_for_slave(slave))
         return data
@@ -178,22 +157,10 @@ class Workflow(Unit):
         """
         Produces a new job, when a slave asks for it. Run by a master.
         """
-        if self.is_finished:
+        if not self.is_running:
             return None
         data = self.generate_data_for_slave(slave)
         return pickle.dumps(data) if data is not None else None
-
-    @property
-    def is_finished(self):
-        return self._is_finished
-
-    @property
-    def plotters_are_enabled(self):
-        return self._plotters_are_enabled
-
-    @plotters_are_enabled.setter
-    def plotters_are_enabled(self, value):
-        self._plotters_are_enabled = value
 
     def do_job(self, data):
         """
@@ -217,9 +184,6 @@ class Workflow(Unit):
         Run by a slave.
         """
         return 0
-
-    def stop(self):
-        self.end_point.run()
 
     def generate_graph(self, filename=None, write_on_disk=True):
         g = pydot.Dot(graph_name="Workflow",
@@ -262,10 +226,11 @@ class Workflow(Unit):
             timers[uid] += value
         stats = sorted(timers.items(), key=lambda x: x[1], reverse=True)
         time_all = sum(timers.values())
-        self.info("Unit run time statistics top:")
-        for i in range(1, min(top_number, len(stats)) + 1):
-            self.info("%d.  %s (%d%%)", i, stats[i - 1][0],
-                      stats[i - 1][1] * 100 / time_all)
+        if time_all > 0:
+            self.info("Unit run time statistics top:")
+            for i in range(1, min(top_number, len(stats)) + 1):
+                self.info("%d.  %s (%d%%)", i, stats[i - 1][0],
+                          stats[i - 1][1] * 100 / time_all)
 
     unit_group_colors = {"PLOTTER": "gold",
                          "WORKER": "greenyellow",

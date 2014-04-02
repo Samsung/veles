@@ -121,7 +121,6 @@ class Workflow(workflows.OpenCLWorkflow):
         self.decision.minibatch_n_err = self.ev.n_err
         self.decision.minibatch_metrics = self.ev.metrics
         self.decision.class_samples = self.loader.class_samples
-        self.decision.workflow = self
 
         # Add Image Saver unit
         self.image_saver = image_saver.ImageSaver(self)

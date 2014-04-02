@@ -648,7 +648,6 @@ class Workflow(workflows.OpenCLWorkflow):
         self.decision.minibatch_n_err = self.ev.n_err
         # self.decision.minibatch_confusion_matrix = self.ev.confusion_matrix
         self.decision.class_samples = self.loader.class_samples
-        self.decision.workflow = self
 
         self.image_saver.gate_skip = ~self.decision.just_snapshotted
         self.image_saver.this_save_time = self.decision.snapshot_time

@@ -126,8 +126,6 @@ class Workflow(workflows.OpenCLWorkflow):
         self.decision.minibatch_confusion_matrix = self.ev.confusion_matrix
         self.decision.minibatch_max_err_y_sum = self.ev.max_err_y_sum
         self.decision.class_samples = self.loader.class_samples
-        self.decision.workflow = self
-        self.decision.should_unlock_pipeline = False
 
         # Add gradient descent units
         del self.gd[:]
@@ -219,7 +217,6 @@ class Workflow(workflows.OpenCLWorkflow):
             else self.forward[0].input)
         self.plt_mx.link_from(self.decision)
         self.plt_mx.gate_block = ~self.decision.epoch_ended
-        self.plt_mx.should_unlock_pipeline = True
 
     def initialize(self, global_alpha, global_lambda, minibatch_maxsize,
                    device):

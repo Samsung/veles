@@ -201,8 +201,6 @@ class Workflow(workflows.OpenCLWorkflow):
         self.decision.minibatch_n_err = self.ev.n_err
         self.decision.minibatch_confusion_matrix = self.ev.confusion_matrix
         self.decision.class_samples = self.loader.class_samples
-        self.decision.workflow = self
-        self.decision.should_unlock_pipeline = False
 
         self.image_saver.gate_skip = ~self.decision.just_snapshotted
         self.image_saver.snapshot_time = self.decision.snapshot_time
@@ -287,7 +285,6 @@ class Workflow(workflows.OpenCLWorkflow):
             else self.forward[0].input)
         self.plt_mx.link_from(self.decision)
         self.plt_mx.gate_block = ~self.decision.epoch_ended
-        self.plt_mx.should_unlock_pipeline = True
 
     def initialize(self, global_alpha, global_lambda, minibatch_maxsize,
                    device):
@@ -305,5 +302,5 @@ class Workflow(workflows.OpenCLWorkflow):
 def run(load, main):
     load(Workflow, layers=root.layers_cifar_conv)
     main(global_alpha=root.global_alpha,
-                      global_lambda=root.global_lambda,
-                      minibatch_maxsize=root.loader.minibatch_maxsize)
+         global_lambda=root.global_lambda,
+         minibatch_maxsize=root.loader.minibatch_maxsize)

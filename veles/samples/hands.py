@@ -122,7 +122,6 @@ class Workflow(workflows.OpenCLWorkflow):
         self.decision.minibatch_n_err = self.ev.n_err
         self.decision.minibatch_confusion_matrix = self.ev.confusion_matrix
         self.decision.class_samples = self.loader.class_samples
-        self.decision.workflow = self
 
         # Add gradient descent units
         del self.gd[:]
