@@ -167,10 +167,11 @@ class Main(veles.logger.Logger):
                 sys.exit(Main.EXIT_FAILURE)
 
     def _load_workflow(self, fname_snapshot):
+        fname_snapshot = fname_snapshot.strip()
         if os.path.exists(fname_snapshot):
             with open(fname_snapshot, "rb") as fin:
                 return pickle.load(fin)
-        if fname_snapshot.strip() == "":
+        if fname_snapshot != "":
             self.warning("Workflow snapshot %s does not exist",
                          fname_snapshot)
         return None
