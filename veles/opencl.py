@@ -198,9 +198,9 @@ class Device(units.Pickleable):
         """
         self.info(
             "Will test device performance.\n"
-            "Results of the test will be saved to",
+            "Results of the test will be saved to " +
             os.path.join(root.common.device_dir,
-                         "device_infos.%d.pickle, " % PYVER),
+                         "device_infos.%d.pickle, " % PYVER) +
             "so this is one time process usually.")
 
         min_dt = {}
