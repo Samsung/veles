@@ -202,9 +202,10 @@ class Main(veles.logger.Logger):
         self.load_called = False
         self.main_called = False
         try:
-            sys.path.append(os.path.dirname(fname_workflow))
+            sys.path = [os.path.dirname(fname_workflow)] + sys.path
             module = __import__(
                 os.path.splitext(os.path.basename(fname_workflow))[0])
+            sys.path = sys.path[1:]
         except FileNotFoundError:
             self.exception("Workflow does not exist: \"%s\"", fname_workflow)
             sys.exit(errno.ENOENT)
