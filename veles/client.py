@@ -208,8 +208,9 @@ class VelesProtocolFactory(ReconnectingClientFactory):
         return VelesProtocol(addr, self)
 
     def clientConnectionLost(self, connector, reason):
-        if self.state.current not in ['ERROR', 'END']:
-            self.state.reconnect()
+        if not self.state or self.state.current not in ['ERROR', 'END']:
+            if self.state:
+                self.state.reconnect()
             if not self.disconnect_time:
                 self.disconnect_time = time.time()
             if ((time.time() - self.disconnect_time) //
