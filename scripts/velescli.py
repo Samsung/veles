@@ -182,15 +182,19 @@ class Main(Logger):
 
     def _load(self, Workflow, **kwargs):
         self.load_called = True
-        self.launcher = Launcher()
-        self.device = None if self.launcher.is_master else Device()
-        self.workflow = self._load_workflow(self.snapshot_file_name)
-        snapshot = self.workflow is not None
-        if not snapshot:
-            self.workflow = Workflow(self.launcher, device=self.device,
-                                     **kwargs)
-        else:
-            self.workflow.workflow = self.launcher
+        try:
+            self.launcher = Launcher()
+            self.device = None if self.launcher.is_master else Device()
+            self.workflow = self._load_workflow(self.snapshot_file_name)
+            snapshot = self.workflow is not None
+            if not snapshot:
+                self.workflow = Workflow(self.launcher, device=self.device,
+                                         **kwargs)
+            else:
+                self.workflow.workflow = self.launcher
+        except:
+            self.critical("Failed to create the workflow")
+            sys.exit(Main.EXIT_FAILURE)
         return self.workflow, snapshot
 
     def _main(self, **kwargs):
@@ -198,8 +202,12 @@ class Main(Logger):
             self.critical("Call load() first in run()")
             raise RuntimeError()
         self.main_called = True
-        self.workflow.initialize(device=self.device, **kwargs)
-        self.launcher.run()
+        try:
+            self.workflow.initialize(device=self.device, **kwargs)
+            self.launcher.run()
+        except:
+            self.critical("Failed to run the workflow")
+            sys.exit(Main.EXIT_FAILURE)
 
     def _run_workflow(self, fname_workflow, fname_snapshot):
         self.snapshot_file_name = fname_snapshot
