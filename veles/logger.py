@@ -18,7 +18,7 @@ class Logger(object):
     """
 
     class ColorFormatter(logging.Formatter):
-        GREEN_MARKERS = ['ok', 'finished', 'completed', 'ready', 'done',
+        GREEN_MARKERS = [' ok', 'finished', 'completed', 'ready', 'done',
                          'running', 'successful']
         GREEN_RE = re.compile("|".join(GREEN_MARKERS))
 
@@ -61,30 +61,23 @@ class Logger(object):
         """
         return self._logger_
 
-    def redirect_logging_to_file(self, file_name, max_bytes=1024 * 1024,
-                                 backups=9):
+    @staticmethod
+    def redirect_all_logging_to_file(file_name, max_bytes=1024 * 1024,
+                                     backups=1):
         handler = logging.handlers.RotatingFileHandler(
             filename=file_name, maxBytes=max_bytes, backupCount=backups
         )
         formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: "
                                       "%(message)s", "%Y-%m-%d %H:%M:%S")
         handler.setFormatter(formatter)
-        self.log.info("Redirecting output to %s", file_name)
-        self.log.propagate = False
-        self.log.addHandler(handler)
-        self.info("Redirected output")
-
-    @staticmethod
-    def duplicate_all_logging_to_file(file_name, max_bytes=1024 * 1024):
-        handler = logging.handlers.RotatingFileHandler(
-            filename=file_name, maxBytes=max_bytes
-        )
-        formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: "
-                                      "%(message)s", "%Y-%m-%d %H:%M:%S")
-        handler.setFormatter(formatter)
         logging.info("Saving logs to %s", file_name)
-        logging.getLogger().addHandler(handler)
-        logging.info("Continuing")
+        if not sys.stdout.isatty():
+            logging.getLogger().handlers[0] = handler
+            sys.stdout = open(file_name, 'w')
+            sys.stderr = sys.stdout
+            logging.info("Continuing to log here")
+        else:
+            logging.getLogger().addFilter(handler)
 
     @staticmethod
     def duplicate_all_logging_to_mongo(addr, docid):

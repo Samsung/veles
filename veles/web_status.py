@@ -60,8 +60,6 @@ class UpdateHandler(web.RequestHandler):
 class WebStatusServer(logger.Logger):
     def __init__(self, cmd_queue_in, cmd_queue_out):
         super(WebStatusServer, self).__init__()
-        if not debug_mode:
-            self.redirect_logging_to_file(root.common.web_status_log_file)
         self.application = web.Application([
             ("/service", ServiceHandler, {"server": self}),
             ("/" + root.common.web_status_update,
@@ -132,6 +130,9 @@ class WebStatus(logger.Logger):
 
     @staticmethod
     def start_web_server(cmd_queue_in, cmd_queue_out):
+        if not debug_mode:
+            logger.Logger.redirect_all_logging_to_file(
+                root.common.web_status_log_file, backups=9)
         try:
             WebStatusServer(cmd_queue_in, cmd_queue_out).run()
         except:
@@ -139,8 +140,6 @@ class WebStatus(logger.Logger):
 
     def __init__(self):
         super(WebStatus, self).__init__()
-        if not debug_mode:
-            self.redirect_logging_to_file(root.common.web_status_log_file)
         self.exiting = False
         self.masters = {}
         self.cmd_queue_in = mp.Queue()
@@ -199,14 +198,18 @@ class WebStatus(logger.Logger):
             except:
                 self.exception()
 
+
+def main():
+    ws = WebStatus()
+    ws.run()
+
 if __name__ == "__main__":
-    logger.Logger.setup(level=logging.DEBUG)
     if not debug_mode:
-        logger.Logger(logging.getLogger('root')).redirect_logging_to_file(
-            root.common.web_status_log_file)
         with daemon.DaemonContext():
-            ws = WebStatus()
-            ws.run()
+            logger.Logger.setup(level=logging.INFO)
+            logger.Logger.redirect_all_logging_to_file(
+                root.common.web_status_log_file, backups=9)
+            main()
     else:
-        ws = WebStatus()
-        ws.run()
+        logger.Logger.setup(level=logging.DEBUG)
+        main()

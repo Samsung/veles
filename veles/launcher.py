@@ -83,7 +83,7 @@ class Launcher(logger.Logger):
             self.info("Daemonized")
             self._daemon_context.open()
         if self.args.log_file != "":
-            logger.Logger.duplicate_all_logging_to_file(self.args.log_file)
+            logger.Logger.redirect_all_logging_to_file(self.args.log_file)
 
         self._id = str(uuid.uuid4())
         self._log_id = self.args.log_id or self.id
