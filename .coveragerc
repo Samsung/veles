@@ -1,0 +1,16 @@
+[report]
+omit = */veles/external/hog.py
+       */veles/external/__init__.py
+       */veles/external/prettytable.py
+       */veles/external/pydot.py
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if self.debug:
+    if settings.DEBUG
+    raise AssertionError
+    raise NotImplementedError
+    if 0:
+    if __name__ == .__main__.:
+
+ignore_errors = True
