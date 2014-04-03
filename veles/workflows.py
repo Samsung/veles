@@ -243,8 +243,14 @@ class Workflow(Unit):
 
     def checksum(self):
         sha1 = hashlib.sha1()
-        with open(sys.argv[0]) as f:
-            sha1.update(f.read().encode())
+        model_name = sys.modules[self.__module__].__file__
+        try:
+            with open(model_name, "r") as f:
+                sha1.update(f.read().encode())
+        except:
+            self.exception("Failed to calculate checksum of %s",
+                           model_name)
+            raise
         return sha1.hexdigest()
 
 
