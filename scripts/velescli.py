@@ -20,8 +20,9 @@ import errno
 import logging
 import numpy
 import os
-import pickle
+from six.moves import cPickle as pickle
 import runpy
+import six
 import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
@@ -88,8 +89,11 @@ class Main(Logger):
         parser.add_argument("--debug", type=str, default="",
                             help="set DEBUG logging level for these names "
                                  "(separated by commas)")
+        parser.add_argument("--debug-pickle", default=False,
+                            help="turn on pickle diagnostics",
+                            action='store_true')
         parser.add_argument("-r", "--random-seed", type=str,
-                            default="/dev/random:16",
+                            default="/dev/urandom:16",
                             help="set random seed, e.g. "
                                  "veles/samples/seed:1024,:1024 or "
                                  "/dev/urandom:16:uint32")
@@ -161,6 +165,8 @@ class Main(Logger):
             rnd_name = "default"
             if index > 1:
                 rnd_name += str(index)
+            self.debug("Seeding with %d samples of type %s from %s",
+                       count, str(dtype), fname)
             try:
                 rnd.__dict__[rnd_name].seed(numpy.fromfile(fname, dtype=dtype,
                                                            count=count),
@@ -193,7 +199,7 @@ class Main(Logger):
             else:
                 self.workflow.workflow = self.launcher
         except:
-            self.critical("Failed to create the workflow")
+            self.exception("Failed to create the workflow")
             sys.exit(Main.EXIT_FAILURE)
         return self.workflow, snapshot
 
@@ -206,7 +212,7 @@ class Main(Logger):
             self.workflow.initialize(device=self.device, **kwargs)
             self.launcher.run()
         except:
-            self.critical("Failed to run the workflow")
+            self.exception("Failed to run the workflow")
             sys.exit(Main.EXIT_FAILURE)
 
     def _run_workflow(self, fname_workflow, fname_snapshot):
@@ -244,6 +250,31 @@ class Main(Logger):
             except:
                 print(Main.LOGO.replace("©", "(c)"))
 
+    def _set_pickle_debug(self, args):
+        if not args.debug_pickle:
+            return
+        if not six.PY3:
+            self.warning("Pickle debugging is only available for Python 3.x")
+            return
+
+        def dump(obj, file, protocol=None, *, fix_imports=True):
+            pickle._Pickler(file, protocol, fix_imports=fix_imports).dump(obj)
+
+        pickle.dump = dump
+        orig_save = pickle._Pickler.save
+
+        def save(self, obj):
+            try:
+                orig_save(self, obj)
+            except:
+                import traceback
+                import pdb
+                print("\033[1;31mPickle failure\033[0m")
+                traceback.print_exc()
+                pdb.set_trace()
+
+        pickle._Pickler.save = save
+
     def run(self):
         """VELES Machine Learning Platform Command Line Interface
         """
@@ -258,6 +289,7 @@ class Main(Logger):
         for name in [n for n in args.debug.split(',') if n.split()]:
             logging.getLogger(name).setLevel(logging.DEBUG)
         self._seed_random(args.random_seed)
+        self._set_pickle_debug(args)
 
         self._apply_config(os.path.abspath(fname_config), args.config_list)
         self._run_workflow(os.path.abspath(args.workflow), args.snapshot)
