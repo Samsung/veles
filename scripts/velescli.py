@@ -35,18 +35,18 @@ import veles.rnd as rnd
 class Main(veles.logger.Logger):
     EXIT_SUCCESS = 0
     EXIT_FAILURE = 1
-    LOGO = r" _   _ _____ _     _____ _____  " "\n" \
-           r"| | | |  ___| |   |  ___/  ___| " + \
-           (" Version %s" % veles.__version__) + \
-           (" %s\n" % formatdate(veles.__date__, True)) + \
-           r"| | | | |__ | |   | |__ \ `--.  " + \
-           (" Copyright %s\n" % veles.__copyright__) + \
-           r"| | | |  __|| |   |  __| `--. \ " \
-           " All rights reserved. Any unauthorized use of\n" \
-           r"\ \_/ / |___| |___| |___/\__/ / " \
-           " this software is strictly prohibited and is\n" \
-           r" \___/\____/\_____|____/\____/  " \
-           " a subject of your country's laws.\n"
+    LOGO_PLAIN = r" _   _ _____ _     _____ _____  " "\n" \
+                 r"| | | |  ___| |   |  ___/  ___| " + \
+                 (" Version %s" % veles.__version__) + \
+                 (" %s\n" % formatdate(veles.__date__, True)) + \
+                 r"| | | | |__ | |   | |__ \ `--.  " + \
+                 (" Copyright %s\n" % veles.__copyright__) + \
+                 r"| | | |  __|| |   |  __| `--. \ " \
+                 " All rights reserved. Any unauthorized use of\n" \
+                 r"\ \_/ / |___| |___| |___/\__/ / " \
+                 " this software is strictly prohibited and is\n" \
+                 r" \___/\____/\_____|____/\____/  " \
+                 " a subject of your country's laws.\n"
 
     LOGO_COLORED = "\033" r"[1;32m _   _ _____ _     _____ _____  " \
                    "\033[0m\n" \
@@ -66,14 +66,14 @@ class Main(veles.logger.Logger):
                    "\033" r"[1;32m \___/\____/\_____|____/\____/  " "\033[0m" \
                    "\033[0;37m a subject of your country's laws.\033[0m\n"
 
-    LOGO_OPT = LOGO_COLORED if sys.stdout.isatty() else LOGO
+    LOGO = LOGO_COLORED if sys.stdout.isatty() else LOGO_PLAIN
 
     LOG_LEVEL_MAP = {"debug": logging.DEBUG, "info": logging.INFO,
                      "warning": logging.WARNING, "error": logging.ERROR}
 
     def _init_parser(self):
         parser = argparse.ArgumentParser(
-            description=Main.LOGO_OPT,
+            description=Main.LOGO,
             formatter_class=argparse.RawDescriptionHelpFormatter)
         parser = Launcher.init_parser(parser=parser)
         parser = Device.init_parser(parser=parser)
@@ -235,7 +235,7 @@ class Main(veles.logger.Logger):
             fname_config = "%s_config%s" % os.path.splitext(args.workflow)
 
         if not args.no_logo:
-            print(Main.LOGO_OPT)
+            print(Main.LOGO)
         logging.basicConfig(level=Main.LOG_LEVEL_MAP[args.verbose])
         self._seed_random(args.random_seed)
 
