@@ -85,6 +85,9 @@ class Main(Logger):
         parser.add_argument("-v", "--verbose", type=str, default="info",
                             choices=Main.LOG_LEVEL_MAP.keys(),
                             help="set verbosity level [default: %(default)s]")
+        parser.add_argument("--debug", type=str, default="",
+                            help="set DEBUG logging level for these names "
+                                 "(separated by commas)")
         parser.add_argument("-r", "--random-seed", type=str,
                             default="/dev/random:16",
                             help="set random seed, e.g. "
@@ -238,6 +241,8 @@ class Main(Logger):
         if not args.no_logo:
             print(Main.LOGO)
         Logger.setup(level=Main.LOG_LEVEL_MAP[args.verbose])
+        for name in [n for n in args.debug.split(',') if n.split()]:
+            logging.getLogger(name).setLevel(logging.DEBUG)
         self._seed_random(args.random_seed)
 
         self._apply_config(os.path.abspath(fname_config), args.config_list)
