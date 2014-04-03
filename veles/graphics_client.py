@@ -217,7 +217,7 @@ class GraphicsClient(Logger):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    Logger.setup(level=logging.INFO)
     backend, endpoint = sys.argv[1:3]
     client = GraphicsClient(backend, endpoint,
                             webagg_fifo=sys.argv[3]

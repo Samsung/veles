@@ -200,7 +200,7 @@ class WebStatus(logger.Logger):
                 self.exception()
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logger.Logger.setup(level=logging.DEBUG)
     if not debug_mode:
         logger.Logger(logging.getLogger('root')).redirect_logging_to_file(
             root.common.web_status_log_file)

@@ -8,12 +8,47 @@ Created on Jul 12, 2013
 from copy import copy
 import logging.handlers
 from pymongo import MongoClient
+import re
+import sys
 
 
 class Logger(object):
     """
     Provides logging facilities to derived classes.
     """
+
+    class ColorFormatter(logging.Formatter):
+        GREEN_MARKERS = ['ok', 'finished', 'completed', 'ready', 'done',
+                         'running']
+        GREEN_RE = re.compile("|".join(GREEN_MARKERS))
+
+        def formatMessage(self, record):
+            level_color = "0"
+            text_color = "0"
+            if record.levelno <= logging.DEBUG:
+                level_color = "1;37"
+                text_color = "0;37"
+            elif record.levelno <= logging.INFO:
+                level_color = "1;36"
+                lmsg = record.message.lower()
+                if Logger.ColorFormatter.GREEN_RE.search(lmsg):
+                    text_color = "1;32"
+            elif record.levelno <= logging.WARNING:
+                level_color = "1;33"
+            elif record.levelno <= logging.CRITICAL:
+                level_color = "1;31"
+            fmt = "\033[" + level_color + \
+                "m%(levelname)s\033[0m:%(name)s:\033[" + text_color + \
+                "m%(message)s\033[0m"
+            return fmt % record.__dict__
+
+    @staticmethod
+    def setup(level):
+        logging.basicConfig(level=level)
+        if sys.stdout.isatty():
+            root = logging.getLogger()
+            handler = root.handlers[0]
+            handler.setFormatter(Logger.ColorFormatter())
 
     def __init__(self, **kwargs):
         super(Logger, self).__init__()

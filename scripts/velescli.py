@@ -25,14 +25,15 @@ import runpy
 import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+import veles
 from veles.config import root
-import veles.logger
+from veles.logger import Logger
 from veles.launcher import Launcher
 from veles.opencl import Device
 import veles.rnd as rnd
 
 
-class Main(veles.logger.Logger):
+class Main(Logger):
     EXIT_SUCCESS = 0
     EXIT_FAILURE = 1
     LOGO_PLAIN = r" _   _ _____ _     _____ _____  " "\n" \
@@ -236,7 +237,7 @@ class Main(veles.logger.Logger):
 
         if not args.no_logo:
             print(Main.LOGO)
-        logging.basicConfig(level=Main.LOG_LEVEL_MAP[args.verbose])
+        Logger.setup(level=Main.LOG_LEVEL_MAP[args.verbose])
         self._seed_random(args.random_seed)
 
         self._apply_config(os.path.abspath(fname_config), args.config_list)
