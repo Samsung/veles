@@ -237,6 +237,13 @@ class Main(Logger):
             self.warning("main() was not called by run() in %s",
                          fname_workflow)
 
+    def _print_logo(self, args):
+        if not args.no_logo:
+            try:
+                print(Main.LOGO)
+            except:
+                print(Main.LOGO.replace("©", "(c)"))
+
     def run(self):
         """VELES Machine Learning Platform Command Line Interface
         """
@@ -246,8 +253,7 @@ class Main(Logger):
         if fname_config == "-":
             fname_config = "%s_config%s" % os.path.splitext(args.workflow)
 
-        if not args.no_logo:
-            print(Main.LOGO)
+        self._print_logo(args)
         Logger.setup(level=Main.LOG_LEVEL_MAP[args.verbose])
         for name in [n for n in args.debug.split(',') if n.split()]:
             logging.getLogger(name).setLevel(logging.DEBUG)
