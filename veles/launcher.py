@@ -414,9 +414,9 @@ class Launcher(logger.Logger):
             progs = []
             for _ in range(0, multiplier):
                 for d in range(ocldevmin, ocldevmax + 1):
-                    progs.append("%s %s -d %d:%d" % (
-                                     os.path.abspath(sys.argv[0]),
-                                     slave_args, oclpnum, d))
+                    progs.append("%s %s -d %d:%d" %
+                                 (os.path.abspath(sys.argv[0]),
+                                  slave_args, oclpnum, d))
             self._launch_remote_progs(host, *progs)
 
     def _launch_remote_progs(self, host, *progs):
