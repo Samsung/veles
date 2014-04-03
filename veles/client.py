@@ -5,7 +5,6 @@ Created on Jan 22, 2014
 """
 
 
-from daemon import daemonize
 import fysom
 import json
 import six
@@ -15,7 +14,6 @@ from twisted.internet.protocol import ReconnectingClientFactory
 from txzmq import ZmqConnection, ZmqEndpoint
 import zmq
 
-from veles.logger import Logger
 from veles.network_common import NetworkAgent, StringLineReceiver
 
 
@@ -100,29 +98,29 @@ class VelesProtocol(StringLineReceiver):
             return
 
     def connectionLost(self, reason):
-        self.factory.host.debug("Connection was lost.")
+        self.factory.host.debug("Connection was lost")
 
     def lineReceived(self, line):
         self.factory.host.debug("lineReceived %s:  %s", self.id, line)
         msg = json.loads(line.decode("utf-8"))
         if not isinstance(msg, dict):
             self.factory.host.error("Could not parse the received line, "
-                                    "dropping it.")
+                                    "dropping it")
             return
         error = msg.get("error")
         if error:
-            self.disconnect("Server returned error: '%s'.", error)
+            self.disconnect("Server returned error: '%s'", error)
             return
         if self.state.current == "WAIT":
             cid = msg.get("id")
             if not cid:
-                self.factory.host.error("No ID was received in WAIT state.")
+                self.factory.host.error("No ID was received in WAIT state")
                 self.request_id()
                 return
             self.factory.id = cid
             endpoint = msg.get("endpoint")
             if not endpoint:
-                self.factory.host.error("No endpoint was received.")
+                self.factory.host.error("No endpoint was received")
                 self.request_id()
                 return
             self.zmq_connection = ZmqDealer(
@@ -131,11 +129,11 @@ class VelesProtocol(StringLineReceiver):
                                    endpoint)
             self.request_job()
             return
-        self.disconnect("Invalid state %s.", self.state.current)
+        self.disconnect("Invalid state %s", self.state.current)
 
     def job_received(self, job):
         if job == bytes(False):
-            self.factory.host.info("Job was refused.")
+            self.factory.host.info("Job was refused")
             self.state.refuse_job()
             self.factory.host.launcher.stop()
             return
@@ -152,7 +150,7 @@ class VelesProtocol(StringLineReceiver):
             self.zmq_connection.request("update", update)
             self.state.wait_update_notification()
             return
-        self.factory.host.error("Invalid state %s.", self.state.current)
+        self.factory.host.error("Invalid state %s", self.state.current)
 
     def update_result_received(self, result):
         self.request_job()
@@ -209,21 +207,24 @@ class VelesProtocolFactory(ReconnectingClientFactory):
 
     def clientConnectionLost(self, connector, reason):
         if not self.state or self.state.current not in ['ERROR', 'END']:
+            lost_state = "<None>"
             if self.state:
+                lost_state = self.state.current
                 self.state.reconnect()
             if not self.disconnect_time:
                 self.disconnect_time = time.time()
             if ((time.time() - self.disconnect_time) //
                     VelesProtocolFactory.RECONNECTION_INTERVAL >
                     VelesProtocolFactory.RECONNECTION_ATTEMPTS):
-                self.host.error("Max reconnection attempts reached, exiting.")
+                self.host.error("Max reconnection attempts reached, exiting")
                 self.host.launcher.stop()
                 return
-            self.host.warning("Disconnected, trying to reconnect...")
+            self.host.warning("Disconnected in %s state, trying to "
+                              "reconnect...", lost_state)
             reactor.callLater(VelesProtocolFactory.RECONNECTION_INTERVAL,
                               connector.connect)
         else:
-            self.host.info("Disconnected.")
+            self.host.info("Disconnected")
             if self.state.current == 'ERROR':
                 self.host.launcher.stop()
 

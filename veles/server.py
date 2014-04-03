@@ -161,18 +161,17 @@ class VelesProtocol(StringLineReceiver):
         msg = json.loads(line.decode("utf-8"))
         if not isinstance(msg, dict):
             self.host.error("%s Could not parse the received line, dropping "
-                            "it.", self.id)
+                            "it", self.id)
             return
         if self.state.current == "WAIT":
             mysha = self.host.workflow.checksum()
             your_sha = msg.get("checksum")
             if not your_sha:
-                self.host.error("Did not receive the workflow checksum.")
-                self.sendError("Workflow checksum is missing.")
+                self.host.error("Did not receive the workflow checksum")
+                self.sendError("Workflow checksum is missing")
                 return
             if mysha != your_sha:
-                self.host.error("Workflow checksum mismatch.")
-                self.sendError("Workflow checksum mismatched.")
+                self.sendError("Workflow checksum mismatched")
                 return
             must_reply = False
             msgid = msg.get("id")
@@ -182,7 +181,7 @@ class VelesProtocol(StringLineReceiver):
             else:
                 self.id = msgid
                 if not self.nodes.get(self.id):
-                    self.host.warning("Did not recognize the received ID %s.",
+                    self.host.warning("Did not recognize the received ID %s",
                                       self.id)
                     must_reply = True
             if must_reply:
@@ -201,37 +200,37 @@ class VelesProtocol(StringLineReceiver):
             if not cmd:
                 self.host.error("%s Client sent something which is not "
                                 "a command: %s. Sending back the error "
-                                "message.", self.id, line)
-                self.sendError("No command found.")
+                                "message", self.id, line)
+                self.sendError("No command found")
                 return
             self.host.error("%s Unsupported %s command. Sending back the "
-                            "error message.", self.id, cmd)
-            self.sendError("Unsupported command.")
+                            "error message", self.id, cmd)
+            self.sendError("Unsupported command")
         else:
-            self.host.error("%s Invalid state %s.",
+            self.host.error("%s Invalid state %s",
                             self.id, self.state.current)
             self.sendError("You sent me something which is not allowed in my "
-                           "current state %s." % self.state.current)
+                           "current state %s" % self.state.current)
 
     def extractClientInfo(self, msg):
         power = msg.get("power")
         mid = msg.get("mid")
         pid = msg.get("pid")
         if not power:
-            self.sendError("I need your computing power.")
+            self.sendError("I need your computing power")
             raise Exception("Newly connected client did not send "
                             "it's computing power value, sending back "
-                            "the error message.")
+                            "the error message")
         if not mid:
-            self.sendError("I need your machine id.")
+            self.sendError("I need your machine id")
             raise Exception("Newly connected client did not send "
                             "it's machine id, sending back the error "
-                            "message.")
+                            "message")
         if not pid:
-            self.sendError("I need your process id.")
+            self.sendError("I need your process id")
             raise Exception("Newly connected client did not send "
                             "it's process id, sending back the error "
-                            "message.")
+                            "message")
         self.nodes[self.id] = {'power': power, 'mid': mid, 'pid': pid}
         reactor.callLater(0, self.resolveAddr, self.addr)
         return power, mid, pid
@@ -318,16 +317,20 @@ class Server(NetworkAgent):
         reactor.listenTCP(self.port, self.factory, interface=self.address)
         self.info("Accepting new connections on %s:%d",
                   self.address, self.port)
-        self.zmq_connection = ZmqRouter(
-            self, ZmqEndpoint("bind", "inproc://veles"),
-            ZmqEndpoint("bind", "rndipc://veles-ipc-:"),
-            ZmqEndpoint("bind", "rndtcp://*:1024:65535:1"))
+        try:
+            self.zmq_connection = ZmqRouter(
+                self, ZmqEndpoint("bind", "inproc://veles"),
+                ZmqEndpoint("bind", "rndipc://veles-ipc-:"),
+                ZmqEndpoint("bind", "rndtcp://*:1024:65535:1"))
+        except zmq.error.ZMQBindError:
+            self.exception("Could not setup ZeroMQ socket")
+            raise
         self.zmq_ipc_fn, self.zmq_tcp_port = self.zmq_connection.rnd_vals
         self.zmq_endpoints = {"inproc": "inproc://veles",
                               "ipc": "ipc://%s" % self.zmq_ipc_fn,
                               "tcp": "tcp://*:%d" % self.zmq_tcp_port}
         self.info("ZeroMQ endpoints: %s",
-                  ' '.join(self.zmq_endpoints.values()))
+                  ' '.join(sorted(self.zmq_endpoints.values())))
 
     def endpoint(self, mid, pid, hip):
         if self.mid == mid:
