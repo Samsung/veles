@@ -101,6 +101,9 @@ class Launcher(logger.Logger):
         self._running = False
         self._start_time = None
 
+    def __getstate__(self):
+        return {}
+
     @staticmethod
     def init_parser(**kwargs):
         """
