@@ -353,7 +353,7 @@ class Launcher(logger.Logger):
         sock.close()
         if result != 0:
             self.info("Launching the web status server")
-            self._launch_remote_program(
+            self._launch_remote_progs(
                 root.common.web_status_host,
                 "PYTHONPATH=%s %s" %
                 (os.path.dirname(
@@ -408,20 +408,25 @@ class Launcher(logger.Logger):
                 ocldevmax = int(ocldevarr[1])
             else:
                 ocldevmax = ocldevmin
+            progs = []
             for _ in range(0, multiplier):
                 for d in range(ocldevmin, ocldevmax + 1):
-                    self._launch_remote_program(
-                        host, "%s %s -d %d:%d" % (os.path.abspath(sys.argv[0]),
-                                                  slave_args,
-                                                  oclpnum, d))
+                    progs.append("%s %s -d %d:%d" % (
+                                     os.path.abspath(sys.argv[0]),
+                                     slave_args, oclpnum, d))
+            self._launch_remote_progs(host, *progs)
 
-    def _launch_remote_program(self, host, prog):
-        self.info("Launching \"%s\" on %s", prog, host)
+    def _launch_remote_progs(self, host, *progs):
+        self.info("Launching %d instance(s) on %s", len(progs), host)
+        cwd = os.getcwd()
+        self.debug("cwd: %s", os.getcwd())
         client = paramiko.SSHClient()
         try:
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(host, look_for_keys=True, timeout=0.1)
-            client.exec_command("cd '%s' && %s" % (os.getcwd(), prog))
+            for prog in progs:
+                self.debug("Launching %s", prog)
+                client.exec_command("cd '%s' && %s" % (cwd, prog))
         except:
             self.exception()
         finally:
