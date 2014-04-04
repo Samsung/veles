@@ -12,7 +12,6 @@
 ///          As well as Matricies:
 ///          #define A err_y
 ///          #define B h
-///          #define C weights
 ///
 ///          And column order if neccessary (otherwise row order is assumed):
 ///          #define A_COL
