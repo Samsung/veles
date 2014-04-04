@@ -290,22 +290,9 @@ class OpenCLWorkflow(OpenCLUnit, Workflow):
         self.power = None
 
     def initialize(self, device=None):
-        super(OpenCLWorkflow, self).initialize()
         if device is not None:
             self.device = device
-        for obj in self.forward:
-            if obj is not None:
-                obj.device = self.device
-        if self.ev is not None:
-            if type(self.ev) == list:
-                for ev in self.ev:
-                    if isinstance(ev, OpenCLUnit):
-                        ev.device = self.device
-            elif isinstance(self.ev, OpenCLUnit):
-                self.ev.device = self.device
-        for obj in self.gd:
-            if obj is not None:
-                obj.device = self.device
+        super(OpenCLWorkflow, self).initialize()
 
     def export(self, filename):
         """Exports workflow for use on DTV.
@@ -394,9 +381,8 @@ class OpenCLWorkflow(OpenCLUnit, Workflow):
         """
         array_to_save = numpy.float32(numpy_vector.ravel())
 
-        f = open("%s/%s" % (path, numpy_vector_name), "wb")
-        f.write(array_to_save)
-        f.close()
+        with open("%s/%s" % (path, numpy_vector_name), "wb") as f:
+            f.write(array_to_save)
         return numpy_vector_name
 
     def get_computing_power(self):

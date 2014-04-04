@@ -475,6 +475,13 @@ class OpenCLUnit(Unit):
         """
         return self.cpu_run()
 
+    def initialize(self, device=None):
+        super(OpenCLUnit, self).initialize()
+        if device is not None:
+            self.device = device
+        elif hasattr(self.workflow, "device"):
+            self.device = self.workflow.device
+
     def run(self):
         t1 = time.time()
         if self.device:
