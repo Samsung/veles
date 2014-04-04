@@ -8,7 +8,6 @@ Units in data stream neural network_common model.
 from copy import copy
 import threading
 import time
-import traceback
 
 from veles.config import root
 import veles.error as error
