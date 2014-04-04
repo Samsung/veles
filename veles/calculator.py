@@ -30,7 +30,7 @@ class Calculator(Unit):
         for key, value in self.__dict__.items():
             if key in Unit.__dict__:
                 continue
-            if isinstance(value, tuple):
+            if Unit.is_reference(value):
                 args[key] = value
                 setattr(self, key, getattr(*value))
         self.calculate()

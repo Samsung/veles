@@ -8,6 +8,7 @@ Created on Apr 4, 2014
 import unittest
 
 from veles.calculator import Calculator
+from veles.units import Unit
 from veles.tests.dummy_workflow import DummyWorkflow
 
 

@@ -384,6 +384,11 @@ class Unit(Distributable):
         """
         pass
 
+    @staticmethod
+    def is_reference(obj):
+        return isinstance(obj, tuple) and len(obj) == 2 and \
+            isinstance(obj[1], str)
+
     def _check_gate_and_run(self, src):
         """Check gate state and run if it is open.
         """
