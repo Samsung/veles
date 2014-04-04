@@ -92,9 +92,7 @@ class Workflow(Unit):
 
     def initialize(self):
         super(Workflow, self).initialize()
-        if not self.is_slave:
-            self.generate_graph()
-        return self.start_point._initialize_dependent()
+        return self.start_point.initialize_dependent()
 
     def run(self):
         """Starts executing the workflow. This function is asynchronous,

@@ -203,6 +203,14 @@ class Unit(Distributable):
         self._is_initialized = False
         Unit.timers[self] = 0
 
+    def __getstate__(self):
+        state = super(Unit, self).__getstate__()
+        if self.stripped_pickle:
+            state["_links_from"] = {}
+            state["_links_to"] = {}
+            state["_workflow"] = None
+        return state
+
     @property
     def links_from(self):
         return self._links_from
@@ -292,19 +300,89 @@ class Unit(Distributable):
     def is_standalone(self):
         return self.workflow.is_standalone
 
-    def __getstate__(self):
-        state = super(Unit, self).__getstate__()
-        if self.stripped_pickle:
-            state["_links_from"] = {}
-            state["_links_to"] = {}
-            state["_workflow"] = None
-        return state
+    def initialize(self):
+        """Allocate buffers here.
+
+        initialize() invoked in the same order as run(), including
+        open_gate() and effects of gate_block and gate_skip.
+
+        If initialize() succeeds, self._is_initialized flag will be
+        automatically set.
+        """
+        self._is_initialized = True
+
+    def run(self):
+        """Do the job here.
+        """
+        pass
+
+    def initialize_dependent(self):
+        """Invokes initialize() on dependent units on the same thread.
+        """
+        for dst in self.links_to.keys():
+            if dst._is_initialized:
+                continue
+            if not dst.open_gate(self):
+                continue
+            dst.initialize()
+            dst.initialize_dependent()
+
+    def run_dependent(self):
+        """Invokes run() on dependent units on different threads.
+        """
+        for dst in self.links_to.keys():
+            self.thread_pool.callInThread(dst._check_gate_and_run, self)
+
+    def open_gate(self, src):
+        """Called before run() or initialize().
+
+        Returns:
+            True: gate is open, can call run() or initialize().
+            False: gate is closed, run() and initialize() shouldn't be called.
+        """
+        with self._gate_lock_:
+            if not len(self.links_from):
+                return True
+            if src in self.links_from:
+                self.links_from[src] = True
+            if not all(self.links_from.values()):
+                return False
+            for src in self.links_from:  # reset activation flags
+                self.links_from[src] = False
+        return True
 
     def link_from(self, src):
         """Adds notification link.
         """
         self.links_from[src] = False
         src.links_to[self] = False
+
+    def unlink_from(self, src):
+        """Unlinks self from src.
+        """
+        with self._gate_lock_:
+            if self in src.links_to:
+                del src.links_to[self]
+            if src in self.links_from:
+                del self.links_from[src]
+
+    def unlink_from_all(self):
+        """Unlinks self from other units.
+        """
+        with self._gate_lock_:
+            for src in self.links_from:
+                del(src.links_to[self])
+            for dst in self.links_to:
+                del(dst.links_from[self])
+            self.links_from.clear()
+            self.links_to.clear()
+
+    def nothing(self, *args, **kwargs):
+        """Function that do nothing.
+
+        It may be used to overload some methods to do nothing.
+        """
+        pass
 
     def _check_gate_and_run(self, src):
         """Check gate state and run if it is open.
@@ -327,98 +405,6 @@ class Unit(Distributable):
             finally:
                 self._run_lock_.release()
         self.run_dependent()
-
-    def _initialize_dependent(self):
-        """Invokes initialize() on dependent units on the same thread.
-        """
-        for dst in self.links_to.keys():
-            if dst._is_initialized:
-                continue
-            if not dst.open_gate(self):
-                continue
-            dst.initialize()
-            dst._initialize_dependent()
-
-    def run_dependent(self):
-        """Invokes run() on dependent units on different threads.
-        """
-        for dst in self.links_to.keys():
-            self.thread_pool.callInThread(dst._check_gate_and_run, self)
-
-    def initialize(self):
-        """Allocate buffers here.
-
-        initialize() invoked in the same order as run(), including
-        open_gate() and effects of gate_block and gate_skip.
-
-        If initialize() succeeds, self._is_initialized flag will be
-        automatically set.
-        """
-        self._is_initialized = True
-
-    def run(self):
-        """Do the job here.
-        """
-        pass
-
-    def open_gate(self, src):
-        """Called before run() or initialize().
-
-        Returns:
-            True: gate is open, can call run() or initialize().
-            False: gate is closed, run() and initialize() shouldn't be called.
-        """
-        self._gate_lock_.acquire()
-        if not len(self.links_from):
-            self._gate_lock_.release()
-            return True
-        if src in self.links_from:
-            self.links_from[src] = True
-        if not all(self.links_from.values()):
-            self._gate_lock_.release()
-            return False
-        for src in self.links_from:  # reset activation flags
-            self.links_from[src] = False
-        self._gate_lock_.release()
-        return True
-
-    def unlink_from_all(self):
-        """Unlinks self from other units.
-        """
-        self._gate_lock_.acquire()
-        for src in self.links_from:
-            del(src.links_to[self])
-        for dst in self.links_to:
-            del(dst.links_from[self])
-        self.links_from.clear()
-        self.links_to.clear()
-        self._gate_lock_.release()
-
-    def unlink_from(self, src):
-        """Unlinks self from src.
-        """
-        self._gate_lock_.acquire()
-        if self in src.links_to:
-            del src.links_to[self]
-        if src in self.links_from:
-            del self.links_from[src]
-        self._gate_lock_.release()
-
-    def nothing(self, *args, **kwargs):
-        """Function that do nothing.
-
-        It may be used to overload some methods to do nothing.
-        """
-        pass
-
-    def log_error(self, **kwargs):
-        """Logs any errors.
-        """
-        if "msg" in kwargs.keys():
-            self.error(kwargs["msg"])
-        if "exc_info" in kwargs.keys():
-            exc_info = kwargs["exc_info"]
-            traceback.print_exception(exc_info[0], exc_info[1], exc_info[2])
 
     def _measure_time(self, fn, storage):
         def wrapped():
