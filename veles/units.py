@@ -26,6 +26,7 @@ class Pickleable(logger.Logger):
         """Calls init_unpickled() to initialize the attributes which are not
         pickled.
         """
+        self._method_storage = {}
         super(Pickleable, self).__init__(**kwargs)
         self.init_unpickled()
 
@@ -33,6 +34,11 @@ class Pickleable(logger.Logger):
     """
     def init_unpickled(self):
         self.stripped_pickle_ = False
+        for key, value in self._method_storage.items():
+            setattr(self, key, getattr(value, key))
+
+    def add_method_to_storage(self, name):
+        self._method_storage[name] = self.__class__
 
     def __getstate__(self):
         """Selects the attributes to pickle.
@@ -75,21 +81,27 @@ class Distributable(Pickleable):
         return wrapped
 
     def __init__(self, **kwargs):
+        self._generate_data_for_slave_threadsafe = \
+            kwargs.get("generate_data_for_slave_threadsafe", False)
+        self._apply_data_from_slave_threadsafe = \
+            kwargs.get("apply_data_from_slave_threadsafe", True)
         super(Distributable, self).__init__(**kwargs)
-        if kwargs.get("generate_data_for_slave_threadsafe", False):
-            self.generate_data_for_slave = \
-                self._data_threadsafe(self.generate_data_for_slave)
-        if kwargs.get("apply_data_from_slave_threadsafe", True):
-            self.apply_data_from_slave = \
-                self._data_threadsafe(self.apply_data_from_slave)
-            self.drop_slave = \
-                self._data_threadsafe(self.drop_slave)
+        self.add_method_to_storage("generate_data_for_slave")
+        self.add_method_to_storage("apply_data_from_slave")
 
     def init_unpickled(self):
         super(Distributable, self).init_unpickled()
         self._data_lock_ = threading.Lock()
         self._data_event_ = threading.Event()
         self._data_event_.set()
+        if self._generate_data_for_slave_threadsafe:
+            self.generate_data_for_slave = \
+                self._data_threadsafe(self.generate_data_for_slave)
+        if self._apply_data_from_slave_threadsafe:
+            self.apply_data_from_slave = \
+                self._data_threadsafe(self.apply_data_from_slave)
+            self.drop_slave = \
+                self._data_threadsafe(self.drop_slave)
 
     @property
     def has_data_for_slave(self):
@@ -192,17 +204,21 @@ class Unit(Distributable):
         self._links_to = {}
         self._gate_block = Bool(False)
         self._gate_skip = Bool(False)
-        self.initialize = self._dereference_attributes(self.initialize)
-        self.run = self._measure_time(self.run, Unit.timers)
-        self.run = self._dereference_attributes(self.run)
+        self._ran = False
         self._workflow = None
         self.workflow = workflow
+        self.add_method_to_storage("initialize")
+        self.add_method_to_storage("run")
 
     def init_unpickled(self):
         super(Unit, self).init_unpickled()
         self._gate_lock_ = threading.Lock()
         self._run_lock_ = threading.Lock()
         self._is_initialized = False
+        self.initialize = self._dereference_attributes(self.initialize)
+        self.run = self._measure_time(self.run, Unit.timers)
+        self.run = self._dereference_attributes(self.run)
+        self.run = self._track_call(self.run, "run_was_called")
         Unit.timers[self] = 0
 
     def __getstate__(self):
@@ -301,6 +317,14 @@ class Unit(Distributable):
     @property
     def is_standalone(self):
         return self.workflow.is_standalone
+
+    @property
+    def run_was_called(self):
+        return self._ran
+
+    @run_was_called.setter
+    def run_was_called(self, value):
+        self._ran = value
 
     def initialize(self):
         """Allocate buffers here.
@@ -416,7 +440,10 @@ class Unit(Distributable):
     def _measure_time(self, fn, storage):
         def wrapped(*args, **kwargs):
             sp = time.time()
-            fn(*args, **kwargs)
+            try:
+                fn(*args, **kwargs)
+            except TypeError:
+                fn(self, *args, **kwargs)
             fp = time.time()
             if self in storage:
                 storage[self] += fp - sp
@@ -436,10 +463,23 @@ class Unit(Distributable):
                 if Unit.is_attribute_reference(value):
                     refs[key] = value
                     setattr(self, key, getattr(*value))
-            fn(*args, **kwargs)
+            try:
+                fn(*args, **kwargs)
+            except TypeError:
+                fn(self, *args, **kwargs)
             for key, value in refs.items():
                 setattr(value[0], value[1], getattr(self, key))
                 setattr(self, key, value)
+        return wrapped
+
+    def _track_call(self, fn, name):
+        def wrapped(*args, **kwargs):
+            setattr(self, name, True)
+            try:
+                fn(*args, **kwargs)
+            except TypeError:
+                fn(self, *args, **kwargs)
+
         return wrapped
 
 
@@ -451,14 +491,12 @@ class OpenCLUnit(Unit):
         prg_: OpenCL program.
         cl_sources: OpenCL source files: file => defines.
         prg_src: last built OpenCL program source code text.
-        run_executed: sets to True at the end of run.
     """
     def __init__(self, workflow, **kwargs):
         device = kwargs.get("device")
         kwargs["device"] = device
         super(OpenCLUnit, self).__init__(workflow, **kwargs)
         self.device = device
-        self.run_executed = False
 
     def init_unpickled(self):
         super(OpenCLUnit, self).init_unpickled()
@@ -488,7 +526,6 @@ class OpenCLUnit(Unit):
             self.gpu_run()
         else:
             self.cpu_run()
-        self.run_executed = True
         self.debug("%s in %.2f sec" %
                    (self.__class__.__name__, time.time() - t1))
 
