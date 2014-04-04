@@ -42,6 +42,9 @@ class Bool(object):
             value = method[1](method[0], value)
         return value
 
+    def __nonzero__(self):
+        return self.__bool__()
+
     def __lshift__(self, value):
         if len(self.__expr) > 1:
             raise RuntimeError("Derived expressions cannot be assigned to.")
