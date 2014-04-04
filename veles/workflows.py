@@ -13,6 +13,7 @@ import shutil
 import sys
 import tarfile
 import tempfile
+import threading
 import yaml
 
 import veles.benchmark as benchmark
@@ -63,7 +64,8 @@ class Workflow(Unit):
         end_point: end point.
     """
     def __init__(self, workflow, **kwargs):
-        self._plotters_are_enabled = not root.common.plotters_disabled
+        self._plotters_are_enabled = \
+            kwargs.get("disable_plotters", not root.common.plotters_disabled)
         super(Workflow, self).__init__(workflow,
                                        generate_data_for_slave_threadsafe=True,
                                        apply_data_from_slave_threadsafe=False,
@@ -72,15 +74,25 @@ class Workflow(Unit):
         self.start_point = StartPoint(self)
         self.end_point = EndPoint(self)
         self.thread_pool.register_on_shutdown(self.stop)
+        self._sync = kwargs.get("sync", True)
 
     def init_unpickled(self):
         super(Workflow, self).init_unpickled()
         self._is_running = False
+        self._sync_event_ = threading.Event()
         del(Unit.timers[self])
 
     @property
     def is_running(self):
         return self._is_running
+
+    @property
+    def run_is_blocking(self):
+        return self._sync
+
+    @run_is_blocking.setter
+    def run_is_blocking(self, value):
+        self._sync = value
 
     @property
     def plotters_are_enabled(self):
@@ -101,6 +113,8 @@ class Workflow(Unit):
         self._is_running = True
         if not self.is_master:
             self.start_point.run_dependent()
+        if self.run_is_blocking:
+            self._sync_event_.wait()
 
     def stop(self):
         self.on_workflow_finished()
@@ -109,6 +123,8 @@ class Workflow(Unit):
         self._is_running = False
         if not self.is_slave:
             self.workflow.on_workflow_finished()
+        if self.run_is_blocking:
+            self._sync_event_.set()
 
     def add_ref(self, unit):
         if unit not in self.units:

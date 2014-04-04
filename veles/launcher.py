@@ -241,6 +241,7 @@ class Launcher(logger.Logger):
         initialize.
         """
         self._workflow = workflow
+        workflow.run_is_blocking = False
         if self.is_slave or self.matplotlib_backend == "":
             workflow.plotters_are_enabled = False
         if self.is_slave:
