@@ -192,7 +192,9 @@ class Unit(Distributable):
         self._links_to = {}
         self._gate_block = Bool(False)
         self._gate_skip = Bool(False)
+        self.initialize = self._dereference_attributes(self.initialize)
         self.run = self._measure_time(self.run, Unit.timers)
+        self.run = self._dereference_attributes(self.run)
         self._workflow = None
         self.workflow = workflow
 
@@ -385,9 +387,9 @@ class Unit(Distributable):
         pass
 
     @staticmethod
-    def is_reference(obj):
+    def is_attribute_reference(obj):
         return isinstance(obj, tuple) and len(obj) == 2 and \
-            isinstance(obj[1], str)
+            isinstance(obj[0], object) and isinstance(obj[1], str)
 
     def _check_gate_and_run(self, src):
         """Check gate state and run if it is open.
@@ -412,13 +414,32 @@ class Unit(Distributable):
         self.run_dependent()
 
     def _measure_time(self, fn, storage):
-        def wrapped():
+        def wrapped(*args, **kwargs):
             sp = time.time()
-            fn()
+            fn(*args, **kwargs)
             fp = time.time()
             if self in storage:
                 storage[self] += fp - sp
 
+        return wrapped
+
+    def _dereference_attributes(self, fn):
+        """
+        If any attribute of this class is a tuple (object, "name"), it is
+        interpreted as a reference to object.name, so it is temporarily set to
+        the dereferenced value before fn() call and then restored after fn() is
+        finished, updating the referenced value.
+        """
+        def wrapped(*args, **kwargs):
+            refs = {}
+            for key, value in self.__dict__.items():
+                if Unit.is_attribute_reference(value):
+                    refs[key] = value
+                    setattr(self, key, getattr(*value))
+            fn(*args, **kwargs)
+            for key, value in refs.items():
+                setattr(value[0], value[1], getattr(self, key))
+                setattr(self, key, value)
         return wrapped
 
 
