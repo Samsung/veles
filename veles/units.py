@@ -16,6 +16,7 @@ import veles.logger as logger
 from veles.mutable import Bool
 import veles.opencl_types as opencl_types
 import veles.thread_pool as thread_pool
+from veles.error import VelesException
 
 
 class Pickleable(logger.Logger):
@@ -402,28 +403,60 @@ class Unit(Distributable):
     def link_from(self, src):
         """Adds notification link.
         """
-        self.links_from[src] = False
-        src.links_to[self] = False
+        with self._gate_lock_:
+            self.links_from[src] = False
+            with src.gate_lock:
+                src.links_to[self] = False
 
     def unlink_from(self, src):
         """Unlinks self from src.
         """
         with self._gate_lock_:
-            if self in src.links_to:
-                del src.links_to[self]
+            with src.gate_lock:
+                if self in src.links_to:
+                    del src.links_to[self]
             if src in self.links_from:
                 del self.links_from[src]
 
-    def unlink_from_all(self):
+    def unlink_all(self):
         """Unlinks self from other units.
+        """
+        self.unlink_before()
+        self.unlink_after()
+
+    def unlink_before(self):
+        """
+        Detaches all previous units from this one.
         """
         with self._gate_lock_:
             for src in self.links_from:
-                del(src.links_to[self])
-            for dst in self.links_to:
-                del(dst.links_from[self])
+                with src.gate_lock:
+                    del(src.links_to[self])
             self.links_from.clear()
+
+    def unlink_after(self):
+        """
+        Detaches all subsequent units from this one.
+        """
+        with self._gate_lock_:
+            for dst in self.links_to:
+                with dst.gate_lock:
+                    del(dst.links_from[self])
             self.links_to.clear()
+
+    def insert_after(self, *chain):
+        """
+        Inserts a series of units between this one and any subsequent ones.
+        """
+        with self._gate_lock_:
+            links_to = self.links_to
+            self.split()
+            first = chain[0]
+            last = chain[-1]
+            first.link_from(self)
+            for dst in links_to:
+                with dst.gate_lock:
+                    dst.link_from(last)
 
     def nothing(self, *args, **kwargs):
         """Function that do nothing.
