@@ -213,6 +213,7 @@ class Main(Logger):
             self.launcher.run()
         except:
             self.exception("Failed to run the workflow")
+            self.launcher.stop()
             sys.exit(Main.EXIT_FAILURE)
 
     def _run_workflow(self, fname_workflow, fname_snapshot):
@@ -286,7 +287,7 @@ class Main(Logger):
 
         self._print_logo(args)
         Logger.setup(level=Main.LOG_LEVEL_MAP[args.verbose])
-        for name in [n for n in args.debug.split(',') if n.split()]:
+        for name in filter(str.strip, args.debug.split(',')):
             logging.getLogger(name).setLevel(logging.DEBUG)
         self._seed_random(args.random_seed)
         self._set_pickle_debug(args)
