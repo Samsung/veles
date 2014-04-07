@@ -73,11 +73,11 @@ class Workflow(Unit):
         self.units = []
         self.start_point = StartPoint(self)
         self.end_point = EndPoint(self)
-        self.thread_pool.register_on_shutdown(self.stop)
         self._sync = kwargs.get("sync", True)
 
     def init_unpickled(self):
         super(Workflow, self).init_unpickled()
+        self.thread_pool.register_on_shutdown(self.stop)
         self._is_running = False
         self._sync_event_ = threading.Event()
         del(Unit.timers[self])

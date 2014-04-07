@@ -324,25 +324,26 @@ class Launcher(logger.Logger):
                                       self.workflow.run)
 
     def _on_stop(self):
-        self._initialized = False
-        self._running = False
-        # Kill the Web status Server notification task and thread
-        if self.reports_web_status:
-            self._notify_task.stop()
-            IOLoop.instance().stop()
-            self.tornado_ioloop_thread.join()
-        # Wait for the own graphics client to terminate normally
-        if self.workflow.plotters_are_enabled:
-            attempt = 0
-            while self.graphics_client.poll() is None and attempt < 10:
-                self.graphics_server.shutdown()
-                attempt += 1
-                time.sleep(0.2)
-            if self.graphics_client.poll() is None:
-                self.graphics_client.terminate()
-                self.info("Graphics client has been terminated")
-            else:
-                self.info("Graphics client returned normally")
+        with self._lock:
+            self._initialized = False
+            self._running = False
+            # Kill the Web status Server notification task and thread
+            if self.reports_web_status:
+                self._notify_task.stop()
+                IOLoop.instance().stop()
+                self.tornado_ioloop_thread.join()
+            # Wait for the own graphics client to terminate normally
+            if self.workflow.plotters_are_enabled:
+                attempt = 0
+                while self.graphics_client.poll() is None and attempt < 10:
+                    self.graphics_server.shutdown()
+                    attempt += 1
+                    time.sleep(0.2)
+                if self.graphics_client.poll() is None:
+                    self.graphics_client.terminate()
+                    self.info("Graphics client has been terminated")
+                else:
+                    self.info("Graphics client returned normally")
         self.workflow.thread_pool.shutdown()
 
     def _print_stats(self):
