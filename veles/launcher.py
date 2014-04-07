@@ -96,6 +96,7 @@ class Launcher(logger.Logger):
                 self.args.log_mongo = root.common.mongodb_logging_address
             logger.Logger.duplicate_all_logging_to_mongo(self.args.log_mongo,
                                                          self._log_id)
+        self.info("My PID is %d", os.getpid())
         self.info("My log ID is %s", self.log_id)
         self._lock = threading.Lock()
         self._webagg_port = 0
