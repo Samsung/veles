@@ -6,6 +6,7 @@ Units in data stream neural network_common model.
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
 from copy import copy
+from six.moves import cPickle as pickle
 import threading
 import time
 
@@ -174,6 +175,20 @@ class Distributable(Pickleable):
         apply_data_from_slave_threadsafe is set to True in __init__ (default).
         """
         pass
+
+    def save(self, file_name):
+        """
+        Stores object's current state in the specified file.
+        """
+        data = self.generate_data_for_slave()
+        pickle.dump(data, file_name)
+
+    def load(self, file_name):
+        """
+        Loads object's current state from the specified file.
+        """
+        data = pickle.load(file_name)
+        self.apply_data_from_master(data)
 
 
 class Unit(Distributable):
