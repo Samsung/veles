@@ -39,7 +39,7 @@ class ZeroMQLoader(Unit):
 
     def __init__(self, workflow, *endpoints, **kwargs):
         super(ZeroMQLoader, self).__init__(workflow, **kwargs)
-        self._endpoints = list(endpoints)
+        self._endpoints = list(map(ZmqEndpoint, endpoints))
         self._queue = queue.Queue(kwargs.get("queue_size", 0))
         self.output = None
 
