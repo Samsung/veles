@@ -82,6 +82,10 @@ class Workflow(Unit):
         self._sync_event_ = threading.Event()
         del(Unit.timers[self])
 
+    def __repr__(self):
+        return super(Workflow, self).__repr__() + \
+            " with %d units" % len(self.units)
+
     @property
     def is_running(self):
         return self._is_running

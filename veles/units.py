@@ -228,6 +228,14 @@ class Unit(Distributable):
             state["_workflow"] = None
         return state
 
+    def __repr__(self):
+        if self._name is not None:
+            return "%s.%s \"%s\"" % (self.__class__.__module__,
+                                     self.__class__.__name__,
+                                     self.name)
+        else:
+            return object.__repr__(self)
+
     @property
     def links_from(self):
         return self._links_from
@@ -408,6 +416,19 @@ class Unit(Distributable):
         It may be used to overload some methods to do nothing.
         """
         pass
+
+    def describe(self):
+        real_name = self.name if self._name is not None else "<not set>"
+        res = "\n\033[1;36mUnit:\033[0m \"%s\"\n" % real_name
+        res += "\033[1;36mClass:\033[0m %s.%s\n" % (self.__class__.__module__,
+                                                    self.__class__.__name__)
+        res += "\033[1;36mIncoming links:\033[0m\n"
+        for link in self.links_from:
+            res += "\t%s" % repr(link)
+        res += "\n\033[1;36mOutgoing links:\033[0m\n"
+        for link in self.links_to:
+            res += "\t%s" % repr(link)
+        print(res)
 
     @staticmethod
     def is_attribute_reference(obj):
