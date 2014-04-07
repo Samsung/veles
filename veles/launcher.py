@@ -32,6 +32,10 @@ import veles.logger as logger
 import veles.server as server
 
 
+if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
+    FileNotFoundError = IOError  # pylint: disable=W0622
+
+
 def threadsafe(fn):
     def wrapped(self, *args, **kwargs):
         with self._lock:
@@ -413,7 +417,7 @@ class Launcher(logger.Logger):
             else:
                 ocldevmax = ocldevmin
             progs = []
-            for _ in range(0, multiplier):
+            for _ in range(multiplier):
                 for d in range(ocldevmin, ocldevmax + 1):
                     progs.append("%s %s -d %d:%d" %
                                  (os.path.abspath(sys.argv[0]),
@@ -424,17 +428,17 @@ class Launcher(logger.Logger):
         self.info("Launching %d instance(s) on %s", len(progs), host)
         cwd = os.getcwd()
         self.debug("cwd: %s", os.getcwd())
-        client = paramiko.SSHClient()
+        pc = paramiko.SSHClient()
         try:
-            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            client.connect(host, look_for_keys=True, timeout=0.1)
+            pc.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            pc.connect(host, look_for_keys=True, timeout=0.1)
             for prog in progs:
                 self.debug("Launching %s", prog)
-                client.exec_command("cd '%s' && %s" % (cwd, prog))
+                pc.exec_command("cd '%s' && %s" % (cwd, prog))
         except:
             self.exception()
         finally:
-            client.close()
+            pc.close()
 
     def _set_webagg_port(self, port):
         self.info("Found out the WebAgg port: %d", port)
