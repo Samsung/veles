@@ -28,6 +28,9 @@ import veles.graphics_client as graphics_client
 class ZmqPublisher(ZmqConnection):
     socketType = zmq.PUB
 
+    def send(self, message):
+        super(ZmqPublisher, self).send(b'graphics' + message)
+
 
 class GraphicsServer(Logger):
     """

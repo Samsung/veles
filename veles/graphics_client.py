@@ -29,11 +29,12 @@ class ZmqSubscriber(ZmqConnection):
 
     def __init__(self, graphics, *args, **kwargs):
         super(ZmqSubscriber, self).__init__(*args, **kwargs)
-        self.socket.set(zmq.constants.SUBSCRIBE, b'')
+        self.socket.set(zmq.SUBSCRIBE, b'graphics')
         self.graphics = graphics
 
     def messageReceived(self, message):
-        self.graphics.update(pickle.loads(message[0]))
+        self.graphics.update(pickle.loads(memoryview(
+            message[0])[len('graphics'):]))
 
 
 class GraphicsClient(Logger):
