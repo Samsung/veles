@@ -464,8 +464,8 @@ class Unit(Distributable):
         mutable or immutable. In the latter case, an attribute link is created.
         """
         for arg in args:
-            if isinstance(arg, tuple) and len(arg) == 2 and \
-                isinstance(arg[0], str) and isinstance(arg[1], str):
+            if (isinstance(arg, tuple) and len(arg) == 2 and
+                    isinstance(arg[0], str) and isinstance(arg[1], str)):
                 self._link_attr(other, *arg)
             elif isinstance(arg, str):
                 self._link_attr(other, arg, arg)

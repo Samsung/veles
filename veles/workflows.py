@@ -5,8 +5,9 @@ Base class for workflows.
 
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
+
+
 import hashlib
-import numpy
 from six.moves import cPickle as pickle
 import sys
 import tempfile
