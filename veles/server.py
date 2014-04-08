@@ -19,7 +19,7 @@ from veles.network_common import NetworkAgent, StringLineReceiver
 
 
 class ZmqRouter(ZmqConnection):
-    socketType = zmq.constants.ROUTER
+    socketType = zmq.ROUTER
 
     def __init__(self, host, *endpoints):
         super(ZmqRouter, self).__init__(endpoints)

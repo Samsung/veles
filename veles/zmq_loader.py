@@ -14,7 +14,7 @@ from veles.units import Unit
 
 
 class ZmqPuller(ZmqConnection):
-    socketType = zmq.constants.PULL
+    socketType = zmq.PULL
 
     def __init__(self, owner, *endpoints):
         super(ZmqPuller, self).__init__(endpoints)

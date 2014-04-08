@@ -18,7 +18,7 @@ from veles.network_common import NetworkAgent, StringLineReceiver
 
 
 class ZmqDealer(ZmqConnection):
-    socketType = zmq.constants.DEALER
+    socketType = zmq.DEALER
 
     def __init__(self, nid, host, *endpoints):
         super(ZmqDealer, self).__init__(endpoints)

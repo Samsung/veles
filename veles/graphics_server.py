@@ -26,7 +26,7 @@ import veles.graphics_client as graphics_client
 
 
 class ZmqPublisher(ZmqConnection):
-    socketType = zmq.constants.PUB
+    socketType = zmq.PUB
 
 
 class GraphicsServer(Logger):

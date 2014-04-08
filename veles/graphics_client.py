@@ -25,7 +25,7 @@ from veles.logger import Logger
 
 class ZmqSubscriber(ZmqConnection):
 
-    socketType = zmq.constants.SUB
+    socketType = zmq.SUB
 
     def __init__(self, graphics, *args, **kwargs):
         super(ZmqSubscriber, self).__init__(*args, **kwargs)
