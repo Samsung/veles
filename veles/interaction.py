@@ -39,6 +39,7 @@ class Shell(Unit):
         for s in i:
             if s == sys.stdin:
                 key = sys.stdin.readline()[0]
+                break
         if key == 'i':
             workflow = self.workflow  # pylint: disable=W0612
             units = self.workflow.units  # pylint: disable=W0612
