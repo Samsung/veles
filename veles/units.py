@@ -16,6 +16,7 @@ import veles.logger as logger
 from veles.mutable import Bool
 import veles.opencl_types as opencl_types
 import veles.thread_pool as thread_pool
+from builtins import isinstance
 
 
 class Pickleable(logger.Logger):
@@ -457,6 +458,20 @@ class Unit(Distributable):
                 with dst._gate_lock_:
                     dst.link_from(last)
 
+    def link_attrs(self, other, *args):
+        """
+        Assigns attributes from other to self, respecting whether each is
+        mutable or immutable. In the latter case, an attribute link is created.
+        """
+        for arg in args:
+            if isinstance(arg, tuple) and len(arg) == 2 and \
+                isinstance(arg[0], str) and isinstance(arg[1], str):
+                self._link_attr(other, *arg)
+            elif isinstance(arg, str):
+                self._link_attr(other, arg, arg)
+            else:
+                raise TypeError(repr(arg) + " is not a valid attributes pair")
+
     def nothing(self, *args, **kwargs):
         """Function that do nothing.
 
@@ -481,6 +496,15 @@ class Unit(Distributable):
     def is_attribute_reference(obj):
         return isinstance(obj, tuple) and len(obj) == 2 and \
             isinstance(obj[0], object) and isinstance(obj[1], str)
+
+    def _link_attr(self, other, mine, yours):
+        attr = getattr(other, yours)
+        if isinstance(attr, tuple) or isinstance(attr, int) or \
+           isinstance(attr, float) or isinstance(attr, bool) or \
+           isinstance(attr, str):
+            setattr(self, mine, (other, yours))
+        else:
+            setattr(self, mine, attr)
 
     def _check_gate_and_run(self, src):
         """Check gate state and run if it is open.
