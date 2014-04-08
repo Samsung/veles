@@ -289,14 +289,15 @@ class Launcher(logger.Logger):
             with self._lock:
                 self._running = False
 
-    @threadsafe
     def stop(self):
-        if not self._initialized:
-            return
-        if not self._running:
+        with self._lock:
+            if not self._initialized:
+                return
+            running = self._running and reactor.running
+        self.info("Stopping everything (%s mode)", self.mode)
+        if not running:
             self._on_stop()
             return
-        self.info("Stopping everything (%s mode)", self.mode)
         try:
             reactor.stop()
         except:
@@ -324,27 +325,27 @@ class Launcher(logger.Logger):
             threads.deferToThreadPool(reactor, self.workflow.thread_pool,
                                       self.workflow.run)
 
+    @threadsafe
     def _on_stop(self):
-        with self._lock:
-            self._initialized = False
-            self._running = False
-            # Kill the Web status Server notification task and thread
-            if self.reports_web_status:
-                self._notify_task.stop()
-                IOLoop.instance().stop()
-                self.tornado_ioloop_thread.join()
-            # Wait for the own graphics client to terminate normally
-            if self.workflow.plotters_are_enabled:
-                attempt = 0
-                while self.graphics_client.poll() is None and attempt < 10:
-                    self.graphics_server.shutdown()
-                    attempt += 1
-                    time.sleep(0.2)
-                if self.graphics_client.poll() is None:
-                    self.graphics_client.terminate()
-                    self.info("Graphics client has been terminated")
-                else:
-                    self.info("Graphics client returned normally")
+        self._initialized = False
+        self._running = False
+        # Kill the Web status Server notification task and thread
+        if self.reports_web_status:
+            self._notify_task.stop()
+            IOLoop.instance().stop()
+            self.tornado_ioloop_thread.join()
+        # Wait for the own graphics client to terminate normally
+        if self.workflow.plotters_are_enabled:
+            attempt = 0
+            while self.graphics_client.poll() is None and attempt < 10:
+                self.graphics_server.shutdown()
+                attempt += 1
+                time.sleep(0.2)
+            if self.graphics_client.poll() is None:
+                self.graphics_client.terminate()
+                self.info("Graphics client has been terminated")
+            else:
+                self.info("Graphics client returned normally")
         self.workflow.thread_pool.shutdown()
 
     def _print_stats(self):
