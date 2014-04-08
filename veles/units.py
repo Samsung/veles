@@ -16,7 +16,6 @@ import veles.logger as logger
 from veles.mutable import Bool
 import veles.opencl_types as opencl_types
 import veles.thread_pool as thread_pool
-from veles.error import VelesException
 
 
 class Pickleable(logger.Logger):
@@ -405,14 +404,14 @@ class Unit(Distributable):
         """
         with self._gate_lock_:
             self.links_from[src] = False
-            with src.gate_lock:
+            with src._gate_lock_:
                 src.links_to[self] = False
 
     def unlink_from(self, src):
         """Unlinks self from src.
         """
         with self._gate_lock_:
-            with src.gate_lock:
+            with src._gate_lock_:
                 if self in src.links_to:
                     del src.links_to[self]
             if src in self.links_from:
@@ -430,7 +429,7 @@ class Unit(Distributable):
         """
         with self._gate_lock_:
             for src in self.links_from:
-                with src.gate_lock:
+                with src._gate_lock_:
                     del(src.links_to[self])
             self.links_from.clear()
 
@@ -440,7 +439,7 @@ class Unit(Distributable):
         """
         with self._gate_lock_:
             for dst in self.links_to:
-                with dst.gate_lock:
+                with dst._gate_lock_:
                     del(dst.links_from[self])
             self.links_to.clear()
 
@@ -455,7 +454,7 @@ class Unit(Distributable):
             last = chain[-1]
             first.link_from(self)
             for dst in links_to:
-                with dst.gate_lock:
+                with dst._gate_lock_:
                     dst.link_from(last)
 
     def nothing(self, *args, **kwargs):
