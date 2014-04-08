@@ -7,19 +7,14 @@ Base class for workflows.
 """
 import hashlib
 import numpy
-import os
 from six.moves import cPickle as pickle
-import shutil
 import sys
-import tarfile
 import tempfile
 import threading
-import yaml
 
 import veles.benchmark as benchmark
 from veles.config import root
-import veles.formats as formats
-from veles.units import Unit, OpenCLUnit, Repeater
+from veles.units import Unit, OpenCLUnit
 from veles.external.prettytable import PrettyTable
 import veles.external.pydot as pydot
 
@@ -273,121 +268,13 @@ class Workflow(Unit):
 
 
 class OpenCLWorkflow(OpenCLUnit, Workflow):
-    """Base class for neural network workflows.
-
-    Attributes:
-        rpt: repeater.
-        loader: loader unit.
-        forward: list of the forward units.
-        ev: evaluator unit.
-        decision: decision unit.
-        gd: list of the gradient descent units.
+    """Base class for OpenCL workflows
     """
-    def __init__(self, workflow, **kwargs):
-        super(OpenCLWorkflow, self).__init__(workflow, **kwargs)
-        self.rpt = Repeater(self)
-        self.loader = None
-        self.forward = []
-        self.ev = None
-        self.decision = None
-        self.gd = []
-        self.power = None
 
     def initialize(self, device=None):
         if device is not None:
             self.device = device
         super(OpenCLWorkflow, self).initialize()
-
-    def export(self, filename):
-        """Exports workflow for use on DTV.
-        """
-        # create temporary folder
-        tmppath = os.path.join(root.common.cache_dir, "saver_tmp")
-        if not os.path.exists(tmppath):
-            os.makedirs(tmppath)
-        files_to_save = []
-        dict_temp = {}
-        variables_to_save = []
-        # Go through units & save numpy array to binary file
-        units_to_export = [self.loader]
-        units_to_export.extend(self.forward)
-        for i in range(len(units_to_export)):
-            u = units_to_export[i]
-            if u.exports is None:
-                self.debug("%s continue" % u.__class__.__name__)
-                continue
-            variables = u.__getstate__()
-            for key in variables:
-                if key in u.exports:
-                    self.debug("%s in attributes to export" % (key))
-                    # Save numpy array to binary file
-                    if type(getattr(u, key)) == formats.Vector and i >= 1:
-                        for j in range(len(getattr(u, key).v.shape)):
-                            name = key + "_shape_" + str(j)
-                            self.info(name)
-                            dict_temp[name] = getattr(u, key).v.shape[j]
-
-                        link_to_numpy = "unit" + str(i - 1) + key + ".bin"
-
-                        dict_temp['link_to_' + key] = link_to_numpy
-
-                        files_to_save.append(
-                            self._save_numpy_to_file(
-                                getattr(u, key).v, link_to_numpy, tmppath))
-                    else:
-                        dict_temp[key] = getattr(u, key)
-            temp__ = {}
-            temp__[u.__class__.__name__] = dict_temp
-            variables_to_save.append(temp__)
-            dict_temp = {}
-
-        # Save forward elements to yaml.
-        yaml_name = 'default.yaml'
-        self._save_to_yaml("%s/%s" % (tmppath, yaml_name), variables_to_save)
-        # Compress archive
-        tar = tarfile.open("%s.tar.gz" % (filename), "w:gz")
-        tar.add("%s/%s" % (tmppath, yaml_name),
-                arcname=yaml_name, recursive=False)
-        for i in range(len(files_to_save)):
-            tar.add("%s/%s" % (tmppath, files_to_save[i]),
-                    arcname=files_to_save[i], recursive=False)
-        tar.close()
-        # delete temporary folder
-        shutil.rmtree(tmppath)
-
-    def _is_class_inside_object(self, obj_to_check):
-        """Check that object is the class.
-        Parameters:
-            obj_to_check: object that should be checked.
-        Returns:
-            True if object is the class.
-        """
-        if isinstance(obj_to_check, (str, bytes, bool, int, float,
-                                     list, tuple)) is False:
-            return True
-        return False
-
-    def _save_to_yaml(self, yaml_name, to_yaml):
-        """Print workflow to yaml-file.
-        Parameters:
-            yaml_name: filename to save.
-        """
-        stream = open(yaml_name, "w")
-        for i in range(len(to_yaml)):
-            yaml.dump(to_yaml[i], stream)
-        stream.close()
-
-    def _save_numpy_to_file(self, numpy_vector, numpy_vector_name, path):
-        """Save numpy array to binary file.
-        Parameters:
-            numpy_vector: contains numpy array.
-            numpy_vector_name: name of the binary file to save numpy array.
-        """
-        array_to_save = numpy.float32(numpy_vector.ravel())
-
-        with open("%s/%s" % (path, numpy_vector_name), "wb") as f:
-            f.write(array_to_save)
-        return numpy_vector_name
 
     def get_computing_power(self):
         """
