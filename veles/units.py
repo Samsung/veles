@@ -16,7 +16,6 @@ import veles.logger as logger
 from veles.mutable import Bool
 import veles.opencl_types as opencl_types
 import veles.thread_pool as thread_pool
-from builtins import isinstance
 
 
 class Pickleable(logger.Logger):
