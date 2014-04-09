@@ -7,7 +7,7 @@ Created on May 17, 2013
 
 import numpy
 
-from veles.config import root
+from veles.config import root, get_config
 import veles.formats as formats
 import veles.plotter as plotter
 import veles.opencl_types as opencl_types
@@ -600,6 +600,7 @@ class MSEHistogram(plotter.Plotter):
         self.show_figure = self.nothing
 
     def initialize(self):
+        super(MSEHistogram, self).initialize()
         self.val_mse = numpy.zeros(
             self.n_bars, dtype=opencl_types.dtypes[root.common.dtype])
 
@@ -698,3 +699,108 @@ class MSEHistogram(plotter.Plotter):
         self.val_min = self.val_mse.min()
 
         super(MSEHistogram, self).run()
+
+
+class Histogram(plotter.Plotter):
+    """Plotter for drawing histogram.
+
+    Should be assigned before initialize():
+        mse
+
+    Updates after run():
+
+    Creates within initialize():
+
+    """
+    def __init__(self, workflow, **kwargs):
+        name = kwargs.get("name", "Histogram")
+        bars = kwargs.get("bars", get_config(root.nbars, 20))
+        kwargs["name"] = name
+        kwargs["bars"] = bars
+        super(Histogram, self).__init__(workflow, **kwargs)
+        self.n_bars = bars
+        self.x = None
+        self.input = None  # formats.Vector()
+        self.pp = None
+        self.show_figure = self.nothing
+
+    def redraw(self):
+        fig = self.pp.figure(self.name)
+        fig.clf()
+        fig.patch.set_facecolor('#E8D6BB')
+        # fig.patch.set_alpha(0.45)
+
+        ax = fig.add_subplot(1, 1, 1)
+        ax.cla()
+        ax.patch.set_facecolor('#ffe6ca')
+        # ax.patch.set_alpha(0.45)
+
+        ymax = self.input.v.max() * 1.3
+        ymin = self.input.v.min()
+        xmax = self.x.v.max()
+        xmin = self.x.v.min()
+        nbars = self.n_bars[0]
+
+        width = ((xmax - xmin) / self.n_bars) * 0.8
+        t0 = 0.65 * ymax
+        l1 = width * 0.5
+
+        if nbars < 11:
+            l3 = 20
+            koef = 0.5 * ymax
+            l2 = 0.235 * ymax
+
+        if nbars < 31 and nbars > 10:
+            l3 = 25 - (0.5) * nbars
+            koef = 0.635 * ymax - 0.0135 * nbars * ymax
+            l2 = 0.2975 * ymax - 0.00625 * nbars * ymax
+
+        if nbars < 41 and nbars > 30:
+            l3 = 16 - (0.2) * nbars
+            koef = 0.32 * ymax - 0.003 * nbars * ymax
+            l2 = 0.17 * ymax - 0.002 * nbars * ymax
+
+        if nbars < 51 and nbars > 40:
+            l3 = 8
+            koef = 0.32 * ymax - 0.003 * nbars * ymax
+            l2 = 0.17 * ymax - 0.002 * nbars * ymax
+
+        if nbars > 51:
+            l3 = 8
+            koef = 0.17 * ymax
+            l2 = 0.07 * ymax
+
+        width = ((xmax - xmin) / nbars) * 0.8
+        N = numpy.linspace(xmin, xmax, num=nbars,
+                           endpoint=True)
+        ax.bar(N, self.input, color='#ffa0ef', width=width,
+               edgecolor='lavender')
+        # , edgecolor='red')
+        # D889B8
+        # B96A9A
+        ax.set_xlabel('Errors', fontsize=20)
+        ax.set_ylabel('Input Data', fontsize=20)
+        ax.set_title('Histogram %s' % (self.name.replace("Histogram ", "")),
+                     fontsize=25)
+        ax.axis([xmin, xmax + ((xmax - xmin) / self.n_bars), ymin, ymax])
+        ax.grid(True)
+        leg = ax.legend((self.name.replace("Histogram ", "")))
+                        # 'upper center')
+        frame = leg.get_frame()
+        frame.set_facecolor('#E8D6BB')
+        for t in leg.get_texts():
+            t.set_fontsize(18)
+        for l in leg.get_lines():
+            l.set_linewidth(1.5)
+
+        for x, y in zip(N, self.input):
+            if y > koef - l2 * 0.75:
+                self.pp.text(x + l1, y - l2 * 0.75, '%.0f' % y, ha='center',
+                             va='bottom', fontsize=l3, rotation=90)
+            else:
+                self.pp.text(x + l1, t0, '%.0f' % y, ha='center', va='bottom',
+                             fontsize=l3, rotation=90)
+
+        self.show_figure(fig)
+        fig.canvas.draw()
+        super(Histogram, self).redraw()
