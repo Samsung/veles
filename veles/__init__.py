@@ -16,6 +16,6 @@ __license__ = "Samsung Proprietary License"
 __copyright__ = "© 2013 Samsung Electronics Co., Ltd."
 
 
+from veles.logger import Logger
 from veles.units import Unit, OpenCLUnit
 from veles.workflows import Workflow, OpenCLWorkflow
-from veles.launcher import Launcher
