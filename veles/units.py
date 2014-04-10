@@ -5,6 +5,8 @@ Units in data stream neural network_common model.
 
 @author: Kazantsev Alexey <a.kazantsev@samsung.com>
 """
+
+
 from copy import copy
 from six.moves import cPickle as pickle
 import threading
@@ -537,8 +539,11 @@ class Unit(Distributable):
             sp = time.time()
             try:
                 fn(*args, **kwargs)
-            except TypeError:
-                fn(self, *args, **kwargs)
+            except TypeError as e:
+                try:
+                    fn(self, *args, **kwargs)
+                except TypeError:
+                    raise e
             fp = time.time()
             if self in storage:
                 storage[self] += fp - sp
@@ -556,12 +561,18 @@ class Unit(Distributable):
             refs = {}
             for key, value in self.__dict__.items():
                 if Unit.is_attribute_reference(value):
+                    new_value = getattr(*value)
+                    if Unit.is_attribute_reference(new_value):
+                        raise RuntimeException()
+                    setattr(self, key, new_value)
                     refs[key] = value
-                    setattr(self, key, getattr(*value))
             try:
                 fn(*args, **kwargs)
-            except TypeError:
-                fn(self, *args, **kwargs)
+            except TypeError as e:
+                try:
+                    fn(self, *args, **kwargs)
+                except TypeError:
+                    raise e
             for key, value in refs.items():
                 setattr(value[0], value[1], getattr(self, key))
                 setattr(self, key, value)
@@ -572,8 +583,11 @@ class Unit(Distributable):
             setattr(self, name, True)
             try:
                 fn(*args, **kwargs)
-            except TypeError:
-                fn(self, *args, **kwargs)
+            except TypeError as e:
+                try:
+                    fn(self, *args, **kwargs)
+                except TypeError:
+                    raise e
 
         return wrapped
 
