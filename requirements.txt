@@ -11,3 +11,4 @@ paramiko>=1.11.0
 opencl4py>=1.0
 pymongo>=2.6
 argcomplete>=0.7
+ipython>=2.0.0
