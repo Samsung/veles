@@ -33,6 +33,11 @@ from veles.launcher import Launcher
 from veles.opencl import Device
 import veles.rnd as rnd
 
+if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
+    FileNotFoundError = IOError  # pylint: disable=W0622
+    IsADirectoryError = IOError  # pylint: disable=W0622
+    PermissionError = IOError  # pylint: disable=W0622
+
 
 class Main(Logger):
     EXIT_SUCCESS = 0
@@ -258,7 +263,7 @@ class Main(Logger):
             self.warning("Pickle debugging is only available for Python 3.x")
             return
 
-        def dump(obj, file, protocol=None, *, fix_imports=True):
+        def dump(obj, file, protocol=None, fix_imports=True):
             pickle._Pickler(file, protocol, fix_imports=fix_imports).dump(obj)
 
         pickle.dump = dump
