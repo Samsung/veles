@@ -162,7 +162,7 @@ class VelesProtocol(StringLineReceiver):
             StringLineReceiver.sendLine(self, json.dumps(line))
 
     def _common_id(self):
-        return {'power': self.factory.host.workflow.get_computing_power(),
+        return {'power': self.factory.host.workflow.computing_power,
                 'checksum': self.factory.host.workflow.checksum(),
                 'mid': self.factory.host.mid,
                 'pid': self.factory.host.pid}

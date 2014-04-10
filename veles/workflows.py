@@ -276,15 +276,17 @@ class OpenCLWorkflow(OpenCLUnit, Workflow):
         if device is not None:
             self.device = device
         super(OpenCLWorkflow, self).initialize()
+        self._power = None
 
-    def get_computing_power(self):
+    @property
+    def computing_power(self):
         """
         Estimates this slave's computing power for initial perfect balancing.
         Run by a slave.
         """
-        if not self.power:
+        if not self._power:
             bench = benchmark.OpenCLBenchmark(self, device=self.device)
-            self.power = bench.estimate()
+            self._power = bench.estimate()
             self.del_ref(bench)
-            self.info("Computing power is %.6f", self.power)
-        return self.power
+            self.info("Computing power is %.6f", self._power)
+        return self._power
