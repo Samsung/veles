@@ -230,9 +230,9 @@ class Unit(Distributable):
         self._run_lock_ = threading.Lock()
         self._is_initialized = False
         self.initialize = self._dereference_attributes(self.initialize)
-        self.run = self._measure_time(self.run, Unit.timers)
-        self.run = self._dereference_attributes(self.run)
         self.run = self._track_call(self.run, "run_was_called")
+        self.run = self._dereference_attributes(self.run)
+        self.run = self._measure_time(self.run, Unit.timers)
         Unit.timers[self] = 0
 
     def __getstate__(self):
@@ -381,7 +381,12 @@ class Unit(Distributable):
         """Invokes run() on dependent units on different threads.
         """
         for dst in self.links_to.keys():
-            self.thread_pool.callInThread(dst._check_gate_and_run, self)
+            if dst.gate_block:
+                continue
+            if len(self.links_to) == 1:
+                dst._check_gate_and_run(self)
+            else:
+                self.thread_pool.callInThread(dst._check_gate_and_run, self)
 
     def open_gate(self, src):
         """Called before run() or initialize().
@@ -510,8 +515,6 @@ class Unit(Distributable):
     def _check_gate_and_run(self, src):
         """Check gate state and run if it is open.
         """
-        if self.gate_block:
-            return
         if not self.open_gate(src):  # gate has a priority over skip
             return
         # Optionally skip the execution
