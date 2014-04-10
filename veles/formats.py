@@ -217,6 +217,9 @@ class Vector(units.Pickleable):
             self.map_read()
         return super(Vector, self).__getstate__()
 
+    def __lshift__(self, value):
+        self.v = value
+
     def _converted_dtype(self, dtype):
         if dtype == numpy.float32:
             return numpy.float64
