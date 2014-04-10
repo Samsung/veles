@@ -714,11 +714,11 @@ class Histogram(plotter.Plotter):
     """
     def __init__(self, workflow, **kwargs):
         name = kwargs.get("name", "Histogram")
-        bars = kwargs.get("bars", get_config(root.nbars, 20))
+        n_bars = kwargs.get("n_bars", get_config(root.histogram.n_bars, 20))
         kwargs["name"] = name
-        kwargs["bars"] = bars
+        kwargs["n_bars"] = n_bars
         super(Histogram, self).__init__(workflow, **kwargs)
-        self.n_bars = bars
+        self.n_bars = n_bars
         self.x = None
         self.input = None  # formats.Vector()
         self.pp = None
@@ -804,3 +804,109 @@ class Histogram(plotter.Plotter):
         self.show_figure(fig)
         fig.canvas.draw()
         super(Histogram, self).redraw()
+
+
+class MultiHistogram(plotter.Plotter):
+    """Plotter for drawing weights as 2D.
+
+    Should be assigned before initialize():
+        input
+        input_field
+
+    Updates after run():
+
+    Creates within initialize():
+
+    """
+    def __init__(self, workflow, **kwargs):
+        name = kwargs.get("name", get_config(root.multihist.name, "Histogram"))
+        limit = kwargs.get("limit", get_config(root.multihist.limit, 64))
+        n_bars = kwargs.get("n_bars", get_config(root.multihist.n_bars, 25))
+        hist_number = kwargs.get("hist_number",
+                                 get_config(root.multihist.hist_number, 16))
+        kwargs["name"] = name
+        kwargs["limit"] = limit
+        kwargs["n_bars"] = n_bars
+        kwargs["hist_number"] = hist_number
+        super(MultiHistogram, self).__init__(workflow, **kwargs)
+        self.limit = limit
+        self.pp = None
+        self.show_figure = self.nothing
+        self.input = None  # formats.Vector()
+        self.value = formats.Vector()
+        self.n_bars = n_bars
+        self.hist_number = hist_number
+
+    def initialize(self):
+        super(MultiHistogram, self).initialize()
+        if self.hist_number > self.limit:
+            self.hist_number = self.limit
+        self.value.v = numpy.zeros(
+            [self.hist_number, self.n_bars], dtype=numpy.int64)
+
+    def redraw(self):
+
+        fig = self.pp.figure(self.name)
+        fig.clf()
+        fig.patch.set_facecolor('#E8D6BB')
+        # fig.patch.set_alpha(0.45)
+
+        n_cols = int(numpy.round(numpy.sqrt(self.value.v.shape[0])))
+        n_rows = int(numpy.ceil(self.value.v.shape[0] / n_cols))
+        i = 0
+        for _ in range(0, n_rows):
+            for _ in range(0, n_cols):
+                ax = fig.add_subplot(n_rows, n_cols, i + 1)
+                ax.cla()
+                #ax.axis('off')
+                ax.patch.set_facecolor('#ffe6ca')
+                #ax.set_xlabel("Input Data", fontsize=10)
+                #ax.set_ylabel("Number", fontsize=10)
+                ymin = self.value[i].min()
+                ymax = self.value[i].max()
+                xmin = self.input[i].min()
+                xmax = self.input[i].max()
+                ax.axis([xmin, xmax + ((xmax - xmin) / self.n_bars), ymin,
+                         ymax])
+                ax.grid(True)
+                nbars = self.n_bars
+                width = ((xmax - xmin) / nbars) * 0.8
+                X = numpy.linspace(xmin, xmax, num=nbars, endpoint=True)
+                Y = self.value[i]
+                if (n_rows > 5) or (n_cols > 5):
+                    ax.bar(X, Y, color='#ffa0ef', width=width,
+                           edgecolor='red')
+                else:
+                    ax.bar(X, Y, color='#ffa0ef', width=width,
+                           edgecolor='lavender')
+                if n_rows > 4:
+                    ax.set_yticklabels([])
+                if n_cols > 3:
+                    ax.set_xticklabels([])
+                i += 1
+                if i >= self.value.v.shape[0]:
+                    break
+            if i >= self.value.v.shape[0]:
+                break
+
+        self.show_figure(fig)
+        fig.canvas.draw()
+
+        super(MultiHistogram, self).redraw()
+
+    def run(self):
+        for i in range(0, self.hist_number):
+            self.value.map_write()
+            self.input.map_read()
+            mx = self.input.v[i].max()
+            mi = self.input.v[i].min()
+            d = mx - mi
+            if not d:
+                return
+            d = (self.n_bars - 1) / d
+            self.value[i] = 0
+            for x in self.input.v[i]:
+                i_bar = int(numpy.floor((x - mi) * d))
+                self.value[i, i_bar] += 1
+
+        super(MultiHistogram, self).run()
