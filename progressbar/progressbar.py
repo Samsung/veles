@@ -265,6 +265,8 @@ class ProgressBar(object):
         self.fd.write(self._format_line() + '\r')
         self.last_update_time = now
 
+    def inc(self):
+        self.update(self.currval + 1)
 
     def start(self):
         """Starts measuring time, and prints the bar at 0%.
