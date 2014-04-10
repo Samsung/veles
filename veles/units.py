@@ -235,6 +235,14 @@ class Unit(Distributable):
         self.run = self._track_call(self.run, "run_was_called")
         self.run = self._dereference_attributes(self.run)
         self.run = self._measure_time(self.run, Unit.timers)
+        self.generate_data_for_slave = \
+            self._dereference_attributes(self.generate_data_for_slave)
+        self.generate_data_for_master = \
+            self._dereference_attributes(self.generate_data_for_master)
+        self.apply_data_from_slave = \
+            self._dereference_attributes(self.apply_data_from_slave)
+        self.apply_data_from_master = \
+            self._dereference_attributes(self.apply_data_from_master)
         Unit.timers[self] = 0
 
     def __getstate__(self):
@@ -480,6 +488,11 @@ class Unit(Distributable):
             else:
                 raise TypeError(repr(arg) + " is not a valid attributes pair")
 
+    def def_attr(self, name, value):
+        real = "_" + name
+        setattr(self, real, value)
+        setattr(self, name, (self, real))
+
     def nothing(self, *args, **kwargs):
         """Function that do nothing.
 
@@ -507,9 +520,9 @@ class Unit(Distributable):
 
     def _link_attr(self, other, mine, yours):
         attr = getattr(other, yours)
-        if isinstance(attr, tuple) or isinstance(attr, int) or \
-           isinstance(attr, float) or isinstance(attr, bool) or \
-           isinstance(attr, str):
+        if (isinstance(attr, tuple) and not Unit.is_attribute_reference(attr))\
+           or isinstance(attr, int) or isinstance(attr, float) \
+           or isinstance(attr, bool) or isinstance(attr, str):
             setattr(self, mine, (other, yours))
         else:
             setattr(self, mine, attr)
