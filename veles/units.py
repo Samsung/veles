@@ -377,43 +377,11 @@ class Unit(Distributable):
             dst.initialize()
             dst.initialize_dependent()
 
-    def _check_gate_and_run(self, src, recursive=True):
-        """Check gate state and run if it is open.
-        """
-        if self.gate_block:
-            return
-        if not self.open_gate(src):  # gate has a priority over skip
-            return
-        # Optionally skip the execution
-        if not self.gate_skip:
-            # If previous run has not yet finished, discard notification.
-            if not self._run_lock_.acquire(False):
-                return
-            try:
-                if not self._is_initialized:
-                    self.initialize()
-                    self.warning("%s was not initialized, performed the "
-                                 "initialization", self.name)
-                self.run()
-            finally:
-                self._run_lock_.release()
-        if recursive:
-            self.run_dependent(False)
-
-    def run_dependent(self, detach=True):
+    def run_dependent(self):
         """Invokes run() on dependent units on different threads.
         """
-        while True:
-            children = tuple(self.links_to.keys())
-            if not len(children):
-                break
-            for i in range(len(children) - 1, -1 if detach else 0, -1):
-                self.thread_pool.callInThread(children[i]._check_gate_and_run,
-                                              self)
-            if detach:
-                break
-            children[0]._check_gate_and_run(self, False)
-            self = children[0]
+        for dst in self.links_to.keys():
+            self.thread_pool.callInThread(dst._check_gate_and_run, self)
 
     def open_gate(self, src):
         """Called before run() or initialize().
@@ -538,6 +506,28 @@ class Unit(Distributable):
             setattr(self, mine, (other, yours))
         else:
             setattr(self, mine, attr)
+
+    def _check_gate_and_run(self, src):
+        """Check gate state and run if it is open.
+        """
+        if self.gate_block:
+            return
+        if not self.open_gate(src):  # gate has a priority over skip
+            return
+        # Optionally skip the execution
+        if not self.gate_skip:
+            # If previous run has not yet finished, discard notification.
+            if not self._run_lock_.acquire(False):
+                return
+            try:
+                if not self._is_initialized:
+                    self.initialize()
+                    self.warning("%s was not initialized, performed the "
+                                 "initialization", self.name)
+                self.run()
+            finally:
+                self._run_lock_.release()
+        self.run_dependent()
 
     def _measure_time(self, fn, storage):
         def wrapped(*args, **kwargs):
