@@ -29,7 +29,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     sigint_initial = None
     pools = []
 
-    def __init__(self, minthreads=3, maxthreads=1024, queue_size=2048,
+    def __init__(self, minthreads=2, maxthreads=1024, queue_size=2048,
                  name=None):
         """
         Creates a new thread pool and starts it.

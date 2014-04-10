@@ -68,6 +68,10 @@ root.common.update = {"graphics_multicast_address": "239.192.1.1",
                       "web_status_notification_interval": 1,
                       "web_status_port": 8090,
                       "web_status_update": "update",
+                      "ThreadPool": {
+                          "minthreads": 2,
+                          "maxthreads": 2,
+                          }
                       }
 
 root.common.cache_dir = os.path.join(root.common.veles_user_dir, "cache")

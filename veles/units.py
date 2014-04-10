@@ -319,7 +319,9 @@ class Unit(Distributable):
         Unit._pool_lock_.acquire()
         try:
             if Unit._pool_ is None:
-                Unit._pool_ = thread_pool.ThreadPool()
+                Unit._pool_ = thread_pool.ThreadPool(
+                    minthreads=root.common.ThreadPool.minthreads,
+                    maxthreads=root.common.ThreadPool.maxthreads)
         finally:
             Unit._pool_lock_.release()
         return Unit._pool_
