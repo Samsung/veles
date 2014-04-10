@@ -1,3 +1,4 @@
+# encoding: utf-8
 """
 Created on Aug 6, 2013
 
@@ -7,10 +8,12 @@ Base class for workflows.
 """
 
 
+import datetime
 import hashlib
 from six.moves import cPickle as pickle
 import sys
 import tempfile
+import time
 import threading
 
 import veles.benchmark as benchmark
@@ -111,6 +114,7 @@ class Workflow(Unit):
         parent's on_workflow_finished() method will be called.
         """
         self._is_running = True
+        self._run_time_started_ = time.time()
         if not self.is_master:
             self.start_point.run_dependent()
         if self.run_is_blocking:
@@ -121,6 +125,7 @@ class Workflow(Unit):
 
     def on_workflow_finished(self):
         self._is_running = False
+        self._run_time_finished_ = time.time()
         if not self.is_slave:
             self.workflow.on_workflow_finished()
         if self.run_is_blocking:
@@ -248,12 +253,25 @@ class Workflow(Unit):
         stats = sorted(timers.items(), key=lambda x: x[1], reverse=True)
         time_all = sum(timers.values())
         if time_all > 0:
-            table = PrettyTable("#", "%", "unit")
+            table = PrettyTable("#", "%", "time", "unit")
             table.align["unit"] = "l"
+            top_time = 0
             for i in range(1, min(top_number, len(stats)) + 1):
+                top_time += stats[i - 1][1]
                 table.add_row(i, int(stats[i - 1][1] * 100 / time_all),
+                              datetime.timedelta(seconds=stats[i - 1][1]),
                               stats[i - 1][0])
+            table.add_row("Σ", int(top_time * 100 / time_all),
+                          datetime.timedelta(seconds=top_time), "Top 5")
             self.info("Unit run time statistics top:\n%s", str(table))
+            if hasattr(self, "_run_time_started_") and \
+               hasattr(self, "_run_time_finished_"):
+                rtime_all = self._run_time_finished_ - self._run_time_started_
+                table = PrettyTable("measured", "real", "η, %")
+                table.add_row(datetime.timedelta(seconds=time_all),
+                              datetime.timedelta(seconds=rtime_all),
+                              int(time_all * 100 / rtime_all))
+                self.info("Total run time:\n%s", str(table))
 
     def checksum(self):
         sha1 = hashlib.sha1()

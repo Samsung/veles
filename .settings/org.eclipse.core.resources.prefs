@@ -9,3 +9,4 @@ encoding//scripts/velescli.py=utf-8
 encoding//veles/__init__.py=utf-8
 encoding//veles/daemon/__init__.py=utf-8
 encoding//veles/external/pydot.py=latin1
+encoding//veles/workflows.py=utf-8
