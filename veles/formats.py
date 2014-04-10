@@ -235,11 +235,6 @@ class Vector(units.Pickleable):
             self.device = device
         if self.device is None:
             return
-        converted_dtype = self._converted_dtype(self.v.dtype)
-        if (converted_dtype in
-                (opencl_types.dtypes[root.common.dtype],
-                 opencl_types.dtypes[root.common.precision_type])):
-            self.v = self.v.astype(converted_dtype)
         self.v = cl.realign_array(self.v, self.device.device_info.memalign,
                                   numpy)
         self.v_ = self.device.queue_.context.create_buffer(
