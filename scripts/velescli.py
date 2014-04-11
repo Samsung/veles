@@ -114,7 +114,10 @@ class Main(Logger):
                             "root.snapshot_prefix='test_pr'",
                             nargs='*', metavar="configs...")
         try:
-            argcomplete.autocomplete(parser, escape_symbols=False)
+            class NoEscapeCompleter(argcomplete.CompletionFinder):
+                def quote_completions(self, completions, *args, **kwargs):
+                    return completions
+            NoEscapeCompleter()(parser)
         except:
             pass
         return parser
