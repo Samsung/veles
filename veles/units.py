@@ -576,7 +576,7 @@ class Unit(Distributable):
                 if Unit.is_attribute_reference(value):
                     new_value = getattr(*value)
                     if Unit.is_attribute_reference(new_value):
-                        raise RuntimeException()
+                        raise RuntimeError()
                     setattr(self, key, new_value)
                     refs[key] = value
             try:
