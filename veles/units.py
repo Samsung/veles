@@ -231,18 +231,18 @@ class Unit(Distributable):
         self._gate_lock_ = threading.Lock()
         self._run_lock_ = threading.Lock()
         self._is_initialized = False
-        self.initialize = self._dereference_attributes(self.initialize)
+        self.initialize = self.dereference_attributes(self.initialize)
         self.run = self._track_call(self.run, "run_was_called")
-        self.run = self._dereference_attributes(self.run)
+        self.run = self.dereference_attributes(self.run)
         self.run = self._measure_time(self.run, Unit.timers)
         self.generate_data_for_slave = \
-            self._dereference_attributes(self.generate_data_for_slave)
+            self.dereference_attributes(self.generate_data_for_slave)
         self.generate_data_for_master = \
-            self._dereference_attributes(self.generate_data_for_master)
+            self.dereference_attributes(self.generate_data_for_master)
         self.apply_data_from_slave = \
-            self._dereference_attributes(self.apply_data_from_slave)
+            self.dereference_attributes(self.apply_data_from_slave)
         self.apply_data_from_master = \
-            self._dereference_attributes(self.apply_data_from_master)
+            self.dereference_attributes(self.apply_data_from_master)
         Unit.timers[self] = 0
 
     def __getstate__(self):
@@ -563,7 +563,7 @@ class Unit(Distributable):
 
         return wrapped
 
-    def _dereference_attributes(self, fn):
+    def dereference_attributes(self, fn):
         """
         If any attribute of this class is a tuple (object, "name"), it is
         interpreted as a reference to object.name, so it is temporarily set to
