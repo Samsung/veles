@@ -218,12 +218,6 @@ class Vector(units.Pickleable):
     def __lshift__(self, value):
         self.v = value
 
-    def __getitem__(self, index):
-        return self.v[index]
-
-    def __setitem__(self, index, value):
-        self.v[index] = value
-
     def _converted_dtype(self, dtype):
         if dtype == numpy.float32:
             return numpy.float64
