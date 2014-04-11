@@ -12,20 +12,20 @@ import veles.error as error
 # : CL type defines
 cl_defines = {"float":      {"dtype": "float",
                              "c_dtype": "float",
-                             "sizeof_dtype": 4,
-                             "sizeof_c_dtype": 4},
+                             "sizeof_dtype": "4",
+                             "sizeof_c_dtype": "4"},
               "double":     {"dtype": "double",
                              "c_dtype": "double",
-                             "sizeof_dtype": 8,
-                             "sizeof_c_dtype": 8},
+                             "sizeof_dtype": "8",
+                             "sizeof_c_dtype": "8"},
               "float2":     {"dtype": "float",
                              "c_dtype": "float2",
-                             "sizeof_dtype": 4,
-                             "sizeof_c_dtype": 8},
+                             "sizeof_dtype": "4",
+                             "sizeof_c_dtype": "8"},
               "double2":    {"dtype": "double",
                              "c_dtype": "double2",
-                             "sizeof_dtype": 8,
-                             "sizeof_c_dtype": 16}}
+                             "sizeof_dtype": "8",
+                             "sizeof_c_dtype": "16"}}
 
 # : Supported int types as OpenCL => numpy dictionary.
 itypes = {"char": numpy.int8, "short": numpy.int16, "int": numpy.int32,

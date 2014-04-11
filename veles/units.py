@@ -677,6 +677,12 @@ class OpenCLUnit(Unit):
         try:
             self.prg_ = self.device.queue_.context.create_program(
                 source, root.common.ocl_dirs)
+            if len(self.prg_.build_logs):
+                for s in self.prg_.build_logs:
+                    s = s.strip()
+                    if not len(s):
+                        continue
+                    self.info("Non-empty OpenCL build log encountered: %s", s)
         finally:
             if dump_filename is not None:
                 flog = open(dump_filename, "w")
