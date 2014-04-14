@@ -9,7 +9,6 @@ from copy import copy
 import logging.handlers
 from pymongo import MongoClient
 import re
-import six
 import sys
 
 
