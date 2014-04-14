@@ -8,6 +8,13 @@ if [ ! -e "veles/znicz/.project" -o ! -e libSoundFeatureExtraction/.project ]; t
     echo '[filter "package"]
         clean = /bin/sh package.sh clean
         smudge = /bin/sh package.sh smudge' >> .git/config
+    echo '[filter "package"]
+        clean = /bin/sh package.sh clean
+        smudge = /bin/sh package.sh smudge' >> .git/modules/Znicz/config
+    rm veles/__init__.py
+    git checkout veles/__init__.py
+    rm veles/znicz/__init__.py
+    git checkout veles/znicz/__init__.py
 else
     git submodule update
 fi
