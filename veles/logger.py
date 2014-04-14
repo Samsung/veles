@@ -9,6 +9,7 @@ from copy import copy
 import logging.handlers
 from pymongo import MongoClient
 import re
+import six
 import sys
 
 
@@ -41,6 +42,26 @@ class Logger(object):
                 "m%(levelname)s\033[0m:%(name)s:\033[" + text_color + \
                 "m%(message)s\033[0m"
             return fmt % record.__dict__
+
+        if not hasattr(logging.Formatter, "formatMessage"):
+            def format(self, record):
+                record.message = record.getMessage()
+                if self.usesTime():
+                    record.asctime = self.formatTime(record, self.datefmt)
+                s = self.formatMessage(record)
+                if record.exc_info:
+                    if not record.exc_text:
+                        record.exc_text = self.formatException(record.exc_info)
+                if record.exc_text:
+                    if s[-1:] != "\n":
+                        s = s + "\n"
+                    try:
+                        s = s + record.exc_text
+                    except UnicodeError:
+                        s = s + \
+                            record.exc_text.decode(sys.getfilesystemencoding(),
+                                                   'replace')
+                return s
 
     @staticmethod
     def setup(level):
