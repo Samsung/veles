@@ -7,7 +7,7 @@ Created on May 17, 2013
 
 import numpy
 
-from veles.config import root, get_config
+import veles.config as config
 import veles.formats as formats
 import veles.plotter as plotter
 import veles.opencl_types as opencl_types
@@ -602,7 +602,7 @@ class MSEHistogram(plotter.Plotter):
     def initialize(self):
         super(MSEHistogram, self).initialize()
         self.val_mse = numpy.zeros(
-            self.n_bars, dtype=opencl_types.dtypes[root.common.dtype])
+            self.n_bars, dtype=opencl_types.dtypes[config.root.common.dtype])
 
     def redraw(self):
         fig = self.pp.figure(self.name)
@@ -714,7 +714,8 @@ class Histogram(plotter.Plotter):
     """
     def __init__(self, workflow, **kwargs):
         name = kwargs.get("name", "Histogram")
-        n_bars = kwargs.get("n_bars", get_config(root.histogram.n_bars, 20))
+        n_bars = kwargs.get("n_bars",
+                            config.get(config.root.histogram.n_bars, 20))
         kwargs["name"] = name
         kwargs["n_bars"] = n_bars
         super(Histogram, self).__init__(workflow, **kwargs)
@@ -819,11 +820,14 @@ class MultiHistogram(plotter.Plotter):
 
     """
     def __init__(self, workflow, **kwargs):
-        name = kwargs.get("name", get_config(root.multihist.name, "Histogram"))
-        limit = kwargs.get("limit", get_config(root.multihist.limit, 64))
-        n_bars = kwargs.get("n_bars", get_config(root.multihist.n_bars, 25))
-        hist_number = kwargs.get("hist_number",
-                                 get_config(root.multihist.hist_number, 16))
+        name = kwargs.get("name",
+                          config.get(config.root.multihist.name, "Histogram"))
+        limit = kwargs.get("limit",
+                           config.get(config.root.multihist.limit, 64))
+        n_bars = kwargs.get("n_bars",
+                            config.get(config.root.multihist.n_bars, 25))
+        hist_number = kwargs.get(
+            "hist_number", config.get(config.root.multihist.hist_number, 16))
         kwargs["name"] = name
         kwargs["limit"] = limit
         kwargs["n_bars"] = n_bars
@@ -858,10 +862,10 @@ class MultiHistogram(plotter.Plotter):
             for _ in range(0, n_cols):
                 ax = fig.add_subplot(n_rows, n_cols, i + 1)
                 ax.cla()
-                #ax.axis('off')
+                # ax.axis('off')
                 ax.patch.set_facecolor('#ffe6ca')
-                #ax.set_xlabel("Input Data", fontsize=10)
-                #ax.set_ylabel("Number", fontsize=10)
+                # ax.set_xlabel("Input Data", fontsize=10)
+                # ax.set_ylabel("Number", fontsize=10)
                 ymin = self.value[i].min()
                 ymax = self.value[i].max()
                 xmin = self.input[i].min()

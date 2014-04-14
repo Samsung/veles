@@ -40,7 +40,7 @@ root = Config()
 root.common = Config()
 
 
-def get_config(value, default_value=None):
+def get(value, default_value=None):
     """Gets value from global config.
     """
     if isinstance(value, Config):

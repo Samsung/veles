@@ -11,7 +11,7 @@ Unit test for global config
 import logging
 import unittest
 
-from veles.config import root, Config, get_config
+from veles.config import root, Config, get
 
 
 class TestConfig(unittest.TestCase):
@@ -69,15 +69,15 @@ class TestConfig(unittest.TestCase):
         logging.info("All Ok")
 
     def test_get_config(self):
-        logging.info("Will test get_config function")
+        logging.info("Will test get function")
         test = Config()
         test.test_value = 0.01
-        test.test_value = get_config(test.test_value, 0.5)
+        test.test_value = get(test.test_value, 0.5)
         self.assertEqual(test.test_value, 0.01,
-                         "No right value in get_config")
-        test.test_value2 = get_config(test.test_value2, 0.5)
+                         "No right value in get")
+        test.test_value2 = get(test.test_value2, 0.5)
         self.assertEqual(test.test_value2, 0.5,
-                         "No right defolt value in get_config")
+                         "No right defolt value in get")
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
