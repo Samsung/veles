@@ -76,12 +76,11 @@ def interleave(a):
 def real_normalize(a):
     """Normalizes real array to [-1, 1] in-place.
     """
-    a -= a.min()
-    m = a.max()
-    if m:
-        a /= m
-        a *= 2.0
-        a -= 1.0
+    x_min, x_max = a.min(), a.max()
+    a -= x_min
+    if x_max > x_min:
+        a *= 2. / (x_max - x_min)
+        a -= 1.
 
 
 def complex_normalize(a):
