@@ -19,9 +19,18 @@ class Config(object):
     def _update(self, tree):
         for k, v in tree.items():
             if isinstance(v, dict):
-                self.__getattr__(k)._update(v)
+                getattr(self, k)._update(v)
             else:
-                self.__setattr__(k, v)
+                setattr(self, k, v)
+
+    def _defaults(self, tree):
+        for k, v in tree.items():
+            if isinstance(v, dict):
+                getattr(self, k)._defaults(v)
+            else:
+                attr = getattr(self, k)
+                if isinstance(attr, Config):
+                    setattr(self, k, v)
 
     def __getattr__(self, name):
         temp = Config()
@@ -32,6 +41,10 @@ class Config(object):
         if name == "update":
             if isinstance(value, dict):
                 self._update(value)
+                return
+        if name == "defaults":
+            if isinstance(value, dict):
+                self._defaults(value)
                 return
         super(Config, self).__setattr__(name, value)
 
