@@ -327,7 +327,8 @@ class Weights2D(plotter.Plotter):
     """
     def __init__(self, workflow, **kwargs):
         name = kwargs.get("name", "Weights")
-        limit = kwargs.get("limit", 64)
+        limit = kwargs.get("limit",
+                           config.get(config.root.weights_plotter.limit, 64))
         yuv = kwargs.get("yuv", False)
         kwargs["name"] = name
         kwargs["limit"] = limit
