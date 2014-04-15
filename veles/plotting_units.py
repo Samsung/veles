@@ -327,8 +327,7 @@ class Weights2D(plotter.Plotter):
     """
     def __init__(self, workflow, **kwargs):
         name = kwargs.get("name", "Weights")
-        limit = kwargs.get("limit",
-                           config.get(config.root.weights_plotter.limit, 64))
+        limit = kwargs.get("limit", 64)
         yuv = kwargs.get("yuv", False)
         kwargs["name"] = name
         kwargs["limit"] = limit
@@ -715,8 +714,7 @@ class Histogram(plotter.Plotter):
     """
     def __init__(self, workflow, **kwargs):
         name = kwargs.get("name", "Histogram")
-        n_bars = kwargs.get("n_bars",
-                            config.get(config.root.histogram.n_bars, 20))
+        n_bars = kwargs.get("n_bars", 20)
         kwargs["name"] = name
         kwargs["n_bars"] = n_bars
         super(Histogram, self).__init__(workflow, **kwargs)
@@ -821,14 +819,10 @@ class MultiHistogram(plotter.Plotter):
 
     """
     def __init__(self, workflow, **kwargs):
-        name = kwargs.get("name",
-                          config.get(config.root.multihist.name, "Histogram"))
-        limit = kwargs.get("limit",
-                           config.get(config.root.multihist.limit, 64))
-        n_bars = kwargs.get("n_bars",
-                            config.get(config.root.multihist.n_bars, 25))
-        hist_number = kwargs.get(
-            "hist_number", config.get(config.root.multihist.hist_number, 16))
+        name = kwargs.get("name", "Histogram")
+        limit = kwargs.get("limit", 64)
+        n_bars = kwargs.get("n_bars", 25)
+        hist_number = kwargs.get("hist_number", 16)
         kwargs["name"] = name
         kwargs["limit"] = limit
         kwargs["n_bars"] = n_bars
