@@ -78,32 +78,19 @@ class Rand(object):
         self.restore_state()
         _lock.release()
 
-    def fill_normal(self, arr, vle_min=-1.0, vle_max=1.0):
-        """Fills numpy array with random numbers with normal distribution.
+    def fill_normal_real(self, arr, mean, stddev):
+        """Fills real-valued numpy array with random normal distribution.
 
         Parameters:
             arr: numpy array.
-            vle_min: minimum value in random distribution.
-            vle_max: maximum value in random distribution.
+            mean:
+            stddev:
         """
         global _lock
         _lock.acquire()
         self.save_state()
         arr = formats.ravel(arr)
-        center = (vle_min + vle_max) * 0.5
-        radius = (vle_max - vle_min) * 0.5
-        if arr.dtype in (numpy.complex64, numpy.complex128):
-            # Fill the circle in case of complex numbers.
-            r = numpy.clip(numpy.random.normal(loc=center, scale=radius,
-                                               size=arr.size), vle_min,
-                           vle_max)
-            a = numpy.random.rand(arr.size) * numpy.pi * 2.0
-            arr.real[:] = r * numpy.cos(a)
-            arr.imag[:] = r * numpy.sin(a)
-        else:
-            arr[:] = numpy.clip(numpy.random.normal(loc=center, scale=radius,
-                                                    size=arr.size), vle_min,
-                                vle_max)[:]
+        arr[:] = numpy.random.normal(loc=mean, scale=stddev, size=arr.size)[:]
         self.restore_state()
         _lock.release()
 
