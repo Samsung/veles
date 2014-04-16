@@ -5,7 +5,7 @@ Created on Jan 14, 2014
 """
 
 
-import fysom
+import veles.external.fysom as fysom
 import json
 import six
 import socket
