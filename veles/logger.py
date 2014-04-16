@@ -25,9 +25,9 @@ class Logger(object):
         def formatMessage(self, record):
             level_color = "0"
             text_color = "0"
+            fmt = ""
             if record.levelno <= logging.DEBUG:
-                level_color = "1;37"
-                text_color = "0;37"
+                fmt = "\033[0;37m" + logging.BASIC_FORMAT + "\033[0m"
             elif record.levelno <= logging.INFO:
                 level_color = "1;36"
                 lmsg = record.message.lower()
@@ -37,9 +37,10 @@ class Logger(object):
                 level_color = "1;33"
             elif record.levelno <= logging.CRITICAL:
                 level_color = "1;31"
-            fmt = "\033[" + level_color + \
-                "m%(levelname)s\033[0m:%(name)s:\033[" + text_color + \
-                "m%(message)s\033[0m"
+            if not fmt:
+                fmt = "\033[" + level_color + \
+                    "m%(levelname)s\033[0m:%(name)s:\033[" + text_color + \
+                    "m%(message)s\033[0m"
             return fmt % record.__dict__
 
         if not hasattr(logging.Formatter, "formatMessage"):
