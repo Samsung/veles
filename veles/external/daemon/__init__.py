@@ -37,13 +37,9 @@
 
     """
 
-import six
-if six.PY3:
-    import daemon.version as version
-    from daemon.daemon import DaemonContext, daemonize
-else:
-    import version
-    from daemon import DaemonContext, daemonize
+
+from veles.external.daemon import version
+from veles.external.daemon.daemon import DaemonContext, daemonize
 
 _version = version.version
 _copyright = version.copyright

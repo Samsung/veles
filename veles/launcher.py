@@ -9,7 +9,7 @@ Workflow launcher (server/client/standalone).
 
 
 import argparse
-import daemon
+import veles.external.daemon as daemon
 import datetime
 import getpass
 import json

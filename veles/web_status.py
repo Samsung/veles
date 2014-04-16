@@ -7,7 +7,7 @@ Created on Feb 10, 2014
 """
 
 
-import daemon
+import veles.external.daemon as daemon
 import logging
 import multiprocessing as mp
 import socket
