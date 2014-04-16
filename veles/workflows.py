@@ -267,7 +267,7 @@ class Workflow(Unit):
             if hasattr(self, "_run_time_started_") and \
                hasattr(self, "_run_time_finished_"):
                 rtime_all = self._run_time_finished_ - self._run_time_started_
-                table = PrettyTable("measured", "real", "η, %")
+                table = PrettyTable("measured", "real", "η,%")
                 table.add_row(datetime.timedelta(seconds=time_all),
                               datetime.timedelta(seconds=rtime_all),
                               int(time_all * 100 / rtime_all))
