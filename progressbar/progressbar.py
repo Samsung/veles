@@ -110,16 +110,20 @@ class ProgressBar(object):
         self.left_justify = left_justify
 
         self.signal_set = False
-        if term_width is not None:
+
+        self.term_width = None
+        try:
+            self._handle_resize()
+            signal.signal(signal.SIGWINCH, self._handle_resize)
+            self.signal_set = True
+        except (SystemExit, KeyboardInterrupt): raise
+        except:
+            self.term_width = self._env_size()
+        if term_width is not None and (self.term_width is None
+                                       or self.term_width > term_width):
             self.term_width = term_width
-        else:
-            try:
-                self._handle_resize()
-                signal.signal(signal.SIGWINCH, self._handle_resize)
-                self.signal_set = True
-            except (SystemExit, KeyboardInterrupt): raise
-            except:
-                self.term_width = self._env_size()
+        if self.term_width is None:
+            self.term_width = self._DEFAULT_TERMSIZE
 
         self.__iterable = None
         self._update_widgets()
