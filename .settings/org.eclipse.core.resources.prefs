@@ -1,13 +1,13 @@
 eclipse.preferences.version=1
 encoding//daemon/daemon.py=utf-8
-encoding//progressbar/__init__.py=utf-8
-encoding//progressbar/compat.py=utf-8
-encoding//progressbar/progressbar.py=utf-8
-encoding//progressbar/widgets.py=utf-8
 encoding//scripts/music_features.py=utf-8
 encoding//scripts/velescli.py=utf-8
 encoding//veles/__init__.py=utf-8
 encoding//veles/daemon/__init__.py=utf-8
+encoding//veles/external/progressbar/__init__.py=utf-8
+encoding//veles/external/progressbar/compat.py=utf-8
+encoding//veles/external/progressbar/progressbar.py=utf-8
+encoding//veles/external/progressbar/widgets.py=utf-8
 encoding//veles/external/pydot.py=latin1
 encoding//veles/workflows.py=utf-8
 encoding//veles/znicz/__init__.py=utf-8
