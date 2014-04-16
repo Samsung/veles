@@ -17,7 +17,7 @@ import subprocess
 import sys
 from tempfile import mkdtemp
 from twisted.internet import reactor
-from txzmq import ZmqConnection, ZmqEndpoint
+from veles.external.txzmq import ZmqConnection, ZmqEndpoint
 import zmq
 
 from veles.config import root

@@ -11,7 +11,7 @@ import six
 import time
 from twisted.internet import reactor, threads
 from twisted.internet.protocol import ReconnectingClientFactory
-from txzmq import ZmqConnection, ZmqEndpoint
+from veles.external.txzmq import ZmqConnection, ZmqEndpoint
 import zmq
 
 from veles.network_common import NetworkAgent, StringLineReceiver

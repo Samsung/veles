@@ -6,7 +6,7 @@ Created on Apr 2, 2014
 
 
 from six.moves import cPickle as pickle, queue
-from txzmq import ZmqConnection, ZmqEndpoint
+from veles.external.txzmq import ZmqConnection, ZmqEndpoint
 import zmq
 
 

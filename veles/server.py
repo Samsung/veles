@@ -11,7 +11,7 @@ import six
 import socket
 from twisted.internet import reactor, threads
 from twisted.internet.protocol import ServerFactory
-from txzmq import ZmqConnection, ZmqEndpoint
+from veles.external.txzmq import ZmqConnection, ZmqEndpoint
 import uuid
 import zmq
 

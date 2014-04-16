@@ -17,7 +17,7 @@ import tornado.ioloop as ioloop
 from twisted.internet import reactor
 import zmq
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from txzmq import ZmqConnection, ZmqEndpoint
+from veles.external.txzmq import ZmqConnection, ZmqEndpoint
 
 from veles.config import root
 from veles.logger import Logger
