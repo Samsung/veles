@@ -551,15 +551,16 @@ class Unit(Distributable):
         def wrapped(*args, **kwargs):
             sp = time.time()
             try:
-                fn(*args, **kwargs)
+                res = fn(*args, **kwargs)
             except TypeError as e:
                 try:
-                    fn(self, *args, **kwargs)
+                    res = fn(self, *args, **kwargs)
                 except TypeError:
                     raise e
             fp = time.time()
             if self in storage:
                 storage[self] += fp - sp
+            return res
 
         return wrapped
 
@@ -580,27 +581,29 @@ class Unit(Distributable):
                     setattr(self, key, new_value)
                     refs[key] = value
             try:
-                fn(*args, **kwargs)
+                res = fn(*args, **kwargs)
             except TypeError as e:
                 try:
-                    fn(self, *args, **kwargs)
+                    res = fn(self, *args, **kwargs)
                 except TypeError:
                     raise e
             for key, value in refs.items():
                 setattr(value[0], value[1], getattr(self, key))
                 setattr(self, key, value)
+            return res
         return wrapped
 
     def _track_call(self, fn, name):
         def wrapped(*args, **kwargs):
             setattr(self, name, True)
             try:
-                fn(*args, **kwargs)
+                res = fn(*args, **kwargs)
             except TypeError as e:
                 try:
-                    fn(self, *args, **kwargs)
+                    res = fn(self, *args, **kwargs)
                 except TypeError:
                     raise e
+            return res
 
         return wrapped
 
