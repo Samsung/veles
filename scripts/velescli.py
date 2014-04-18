@@ -224,7 +224,7 @@ class Main(Logger):
             self.launcher.stop()
             sys.exit(Main.EXIT_FAILURE)
 
-    def _run_workflow(self, fname_workflow, fname_snapshot):
+    def _load_model(self, fname_workflow, fname_snapshot):
         self.snapshot_file_name = fname_snapshot
         self.load_called = False
         self.main_called = False
@@ -246,11 +246,13 @@ class Main(Logger):
             self.exception("Failed to load the workflow \"%s\"",
                            fname_workflow)
             sys.exit(Main.EXIT_FAILURE)
+        return module
 
+    def _run_workflow(self, module):
         module.run(self._load, self._main)
         if not self.main_called:
             self.warning("main() was not called by run() in %s",
-                         fname_workflow)
+                         module.__file__)
 
     def _print_logo(self, args):
         if not args.no_logo:
@@ -292,6 +294,8 @@ class Main(Logger):
         fname_config = args.config
         if fname_config == "-":
             fname_config = "%s_config%s" % os.path.splitext(args.workflow)
+        fname_config = os.path.abspath(fname_config)
+        fname_workflow = os.path.abspath(args.workflow)
 
         self._print_logo(args)
         Logger.setup(level=Main.LOG_LEVEL_MAP[args.verbose])
@@ -300,8 +304,9 @@ class Main(Logger):
         self._seed_random(args.random_seed)
         self._set_pickle_debug(args)
 
-        self._apply_config(os.path.abspath(fname_config), args.config_list)
-        self._run_workflow(os.path.abspath(args.workflow), args.snapshot)
+        wm = self._load_model(fname_workflow, args.snapshot)
+        self._apply_config(fname_config, args.config_list)
+        self._run_workflow(wm)
 
         self.info("End of job")
         return Main.EXIT_SUCCESS
