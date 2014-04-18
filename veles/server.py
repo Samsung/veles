@@ -148,12 +148,12 @@ class VelesProtocol(StringLineReceiver):
             del(self.factory.protocols[self._id])
             if len(self.nodes) == 0:
                 self.host.launcher.stop()
-        elif self._id in self.nodes:
+        elif self.id in self.nodes:
             threads.deferToThreadPool(reactor,
                                       self.host.workflow.thread_pool,
                                       self.host.workflow.drop_slave,
                                       self.nodes[self.id])
-            if self._id in self.factory.protocols:
+            if self.id in self.factory.protocols:
                 del(self.factory.protocols[self._id])
 
     def lineReceived(self, line):
@@ -231,7 +231,8 @@ class VelesProtocol(StringLineReceiver):
             raise Exception("Newly connected client did not send "
                             "it's process id, sending back the error "
                             "message")
-        self.nodes[self.id] = {'power': power, 'mid': mid, 'pid': pid}
+        self.nodes[self.id] = {'power': power, 'mid': mid, 'pid': pid,
+                               'id': self.id}
         reactor.callLater(0, self.resolveAddr, self.addr)
         return power, mid, pid
 
@@ -259,16 +260,23 @@ class VelesProtocol(StringLineReceiver):
         self.host.error(err)
         self.sendLine({'error': err})
 
-    def jobRequestReceived(self):
-        self.state.request_job()
+    def _request_job(self):
         job = threads.deferToThreadPool(reactor,
                                         self.host.workflow.thread_pool,
                                         self.host.workflow.request_job,
                                         self.nodes[self.id])
         job.addCallback(self.jobRequestFinished)
 
+    def jobRequestReceived(self):
+        self.state.request_job()
+        self._request_job()
+
     def jobRequestFinished(self, data):
         if data is not None:
+            if not data:
+                # Try again later
+                self._request_job()
+                return
             self.state.obtain_job()
             self.host.debug("%s Job size: %d Kb", self.id, len(data) / 1000)
             self.host.zmq_connection.reply(self.id, data)

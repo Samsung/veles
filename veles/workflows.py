@@ -147,8 +147,12 @@ class Workflow(Unit):
 
     def generate_data_for_slave(self, slave):
         data = []
+        has_data = True
         for unit in self.units:
-            unit.wait_for_data_for_slave()
+            has_data &= unit.has_data_for_slave
+        if not has_data:
+            # Try again later
+            return False
         for unit in self.units:
             data.append(unit.generate_data_for_slave(slave))
         return data
@@ -179,6 +183,9 @@ class Workflow(Unit):
         if not self.is_running:
             return None
         data = self.generate_data_for_slave(slave)
+        if data is not None and not data:
+            # Try again later
+            return False
         return pickle.dumps(data) if data is not None else None
 
     def do_job(self, data):
