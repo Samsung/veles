@@ -75,7 +75,7 @@ class Distributable(Pickleable):
     def _data_threadsafe(self, fn):
         def wrapped(*args, **kwargs):
             if not self._data_lock_.acquire(
-                timeout=Distributable.DEADLOCK_TIME):
+                    timeout=Distributable.DEADLOCK_TIME):
                 self.error("Deadlock in %s: %s", self.name, fn.__name__)
             else:
                 self._data_lock_.release()
@@ -583,11 +583,11 @@ class Unit(Distributable):
                 if Unit.is_attribute_reference(value):
                     new_value = getattr(*value)
                     if Unit.is_attribute_reference(new_value):
-                        raise RuntimeError("Attribute reference %s@%s " \
-                                           "references  an attribute " \
-                                           "reference %s@%s in unit %s" % (
-                                            value[1], value[0], new_value[1],
-                                            new_value[0], self.name))
+                        raise RuntimeError("Attribute reference %s@%s "
+                                           "references  an attribute "
+                                           "reference %s@%s in unit %s"
+                                           % (value[1], value[0], new_value[1],
+                                              new_value[0], self.name))
                     setattr(self, key, new_value)
                     refs[key] = value
             try:
