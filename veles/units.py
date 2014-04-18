@@ -70,21 +70,23 @@ class Pickleable(logger.Logger):
 
 
 class Distributable(Pickleable):
+    DEADLOCK_TIME = 4
+
     def _data_threadsafe(self, fn):
         def wrapped(*args, **kwargs):
-            self._data_lock_.acquire()
-            result = None
-            try:
-                result = fn(*args, **kwargs)
-            finally:
+            if not self._data_lock_.acquire(
+                timeout=Distributable.DEADLOCK_TIME):
+                self.error("Deadlock in %s: %s", self.name, fn.__name__)
+            else:
                 self._data_lock_.release()
-            return result
+            with self._data_lock_:
+                return fn(*args, **kwargs)
 
         return wrapped
 
     def __init__(self, **kwargs):
         self._generate_data_for_slave_threadsafe = \
-            kwargs.get("generate_data_for_slave_threadsafe", False)
+            kwargs.get("generate_data_for_slave_threadsafe", True)
         self._apply_data_from_slave_threadsafe = \
             kwargs.get("apply_data_from_slave_threadsafe", True)
         super(Distributable, self).__init__(**kwargs)
@@ -112,12 +114,16 @@ class Distributable(Pickleable):
     @has_data_for_slave.setter
     def has_data_for_slave(self, value):
         if value:
+            self.debug("%s has data for slave", self.name)
             self._data_event_.set()
         else:
+            self.debug("%s has NO data for slave", self.name)
             self._data_event_.clear()
 
     def wait_for_data_for_slave(self):
-        self._data_event_.wait()
+        if not self._data_event_.wait(Distributable.DEADLOCK_TIME):
+            self.error("Deadlock in %s: wait_for_data_for_slave", self.name)
+            self._data_event_.wait()
 
     """Callbacks for working in distributed environment.
     """
@@ -577,7 +583,11 @@ class Unit(Distributable):
                 if Unit.is_attribute_reference(value):
                     new_value = getattr(*value)
                     if Unit.is_attribute_reference(new_value):
-                        raise RuntimeError()
+                        raise RuntimeError("Attribute reference %s@%s " \
+                                           "references  an attribute " \
+                                           "reference %s@%s in unit %s" % (
+                                            value[1], value[0], new_value[1],
+                                            new_value[0], self.name))
                     setattr(self, key, new_value)
                     refs[key] = value
             try:

@@ -14,6 +14,7 @@ from six.moves import queue
 from six.moves import zip
 import sys
 import threading
+import traceback
 import types
 from twisted.python import threadpool
 
@@ -105,19 +106,29 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             else:
                 thread.join(timeout)
                 if thread.is_alive():
-                    if hasattr(thread, "_stop") and callable(thread._stop):
-                        thread._stop()
-                    self.warning("Failed to join with thread #%d since the "
-                                 "timeout (%.2f sec) was exceeded.%s",
-                                 thread.ident, timeout, " It was killed."
-                                 if (hasattr(thread, "_stop") and
-                                     callable(thread._stop))
-                                 else " It was not killed "
-                                      "due to the lack of _stop for Thread "
-                                      "in current python interpreter.")
+                    self.warning("Stack trace of probably deadlocked #%d:",
+                                 thread.ident)
+                    traceback.print_stack(sys._current_frames()[thread.ident])
+                    ThreadPool.force_thread_to_stop(thread)
+                    self.warning(
+                        "Failed to join with thread #%d since the  timeout "
+                        "(%.2f sec) was exceeded.%s",
+                        thread.ident, timeout, " It was killed."
+                        if ThreadPool.thread_can_be_forced_to_stop(thread)
+                        else " It was not killed due to the lack of _stop in "
+                        " Thread class of the current Python interpreter.")
         ThreadPool.pools.remove(self)
         self.debug("I am destroyed")
         self.shutting_down = False
+
+    @staticmethod
+    def thread_can_be_forced_to_stop(thread):
+        return hasattr(thread, "_stop") and callable(thread._stop)
+
+    @staticmethod
+    def force_thread_to_stop(thread):
+        if ThreadPool.thread_can_be_forced_to_stop(thread):
+            thread._stop()
 
     @staticmethod
     def shutdown_pools(execute_remaining=True, force=False, timeout=0.25):
