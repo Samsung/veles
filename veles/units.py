@@ -596,6 +596,7 @@ class Unit(Distributable):
                 try:
                     res = fn(self, *args, **kwargs)
                 except TypeError:
+                    e.__context__ = None
                     raise e
             for key, value in refs.items():
                 setattr(value[0], value[1], getattr(self, key))
