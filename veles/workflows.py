@@ -121,12 +121,12 @@ class Workflow(Unit):
             self._sync_event_.wait()
 
     def stop(self):
-        self.on_workflow_finished()
+        self.on_workflow_finished(True)
 
-    def on_workflow_finished(self):
+    def on_workflow_finished(self, slave_force=False):
         self._is_running = False
         self._run_time_finished_ = time.time()
-        if not self.is_slave:
+        if not self.is_slave or slave_force:
             self.workflow.on_workflow_finished()
         if self.run_is_blocking:
             self._sync_event_.set()
@@ -187,7 +187,12 @@ class Workflow(Unit):
         """
         real_data = pickle.loads(data)
         self.apply_data_from_master(real_data)
-        self.run()
+        try:
+            self.run()
+        except:
+            self.exception("Failed to run the workflow")
+            self.stop()
+            return
         return pickle.dumps(self.generate_data_for_master())
 
     def apply_update(self, data, slave):
