@@ -122,7 +122,34 @@ class Main(Logger):
             pass
         return parser
 
+    def _load_model(self, fname_workflow, fname_snapshot):
+        self.debug("Loading the model \"%s\"...", fname_workflow)
+        self.snapshot_file_name = fname_snapshot
+        self.load_called = False
+        self.main_called = False
+        try:
+            sys.path = [os.path.dirname(fname_workflow)] + sys.path
+            module = __import__(
+                os.path.splitext(os.path.basename(fname_workflow))[0])
+            sys.path = sys.path[1:]
+        except FileNotFoundError:
+            self.exception("Workflow does not exist: \"%s\"", fname_workflow)
+            sys.exit(errno.ENOENT)
+        except IsADirectoryError:
+            self.exception("Workflow \"%s\" is a directory", fname_workflow)
+            sys.exit(errno.EISDIR)
+        except PermissionError:
+            self.exception("Cannot read workflow \"%s\"", fname_workflow)
+            sys.exit(errno.EACCES)
+        except:
+            self.exception("Failed to load the workflow \"%s\"",
+                           fname_workflow)
+            sys.exit(Main.EXIT_FAILURE)
+        return module
+
     def _apply_config(self, fname_config, config_list):
+        self.debug("Applying the configuration from %s...",
+                   fname_config)
         try:
             runpy.run_path(fname_config)
         except FileNotFoundError:
@@ -139,11 +166,20 @@ class Main(Logger):
             self.exception("Failed to apply the configuration \"%s\"",
                            fname_config)
             sys.exit(Main.EXIT_FAILURE)
+        override_cfg = "\n".join(config_list)
+        self.debug("Overriding the configuration with %s", override_cfg)
         try:
-            exec("\n".join(config_list))
+            exec(override_cfg)
         except:
             self.exception("Invalid configuration overloads")
             sys.exit(Main.EXIT_FAILURE)
+
+    def _run_workflow(self, module):
+        self.debug("Calling %s.run()...", module.__name__)
+        module.run(self._load, self._main)
+        if not self.main_called:
+            self.warning("main() was not called by run() in %s",
+                         module.__file__)
 
     def _seed_random(self, rndvals):
         rndvals_split = rndvals.split(',')
@@ -195,6 +231,8 @@ class Main(Logger):
         return None
 
     def _load(self, Workflow, **kwargs):
+        self.debug("load() was called from run(), workflow class is %s",
+                   str(Workflow))
         self.load_called = True
         try:
             self.launcher = Launcher()
@@ -212,6 +250,7 @@ class Main(Logger):
         return self.workflow, snapshot
 
     def _main(self, **kwargs):
+        self.debug("main() was called from run()")
         if not self.load_called:
             self.critical("Call load() first in run()")
             raise RuntimeError()
@@ -223,36 +262,6 @@ class Main(Logger):
             self.exception("Failed to run the workflow")
             self.launcher.stop()
             sys.exit(Main.EXIT_FAILURE)
-
-    def _load_model(self, fname_workflow, fname_snapshot):
-        self.snapshot_file_name = fname_snapshot
-        self.load_called = False
-        self.main_called = False
-        try:
-            sys.path = [os.path.dirname(fname_workflow)] + sys.path
-            module = __import__(
-                os.path.splitext(os.path.basename(fname_workflow))[0])
-            sys.path = sys.path[1:]
-        except FileNotFoundError:
-            self.exception("Workflow does not exist: \"%s\"", fname_workflow)
-            sys.exit(errno.ENOENT)
-        except IsADirectoryError:
-            self.exception("Workflow \"%s\" is a directory", fname_workflow)
-            sys.exit(errno.EISDIR)
-        except PermissionError:
-            self.exception("Cannot read workflow \"%s\"", fname_workflow)
-            sys.exit(errno.EACCES)
-        except:
-            self.exception("Failed to load the workflow \"%s\"",
-                           fname_workflow)
-            sys.exit(Main.EXIT_FAILURE)
-        return module
-
-    def _run_workflow(self, module):
-        module.run(self._load, self._main)
-        if not self.main_called:
-            self.warning("main() was not called by run() in %s",
-                         module.__file__)
 
     def _print_logo(self, args):
         if not args.no_logo:
