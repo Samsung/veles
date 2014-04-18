@@ -3,6 +3,16 @@ omit = */veles/external/hog.py
        */veles/external/__init__.py
        */veles/external/prettytable.py
        */veles/external/pydot.py
+       */veles/external/daemon/daemon.py
+       */veles/external/daemon/version/version_info.py
+       */veles/external/fysom/__init__.py
+       */veles/external/progressbar/compat.py
+       */veles/external/progressbar/__init__.py
+       */veles/external/progressbar/progressbar.py
+       */veles/external/progressbar/widgets.py
+       */veles/external/txzmq/__init__.py
+       */veles/external/txzmq/connection.py
+       */veles/external/txzmq/manager.py
 exclude_lines =
     pragma: no cover
     def __repr__
