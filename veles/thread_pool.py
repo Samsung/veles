@@ -51,6 +51,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             sys.exit = ThreadPool.exit
             ThreadPool.sigint_initial = \
                 signal.signal(signal.SIGINT, ThreadPool.sigint_handler)
+            signal.signal(signal.SIGUSR1, ThreadPool.sigusr1_handler)
         ThreadPool.pools.append(self)
 
     def __fini__(self):
@@ -158,6 +159,17 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             ThreadPool.sigint_initial(sign, frame)
         except KeyboardInterrupt:
             logging.getLogger("ThreadPool").critical("KeyboardInterrupt")
+
+    @staticmethod
+    def sigusr1_handler(sign, frame):
+        """
+        Private method - handler for SIGUSR1.
+        """
+        print("SIGUSR1 was received, dumping current frames...")
+        for tid, stack in sys._current_frames().items():
+            print("-" * 80)
+            print("Thread #%d:" % tid)
+            traceback.print_stack(stack)
 
     @staticmethod
     def debug_deadlocks():
