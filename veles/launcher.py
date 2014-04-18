@@ -331,9 +331,11 @@ class Launcher(logger.Logger):
         self._running = False
         # Kill the Web status Server notification task and thread
         if self.reports_web_status:
-            self._notify_task.stop()
-            IOLoop.instance().stop()
-            self.tornado_ioloop_thread.join()
+            if self._notify_task.running:
+                self._notify_task.stop()
+            if self.tornado_ioloop_thread.is_alive():
+                IOLoop.instance().stop()
+                self.tornado_ioloop_thread.join()
         # Wait for the own graphics client to terminate normally
         if self.workflow.plotters_are_enabled:
             attempt = 0
