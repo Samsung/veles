@@ -72,11 +72,11 @@ class Pickleable(logger.Logger):
 class Distributable(Pickleable):
     DEADLOCK_TIME = 4
 
-    def _data_threadsafe(self, fn):
+    def _data_threadsafe(self, fn, name):
         def wrapped(*args, **kwargs):
             if not self._data_lock_.acquire(
                     timeout=Distributable.DEADLOCK_TIME):
-                self.error("Deadlock in %s: %s", self.name, fn.__name__)
+                self.error("Deadlock in %s: %s", self.name, name)
             else:
                 self._data_lock_.release()
             with self._data_lock_:
@@ -100,12 +100,14 @@ class Distributable(Pickleable):
         self._data_event_.set()
         if self._generate_data_for_slave_threadsafe:
             self.generate_data_for_slave = \
-                self._data_threadsafe(self.generate_data_for_slave)
+                self._data_threadsafe(self.generate_data_for_slave,
+                                      "generate_data_for_slave")
         if self._apply_data_from_slave_threadsafe:
             self.apply_data_from_slave = \
-                self._data_threadsafe(self.apply_data_from_slave)
+                self._data_threadsafe(self.apply_data_from_slave,
+                                      "apply_data_from_slave")
             self.drop_slave = \
-                self._data_threadsafe(self.drop_slave)
+                self._data_threadsafe(self.drop_slave, "drop_slave")
 
     @property
     def has_data_for_slave(self):
@@ -233,14 +235,9 @@ class Unit(Distributable):
         self.add_method_to_storage("run")
 
     def init_unpickled(self):
-        super(Unit, self).init_unpickled()
-        self._gate_lock_ = threading.Lock()
-        self._run_lock_ = threading.Lock()
-        self._is_initialized = False
-        self.initialize = self.dereference_attributes(self.initialize)
-        self.run = self._track_call(self.run, "run_was_called")
-        self.run = self.dereference_attributes(self.run)
-        self.run = self._measure_time(self.run, Unit.timers)
+        # Important: these four decorator applications must stand before
+        # super(...).init_unpickled since it will call
+        # Distributable.init_unpickled which finally makes them thread safe.
         self.generate_data_for_slave = \
             self.dereference_attributes(self.generate_data_for_slave)
         self.generate_data_for_master = \
@@ -249,6 +246,14 @@ class Unit(Distributable):
             self.dereference_attributes(self.apply_data_from_slave)
         self.apply_data_from_master = \
             self.dereference_attributes(self.apply_data_from_master)
+        super(Unit, self).init_unpickled()
+        self._gate_lock_ = threading.Lock()
+        self._run_lock_ = threading.Lock()
+        self._is_initialized = False
+        self.initialize = self.dereference_attributes(self.initialize)
+        self.run = self._track_call(self.run, "run_was_called")
+        self.run = self.dereference_attributes(self.run)
+        self.run = self._measure_time(self.run, Unit.timers)
         Unit.timers[self] = 0
 
     def __getstate__(self):
