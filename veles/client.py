@@ -147,7 +147,7 @@ class VelesProtocol(StringLineReceiver):
 
     def job_finished(self, update):
         if self.state.current == "BUSY":
-            self.zmq_connection.request("update", update)
+            self.zmq_connection.request("update", update or b'')
             self.state.wait_update_notification()
             return
         self.factory.host.error("Invalid state %s", self.state.current)

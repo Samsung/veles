@@ -243,6 +243,9 @@ class VelesProtocol(StringLineReceiver):
         upd.addCallback(self.updateFinished)
 
     def updateFinished(self, result):
+        if self.state.current != 'APPLYING_UPDATE':
+            # silently ignore anything received not in APPLYING_UPDATE state
+            return
         self.state.apply_update()
         if result:
             self.host.zmq_connection.reply(self.id, bytes(True))

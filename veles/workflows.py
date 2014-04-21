@@ -193,9 +193,9 @@ class Workflow(Unit):
                 self.units[i].apply_data_from_slave(data[i], slave)
 
     def drop_slave(self, slave):
-        self.info("Job drop")
         for i in range(len(self.units)):
             self.units[i].drop_slave(slave)
+        self.warning("Dropped the job from %s", slave.id)
 
     def request_job(self, slave):
         """
@@ -227,6 +227,9 @@ class Workflow(Unit):
         """
         Harness the results of a slave's job. Run by a master.
         """
+        if len(data) == 0:
+            self.drop_slave(slave)
+            return
         real_data = pickle.loads(data)
         self.apply_data_from_slave(real_data, slave)
 
