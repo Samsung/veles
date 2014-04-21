@@ -590,7 +590,7 @@ class Unit(Distributable):
                     if Unit.is_attribute_reference(new_value):
                         raise RuntimeError("Attribute reference %s@%s "
                                            "references  an attribute "
-                                           "reference %s@%s in unit %s"
+                                           "reference %s@%s in unit %s BEFORE"
                                            % (value[1], value[0], new_value[1],
                                               new_value[0], self.name))
                     setattr(self, key, new_value)
@@ -604,7 +604,14 @@ class Unit(Distributable):
                     e.__context__ = None
                     raise e
             for key, value in refs.items():
-                setattr(value[0], value[1], getattr(self, key))
+                new_value = getattr(self, key)
+                if Unit.is_attribute_reference(new_value):
+                    raise RuntimeError("Attribute reference %s@%s "
+                                       "references an attribute "
+                                       "reference %s@%s in unit %s AFTER"
+                                       % (value[1], value[0], new_value[1],
+                                          new_value[0], self.name))
+                setattr(value[0], value[1], new_value)
                 setattr(self, key, value)
             return res
         return wrapped
