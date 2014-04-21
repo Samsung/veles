@@ -214,8 +214,35 @@ class Vector(units.Pickleable):
             self.map_read()
         return super(Vector, self).__getstate__()
 
+    def __bool__(self):
+        return self.v is not None and len(self.v) > 0
+
+    def __nonzero__(self):
+        return self.__bool__()
+
     def __lshift__(self, value):
         self.v = value
+
+    def __rlshift__(self, other):
+        other.extend(self.v)
+
+    def __len__(self):
+        """To enable [] operator.
+        """
+        return self.v.size
+
+    def __del__(self):
+        self.reset()
+
+    def __getitem__(self, key):
+        """To enable [] operator.
+        """
+        return self.v[key]
+
+    def __setitem__(self, key, value):
+        """To enable [] operator.
+        """
+        self.v[key] = value
 
     def _converted_dtype(self, dtype):
         if dtype == numpy.float32:
@@ -290,21 +317,6 @@ class Vector(units.Pickleable):
         self._unmap()
         self.lock_.release()
 
-    def __len__(self):
-        """To enable [] operator.
-        """
-        return self.v.size
-
-    def __getitem__(self, key):
-        """To enable [] operator.
-        """
-        return self.v[key]
-
-    def __setitem__(self, key, value):
-        """To enable [] operator.
-        """
-        self.v[key] = value
-
     def reset(self):
         """Sets buffers to None
         """
@@ -314,6 +326,3 @@ class Vector(units.Pickleable):
         self.v_ = None
         self.map_flags = 0
         self.lock_.release()
-
-    def __del__(self):
-        self.reset()
