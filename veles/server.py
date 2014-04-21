@@ -5,16 +5,17 @@ Created on Jan 14, 2014
 """
 
 
-import veles.external.fysom as fysom
+from collections import namedtuple
 import json
 import six
 import socket
 from twisted.internet import reactor, threads
 from twisted.internet.protocol import ServerFactory
-from veles.external.txzmq import ZmqConnection, ZmqEndpoint
 import uuid
 import zmq
 
+import veles.external.fysom as fysom
+from veles.external.txzmq import ZmqConnection, ZmqEndpoint
 from veles.network_common import NetworkAgent, StringLineReceiver
 
 
@@ -46,6 +47,10 @@ class ZmqRouter(ZmqConnection):
     def reply(self, node_id, message):
         self.send(self.routing.pop(node_id) + [node_id.encode(), b'',
                   message])
+
+
+SlaveDescription = namedtuple("SlaveDescription",
+                              ['id', 'mid', 'pid', 'power', 'host', 'state'])
 
 
 class VelesProtocol(StringLineReceiver):
@@ -149,10 +154,10 @@ class VelesProtocol(StringLineReceiver):
             if len(self.nodes) == 0:
                 self.host.launcher.stop()
         elif self.id in self.nodes:
-            threads.deferToThreadPool(reactor,
-                                      self.host.workflow.thread_pool,
-                                      self.host.workflow.drop_slave,
-                                      self.nodes[self.id])
+            threads.deferToThreadPool(
+                reactor, self.host.workflow.thread_pool,
+                self.host.workflow.drop_slave,
+                SlaveDescription(**self.nodes[self.id]))
             if self.id in self.factory.protocols:
                 del(self.factory.protocols[self._id])
 
@@ -168,10 +173,10 @@ class VelesProtocol(StringLineReceiver):
             your_sha = msg.get("checksum")
             if not your_sha:
                 self.host.error("Did not receive the workflow checksum")
-                self.sendError("Workflow checksum is missing")
+                self._sendError("Workflow checksum is missing")
                 return
             if mysha != your_sha:
-                self.sendError("Workflow checksum mismatched")
+                self._sendError("Workflow checksum mismatched")
                 return
             must_reply = False
             msgid = msg.get("id")
@@ -186,7 +191,7 @@ class VelesProtocol(StringLineReceiver):
                     must_reply = True
             if must_reply:
                 try:
-                    _, mid, pid = self.extractClientInfo(msg)
+                    _, mid, pid = self._extractClientInformation(msg)
                 except Exception as e:
                     self.host.error(str(e))
                     return
@@ -201,81 +206,26 @@ class VelesProtocol(StringLineReceiver):
                 self.host.error("%s Client sent something which is not "
                                 "a command: %s. Sending back the error "
                                 "message", self.id, line)
-                self.sendError("No command found")
+                self._sendError("No command found")
                 return
             self.host.error("%s Unsupported %s command. Sending back the "
                             "error message", self.id, cmd)
-            self.sendError("Unsupported command")
+            self._sendError("Unsupported command")
         else:
             self.host.error("%s Invalid state %s",
                             self.id, self.state.current)
-            self.sendError("You sent me something which is not allowed in my "
+            self._sendError("You sent me something which is not allowed in my "
                            "current state %s" % self.state.current)
-
-    def extractClientInfo(self, msg):
-        power = msg.get("power")
-        mid = msg.get("mid")
-        pid = msg.get("pid")
-        if not power:
-            self.sendError("I need your computing power")
-            raise Exception("Newly connected client did not send "
-                            "it's computing power value, sending back "
-                            "the error message")
-        if not mid:
-            self.sendError("I need your machine id")
-            raise Exception("Newly connected client did not send "
-                            "it's machine id, sending back the error "
-                            "message")
-        if not pid:
-            self.sendError("I need your process id")
-            raise Exception("Newly connected client did not send "
-                            "it's process id, sending back the error "
-                            "message")
-        self.nodes[self.id] = {'power': power, 'mid': mid, 'pid': pid,
-                               'id': self.id}
-        reactor.callLater(0, self.resolveAddr, self.addr)
-        return power, mid, pid
-
-    def resolveAddr(self, addr):
-        host, _, _ = socket.gethostbyaddr(addr.host)
-        if host == "localhost":
-            host = socket.gethostname()
-        self.host.debug("%s Address %s was resolved to %s", self.id,
-                        addr.host, host)
-        self.nodes[self.id]['host'] = host
-
-    def sendLine(self, line):
-        if six.PY3:
-            super(VelesProtocol, self).sendLine(json.dumps(line))
-        else:
-            StringLineReceiver.sendLine(self, json.dumps(line))
-
-    def sendError(self, err):
-        """
-        Sends the line with the specified error message.
-
-        Parameters:
-            err:    The error message.
-        """
-        self.host.error(err)
-        self.sendLine({'error': err})
-
-    def _request_job(self):
-        job = threads.deferToThreadPool(reactor,
-                                        self.host.workflow.thread_pool,
-                                        self.host.workflow.request_job,
-                                        self.nodes[self.id])
-        job.addCallback(self.jobRequestFinished)
 
     def jobRequestReceived(self):
         self.state.request_job()
-        self._request_job()
+        self._requestJob()
 
     def jobRequestFinished(self, data):
         if data is not None:
             if not data:
                 # Try again later
-                self._request_job()
+                self._requestJob()
                 return
             self.state.obtain_job()
             self.host.debug("%s Job size: %d Kb", self.id, len(data) / 1000)
@@ -286,10 +236,10 @@ class VelesProtocol(StringLineReceiver):
 
     def updateReceived(self, data):
         self.state.receive_update()
-        upd = threads.deferToThreadPool(reactor,
-                                        self.host.workflow.thread_pool,
-                                        self.host.workflow.apply_update,
-                                        data, self.nodes[self.id])
+        upd = threads.deferToThreadPool(
+            reactor, self.host.workflow.thread_pool,
+            self.host.workflow.apply_update, data,
+            SlaveDescription(**self.nodes[self.id]))
         upd.addCallback(self.updateFinished)
 
     def updateFinished(self, result):
@@ -298,6 +248,61 @@ class VelesProtocol(StringLineReceiver):
             self.host.zmq_connection.reply(self.id, bytes(True))
         else:
             self.host.zmq_connection.reply(self.id, bytes(False))
+
+    def sendLine(self, line):
+        if six.PY3:
+            super(VelesProtocol, self).sendLine(json.dumps(line))
+        else:
+            StringLineReceiver.sendLine(self, json.dumps(line))
+
+    def _extractClientInformation(self, msg):
+        power = msg.get("power")
+        mid = msg.get("mid")
+        pid = msg.get("pid")
+        if not power:
+            self._sendError("I need your computing power")
+            raise Exception("Newly connected client did not send "
+                            "it's computing power value, sending back "
+                            "the error message")
+        if not mid:
+            self._sendError("I need your machine id")
+            raise Exception("Newly connected client did not send "
+                            "it's machine id, sending back the error "
+                            "message")
+        if not pid:
+            self._sendError("I need your process id")
+            raise Exception("Newly connected client did not send "
+                            "it's process id, sending back the error "
+                            "message")
+        self.nodes[self.id] = {'power': power, 'mid': mid, 'pid': pid,
+                               'id': self.id}
+        reactor.callLater(0, self._resolveAddr, self.addr)
+        return power, mid, pid
+
+    def _resolveAddr(self, addr):
+        host, _, _ = socket.gethostbyaddr(addr.host)
+        if host == "localhost":
+            host = socket.gethostname()
+        self.host.debug("%s Address %s was resolved to %s", self.id,
+                        addr.host, host)
+        self.nodes[self.id]['host'] = host
+
+    def _sendError(self, err):
+        """
+        Sends the line with the specified error message.
+
+        Parameters:
+            err:    The error message.
+        """
+        self.host.error(err)
+        self.sendLine({'error': err})
+
+    def _requestJob(self):
+        job = threads.deferToThreadPool(
+            reactor, self.host.workflow.thread_pool,
+            self.host.workflow.request_job,
+            SlaveDescription(**self.nodes[self.id]))
+        job.addCallback(self.jobRequestFinished)
 
 
 class VelesProtocolFactory(ServerFactory):
