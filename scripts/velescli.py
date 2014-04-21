@@ -257,6 +257,8 @@ class Main(Logger):
         self.main_called = True
         try:
             self.workflow.initialize(device=self.device, **kwargs)
+            self.debug("Workflow initialization has been completed."
+                       "Running the launcher.")
             self.launcher.run()
         except:
             self.exception("Failed to run the workflow")
