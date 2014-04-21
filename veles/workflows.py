@@ -20,6 +20,7 @@ import veles.benchmark as benchmark
 from veles.config import root
 from veles.units import Unit, OpenCLUnit
 from veles.external.prettytable import PrettyTable
+from veles.external.progressbar import ProgressBar, Percentage, Bar
 import veles.external.pydot as pydot
 
 
@@ -59,8 +60,10 @@ class Workflow(Unit):
     the same host.
 
     Attributes:
-        start_point: start point.
-        end_point: end point.
+        _start_point: start point.
+        _end_point: end point.
+        _units: the list of units belonging to this workflow.
+        _sync: threading.Event enabling synchronous run().
     """
     def __init__(self, workflow, **kwargs):
         self._plotters_are_enabled = \
@@ -69,9 +72,9 @@ class Workflow(Unit):
                                        generate_data_for_slave_threadsafe=True,
                                        apply_data_from_slave_threadsafe=False,
                                        **kwargs)
-        self.units = []
-        self.start_point = StartPoint(self)
-        self.end_point = EndPoint(self)
+        self._units = []
+        self._start_point = StartPoint(self)
+        self._end_point = EndPoint(self)
         self._sync = kwargs.get("sync", True)
 
     def init_unpickled(self):
@@ -105,9 +108,27 @@ class Workflow(Unit):
     def plotters_are_enabled(self, value):
         self._plotters_are_enabled = value
 
+    @property
+    def units(self):
+        return self._units
+
     def initialize(self):
         super(Workflow, self).initialize()
-        return self.start_point.initialize_dependent()
+        fin_text = "all units are initialized"
+        maxlen = max([len(u.name) for u in self.units] + [len(fin_text)])
+        progress = ProgressBar(maxval=len(self.units),
+                               term_width=min(80,
+                                              len(self.units) + 8 + maxlen),
+                               widgets=[Percentage(), ' ', Bar(), ' ',
+                                        ' ' * maxlen])
+        self.info("Initializing units in %s...", self.name)
+        progress.start()
+        for unit in self.units:
+            progress.widgets[-1] = unit.name + ' ' * (maxlen - len(unit.name))
+            unit.initialize()
+            progress.inc()
+        progress.widgets[-1] = fin_text + ' ' * (maxlen - len(fin_text))
+        progress.finish()
 
     def run(self):
         """Starts executing the workflow. This function is asynchronous,
@@ -116,7 +137,7 @@ class Workflow(Unit):
         self._is_running = True
         self._run_time_started_ = time.time()
         if not self.is_master:
-            self.start_point.run_dependent()
+            self._start_point.run_dependent()
         if self.run_is_blocking:
             self._sync_event_.wait()
 
@@ -222,7 +243,7 @@ class Workflow(Unit):
                       bgcolor="transparent")
         g.set_prog("circo")
         visited_units = set()
-        boilerplate = set([self.start_point])
+        boilerplate = set([self._start_point])
         while len(boilerplate) > 0:
             unit = boilerplate.pop()
             visited_units.add(unit)
