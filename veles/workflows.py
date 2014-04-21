@@ -60,8 +60,8 @@ class Workflow(Unit):
     the same host.
 
     Attributes:
-        _start_point: start point.
-        _end_point: end point.
+        start_point: start point.
+        end_point: end point.
         _units: the list of units belonging to this workflow.
         _sync: threading.Event enabling synchronous run().
     """
@@ -73,8 +73,8 @@ class Workflow(Unit):
                                        apply_data_from_slave_threadsafe=False,
                                        **kwargs)
         self._units = []
-        self._start_point = StartPoint(self)
-        self._end_point = EndPoint(self)
+        self.start_point = StartPoint(self)
+        self.end_point = EndPoint(self)
         self._sync = kwargs.get("sync", True)
 
     def init_unpickled(self):
@@ -137,7 +137,7 @@ class Workflow(Unit):
         self._is_running = True
         self._run_time_started_ = time.time()
         if not self.is_master:
-            self._start_point.run_dependent()
+            self.start_point.run_dependent()
         if self.run_is_blocking:
             self._sync_event_.wait()
 
@@ -243,7 +243,7 @@ class Workflow(Unit):
                       bgcolor="transparent")
         g.set_prog("circo")
         visited_units = set()
-        boilerplate = set([self._start_point])
+        boilerplate = set([self.start_point])
         while len(boilerplate) > 0:
             unit = boilerplate.pop()
             visited_units.add(unit)
