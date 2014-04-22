@@ -668,8 +668,8 @@ class OpenCLUnit(Unit):
         """
         return super(OpenCLUnit, self).run()
 
-    def gpu_run(self):
-        """Run on GPU.
+    def ocl_run(self):
+        """Run on GPU/any OpenCL capable device.
         """
         return self.cpu_run()
 
@@ -683,7 +683,7 @@ class OpenCLUnit(Unit):
     def run(self):
         t1 = time.time()
         if self.device:
-            self.gpu_run()
+            self.ocl_run()
         else:
             self.cpu_run()
         self.debug("%s in %.2f sec" %
