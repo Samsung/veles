@@ -215,7 +215,7 @@ class VelesProtocol(StringLineReceiver):
             self.host.error("%s Invalid state %s",
                             self.id, self.state.current)
             self._sendError("You sent me something which is not allowed in my "
-                           "current state %s" % self.state.current)
+                            "current state %s" % self.state.current)
 
     def jobRequestReceived(self):
         self.state.request_job()
