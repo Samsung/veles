@@ -120,7 +120,7 @@ class Workflow(Unit):
 
     @property
     def units(self):
-        return self._units
+        return self._units if hasattr(self, "_units") else []
 
     def initialize(self):
         super(Workflow, self).initialize()
