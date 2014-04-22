@@ -80,7 +80,7 @@ class Workflow(Unit):
     def init_unpickled(self):
         super(Workflow, self).init_unpickled()
         self.thread_pool.register_on_shutdown(self.stop)
-        self._is_running = False
+        self.is_running = False
         self._sync_event_ = threading.Event()
         del(Unit.timers[self])
 
@@ -91,6 +91,15 @@ class Workflow(Unit):
     @property
     def is_running(self):
         return self._is_running
+
+    @is_running.setter
+    def is_running(self, value):
+        self._is_running = value
+        if self.run_is_blocking:
+            if self.is_running:
+                self._sync_event_.clear()
+            else:
+                self._sync_event_.set()
 
     @property
     def run_is_blocking(self):
@@ -134,23 +143,21 @@ class Workflow(Unit):
         """Starts executing the workflow. This function is asynchronous,
         parent's on_workflow_finished() method will be called.
         """
-        self._is_running = True
+        self.is_running = True
         self._run_time_started_ = time.time()
         if not self.is_master:
             self.start_point.run_dependent()
-        if self.run_is_blocking:
-            self._sync_event_.wait()
+        self._sync_event_.wait()
+        assert not self.is_running
 
     def stop(self):
         self.on_workflow_finished(True)
 
     def on_workflow_finished(self, slave_force=False):
-        self._is_running = False
         self._run_time_finished_ = time.time()
         if not self.is_slave or slave_force:
             self.workflow.on_workflow_finished()
-        if self.run_is_blocking:
-            self._sync_event_.set()
+        self.is_running = False
 
     def add_ref(self, unit):
         if unit not in self.units:
