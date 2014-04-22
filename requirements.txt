@@ -13,3 +13,4 @@ pymongo>=2.6
 argcomplete>=0.8
 ipython>=2.0.0
 jpeg4py>=0.1.0
+cffi>=0.8.2
