@@ -80,8 +80,9 @@ class Workflow(Unit):
     def init_unpickled(self):
         super(Workflow, self).init_unpickled()
         self.thread_pool.register_on_shutdown(self.stop)
-        self.is_running = False
+        self._is_running = False
         self._sync_event_ = threading.Event()
+        self._sync_event_.set()
         del(Unit.timers[self])
 
     def __repr__(self):
