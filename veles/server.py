@@ -222,6 +222,8 @@ class VelesProtocol(StringLineReceiver):
         self._requestJob()
 
     def jobRequestFinished(self, data):
+        if self.state.current != "GETTING_JOB":
+            return
         if data is not None:
             if not data:
                 # Try again later
