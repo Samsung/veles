@@ -123,7 +123,7 @@ class Workflow(Unit):
                                         ' ' * maxlen])
         self.info("Initializing units in %s...", self.name)
         progress.start()
-        for unit in self.units:
+        for unit in self.start_point.dependecy_list():
             progress.widgets[-1] = unit.name + ' ' * (maxlen - len(unit.name))
             unit.initialize()
             progress.inc()

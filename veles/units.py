@@ -390,13 +390,8 @@ class Unit(Distributable):
     def initialize_dependent(self):
         """Invokes initialize() on dependent units on the same thread.
         """
-        for dst in self.links_to.keys():
-            if dst._is_initialized:
-                continue
-            if not dst.open_gate(self):
-                continue
-            dst.initialize()
-            dst.initialize_dependent()
+        for unit in self.dependecy_list():
+            unit.initialize()
 
     def run_dependent(self):
         """Invokes run() on dependent units on different threads.
@@ -408,6 +403,23 @@ class Unit(Distributable):
                 dst._check_gate_and_run(self)
             else:
                 self.thread_pool.callInThread(dst._check_gate_and_run, self)
+
+    def dependecy_list(self):
+        units = [self]
+        walk = []
+        visited = {self}
+        for child in self.links_to.keys():
+            walk.append((child, self))
+        # flatten the dependency tree by doing breadth first search
+        while len(walk) > 0:
+            node, parent = walk.pop(0)
+            if node in visited or not node.open_gate(parent):
+                continue
+            units.append(node)
+            visited.add(node)
+            for child in node.links_to.keys():
+                walk.append((child, node))
+        return units
 
     def open_gate(self, src):
         """Called before run() or initialize().
