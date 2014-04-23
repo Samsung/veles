@@ -207,3 +207,10 @@ class LinkableAttribute(object):
 
     def __delete__(self, obj):
         obj.__delattr__(self.real_attribute_name)
+
+
+def link(obj_dst, name_dst, obj_src, name_src, duplex=False):
+    """Establishes a link from obj_src's "name_src" attribute to obj_dst's
+    "name_dst" one using LinkableAttribute.
+    """
+    LinkableAttribute(obj_dst, name_dst, (obj_src, name_src), duplex)
