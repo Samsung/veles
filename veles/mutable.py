@@ -129,3 +129,81 @@ class Bool(object):
             func_code = marshal.loads(expr[2])
             es.append((expr[0],
                        types.FunctionType(func_code, globals(), expr[1])))
+
+
+class LinkableAttribute(object):
+    """Data descriptor which allows referencing an attribute belonging to
+    an other class instance. Internally, it operates with "pointers" modeled
+    with tuples (obj, attr_name).
+
+    The usage is the following: at any time in the program you can call
+    LinkableAttribute(class_instance, string_with_attr_name, value).
+    It will create a static class attribute 'string_with_attr_name' and
+    set LinkableAttribute() to it. That instance of LinkableAttribute saves the
+    name of the attribute with prepended double underscore "__" as well as the
+    unmodified name.
+    The "pointer" can be replaced with anything else, resulting in passing
+    the attribute value "by value", as usual in Python.
+
+    Applying LinkableAttribute() on the same attribute is safe.
+    """
+
+    def __new__(cls, *args, **kwargs):
+        # check if we already have an instance of LinkableAttribute assigned to
+        # the attribute args[1] of the type type(args[0])
+        instance = getattr(type(args[0]), args[1], None)
+        if not isinstance(instance, LinkableAttribute):
+            return super(LinkableAttribute, cls).__new__(cls)
+        # updating the attribute value since the object already exists and thus
+        # we are ignoring __init__()
+        setattr(*args[:3])
+        if len(args) > 3:
+            instance.duplex = args[3]
+
+    def __init__(self, obj, name, value, duplex=False):
+        if obj is None:
+            raise  UnboundLocalError(
+                __class__, "can not be created without an instance to bind: "
+                "instance=", obj, "name=", name, "value=", value)
+        self.duplex = duplex
+        # getting here means that passed the instance check in  __new__
+        # real name of the attribute
+        self.real_attribute_name = '__' + name
+        # original name without underscores is used in __get__ to find
+        # the class attribute faster
+        self.exposed_attribute_name = name
+        # assign the attribute of the hosting class
+        setattr(type(obj), name, self)
+        # assign the attribute value to "obj"
+        setattr(obj, self.real_attribute_name, value)
+
+    def __get__(self, obj, objtype):
+        # since this method can be applied to get the attribute of the Class
+        # (not just it's instance) we check whether obj is None; see __new__
+        if obj is None:
+            return objtype.__getattribute__(objtype,
+                                            self.exposed_attribute_name)
+        # get the reference to the attribute value
+        pointer = getattr(obj, self.real_attribute_name)
+        # dereference it
+        return getattr(*pointer)
+
+    def __set__(self, obj, value):
+        if not (isinstance(value, tuple) and len(value) == 2 and
+                isinstance(value[0], object) and isinstance(value[1], str)):
+            if self.duplex:
+                # update the referenced attribute value and return
+                pointer = getattr(obj, self.real_attribute_name)
+                setattr(pointer[0], pointer[1], value)
+                return
+            else:
+                # play the trick with getattr(*pointer) in __get__
+                value = (None, '', value)
+        else:
+            if value[0] == obj and value[1] == self.real_attribute_name:
+                raise ValueError("Attempted to set the attribute reference to "
+                                 "itself")
+        setattr(obj, self.real_attribute_name, value)
+
+    def __delete__(self, obj):
+        obj.__delattr__(self.real_attribute_name)
