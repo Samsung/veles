@@ -19,10 +19,10 @@ Note:
   the specified one.
 '''
 from ctypes import *
-from freetype.ft_types import *
-from freetype.ft_enums import *
-from freetype.ft_errors import *
-from freetype.ft_structs import *
+from .freetype.ft_types import *
+from .freetype.ft_enums import *
+from .freetype.ft_errors import *
+from .freetype.ft_structs import *
 import ctypes.util
 
 
@@ -1038,7 +1038,7 @@ class Face(object):
         library = get_handle()
         face = FT_Face()
         self._FT_Face = None
-        #error = FT_New_Face( library, filename, 0, byref(face) )
+        # error = FT_New_Face( library, filename, 0, byref(face) )
         u_filename = c_char_p(filename)
         error = FT_New_Face(library, u_filename, index, byref(face))
         if error: raise FT_Exception(error)
@@ -1178,7 +1178,7 @@ class Face(object):
           Note that 'agindex' is set to 0 when there are no more codes in the
           charmap.
         '''
-        agindex = FT_UInt(0)  #agindex )
+        agindex = FT_UInt(0)  # agindex )
         charcode = FT_Get_Next_Char(self._FT_Face, charcode, byref(agindex))
         return charcode, agindex.value
 
@@ -1642,7 +1642,7 @@ class SfntName(object):
     name_id = property(lambda self: self._FT_SfntName.name_id,
         doc='''An identifier for 'string'.''')
 
-    #string      = property(lambda self: self._FT_SfntName.string)
+    # string      = property(lambda self: self._FT_SfntName.string)
 
     string_len = property(lambda self: self._FT_SfntName.string_len,
            doc='''The length of 'string' in bytes.''')

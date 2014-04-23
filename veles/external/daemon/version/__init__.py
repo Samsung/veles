@@ -11,7 +11,7 @@
 
 """ Version information for the python-daemon distribution. """
 
-from veles.external.daemon.version.version_info import version_info
+from .version_info import version_info
 
 version_info['version_string'] = "1.5.5"
 

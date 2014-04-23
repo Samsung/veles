@@ -38,8 +38,8 @@
     """
 
 
-from veles.external.daemon import version
-from veles.external.daemon.daemon import DaemonContext, daemonize
+from . import version
+from .daemon import DaemonContext, daemonize
 
 _version = version.version
 _copyright = version.copyright
