@@ -176,7 +176,7 @@ class VelesProtocol(StringLineReceiver):
                 self._sendError("Workflow checksum is missing")
                 return
             if mysha != your_sha:
-                self._sendError("Workflow checksum mismatched")
+                self._sendError("Workflow checksum mismatch")
                 return
             must_reply = False
             msgid = msg.get("id")
