@@ -3,7 +3,7 @@ Created on Apr 15, 2013
 
 Data formats for connectors.
 
-@author: Kazantsev Alexey <a.kazantsev@samsung.com>
+Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 import logging
 import numpy

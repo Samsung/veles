@@ -3,7 +3,7 @@ Created on May 23, 2013
 
 Random generators.
 
-@author: Kazantsev Alexey <a.kazantsev@samsung.com>
+Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 import numpy
 import threading

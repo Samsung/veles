@@ -3,7 +3,7 @@
 """
 Created on Feb 10, 2014
 
-@author: Vadim Markovtsev <v.markovtsev@samsung.com>
+Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 

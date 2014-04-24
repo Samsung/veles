@@ -1,7 +1,7 @@
 """
 Created on May 17, 2013
 
-@author: Kumok Akim <a.kumok@samsung.com>
+Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 

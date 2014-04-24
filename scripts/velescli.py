@@ -1,11 +1,10 @@
 #!/usr/bin/python3
 # encoding: utf-8
 '''
-veles is python script which starts platform and
-executes user script (called experiment)
+This scripts starts the Veles platform and executes the user's workflow
+(called model).
 
-@author:     Gennady Kuznetsov
-@copyright:  Copyright 2013 Samsung R&D Institute Russia
+@copyright:  Copyright 2013 Samsung Electronics Co., Ltd.
 @contact:    g.kuznetsov@samsung.com
 '''
 

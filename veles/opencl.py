@@ -3,7 +3,7 @@ Created on Mar 21, 2013
 
 OpenCL helper classes.
 
-@author: Kazantsev Alexey <a.kazantsev@samsung.com>
+Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 

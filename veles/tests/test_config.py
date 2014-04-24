@@ -4,7 +4,7 @@ Created on Mart 31, 2014
 
 Unit test for global config
 
-@author: Lyubov Podoynitsina <lyubov.p@samsung.com>
+Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
