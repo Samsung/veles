@@ -8,6 +8,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 from copy import copy
+import functools
 from six.moves import cPickle as pickle
 import threading
 import time
@@ -21,8 +22,8 @@ import veles.thread_pool as thread_pool
 
 
 class Pickleable(logger.Logger):
-    """Will save attributes ending with _ as None when pickling and will call
-    constructor upon unpickling.
+    """Prevents attributes ending with _ from getting into pickle and calls
+    init_unpickled() after unpickling to recover them.
     """
     def __init__(self, **kwargs):
         """Calls init_unpickled() to initialize the attributes which are not
@@ -37,7 +38,8 @@ class Pickleable(logger.Logger):
     def init_unpickled(self):
         self.stripped_pickle_ = False
         for key, value in self._method_storage.items():
-            setattr(self, key, getattr(value, key))
+            class_method = getattr(value, key)
+            setattr(self, key, functools.partial(class_method, self))
 
     def add_method_to_storage(self, name):
         self._method_storage[name] = self.__class__
@@ -573,13 +575,7 @@ class Unit(Distributable):
     def _measure_time(self, fn, storage):
         def wrapped(*args, **kwargs):
             sp = time.time()
-            try:
-                res = fn(*args, **kwargs)
-            except TypeError as e:
-                try:
-                    res = fn(self, *args, **kwargs)
-                except TypeError:
-                    raise e
+            res = fn(*args, **kwargs)
             fp = time.time()
             if self in storage:
                 storage[self] += fp - sp
@@ -607,14 +603,7 @@ class Unit(Distributable):
                                               new_value[0], self.name))
                     setattr(self, key, new_value)
                     refs[key] = value
-            try:
-                res = fn(*args, **kwargs)
-            except TypeError as e:
-                try:
-                    res = fn(self, *args, **kwargs)
-                except TypeError:
-                    e.__context__ = None
-                    raise e
+            res = fn(*args, **kwargs)
             for key, value in refs.items():
                 new_value = getattr(self, key)
                 if Unit.is_attribute_reference(new_value):
@@ -631,13 +620,7 @@ class Unit(Distributable):
     def _track_call(self, fn, name):
         def wrapped(*args, **kwargs):
             setattr(self, name, True)
-            try:
-                res = fn(*args, **kwargs)
-            except TypeError as e:
-                try:
-                    res = fn(self, *args, **kwargs)
-                except TypeError:
-                    raise e
+            res = fn(*args, **kwargs)
             return res
 
         return wrapped
