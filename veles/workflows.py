@@ -63,11 +63,13 @@ class Workflow(Unit):
         start_point: start point.
         end_point: end point.
         _units: the list of units belonging to this workflow.
-        _sync: threading.Event enabling synchronous run().
+        _sync: flag which makes Workflow.run() either blocking or non-blocking.
+        _sync_event_: threading.Event enabling synchronous run().
     """
     def __init__(self, workflow, **kwargs):
-        self._plotters_are_enabled = \
-            kwargs.get("disable_plotters", not root.common.plotters_disabled)
+        self._plotters_are_enabled = kwargs.get(
+            "disable_plotters", not root.common.plotters_disabled)
+        self._sync = kwargs.get("sync", True)
         super(Workflow, self).__init__(workflow,
                                        generate_data_for_slave_threadsafe=True,
                                        apply_data_from_slave_threadsafe=False,
@@ -75,7 +77,6 @@ class Workflow(Unit):
         self._units = []
         self.start_point = StartPoint(self)
         self.end_point = EndPoint(self)
-        self._sync = kwargs.get("sync", True)
 
     def init_unpickled(self):
         super(Workflow, self).init_unpickled()
@@ -149,7 +150,9 @@ class Workflow(Unit):
         if not self.is_master:
             self.start_point.run_dependent()
         self._sync_event_.wait()
-        assert not self.is_running
+        if self.is_running and self.run_is_blocking:
+            self.thread_pool.shutdown(False)
+            raise RuntimeError("Workflow synchronization internal failure")
 
     def stop(self):
         self.on_workflow_finished(True)
