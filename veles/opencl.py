@@ -17,7 +17,7 @@ import time
 import traceback
 import opencl4py as cl
 
-from veles.config import root
+from veles.config import root, get
 import veles.formats as formats
 import veles.opencl_types as opencl_types
 import veles.rnd as rnd
@@ -168,9 +168,9 @@ class Device(units.Pickleable):
 
             fin.close()
         except IOError:
-            self.info(os.path.join(root.common.device_dir,
-                                   "device_infos.%d.pickle" % PYVER),
-                      " was not found")
+            self.warning(os.path.join(root.common.device_dir,
+                                      "device_infos.%d.pickle" % PYVER) +
+                         " was not found")
         if (not root.common.test_known_device and
            self.device_info.desc in device_infos):
             device_info = device_infos[self.device_info.desc]
@@ -183,25 +183,29 @@ class Device(units.Pickleable):
             return
         device_infos[self.device_info.desc] = self.device_info
         self._do_tests(device_infos)
-        self.info("Saving found device performance values into %s" %
-                  (os.path.join(root.common.device_dir,
-                                "device_infos.%d.pickle" % PYVER)))
         fout = open(os.path.join(root.common.device_dir,
                                  "device_infos.%d.pickle" % PYVER),
                     "wb")
         pickle.dump(device_infos, fout)
         fout.close()
-        self.info("Saved")
+        self.info("Saved the measured device performance values to %s" %
+                  (os.path.join(root.common.device_dir,
+                                "device_infos.%d.pickle" % PYVER)))
 
     def _do_tests(self, device_infos):
         """Measure relative device performance.
         """
+        bs_max = get(root.common.opencl.benchmark.max_block_size, 32)
+        bs_min = get(root.common.opencl.benchmark.min_block_size, 3)
+        if bs_min >= bs_max:
+            raise ValueError("max_block_size must be greater than "
+                             "min_block_size")
         self.info(
-            "Will test device performance.\n"
-            "Results of the test will be saved to " +
+            "Testing device performance on block sizes (%d, %d].\n"
+            "Results will be saved to " % (bs_min, bs_max) +
             os.path.join(root.common.device_dir,
                          "device_infos.%d.pickle, " % PYVER) +
-            "so this is one time process usually.")
+            "so this is usually a one time process.")
 
         min_dt = {}
         dt_numpy = {}
@@ -216,7 +220,7 @@ class Device(units.Pickleable):
         cc = {}
         for dtype in self.device_info.dt.keys():
             self.device_info.dt[dtype] = 86400
-        for BLOCK_SIZE in range(32, 3, -1):
+        for BLOCK_SIZE in range(bs_max, bs_min, -1):
             for dtype in sorted(opencl_types.dtypes.keys()):
                 try:
                     self._prepare_test(BLOCK_SIZE, dtype, cc)
@@ -272,17 +276,21 @@ class Device(units.Pickleable):
                 self.info("================")
                 self.info(dtype)
                 rating = min_dt[dtype] / device_info.dt[dtype]
-                if device_info.rating[dtype] != rating:
-                    if device_info.rating[dtype]:
-                        self.info(
-                            "UPD Rating(%s): %.4f" %
-                            (device_info.desc, rating))
+                try:
+                    if device_info.rating[dtype] != rating:
+                        if device_info.rating[dtype]:
+                            self.info(
+                                "UPD Rating(%s): %.4f" % (device_info.desc,
+                                                          rating))
+                        else:
+                            self.info(
+                                "NEW Rating(%s): %.4f" % (device_info.desc,
+                                                          rating))
                     else:
-                        self.info(
-                            "NEW Rating(%s): %.4f" %
-                            (device_info.desc, rating))
-                else:
-                    self.info("Rating(%s): %.4f" % (device_info.desc, rating))
+                        self.info("Rating(%s): %.4f" % (device_info.desc,
+                                                        rating))
+                except:
+                    self.exception()
                 device_info.rating[dtype] = rating
                 device_info.min_dt[dtype] = min_dt[dtype]
         self.info("================")
