@@ -3,7 +3,7 @@ Created on Mar 12, 2013
 
 Units in data stream neural network_common model.
 
-@author: Kazantsev Alexey <a.kazantsev@samsung.com>
+Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 

@@ -1,7 +1,7 @@
 """
 Created on Oct 15, 2013
 
-@author: Vadim Markovtsev <v.markovtsev@samsung.com>
+Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 

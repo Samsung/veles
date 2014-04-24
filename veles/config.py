@@ -3,7 +3,7 @@ Created on May 28, 2013
 
 Global configuration variables.
 
-@author: Kazantsev Alexey <a.kazantsev@samsung.com>
+Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 

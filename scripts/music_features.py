@@ -9,9 +9,7 @@ the results to XML file.
 
 It uses libSoundFeatureExtraction as the calculation backend.
 
-@author:     Markovtsev Vadim
-
-@copyright:  2013 Samsung R&D Institute Russia. All rights reserved.
+@copyright:  2013 Samsung Electronics Co., Ltd.
 
 @license:    Samsung Proprietary License
 

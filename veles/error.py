@@ -3,7 +3,7 @@ Created on Mar 18, 2013
 
 Classes for custom exceptions
 
-@author: Kazantsev Alexey <a.kazantsev@samsung.com>
+Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 

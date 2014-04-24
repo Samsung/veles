@@ -4,7 +4,7 @@ Created on Aug 6, 2013
 
 Base class for workflows.
 
-@author: Kazantsev Alexey <a.kazantsev@samsung.com>
+Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 

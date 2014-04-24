@@ -4,7 +4,7 @@ Created on April 3, 2014
 
 Unit test for opencl types
 
-@author: Lyubov Podoynitsina <lyubov.p@samsung.com>
+Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
