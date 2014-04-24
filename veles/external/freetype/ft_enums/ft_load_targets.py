@@ -53,7 +53,7 @@ FT_LOAD_TARGET_LCD_V
   displays.
 """
 
-from freetype.ft_enums.ft_render_modes import *
+from .ft_render_modes import *
 
 
 def _FT_LOAD_TARGET_(x):
@@ -65,6 +65,6 @@ FT_LOAD_TARGETS = {
     'FT_LOAD_TARGET_LCD'    : _FT_LOAD_TARGET_(FT_RENDER_MODE_LCD),
     'FT_LOAD_TARGET_LCD_V'  : _FT_LOAD_TARGET_(FT_RENDER_MODE_LCD_V) }
 globals().update(FT_LOAD_TARGETS)
-#def FT_LOAD_TARGET_MODE(x):
+# def FT_LOAD_TARGET_MODE(x):
 #    return (x >> 16) & 15
 
