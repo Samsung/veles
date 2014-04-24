@@ -146,6 +146,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         ThreadPool.shutdown_pools()
         sys.exit = ThreadPool.sysexit_initial
+        ThreadPool.debug_deadlocks()
         sys.exit(retcode)
 
     @staticmethod
