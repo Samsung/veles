@@ -22,6 +22,7 @@
 
 from __future__ import division
 
+import logging
 import math
 import os
 import signal
@@ -86,18 +87,18 @@ class ProgressBar(object):
      - percentage(): progress in percent [0..100]
     """
 
-    __slots__ = ('currval', 'fd', 'finished', 'last_update_time',
+    __slots__ = ('currval', 'fd', 'finished', 'last_update_time', 'logger',
                  'left_justify', 'maxval', 'next_update', 'num_intervals',
                  'poll', 'seconds_elapsed', 'signal_set', 'start_time',
                  'term_width', 'update_interval', 'widgets', '_time_sensitive',
-                 '__iterable')
+                 '__iterable', 'log_level')
 
     _DEFAULT_MAXVAL = 100
     _DEFAULT_TERMSIZE = 80
     _DEFAULT_WIDGETS = [Percentage(), ' ', Bar()]
 
     def __init__(self, maxval=None, widgets=None, term_width=None, poll=1,
-                 left_justify=True, fd=sys.stderr):
+                 left_justify=True, fd=sys.stderr, log_level=logging.INFO):
         """Initializes a progress bar with sane defaults."""
 
         # Don't share a reference with any other progress bars
@@ -108,6 +109,8 @@ class ProgressBar(object):
         self.widgets = widgets
         self.fd = fd
         self.left_justify = left_justify
+        self.logger = logging.getLogger("ProgressBar")
+        self.log_level = log_level
 
         self.signal_set = False
 
@@ -266,7 +269,8 @@ class ProgressBar(object):
         now = time.time()
         self.seconds_elapsed = now - self.start_time
         self.next_update = self.currval + self.update_interval
-        self.fd.write(self._format_line() + '\r')
+        if self.log_level >= self.logger.level:
+            self.fd.write(self._format_line() + '\r')
         self.last_update_time = now
 
     def inc(self):
@@ -308,6 +312,7 @@ class ProgressBar(object):
             return
         self.finished = True
         self.update(self.maxval)
-        self.fd.write('\n')
+        if self.log_level >= self.logger.level:
+            self.fd.write('\n')
         if self.signal_set:
             signal.signal(signal.SIGWINCH, signal.SIG_DFL)

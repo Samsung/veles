@@ -11,6 +11,8 @@ from pymongo import MongoClient
 import re
 import sys
 
+from veles.external.progressbar import ProgressBar
+
 
 class Logger(object):
     """
@@ -66,6 +68,7 @@ class Logger(object):
     @staticmethod
     def setup(level):
         logging.basicConfig(level=level)
+        ProgressBar().logger.level = level
         if sys.stdout.isatty():
             root = logging.getLogger()
             handler = root.handlers[0]
