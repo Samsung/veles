@@ -162,7 +162,7 @@ class LinkableAttribute(object):
 
     def __init__(self, obj, name, value, duplex=False):
         if obj is None:
-            raise  UnboundLocalError(
+            raise UnboundLocalError(
                 __class__, "can not be created without an instance to bind: "
                 "instance=", obj, "name=", name, "value=", value)
         self.duplex = duplex

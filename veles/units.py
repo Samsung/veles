@@ -16,7 +16,7 @@ import time
 from veles.config import root
 import veles.error as error
 import veles.logger as logger
-from veles.mutable import Bool
+from veles.mutable import Bool, LinkableAttribute
 import veles.opencl_types as opencl_types
 import veles.thread_pool as thread_pool
 
@@ -511,11 +511,6 @@ class Unit(Distributable):
             else:
                 raise TypeError(repr(arg) + " is not a valid attributes pair")
 
-    def def_attr(self, name, value):
-        real = "_" + name
-        setattr(self, real, value)
-        setattr(self, name, (self, real))
-
     def nothing(self, *args, **kwargs):
         """Function that do nothing.
 
@@ -536,17 +531,12 @@ class Unit(Distributable):
             res += "\t%s" % repr(link)
         print(res)
 
-    @staticmethod
-    def is_attribute_reference(obj):
-        return isinstance(obj, tuple) and len(obj) == 2 and \
-            isinstance(obj[0], object) and isinstance(obj[1], str)
-
     def _link_attr(self, other, mine, yours):
         attr = getattr(other, yours)
-        if (isinstance(attr, tuple) and not Unit.is_attribute_reference(attr))\
-           or isinstance(attr, int) or isinstance(attr, float) \
-           or isinstance(attr, bool) or isinstance(attr, str):
-            setattr(self, mine, (other, yours))
+        if (isinstance(attr, tuple) or isinstance(attr, int) or
+                isinstance(attr, float) or isinstance(attr, complex) or
+                isinstance(attr, bool) or isinstance(attr, str)):
+            LinkableAttribute(self, mine, (other, yours))
         else:
             setattr(self, mine, attr)
 
@@ -579,40 +569,6 @@ class Unit(Distributable):
                 storage[self] += fp - sp
             return res
 
-        return wrapped
-
-    def dereference_attributes(self, fn):
-        """
-        If any attribute of this class is a tuple (object, "name"), it is
-        interpreted as a reference to object.name, so it is temporarily set to
-        the dereferenced value before fn() call and then restored after fn() is
-        finished, updating the referenced value.
-        """
-        def wrapped(*args, **kwargs):
-            refs = {}
-            for key, value in self.__dict__.items():
-                if Unit.is_attribute_reference(value):
-                    new_value = getattr(*value)
-                    if Unit.is_attribute_reference(new_value):
-                        raise RuntimeError("Attribute reference %s@%s "
-                                           "references  an attribute "
-                                           "reference %s@%s in unit %s BEFORE"
-                                           % (value[1], value[0], new_value[1],
-                                              new_value[0], self.name))
-                    setattr(self, key, new_value)
-                    refs[key] = value
-            res = fn(*args, **kwargs)
-            for key, value in refs.items():
-                new_value = getattr(self, key)
-                if Unit.is_attribute_reference(new_value):
-                    raise RuntimeError("Attribute reference %s@%s "
-                                       "references an attribute "
-                                       "reference %s@%s in unit %s AFTER"
-                                       % (value[1], value[0], new_value[1],
-                                          new_value[0], self.name))
-                setattr(value[0], value[1], new_value)
-                setattr(self, key, value)
-            return res
         return wrapped
 
     def _track_call(self, fn, name):
