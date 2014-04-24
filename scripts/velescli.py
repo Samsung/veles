@@ -242,6 +242,8 @@ class Main(Logger):
                 self.workflow = Workflow(self.launcher, device=self.device,
                                          **kwargs)
             else:
+                self.info("Loaded the workflow pickle from %s",
+                          self.snapshot_file_name)
                 self.workflow.workflow = self.launcher
         except:
             self.exception("Failed to create the workflow")
