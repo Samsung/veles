@@ -15,7 +15,7 @@ import time
 from veles.config import root, get
 import veles.error as error
 import veles.logger as logger
-from veles.mutable import Bool
+from veles.mutable import Bool, LinkableAttribute
 import veles.thread_pool as thread_pool
 
 
