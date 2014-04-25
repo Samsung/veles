@@ -29,4 +29,4 @@ except Exception as ex:
 from veles.logger import Logger
 from veles.units import Unit
 from veles.opencl_units import OpenCLUnit, OpenCLWorkflow
-from veles.workflows import Workflow
+from veles.workflow import Workflow

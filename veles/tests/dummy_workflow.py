@@ -5,7 +5,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
-from veles.workflows import Workflow
+from veles.workflow import Workflow
 
 
 class DummyLauncher(object):

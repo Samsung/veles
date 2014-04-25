@@ -15,10 +15,10 @@ import unittest
 
 from veles.config import root
 from veles.launcher import Launcher
-import veles.workflows
+import veles.workflow
 
 
-class TestWorkflow(veles.workflows.Workflow):
+class TestWorkflow(veles.workflow.Workflow):
     job_requested = False
     job_done = False
     job_dropped = False

@@ -12,7 +12,7 @@ import unittest
 
 import veles.client as client
 import veles.server as server
-import veles.workflows as workflows
+import veles.workflow as workflows
 
 
 class TestWorkflow(workflows.Workflow):
