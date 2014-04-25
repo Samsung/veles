@@ -55,9 +55,9 @@ class OpenCLUnit(units.Unit):
         return self.cpu_run()
 
     def build_program(self, defines=None, dump_filename=None, dtype=None):
-        """Builds OpenCL program.
+        """Builds the OpenCL program.
 
-        program_ will be initialized to the built program.
+        program_ will be initialized to the resulting program object.
         """
         if defines and not isinstance(defines, dict):
             raise RuntimeError("defines must be a dictionary")
@@ -101,7 +101,7 @@ class OpenCLUnit(units.Unit):
 
 class OpenCLBenchmark(OpenCLUnit):
     """
-    Executes an OpenCL benchmark to estimate the computing power.
+    Executes an OpenCL benchmark to estimate the computing power of the device.
     """
 
     def __init__(self, workflow, **kwargs):
@@ -121,6 +121,8 @@ class OpenCLBenchmark(OpenCLUnit):
         self.output_C_.v = numpy.zeros(msize, dtype=numpy.double)
 
     def initialize(self, device, **kwargs):
+        """Compiles the benchmarking kernel.
+        """
         super(OpenCLBenchmark, self).initialize(device=device, **kwargs)
         self.build_program()
         self.kernel_ = self.get_kernel("benchmark")
@@ -133,7 +135,7 @@ class OpenCLBenchmark(OpenCLUnit):
 
     def estimate(self):
         """
-        Launches and waits for the benchmark to finish being executed.
+        Launches and waits for the benchmark to finish.
         """
         global_size = [formats.roundup(self.size, self.block_size),
                        formats.roundup(self.size, self.block_size)]
@@ -149,15 +151,12 @@ class OpenCLBenchmark(OpenCLUnit):
 
 
 class OpenCLWorkflow(OpenCLUnit, workflow.Workflow):
-    """Base class for OpenCL workflow
+    """Base class for OpenCL workflows.
     """
 
     def __init__(self, workflow, **kwargs):
         super(OpenCLWorkflow, self).__init__(workflow, **kwargs)
         self._power = None
-
-    def initialize(self, device, **kwargs):
-        super(OpenCLWorkflow, self).initialize(device=device, **kwargs)
 
     @property
     def computing_power(self):
