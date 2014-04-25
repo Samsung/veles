@@ -2,7 +2,7 @@
 """
 Created on Aug 6, 2013
 
-Base class for workflows.
+Provides the essential workflow classes.
 
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
@@ -18,7 +18,8 @@ import threading
 
 import veles.benchmark as benchmark
 from veles.config import root
-from veles.units import Unit, OpenCLUnit
+from veles.opencl import OpenCLUnit
+from veles.units import Unit
 from veles.external.prettytable import PrettyTable
 from veles.external.progressbar import ProgressBar, Percentage, Bar
 import veles.external.pydot as pydot

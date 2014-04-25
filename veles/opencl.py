@@ -1,13 +1,14 @@
 """
 Created on Mar 21, 2013
 
-OpenCL helper classes.
+OpenCL base classes.
 
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
 import argparse
+from copy import copy
 import numpy
 import os
 import six
@@ -402,7 +403,7 @@ class Device(units.Pickleable):
             def del_ref(self, unit):
                 pass
 
-        obj = units.OpenCLUnit(WorkflowStub(), device=self)
+        obj = OpenCLUnit(WorkflowStub(), device=self)
         obj.cl_sources_["forward.cl"] = {}
         defines = {
             "ACTIVATION_TANH": 1,
@@ -447,3 +448,94 @@ class Device(units.Pickleable):
         # Get results back
         self.c.map_read()
         return dt / iters
+
+
+class OpenCLUnit(units.Unit):
+    """Unit that operates using OpenCL.
+
+    Attributes:
+        device: Device object.
+        prg_: OpenCL program.
+        cl_sources: OpenCL source files: file => defines.
+        prg_src: last built OpenCL program source code text.
+    """
+    def __init__(self, workflow, **kwargs):
+        device = kwargs.get("device")
+        kwargs["device"] = device
+        super(OpenCLUnit, self).__init__(workflow, **kwargs)
+        self.device = device
+
+    def init_unpickled(self):
+        super(OpenCLUnit, self).init_unpickled()
+        self.prg_ = None
+        self.cl_sources_ = {}
+
+    def cpu_run(self):
+        """Run on CPU only.
+        """
+        return super(OpenCLUnit, self).run()
+
+    def ocl_run(self):
+        """Run on GPU/any OpenCL capable device.
+        """
+        return self.cpu_run()
+
+    def initialize(self, device=None):
+        super(OpenCLUnit, self).initialize()
+        if device is not None:
+            self.device = device
+        elif hasattr(self.workflow, "device"):
+            self.device = self.workflow.device
+
+    def run(self):
+        t1 = time.time()
+        if self.device:
+            self.ocl_run()
+        else:
+            self.cpu_run()
+        self.debug("%s in %.2f sec" %
+                   (self.__class__.__name__, time.time() - t1))
+
+    def build_program(self, defines=None, dump_filename=None, dtype=None):
+        """Builds OpenCL program.
+
+        prg_ will be initialized to the built program.
+        """
+        if defines and not isinstance(defines, dict):
+            raise RuntimeError("defines must be a dictionary")
+        lines = []
+        my_defines = copy(defines) if defines else {}
+        for fnme, defs in self.cl_sources_.items():
+            lines.append("#include \"%s\"" % (fnme))
+            my_defines.update(defs)
+        if dtype is None:
+            dtype = root.common.precision_type
+        elif type(dtype) != str:
+            dtype = opencl_types.numpy_dtype_to_opencl(dtype)
+        my_defines.update(opencl_types.cl_defines[dtype])
+
+        for k, v in my_defines.items():
+            lines.insert(0, "#define %s %s" % (k, v))
+
+        source = "\n".join(lines)
+
+        try:
+            self.prg_ = self.device.queue_.context.create_program(
+                source, root.common.ocl_dirs)
+            if len(self.prg_.build_logs):
+                for s in self.prg_.build_logs:
+                    s = s.strip()
+                    if not len(s):
+                        continue
+                    self.info("Non-empty OpenCL build log encountered: %s", s)
+        finally:
+            if dump_filename is not None:
+                flog = open(dump_filename, "w")
+                flog.write(source)
+                flog.close()
+
+    def get_kernel(self, name):
+        return self.prg_.get_kernel(name)
+
+    def execute_kernel(self, krn, global_size, local_size):
+        return self.device.queue_.execute_kernel(krn, global_size, local_size)
