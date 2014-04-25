@@ -240,14 +240,18 @@ class Unit(Distributable):
         # Important: these four decorator applications must stand before
         # super(...).init_unpickled since it will call
         # Distributable.init_unpickled which finally makes them thread safe.
-        self.generate_data_for_slave = \
-            self.dereference_attributes(self.generate_data_for_slave)
-        self.generate_data_for_master = \
-            self.dereference_attributes(self.generate_data_for_master)
-        self.apply_data_from_slave = \
-            self.dereference_attributes(self.apply_data_from_slave)
-        self.apply_data_from_master = \
-            self.dereference_attributes(self.apply_data_from_master)
+        self.generate_data_for_slave = self._measure_time(
+            self.dereference_attributes(self.generate_data_for_slave),
+            Unit.timers)
+        self.generate_data_for_master = self._measure_time(
+            self.dereference_attributes(self.generate_data_for_master),
+            Unit.timers)
+        self.apply_data_from_slave = self._measure_time(
+            self.dereference_attributes(self.apply_data_from_slave),
+            Unit.timers)
+        self.apply_data_from_master = self._measure_time(
+            self.dereference_attributes(self.apply_data_from_master),
+            Unit.timers)
         super(Unit, self).init_unpickled()
         self._gate_lock_ = threading.Lock()
         self._run_lock_ = threading.Lock()
