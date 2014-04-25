@@ -7,7 +7,6 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
-from copy import copy
 import functools
 from six.moves import cPickle as pickle
 import threading
@@ -17,7 +16,6 @@ from veles.config import root
 import veles.error as error
 import veles.logger as logger
 from veles.mutable import Bool, LinkableAttribute
-import veles.opencl_types as opencl_types
 import veles.thread_pool as thread_pool
 
 
@@ -236,7 +234,7 @@ class Unit(Distributable):
         self.add_method_to_storage("initialize")
         self.add_method_to_storage("run")
 
-    def init_unpickled(self):
+    def init_unpickled(self):        
         # Important: these four decorator applications must stand before
         # super(...).init_unpickled since it will call
         # Distributable.init_unpickled which finally makes them thread safe.
