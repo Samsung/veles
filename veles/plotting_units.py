@@ -599,8 +599,8 @@ class MSEHistogram(plotter.Plotter):
         self.pp = None
         self.show_figure = self.nothing
 
-    def initialize(self):
-        super(MSEHistogram, self).initialize()
+    def initialize(self, **kwargs):
+        super(MSEHistogram, self).initialize(**kwargs)
         self.val_mse = numpy.zeros(
             self.n_bars, dtype=opencl_types.dtypes[config.root.common.dtype])
 
@@ -836,8 +836,8 @@ class MultiHistogram(plotter.Plotter):
         self.n_bars = n_bars
         self.hist_number = hist_number
 
-    def initialize(self):
-        super(MultiHistogram, self).initialize()
+    def initialize(self, **kwargs):
+        super(MultiHistogram, self).initialize(**kwargs)
         if self.hist_number > self.limit:
             self.hist_number = self.limit
         self.value.v = numpy.zeros(

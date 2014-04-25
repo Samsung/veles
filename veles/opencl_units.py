@@ -13,7 +13,7 @@ from veles.config import root
 import veles.formats as formats
 import veles.opencl_types as opencl_types
 import veles.units as units
-import veles.workflow as workflows
+import veles.workflow as workflow
 
 
 class OpenCLUnit(units.Unit):
@@ -27,12 +27,22 @@ class OpenCLUnit(units.Unit):
     """
     def __init__(self, workflow, **kwargs):
         super(OpenCLUnit, self).__init__(workflow, **kwargs)
-        self.device = kwargs.get("device")
+        self.device = None
 
     def init_unpickled(self):
         super(OpenCLUnit, self).init_unpickled()
         self.program_ = None
         self.cl_sources_ = {}
+
+    def initialize(self, device, **kwargs):
+        super(OpenCLUnit, self).initialize(device=device, **kwargs)
+        self.device = device or self.workflow.device
+
+    def run(self):
+        if self.device:
+            self.ocl_run()
+        else:
+            self.cpu_run()
 
     def cpu_run(self):
         """Run on CPU only.
@@ -43,22 +53,6 @@ class OpenCLUnit(units.Unit):
         """Run on GPU/any OpenCL capable device.
         """
         return self.cpu_run()
-
-    def initialize(self, device=None):
-        super(OpenCLUnit, self).initialize()
-        if device is not None:
-            self.device = device
-        elif hasattr(self.workflow, "device"):
-            self.device = self.workflow.device
-
-    def run(self):
-        t1 = time.time()
-        if self.device:
-            self.ocl_run()
-        else:
-            self.cpu_run()
-        self.debug("%s in %.2f sec" %
-                   (self.__class__.__name__, time.time() - t1))
 
     def build_program(self, defines=None, dump_filename=None, dtype=None):
         """Builds OpenCL program.
@@ -118,15 +112,18 @@ class OpenCLBenchmark(OpenCLUnit):
             'BLOCK_SIZE': self.block_size,
             'SIZE': self.size
         }}
-        self.build_program()
-        self.kernel_ = self.get_kernel("benchmark")
-        msize = [self.size, self.size]
         self.input_A_ = formats.Vector()
         self.input_B_ = formats.Vector()
         self.output_C_ = formats.Vector()
+        msize = [self.size, self.size]
         self.input_A_.v = numpy.zeros(msize, dtype=numpy.double)
         self.input_B_.v = numpy.zeros(msize, dtype=numpy.double)
         self.output_C_.v = numpy.zeros(msize, dtype=numpy.double)
+
+    def initialize(self, device, **kwargs):
+        super(OpenCLBenchmark, self).initialize(device=device, **kwargs)
+        self.build_program()
+        self.kernel_ = self.get_kernel("benchmark")
         self.input_A_.initialize(self.device)
         self.input_B_.initialize(self.device)
         self.output_C_.initialize(self.device)
@@ -151,15 +148,16 @@ class OpenCLBenchmark(OpenCLUnit):
         return 1000 / delta
 
 
-class OpenCLWorkflow(OpenCLUnit, workflows.Workflow):
-    """Base class for OpenCL workflows
+class OpenCLWorkflow(OpenCLUnit, workflow.Workflow):
+    """Base class for OpenCL workflow
     """
 
-    def initialize(self, device=None):
-        if device is not None:
-            self.device = device
-        super(OpenCLWorkflow, self).initialize()
+    def __init__(self, workflow, **kwargs):
+        super(OpenCLWorkflow, self).__init__(workflow, **kwargs)
         self._power = None
+
+    def initialize(self, device, **kwargs):
+        super(OpenCLWorkflow, self).initialize(device=device, **kwargs)
 
     @property
     def computing_power(self):

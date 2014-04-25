@@ -12,10 +12,10 @@ import unittest
 
 import veles.client as client
 import veles.server as server
-import veles.workflow as workflows
+import veles.workflow as workflow
 
 
-class TestWorkflow(workflows.Workflow):
+class TestWorkflow(workflow.Workflow):
     job_requested = False
     job_done = False
     update_applied = False

@@ -171,7 +171,7 @@ class WebStatus(logger.Logger):
                     self.masters[mid] = cmd["body"]
                     self.masters[mid]["last_update"] = time.time()
                 elif "request" in cmd.keys():
-                    if cmd["body"]["request"] == "workflows":
+                    if cmd["body"]["request"] == "workflow":
                         ret = {}
                         garbage = []
                         for mid, master in self.masters.items():

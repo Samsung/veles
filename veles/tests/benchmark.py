@@ -16,7 +16,8 @@ class Test(unittest.TestCase):
 
     def testBenchmark(self):
         logging.basicConfig(level=logging.DEBUG)
-        self.bench = opencl_units.OpenCLBenchmark(self, device=opencl.Device())
+        self.bench = opencl_units.OpenCLBenchmark(self)
+        self.bench.initialize(device=opencl.Device())
         logging.info("Result: %d points", self.bench.estimate())
 
 

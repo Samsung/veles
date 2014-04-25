@@ -7,17 +7,15 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
-from copy import copy
 import functools
 from six.moves import cPickle as pickle
 import threading
 import time
 
-from veles.config import root
+from veles.config import root, get
 import veles.error as error
 import veles.logger as logger
 from veles.mutable import Bool
-import veles.opencl_types as opencl_types
 import veles.thread_pool as thread_pool
 
 
@@ -231,6 +229,7 @@ class Unit(Distributable):
         self._gate_block = Bool(False)
         self._gate_skip = Bool(False)
         self._ran = False
+        self._timings = kwargs.get("timings", get(root.common.timings, False))
         self._workflow = None
         self.workflow = workflow
         self.add_method_to_storage("initialize")
@@ -342,6 +341,10 @@ class Unit(Distributable):
         self._view_group = value
 
     @property
+    def timings(self):
+        return self._timings
+
+    @property
     def thread_pool(self):
         Unit._pool_lock_.acquire()
         try:
@@ -377,7 +380,7 @@ class Unit(Distributable):
     def run_was_called(self, value):
         self._ran = value
 
-    def initialize(self):
+    def initialize(self, **kwargs):
         """Allocate buffers here.
 
         initialize() invoked in the same order as run(), including
@@ -581,8 +584,11 @@ class Unit(Distributable):
             sp = time.time()
             res = fn(*args, **kwargs)
             fp = time.time()
+            delta = fp - sp
             if self in storage:
-                storage[self] += fp - sp
+                storage[self] += delta
+            if self.timings:
+                self.debug("%s took %.2f sec", fn.__name__, delta)
             return res
 
         return wrapped

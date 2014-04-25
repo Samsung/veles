@@ -27,8 +27,8 @@ class Shell(Unit):
         self.cfg.PromptManager.out_template = "veles [\\#]: "
         self.cfg.HistoryManager.enabled = False
 
-    def initialize(self):
-        super(Shell, self).initialize()
+    def initialize(self, **kwargs):
+        super(Shell, self).initialize(**kwargs)
         self.shell_ = InteractiveShellEmbed(config=self.cfg,
                                             banner1=Shell.BANNER1,
                                             banner2=Shell.BANNER2)

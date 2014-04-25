@@ -47,8 +47,8 @@ class ZeroMQLoader(Unit):
     def endpoints(self):
         return self._endpoints
 
-    def initialize(self):
-        super(ZeroMQLoader, self).initialize()
+    def initialize(self, **kwargs):
+        super(ZeroMQLoader, self).initialize(**kwargs)
         self._zmq_socket = ZmqPuller(self, self.endpoints)
 
     def run(self):
