@@ -7,6 +7,7 @@ import logging
 import unittest
 
 import veles.opencl as opencl
+import veles.opencl_units as opencl_units
 
 
 class Test(unittest.TestCase):
@@ -15,7 +16,7 @@ class Test(unittest.TestCase):
 
     def testBenchmark(self):
         logging.basicConfig(level=logging.DEBUG)
-        self.bench = opencl.OpenCLBenchmark(self)
+        self.bench = opencl_units.OpenCLBenchmark(self, device=opencl.Device())
         logging.info("Result: %d points", self.bench.estimate())
 
 
