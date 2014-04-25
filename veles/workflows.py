@@ -159,9 +159,12 @@ class Workflow(Unit):
 
     def on_workflow_finished(self, slave_force=False):
         self._run_time_finished_ = time.time()
+        self.is_running = False
         if not self.is_slave or slave_force:
             self.workflow.on_workflow_finished()
-        self.is_running = False
+        else:
+            data = pickle.dumps(self.generate_data_for_master())
+            self._do_job_callback_(data)
 
     def add_ref(self, unit):
         if unit not in self.units:
@@ -220,19 +223,18 @@ class Workflow(Unit):
             return False
         return pickle.dumps(data) if data is not None else None
 
-    def do_job(self, data):
+    def do_job(self, data, callback):
         """
         Executes this workflow on the given source data. Run by a slave.
         """
         real_data = pickle.loads(data)
         self.apply_data_from_master(real_data)
+        self._do_job_callback_ = callback
         try:
             self.run()
         except:
             self.exception("Failed to run the workflow")
             self.stop()
-            return
-        return pickle.dumps(self.generate_data_for_master())
 
     def apply_update(self, data, slave):
         """
@@ -311,7 +313,7 @@ class Workflow(Unit):
             table.add_row("Σ", int(top_time * 100 / time_all),
                           datetime.timedelta(seconds=top_time), "Top 5")
             self.info("Unit run time statistics top:\n%s", str(table))
-            if hasattr(self, "_run_time_started_") and \
+            if not self.is_master and hasattr(self, "_run_time_started_") and \
                hasattr(self, "_run_time_finished_"):
                 rtime_all = self._run_time_finished_ - self._run_time_started_
                 table = PrettyTable("measured", "real", "η,%")
