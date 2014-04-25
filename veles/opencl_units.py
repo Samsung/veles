@@ -13,7 +13,7 @@ from veles.config import root
 import veles.formats as formats
 import veles.opencl_types as opencl_types
 import veles.units as units
-import veles.workflows as workflows
+import veles.workflow as workflows
 
 
 class OpenCLUnit(units.Unit):
