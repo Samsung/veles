@@ -6,7 +6,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 import logging
 import unittest
 
-import veles.benchmark
+import veles.opencl as opencl
 
 
 class Test(unittest.TestCase):
@@ -15,7 +15,7 @@ class Test(unittest.TestCase):
 
     def testBenchmark(self):
         logging.basicConfig(level=logging.DEBUG)
-        self.bench = veles.benchmark.OpenCLBenchmark(self)
+        self.bench = opencl.OpenCLBenchmark(self)
         logging.info("Result: %d points", self.bench.estimate())
 
 
