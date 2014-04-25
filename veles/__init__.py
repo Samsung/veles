@@ -27,5 +27,6 @@ except Exception as ex:
     __date__ = None
 
 from veles.logger import Logger
-from veles.units import Unit, OpenCLUnit
+from veles.opencl import OpenCLUnit
+from veles.units import Unit
 from veles.workflows import Workflow, OpenCLWorkflow

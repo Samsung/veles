@@ -10,10 +10,9 @@ import time
 
 import veles.formats as formats
 import veles.opencl as opencl
-import veles.units as units
 
 
-class OpenCLBenchmark(units.OpenCLUnit):
+class OpenCLBenchmark(opencl.OpenCLUnit):
     """
     Executes an OpenCL benchmark to estimate the computing power.
     """
