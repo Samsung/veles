@@ -16,9 +16,7 @@ import tempfile
 import time
 import threading
 
-import veles.benchmark as benchmark
 from veles.config import root
-from veles.opencl import OpenCLUnit
 from veles.units import Unit
 from veles.external.prettytable import PrettyTable
 from veles.external.progressbar import ProgressBar, Percentage, Bar
@@ -334,27 +332,3 @@ class Workflow(Unit):
                            model_name)
             raise
         return sha1.hexdigest()
-
-
-class OpenCLWorkflow(OpenCLUnit, Workflow):
-    """Base class for OpenCL workflows
-    """
-
-    def initialize(self, device=None):
-        if device is not None:
-            self.device = device
-        super(OpenCLWorkflow, self).initialize()
-        self._power = None
-
-    @property
-    def computing_power(self):
-        """
-        Estimates this slave's computing power for initial perfect balancing.
-        Run by a slave.
-        """
-        if not self._power:
-            bench = benchmark.OpenCLBenchmark(self, device=self.device)
-            self._power = bench.estimate()
-            self.del_ref(bench)
-            self.info("Computing power is %.6f", self._power)
-        return self._power
