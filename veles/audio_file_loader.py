@@ -31,7 +31,7 @@ class AudioFileLoader(units.Unit):
         self.files_list = []
         self.backends = {}
 
-    def initialize(self):
+    def initialize(self, **kwargs):
         for fn in self.files_list:
             ext = os.path.splitext(fn)[1][1:]
             backend = AudioFileLoader.available_backends.get(ext)

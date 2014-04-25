@@ -122,8 +122,8 @@ class Workflow(Unit):
     def units(self):
         return self._units if hasattr(self, "_units") else []
 
-    def initialize(self):
-        super(Workflow, self).initialize()
+    def initialize(self, **kwargs):
+        super(Workflow, self).initialize(**kwargs)
         fin_text = "all units are initialized"
         maxlen = max([len(u.name) for u in self.units] + [len(fin_text)])
         progress = ProgressBar(maxval=len(self.units),
@@ -135,7 +135,11 @@ class Workflow(Unit):
         progress.start()
         for unit in self.start_point.dependecy_list():
             progress.widgets[-1] = unit.name + ' ' * (maxlen - len(unit.name))
-            unit.initialize()
+            try:
+                unit.initialize(**kwargs)
+            except:
+                self.error("Unit \"%s\" failed to initialize", unit.name)
+                raise
             progress.inc()
         progress.widgets[-1] = fin_text + ' ' * (maxlen - len(fin_text))
         progress.finish()

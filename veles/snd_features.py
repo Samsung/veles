@@ -37,7 +37,7 @@ class SoundFeatures(units.Unit):
         for desc in descriptions:
             self.add_feature(desc)
 
-    def initialize(self):
+    def initialize(self, **kwargs):
         pass
 
     def extract(self, name, data, extr):

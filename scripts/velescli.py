@@ -235,12 +235,10 @@ class Main(Logger):
         self.load_called = True
         try:
             self.launcher = Launcher()
-            self.device = None if self.launcher.is_master else Device()
             self.workflow = self._load_workflow(self.snapshot_file_name)
             snapshot = self.workflow is not None
             if not snapshot:
-                self.workflow = Workflow(self.launcher, device=self.device,
-                                         **kwargs)
+                self.workflow = Workflow(self.launcher, **kwargs)
             else:
                 self.info("Loaded the workflow pickle from %s",
                           self.snapshot_file_name)
@@ -256,6 +254,7 @@ class Main(Logger):
             self.critical("Call load() first in run()")
             raise RuntimeError()
         self.main_called = True
+        self.device = None if self.launcher.is_master else Device()
         try:
             self.workflow.initialize(device=self.device, **kwargs)
             self.debug("Workflow initialization has been completed."
