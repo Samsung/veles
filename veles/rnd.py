@@ -78,19 +78,24 @@ class Rand(object):
         self.restore_state()
         _lock.release()
 
-    def fill_normal_real(self, arr, mean, stddev):
+    def fill_normal_real(self, arr, mean, stddev, min_val=None, max_val=None):
         """Fills real-valued numpy array with random normal distribution.
 
         Parameters:
             arr: numpy array.
             mean:
             stddev:
+            min_val, max_val (optional): clipping values of output data.
         """
         global _lock
         _lock.acquire()
         self.save_state()
         arr = formats.ravel(arr)
         arr[:] = numpy.random.normal(loc=mean, scale=stddev, size=arr.size)[:]
+
+        if min_val is not None and max_val is not None:
+            assert max_val >= min_val
+            numpy.clip(arr, min_val, max_val, out=arr)
         self.restore_state()
         _lock.release()
 
