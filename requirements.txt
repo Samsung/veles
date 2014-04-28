@@ -15,3 +15,4 @@ ipython>=2.0.0
 jpeg4py>=0.1.0
 cffi>=0.8.2
 glymur>=0.5.10
+lockfile>=0.9.1
