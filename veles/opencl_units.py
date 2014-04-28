@@ -36,7 +36,7 @@ class OpenCLUnit(units.Unit):
 
     def initialize(self, device, **kwargs):
         super(OpenCLUnit, self).initialize(device=device, **kwargs)
-        self.device = device or self.workflow.device
+        self.device = device
 
     def run(self):
         if self.device:
