@@ -404,7 +404,8 @@ class Device(units.Pickleable):
 
         from veles.opencl_units import OpenCLUnit
 
-        obj = OpenCLUnit(WorkflowStub(), device=self)
+        obj = OpenCLUnit(WorkflowStub())
+        obj.initialize(device=self)
         obj.cl_sources_["forward.cl"] = {}
         defines = {
             "ACTIVATION_TANH": 1,
