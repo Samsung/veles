@@ -156,7 +156,10 @@ class OpenCLWorkflow(OpenCLUnit, workflow.Workflow):
 
     def __init__(self, workflow, **kwargs):
         super(OpenCLWorkflow, self).__init__(workflow, **kwargs)
-        self._power = None
+
+    def init_unpickled(self):
+        super(OpenCLWorkflow, self).init_unpickled()
+        self._power_ = None
 
     @property
     def computing_power(self):
@@ -164,9 +167,9 @@ class OpenCLWorkflow(OpenCLUnit, workflow.Workflow):
         Estimates this slave's computing power for initial perfect balancing.
         Run by a slave.
         """
-        if not self._power:
+        if not self._power_:
             bench = OpenCLBenchmark(self, device=self.device)
-            self._power = bench.estimate()
+            self._power_ = bench.estimate()
             self.del_ref(bench)
             self.info("Computing power is %.6f", self._power)
-        return self._power
+        return self._power_
