@@ -27,12 +27,11 @@ cl_defines = {"float":      {"dtype": "float",
                              "sizeof_dtype": "8",
                              "sizeof_c_dtype": "16"}}
 
+
 # : Supported types as OpenCL => numpy dictionary.
 dtypes = {"float": numpy.float32, "double": numpy.float64,
-          "float2": numpy.complex64, "double2": numpy.complex128,
-          "char": numpy.int8, "short": numpy.int16, "int": numpy.int32,
-          "uchar": numpy.uint8, "ushort": numpy.uint16, "uint": numpy.uint32,
-          "long": numpy.int64, "ulong": numpy.uint64}
+          "float2": numpy.complex64, "double2": numpy.complex128}
+
 
 # : Complex type to real type mapping
 dtype_map = {"float": "float", "double": "double",
