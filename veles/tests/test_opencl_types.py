@@ -20,18 +20,6 @@ class TestOpenclTypes(unittest.TestCase):
     def setUp(self):
         root.common.unit_test = True
 
-    def test_get_itype_from_size(self):
-        logging.info("Will test opencl types")
-        self.assertEqual(ot.get_itype_from_size(13), "char")
-        self.assertEqual(ot.get_itype_from_size(139), "short")
-        self.assertEqual(ot.get_itype_from_size(34000), "int")
-        self.assertEqual(ot.get_itype_from_size(3000000000), "long")
-        self.assertEqual(ot.get_itype_from_size(139, False), "uchar")
-        self.assertEqual(ot.get_itype_from_size(34000, False), "ushort")
-        self.assertEqual(ot.get_itype_from_size(3000000000, False), "uint")
-        self.assertEqual(ot.get_itype_from_size(5000000000, False), "ulong")
-        logging.info("All Ok")
-
     def test_numpy_dtype_to_opencl(self):
         logging.info("Will test opencl types")
         self.assertEqual(ot.numpy_dtype_to_opencl(numpy.float32), "float")

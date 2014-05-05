@@ -27,15 +27,12 @@ cl_defines = {"float":      {"dtype": "float",
                              "sizeof_dtype": "8",
                              "sizeof_c_dtype": "16"}}
 
-# : Supported int types as OpenCL => numpy dictionary.
-itypes = {"char": numpy.int8, "short": numpy.int16, "int": numpy.int32,
-          "long": numpy.int64,
-          "uchar": numpy.uint8, "ushort": numpy.uint16, "uint": numpy.uint32,
-          "ulong": numpy.uint64}
-
-# : Supported float types as OpenCL => numpy dictionary.
+# : Supported types as OpenCL => numpy dictionary.
 dtypes = {"float": numpy.float32, "double": numpy.float64,
-          "float2": numpy.complex64, "double2": numpy.complex128}
+          "float2": numpy.complex64, "double2": numpy.complex128,
+          "char": numpy.int8, "short": numpy.int16, "int": numpy.int32,
+          "uchar": numpy.uint8, "ushort": numpy.uint16, "uint": numpy.uint32,
+          "long": numpy.int64, "ulong": numpy.uint64}
 
 # : Complex type to real type mapping
 dtype_map = {"float": "float", "double": "double",
@@ -69,23 +66,3 @@ def numpy_dtype_to_opencl(dtype):
     if dtype == numpy.uint64:
         return "ulong"
     raise error.ErrNotExists()
-
-
-def get_itype_from_size(size, signed=True):
-    """Get integer type from size.
-    """
-    if signed:
-        if size < 128:
-            return "char"
-        if size < 32768:
-            return "short"
-        if size < 2147483648:
-            return "int"
-        return "long"
-    if size < 256:
-        return "uchar"
-    if size < 65536:
-        return "ushort"
-    if size < 4294967296:
-        return "uint"
-    return "ulong"
