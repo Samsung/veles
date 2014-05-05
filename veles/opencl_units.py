@@ -10,6 +10,7 @@ import numpy
 import os
 from six.moves import cPickle as pickle
 from six import BytesIO
+from six import PY3
 import tarfile
 import time
 
@@ -72,6 +73,8 @@ class OpenCLUnit(units.Unit):
 
         program_ will be initialized to the resulting program object.
         """
+        if type(cache_file_name) == str:
+            cache_file_name = cache_file_name + (".3" if PY3 else ".2")
         if self.cache and os.path.exists("%s.cache" % cache_file_name):
             binaries = self._load_from_cache(cache_file_name, defines, dtype)
             if binaries is not None:
