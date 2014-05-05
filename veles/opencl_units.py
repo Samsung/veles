@@ -8,6 +8,7 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 from copy import copy
 import numpy
 import os
+import re
 from six.moves import cPickle as pickle
 from six import BytesIO
 from six import PY3
@@ -88,7 +89,7 @@ class OpenCLUnit(units.Unit):
         if len(self.program_.build_logs):
             for s in self.program_.build_logs:
                 s = s.strip()
-                if not len(s):
+                if not s:
                     continue
                 self.info("Non-empty OpenCL build log encountered: %s", s)
         self._save_to_cache(cache_file_name)
@@ -105,7 +106,7 @@ class OpenCLUnit(units.Unit):
         lines = []
         my_defines = copy(defines) if defines else {}
         for fnme, defs in self.cl_sources_.items():
-            lines.append("#include \"%s\"" % (fnme))
+            lines.append("#include \"%s\"" % fnme)
             my_defines.update(defs)
         if dtype is None:
             dtype = root.common.precision_type
@@ -119,18 +120,57 @@ class OpenCLUnit(units.Unit):
         source = "\n".join(lines)
         return source
 
+    def _search_include(self, file_name):
+        if os.path.exists(file_name):
+            return os.path.abspath(file_name)
+        for d in root.common.ocl_dirs:
+            full = os.path.join(d, file_name)
+            if os.path.exists(full):
+                return os.path.abspath(full)
+        return ""
+
+    def _scan_include_dependencies(self):
+        res = [self._search_include(f) for f in self.cl_sources_.keys()]
+        pending = copy(res)
+        include_matcher = re.compile('#\s*include\s*((")?|(<)?)([\w\.]+)'
+                                     '(?(2)"|>)')
+        while len(pending):
+            with open(pending[0], "r") as fr:
+                contents = fr.read()
+            for match in include_matcher.finditer(contents):
+                header = match.group(4)
+                full = self._search_include(header)
+                if not full:
+                    self.warning("Could not find the header \"%s\" "
+                                 "required from %s", header, pending[0])
+                    continue
+                pending.append(full)
+                res.append(full)
+            pending = pending[1:]
+        return res
+
     def _load_from_cache(self, cache_file_name, defines, dtype):
-        with tarfile.open("%s.cache" % cache_file_name, "r") as tar:
-            cached_source = tar.extractfile("source.cl").read()
-            real_source = self._generate_source(defines, dtype).encode()
-            if cached_source != real_source:
-                return None
-            cache = pickle.loads(tar.extractfile("binaries.pickle").read())
-            if (self.device.queue_.device.name != cache["devices"][0][0] or
-                self.device.queue_.device.platform.name !=
-                    cache["devices"][0][1]):
-                return None
-            return cache["binaries"]
+        try:
+            with tarfile.open("%s.cache" % cache_file_name, "r") as tar:
+                cached_source = tar.extractfile("source.cl").read()
+                real_source = self._generate_source(defines, dtype).encode()
+                if cached_source != real_source:
+                    return None
+                for dep in self._scan_include_dependencies():
+                    cached_source = tar.extractfile(
+                        os.path.basename(dep)).read()
+                    with open(dep, "rb") as fr:
+                        real_source = fr.read()
+                    if cached_source != real_source:
+                        return None
+                cache = pickle.loads(tar.extractfile("binaries.pickle").read())
+                if (self.device.queue_.device.name != cache["devices"][0][0] or
+                    self.device.queue_.device.platform.name !=
+                        cache["devices"][0][1]):
+                    return None
+                return cache["binaries"]
+        except:
+            return None
 
     def _save_to_cache(self, cache_file_name):
         with tarfile.open("%s.cache" % cache_file_name, "w") as tar:
@@ -141,6 +181,12 @@ class OpenCLUnit(units.Unit):
             ti.mode = int("666", 8)
             source_io.seek(0)
             tar.addfile(ti, fileobj=source_io)
+            for dep in self._scan_include_dependencies():
+                ti = tarfile.TarInfo(os.path.basename(dep))
+                ti.size = os.path.getsize(dep)
+                ti.mode = int("666", 8)
+                with open(dep, "rb") as fr:
+                    tar.addfile(ti, fileobj=fr)
             binaries_io = BytesIO()
             pickler = pickle.Pickler(binaries_io)
             binaries = {"binaries": self.program_.binaries,
