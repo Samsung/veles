@@ -135,8 +135,12 @@ class OpenCLUnit(units.Unit):
         include_matcher = re.compile('#\s*include\s*((")?|(<)?)([\w\.]+)'
                                      '(?(2)"|>)')
         while len(pending):
-            with open(pending[0], "r") as fr:
-                contents = fr.read()
+            try:
+                with open(pending[0], "r") as fr:
+                    contents = fr.read()
+            except:
+                self.exception("Failed to read %s", pending[0])
+                raise
             for match in include_matcher.finditer(contents):
                 header = match.group(4)
                 full = self._search_include(header)
