@@ -132,18 +132,18 @@ class OpenCLUnit(units.Unit):
     def _scan_include_dependencies(self):
         res = [self._search_include(f) for f in self.cl_sources_.keys()]
         pending = copy(res)
-        include_matcher = re.compile('#\s*include\s*((")?|(<)?)([\w\.]+)'
-                                     '(?(2)"|>)')
+        include_matcher = re.compile(b'#\s*include\s*((")?|(<)?)([\w\.]+)'
+                                     b'(?(2)"|>)')
         while len(pending):
             try:
-                with open(pending[0], "r") as fr:
+                with open(pending[0], "rb") as fr:
                     contents = fr.read()
             except:
                 self.exception("Failed to read %s", pending[0])
                 raise
             for match in include_matcher.finditer(contents):
                 header = match.group(4)
-                full = self._search_include(header)
+                full = self._search_include(header.decode('utf-8'))
                 if not full:
                     self.warning("Could not find the header \"%s\" "
                                  "required from %s", header, pending[0])
