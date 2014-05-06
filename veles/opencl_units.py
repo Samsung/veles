@@ -168,6 +168,11 @@ class OpenCLUnit(units.Unit):
                     self.device.queue_.device.platform.name !=
                         cache["devices"][0][1]):
                     return None
+                bins = cache["binaries"]
+                if (not isinstance(bins, list) or len(bins) == 0 or
+                    not isinstance(bins[0], bytes)):
+                    self.warning("Cached binaries have an invalid format")
+                    return None
                 return cache["binaries"]
         except:
             return None
