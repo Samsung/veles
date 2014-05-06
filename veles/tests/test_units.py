@@ -32,13 +32,16 @@ class Test(unittest.TestCase):
         u2.B = -4
         u3 = UnitMock()
         u3.C = 1
-        calc.a = (u1, "A")
-        calc.b = (u2, "B")
-        calc.c = (u3, "C")
+        calc.link_attrs(u1, ("a", "A"))
+        calc.link_attrs(u2, ("b", "B"))
+        calc.link_attrs(u3, ("c", "C"))
         calc.run()
-        self.assertEqual(16, u1.A)
+        self.assertEqual(56, u1.A)
         self.assertEqual(-4, u2.B)
-        self.assertEqual(52, u3.C)
+        self.assertEqual(1, u3.C)
+        self.assertEqual(16, calc.a)
+        self.assertEqual(-4, calc.b)
+        self.assertEqual(52, calc.c)
 
 
 if __name__ == "__main__":
