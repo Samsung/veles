@@ -19,7 +19,7 @@ from veles.config import root
 import veles.formats as formats
 import veles.opencl_types as opencl_types
 import veles.units as units
-import veles.workflow as workflow
+import veles.workflow
 
 
 class OpenCLUnit(units.Unit):
@@ -175,8 +175,8 @@ class OpenCLUnit(units.Unit):
                         cache["devices"][0][1]):
                     return None
                 bins = cache["binaries"]
-                if (not isinstance(bins, list) or len(bins) == 0 or
-                    not isinstance(bins[0], bytes)):
+                if not isinstance(bins, list) or len(bins) == 0 or \
+                   not isinstance(bins[0], bytes):
                     self.warning("Cached binaries have an invalid format")
                     return None
                 return cache["binaries"]
@@ -262,7 +262,7 @@ class OpenCLBenchmark(OpenCLUnit):
         return 1000 / delta
 
 
-class OpenCLWorkflow(OpenCLUnit, workflow.Workflow):
+class OpenCLWorkflow(OpenCLUnit, veles.workflow.Workflow):
     """Base class for OpenCL workflows.
     """
 
