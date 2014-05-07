@@ -117,7 +117,7 @@ class GraphicsServer(Logger):
         else:
             python = "python"
         args = ["env", python, graphics_client.__file__,
-                backend, server.endpoints["ipc"]]
+                "--backend", backend, "--endpoint", server.endpoints["ipc"]]
         if backend == "WebAgg" and \
            webagg_callback is not None:
             tmpdir = mkdtemp(prefix="veles-graphics")
@@ -126,6 +126,7 @@ class GraphicsServer(Logger):
             fifo = os.open(tmpfn, os.O_RDONLY | os.O_NONBLOCK)
             reactor.callLater(0, GraphicsServer._read_webagg_port,
                               fifo, tmpfn, tmpdir, webagg_callback)
+            args.append("--webagg-discovery-fifo")
             args.append(tmpfn)
         client = subprocess.Popen(args, stdout=sys.stdout,
                                   stderr=sys.stderr)

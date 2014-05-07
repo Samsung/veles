@@ -5,6 +5,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
+import argparse
 import errno
 import logging
 import os
@@ -219,11 +220,18 @@ class GraphicsClient(Logger):
 
 if __name__ == "__main__":
     Logger.setup(level=logging.INFO)
-    backend, endpoint = sys.argv[1:3]
-    client = GraphicsClient(backend, endpoint,
-                            webagg_fifo=sys.argv[3]
-                            if len(sys.argv) > 3 else None)
-    if backend == "WebAgg":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-b", "--backend", nargs='?',
+                        default=root.common.matplotlib_backend,
+                        help="Matplotlib drawing backend.")
+    parser.add_argument("-e", "--endpoint", required=True,
+                        help="ZeroMQ endpoint to receive updates from.")
+    parser.add_argument("--webagg-discovery-fifo", nargs='?',
+                        default=None, help="Matplotlib drawing backend.")
+    args = parser.parse_args()
+    client = GraphicsClient(args.backend, args.endpoint,
+                            webagg_fifo=args.webagg_discovery_fifo)
+    if args.backend == "WebAgg":
         client_thread = threading.Thread(target=client.run)
         client_thread.start()
         reactor.run()
