@@ -16,6 +16,12 @@ class UnitMock(object):
 
 
 class CalculatorTester(Unit):
+    def __init__(self, workflow):
+        super(CalculatorTester, self).__init__(workflow)
+        self.a = None
+        self.b = None
+        self.c = None
+
     def run(self):
         self.c = self.a + self.b
         self.a = self.b ** 2
