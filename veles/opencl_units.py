@@ -157,7 +157,7 @@ class OpenCLUnit(units.Unit):
 
     def _load_from_cache(self, cache_file_name, defines, dtype):
         try:
-            with tarfile.open("%s.cache" % cache_file_name, "r") as tar:
+            with tarfile.open("%s.cache" % cache_file_name, "r:gz") as tar:
                 cached_source = tar.extractfile("source.cl").read()
                 real_source = self._generate_source(defines, dtype).encode()
                 if cached_source != real_source:
@@ -184,7 +184,7 @@ class OpenCLUnit(units.Unit):
             return None
 
     def _save_to_cache(self, cache_file_name):
-        with tarfile.open("%s.cache" % cache_file_name, "w") as tar:
+        with tarfile.open("%s.cache" % cache_file_name, "w:gz") as tar:
             source_io = BytesIO()
             source_io.write(self.program_.source)
             ti = tarfile.TarInfo("source.cl")
