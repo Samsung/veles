@@ -78,7 +78,8 @@ class GraphicsClient(Logger):
             import matplotlib.lines as lines
             import matplotlib.patches as patches
             import matplotlib.pyplot as pp
-            import veles.plotting_units as plotting_units  # do not remove
+            import veles.plotting_units  # do not remove
+            import veles.znicz.nn_plotting_units  # do not remove
             pp.ion()
             self.matplotlib = matplotlib
             self.cm = cm
