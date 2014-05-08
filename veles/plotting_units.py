@@ -566,7 +566,7 @@ class Histogram(plotter.Plotter):
         self.show_figure(fig)
         fig.canvas.draw()
         super(Histogram, self).redraw()
-        return figure
+        return fig
 
 
 class MultiHistogram(plotter.Plotter):
