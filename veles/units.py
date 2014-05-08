@@ -52,12 +52,19 @@ class Pickleable(logger.Logger):
                 state[k] = v
             else:
                 state[k] = None
-        return state
+        # we have to check class attributes too
+        # but we do not care of owerriding (in __setstate__)
+        class_state = {}
+        for i,v in self.__class__.__dict__.items():
+            if isinstance(v, LinkableAttribute):
+                class_state.__setitem__(i,v)
+        return (state, class_state) # return tuple
 
     def __setstate__(self, state):
         """Recovers the object after unpickling.
         """
-        self.__dict__.update(state)
+        self.__dict__.update(state[0]) # add class attributes
+        self.__class__.__dict__.update(state[1])
         super(Pickleable, self).__init__()
         self.init_unpickled()
 
