@@ -9,9 +9,11 @@ import argparse
 import errno
 import logging
 import os
+import platform
 import signal
 from six.moves import cPickle as pickle
 import socket
+import subprocess
 import sys
 import tempfile
 import threading
@@ -59,8 +61,10 @@ class GraphicsClient(Logger):
         self._started = False
         self._shutted_down = False
         self.webagg_fifo = webagg_fifo
+        self._pdf_lock = threading.Lock()
         self._pdf_trigger = False
         self._pdf_pages = None
+        self._pdf_file_name = None
         self._pdf_units_served = set()
         self._pdf_unit_chains = set()
         self._sigint_initial = signal.signal(signal.SIGINT,
@@ -224,26 +228,34 @@ class GraphicsClient(Logger):
             self.zmq_connection.shutdown()
 
     def _save_pdf(self, plotter):
-        figure = plotter.redraw()
-        if plotter.id in self._pdf_units_served:
-            self._pdf_trigger = False
-            self._pdf_pages.close()
-            self._pdf_pages = None
-            self._pdf_units_served.clear()
-            self._pdf_unit_chains.clear()
-            self.info("Finished with writing PDF")
-            return
-        if self._pdf_pages is None:
-            _, file_name = tempfile.mkstemp(suffix=".pdf", prefix="veles")
-            self.info("Saving figures to %s...", file_name)
-            import matplotlib.backends.backend_pdf as backend_pdf
-            self._pdf_pages = backend_pdf.PdfPages(file_name)
-        self._pdf_units_served.add(plotter.id)
-        if getattr(plotter, "clear_plot", False):
-            self._pdf_unit_chains.add(plotter.name)
-        elif (not plotter.name in self._pdf_unit_chains or
-              getattr(plotter, "redraw_plot", False)):
-            self._pdf_pages.savefig(figure)
+        with self._pdf_lock:
+            figure = plotter.redraw()
+            if plotter.id in self._pdf_units_served:
+                self._pdf_trigger = False
+                self._pdf_pages.close()
+                self._pdf_pages = None
+                self._pdf_units_served.clear()
+                self._pdf_unit_chains.clear()
+                self.info("Finished writing PDF %s" % self._pdf_file_name)
+                system = platform.system()
+                if system == "Windows":
+                    os.startfile(self._pdf_file_name)
+                elif system == "Linux":
+                    subprocess.Popen(["xdg-open", self._pdf_file_name])
+                self._pdf_file_name = None
+                return
+            if self._pdf_pages is None:
+                _, self._pdf_file_name = tempfile.mkstemp(suffix=".pdf",
+                                                          prefix="veles")
+                self.debug("Saving figures to %s...", self._pdf_file_name)
+                import matplotlib.backends.backend_pdf as backend_pdf
+                self._pdf_pages = backend_pdf.PdfPages(self._pdf_file_name)
+            self._pdf_units_served.add(plotter.id)
+            if getattr(plotter, "clear_plot", False):
+                self._pdf_unit_chains.add(plotter.name)
+            elif (not plotter.name in self._pdf_unit_chains or
+                  getattr(plotter, "redraw_plot", False)):
+                self._pdf_pages.savefig(figure)
 
     def _sigint_handler(self, sign, frame):
         self.shutdown(True)
