@@ -46,25 +46,35 @@ class Pickleable(logger.Logger):
     def __getstate__(self):
         """Selects the attributes to pickle.
         """
+
         state = {}
         for k, v in self.__dict__.items():
             if k[len(k) - 1] != "_" and not callable(v):
                 state[k] = v
             else:
                 state[k] = None
+                
         # we have to check class attributes too
         # but we do not care of owerriding (in __setstate__)
-        class_state = {}
+        class_attributes = {}
         for i,v in self.__class__.__dict__.items():
             if isinstance(v, LinkableAttribute):
-                class_state.__setitem__(i,v)
-        return (state, class_state) # return tuple
+                class_attributes.__setitem__(i,v)
+        state['class_attributes__'] = class_attributes
+        return state 
 
     def __setstate__(self, state):
         """Recovers the object after unpickling.
         """
-        self.__dict__.update(state[0]) # add class attributes
-        self.__class__.__dict__.update(state[1])
+        # recover class attributes
+        if 'class_attributes__' in state:
+            # RATS! AttributeError: 'mappingproxy' object has no attribute 'update'
+            #self.__class__.__dict__.update(state['class_attributes__'])
+            for i,v in state['class_attributes__'].items():
+                setattr(type(self), i, v)
+            del state['class_attributes__']
+            
+        self.__dict__.update(state)
         super(Pickleable, self).__init__()
         self.init_unpickled()
 
