@@ -11,6 +11,7 @@ import functools
 from six.moves import cPickle as pickle
 import threading
 import time
+import uuid
 
 from veles.config import root, get
 import veles.error as error
@@ -232,6 +233,7 @@ class Unit(Distributable):
         self._timings = kwargs.get("timings", get(root.common.timings, False))
         self._workflow = None
         self.workflow = workflow
+        self._id = str(uuid.uuid4())
         self.add_method_to_storage("initialize")
         self.add_method_to_storage("run")
 
@@ -323,6 +325,10 @@ class Unit(Distributable):
         if value is not None and not isinstance(value, str):
             raise ValueError("Unit name must be a string")
         self._name = value
+
+    @property
+    def id(self):
+        return self._id
 
     @property
     def view_group(self):

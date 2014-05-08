@@ -13,6 +13,7 @@ import signal
 from six.moves import cPickle as pickle
 import socket
 import sys
+import tempfile
 import threading
 import tornado.ioloop as ioloop
 from twisted.internet import reactor
@@ -58,8 +59,14 @@ class GraphicsClient(Logger):
         self._started = False
         self._shutted_down = False
         self.webagg_fifo = webagg_fifo
+        self._pdf_trigger = False
+        self._pdf_pages = None
+        self._pdf_units_served = set()
+        self._pdf_unit_chains = set()
         self._sigint_initial = signal.signal(signal.SIGINT,
                                              self._sigint_handler)
+        self._sigusr2_initial = signal.signal(signal.SIGUSR2,
+                                              self._sigusr2_handler)
 
     def __del__(self):
         signal.signal(signal.SIGINT, self._sigint_initial)
@@ -79,7 +86,10 @@ class GraphicsClient(Logger):
             import matplotlib.patches as patches
             import matplotlib.pyplot as pp
             import veles.plotting_units  # do not remove
-            import veles.znicz.nn_plotting_units  # do not remove
+            try:
+                import veles.znicz.nn_plotting_units  # do not remove
+            except ImportError:
+                self.warning("Failed to import veles.znicz.nn_plotting_units")
             pp.ion()
             self.matplotlib = matplotlib
             self.cm = cm
@@ -177,7 +187,10 @@ class GraphicsClient(Logger):
             plotter.patches = self.patches
             plotter.pp = self.pp
             plotter.show_figure = self.show_figure
-            reactor.callLater(0, plotter.redraw)
+            if self._pdf_trigger:
+                reactor.callLater(0, self._save_pdf, plotter)
+            else:
+                reactor.callLater(0, plotter.redraw)
         else:
             self.debug("Received the command to terminate")
             self.shutdown()
@@ -210,6 +223,28 @@ class GraphicsClient(Logger):
             # Not strictly necessary, but prevents from DoS
             self.zmq_connection.shutdown()
 
+    def _save_pdf(self, plotter):
+        figure = plotter.redraw()
+        if plotter.id in self._pdf_units_served:
+            self._pdf_trigger = False
+            self._pdf_pages.close()
+            self._pdf_pages = None
+            self._pdf_units_served.clear()
+            self._pdf_unit_chains.clear()
+            self.info("Finished with writing PDF")
+            return
+        if self._pdf_pages is None:
+            _, file_name = tempfile.mkstemp(suffix=".pdf", prefix="veles")
+            self.info("Saving figures to %s...", file_name)
+            import matplotlib.backends.backend_pdf as backend_pdf
+            self._pdf_pages = backend_pdf.PdfPages(file_name)
+        self._pdf_units_served.add(plotter.id)
+        if getattr(plotter, "clear_plot", False):
+            self._pdf_unit_chains.add(plotter.name)
+        elif (not plotter.name in self._pdf_unit_chains or
+              getattr(plotter, "redraw_plot", False)):
+            self._pdf_pages.savefig(figure)
+
     def _sigint_handler(self, sign, frame):
         self.shutdown(True)
         try:
@@ -217,6 +252,9 @@ class GraphicsClient(Logger):
         except KeyboardInterrupt:
             self.critical("KeyboardInterrupt")
             reactor.stop()
+
+    def _sigusr2_handler(self, sign, frame):
+        self._pdf_trigger = True
 
 
 if __name__ == "__main__":

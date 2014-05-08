@@ -117,6 +117,7 @@ class AccumulatingPlotter(plotter.Plotter):
         if self.redraw_plot:
             figure.canvas.draw()
         super(AccumulatingPlotter, self).redraw()
+        return figure
 
     def run(self):
         if type(self.input_field) == int:
@@ -309,6 +310,7 @@ class MatrixPlotter(plotter.Plotter):
         self.show_figure(figure)
         figure.canvas.draw()
         super(MatrixPlotter, self).redraw()
+        return figure
 
 
 class Image(plotter.Plotter):
@@ -403,6 +405,7 @@ class Image(plotter.Plotter):
         self.show_figure(figure)
         figure.canvas.draw()
         super(Image, self).redraw()
+        return figure
 
 
 class Plot(plotter.Plotter):
@@ -457,6 +460,7 @@ class Plot(plotter.Plotter):
         self.show_figure(figure)
         figure.canvas.draw()
         super(Plot, self).redraw()
+        return figure
 
 
 class Histogram(plotter.Plotter):
@@ -562,6 +566,7 @@ class Histogram(plotter.Plotter):
         self.show_figure(fig)
         fig.canvas.draw()
         super(Histogram, self).redraw()
+        return figure
 
 
 class MultiHistogram(plotter.Plotter):
@@ -650,6 +655,7 @@ class MultiHistogram(plotter.Plotter):
         fig.canvas.draw()
 
         super(MultiHistogram, self).redraw()
+        return fig
 
     def run(self):
         for i in range(0, self.hist_number):
