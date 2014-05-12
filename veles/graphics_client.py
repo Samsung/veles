@@ -6,6 +6,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import argparse
+import datetime
 import errno
 import logging
 import os
@@ -15,7 +16,6 @@ from six.moves import cPickle as pickle
 import socket
 import subprocess
 import sys
-import tempfile
 import threading
 import tornado.ioloop as ioloop
 from twisted.internet import reactor
@@ -245,8 +245,15 @@ class GraphicsClient(Logger):
                 self._pdf_file_name = None
                 return
             if self._pdf_pages is None:
-                _, self._pdf_file_name = tempfile.mkstemp(suffix=".pdf",
-                                                          prefix="veles")
+                now = datetime.datetime.now()
+                out_dir = os.path.join(root.common.cache_dir, "plots")
+                try:
+                    os.makedirs(out_dir, mode=0o775)
+                except OSError:
+                    pass
+                self._pdf_file_name = os.path.join(
+                    root.common.cache_dir, "plots/veles_%s.pdf" %
+                    (now.strftime('%Y_%m_%d_%H_%M_%S')))
                 self.debug("Saving figures to %s...", self._pdf_file_name)
                 import matplotlib.backends.backend_pdf as backend_pdf
                 self._pdf_pages = backend_pdf.PdfPages(self._pdf_file_name)
