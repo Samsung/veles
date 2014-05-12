@@ -40,19 +40,17 @@
 #else
 #define N_BLOCKS (AB_COMMON / BLOCK_SIZE + 1)
 #endif
-#if N_BLOCKS <= 4
+#if (N_BLOCKS <= 2) || (sizeof_dtype >= 8)
+#define N_SUM 1
+#elif N_BLOCKS <= 4
 #define N_SUM 2
-#endif
-#if (N_BLOCKS > 4) && (N_BLOCKS <= 8)
+#elif N_BLOCKS <= 8
 #define N_SUM 4
-#endif
-#if (N_BLOCKS > 8) && (N_BLOCKS <= 16)
+#elif N_BLOCKS <= 16
 #define N_SUM 8
-#endif
-#if (N_BLOCKS > 16) && ((N_BLOCKS <= 32) || (sizeof_c_dtype > 8))
+#elif (N_BLOCKS <= 32) || (sizeof_c_dtype > 8)
 #define N_SUM 16
-#endif
-#ifndef N_SUM
+#else
 #define N_SUM 32
 #endif
 #ifndef A_REAL_OFFS
@@ -66,6 +64,9 @@
 #endif
 #ifndef B_REAL_OFFS_VALID
 #define B_REAL_OFFS_VALID 1
+#endif
+#ifndef MULTIPLY
+#define MULTIPLY c_mul
 #endif
 
   __local c_dtype AS[BLOCK_SIZE][BLOCK_SIZE]; // shared submatrix of A
@@ -114,10 +115,16 @@
 #endif
 
   c_dtype sum[N_SUM];
+  #if N_SUM > 1
   for (int i_sum = 0; i_sum < N_SUM; i_sum++) {
     sum[i_sum] = c_from_re(0);
     for (int i = N_BLOCKS * i_sum / N_SUM; i < N_BLOCKS * (i_sum + 1) / N_SUM; i++,
          a_offs += A_OFFS, b_offs += B_OFFS) {
+  #else
+    #define i_sum 0
+    sum[i_sum] = c_from_re(0);
+    for (int i = 0; i < N_BLOCKS; i++, a_offs += A_OFFS, b_offs += B_OFFS) {
+  #endif
       #ifdef ALIGNED
       AS[ty][tx] = A_REAL_OFFS_VALID ? A[A_REAL_OFFS] : 0;
       BS[ty][tx] = B_REAL_OFFS_VALID ? B[B_REAL_OFFS] : 0;
@@ -132,30 +139,34 @@
       barrier(CLK_LOCAL_MEM_FENCE);
 
       #pragma unroll
-      for(int k = 0; k < BLOCK_SIZE; k++)
+      for (int k = 0; k < BLOCK_SIZE; k++)
       #ifdef B_COL
       #ifdef A_COL
-        sum[i_sum] += c_mul(AS[k][ty], BS[k][tx]);
+        sum[i_sum] += MULTIPLY(AS[k][ty], BS[k][tx]);
       #else
-        sum[i_sum] += c_mul(AS[ty][k], BS[k][tx]);
+        sum[i_sum] += MULTIPLY(AS[ty][k], BS[k][tx]);
       #endif
       #else
       #ifdef A_COL
-        sum[i_sum] += c_mul(AS[k][ty], BS[tx][k]);
+        sum[i_sum] += MULTIPLY(AS[k][ty], BS[tx][k]);
       #else
-        sum[i_sum] += c_mul(AS[ty][k], BS[tx][k]);
+        sum[i_sum] += MULTIPLY(AS[ty][k], BS[tx][k]);
       #endif
       #endif
 
       // ensure we can reload shared with new values
       barrier(CLK_LOCAL_MEM_FENCE);
     }
+  #if N_SUM > 1
   }
   for (int n_sum = N_SUM; n_sum > 2; n_sum >>= 1) {
     for (int i_sum = 0; i_sum < (n_sum >> 1); i_sum++)
       sum[i_sum] = sum[i_sum << 1] + sum[(i_sum << 1) + 1];
   }
   sum[0] += sum[1];
+  #else
+  #undef i_sum
+  #endif
 
   int idx = get_global_id(1) * B_WIDTH + get_global_id(0);
 #ifdef ALIGNED
@@ -178,5 +189,6 @@
   #undef B_REAL_OFFS_VALID
   #undef N_BLOCKS
   #undef N_SUM
+  #undef MULTIPLY
 
 // The source for matrix multiplication ends here.
