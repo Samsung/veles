@@ -53,27 +53,28 @@ class Pickleable(logger.Logger):
                 state[k] = v
             else:
                 state[k] = None
-                
+
         # we have to check class attributes too
         # but we do not care of owerriding (in __setstate__)
         class_attributes = {}
-        for i,v in self.__class__.__dict__.items():
+        for i, v in self.__class__.__dict__.items():
             if isinstance(v, LinkableAttribute):
-                class_attributes.__setitem__(i,v)
+                class_attributes.__setitem__(i, v)
         state['class_attributes__'] = class_attributes
-        return state 
+        return state
 
     def __setstate__(self, state):
         """Recovers the object after unpickling.
         """
         # recover class attributes
         if 'class_attributes__' in state:
-            # RATS! AttributeError: 'mappingproxy' object has no attribute 'update'
+            # RATS! AttributeError:
+            # 'mappingproxy' object has no attribute 'update'
             #self.__class__.__dict__.update(state['class_attributes__'])
-            for i,v in state['class_attributes__'].items():
+            for i, v in state['class_attributes__'].items():
                 setattr(type(self), i, v)
             del state['class_attributes__']
-            
+
         self.__dict__.update(state)
         super(Pickleable, self).__init__()
         self.init_unpickled()
