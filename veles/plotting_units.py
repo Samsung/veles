@@ -542,8 +542,7 @@ class Histogram(plotter.Plotter):
         # B96A9A
         ax.set_xlabel('Errors', fontsize=20)
         ax.set_ylabel('Input Data', fontsize=20)
-        ax.set_title('Histogram %s' % (self.name.replace("Histogram ", "")),
-                     fontsize=25)
+        ax.set_title(self.name.replace("Histogram ", ""))
         ax.axis([xmin, xmax + ((xmax - xmin) / self.n_bars), ymin, ymax])
         ax.grid(True)
         leg = ax.legend((self.name.replace("Histogram ", "")))
@@ -631,6 +630,7 @@ class MultiHistogram(plotter.Plotter):
                 ax.axis([xmin, xmax + ((xmax - xmin) / self.n_bars), ymin,
                          ymax])
                 ax.grid(True)
+                ax.set_title(self.name.replace("Histogram ", ""))
                 nbars = self.n_bars
                 width = ((xmax - xmin) / nbars) * 0.8
                 X = numpy.linspace(xmin, xmax, num=nbars, endpoint=True)
