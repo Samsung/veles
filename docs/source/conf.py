@@ -17,6 +17,7 @@ import sys
 import os
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), "../../scripts"))
 from veles import (__version__, __license__, __copyright__, __git__,
                    __authors__, __project__)
 
@@ -40,6 +41,8 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
+    'sphinxcontrib.napoleon',
+    'sphinxarg.ext'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -90,7 +93,7 @@ exclude_patterns = []
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
-# add_module_names = True
+add_module_names = False
 
 # If true, sectionauthor and moduleauthor directives will be shown in the
 # output. They are ignored by default.
@@ -272,3 +275,33 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 # texinfo_no_detailmenu = False
+
+
+#Mock used C++ extensions to avoid import errors:
+#http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
+class Mock(object):
+    __all__ = []
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __call__(self, *args, **kwargs):
+        return Mock()
+
+    @classmethod
+    def __getattr__(cls, name):
+        if name in ('__file__', '__path__'):
+            return '/dev/null'
+        elif name[0] == name[0].upper():
+            mockType = type(name, (), {})
+            mockType.__module__ = __name__
+            return mockType
+        else:
+            return Mock()
+
+MOCK_MODULES = ['pygtk', 'gtk', 'gobject', "numpy", "numpy.random", "cv2", 
+                "scipy", "scipy.signal", "scipy.io", "scipy.misc",
+                "scipy.ndimage", "freetype", "matplotlib", "matplotlib.pyplot",
+                "matplotlib.cm", "matplotlib.patches", "matplotlib.lines"]
+for mod_name in MOCK_MODULES:
+    sys.modules[mod_name] = Mock()
