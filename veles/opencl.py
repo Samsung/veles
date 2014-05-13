@@ -125,6 +125,11 @@ class Device(units.Pickleable):
             help="OpenCL device to use.").completer = Device.arg_completer
         return parser
 
+    @property
+    def max_group_size(self):
+        block_size = self.device_info.BLOCK_SIZE["float"]
+        return block_size * block_size
+
     def _get_some_device(self, **kwargs):
         """Gets some device from the available OpenCL devices.
         """
