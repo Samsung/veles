@@ -76,8 +76,13 @@ class OpenCLUnit(units.Unit):
 
         program_ will be initialized to the resulting program object.
         """
-        if type(cache_file_name) == str:
-            cache_file_name = cache_file_name + (".3" if PY3 else ".2")
+        if (not isinstance(cache_file_name, str) and
+            cache_file_name is not None):
+            raise ValueError("cache_file_name must be a string")
+        cache_file_name = cache_file_name + (".3" if PY3 else ".2")
+        if cache_file_name is not None and not os.path.isabs(cache_file_name):
+            cache_file_name = os.path.join(root.common.cache_dir,
+                                           cache_file_name)
         if self.cache and os.path.exists("%s.cache" % cache_file_name):
             binaries = self._load_from_cache(cache_file_name, defines, dtype)
             if binaries is not None:

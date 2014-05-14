@@ -418,9 +418,7 @@ class Device(units.Pickleable):
             "H": self.AB_WIDTH,
             "Y": self.B_HEIGHT,
             "BATCH": self.A_HEIGHT}
-        obj.build_program(defines, os.path.join(root.common.cache_dir,
-                                                "test.cl"),
-                          dtype=dtype)
+        obj.build_program(defines, "test.cl", dtype=dtype)
 
         krn = obj.get_kernel("feed_layer")
 
