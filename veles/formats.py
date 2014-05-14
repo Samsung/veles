@@ -30,10 +30,14 @@ def max_type(num):
     return num.astype(numpy.float64)
 
 
+def eq_addr(a, b):
+    return a.__array_interface__["data"][0] == b.__array_interface__["data"][0]
+
+
 def assert_addr(a, b):
     """Raises an exception if addresses of the supplied arrays differ.
     """
-    if a.__array_interface__["data"][0] != b.__array_interface__["data"][0]:
+    if not eq_addr(a, b):
         raise error.ErrBadFormat("Addresses of the arrays are not equal.")
 
 
