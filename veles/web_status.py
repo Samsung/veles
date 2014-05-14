@@ -7,7 +7,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
-import veles.external.daemon as daemon
+import argparse
 import logging
 import multiprocessing as mp
 import socket
@@ -19,6 +19,7 @@ import tornado.web as web
 import uuid
 
 from veles.config import root
+import veles.external.daemon as daemon
 import veles.logger as logger
 
 
@@ -171,7 +172,7 @@ class WebStatus(logger.Logger):
                     self.masters[mid] = cmd["body"]
                     self.masters[mid]["last_update"] = time.time()
                 elif "request" in cmd.keys():
-                    if cmd["body"]["request"] == "workflow":
+                    if cmd["body"]["request"] == "workflows":
                         ret = {}
                         garbage = []
                         for mid, master in self.masters.items():
@@ -204,6 +205,12 @@ def main():
     ws.run()
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--debug", default=False,
+                        help="activates debugging mode (run in foreground, "
+                        "DEBUG logging level)", action='store_true')
+    args = parser.parse_args()
+    debug_mode = args.debug
     if not debug_mode:
         with daemon.DaemonContext():
             logger.Logger.setup(level=logging.INFO)
