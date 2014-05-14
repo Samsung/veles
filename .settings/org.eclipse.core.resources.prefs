@@ -1,4 +1,5 @@
 eclipse.preferences.version=1
+encoding//docs/generate_docs.py=utf-8
 encoding//docs/source/conf.py=utf-8
 encoding//scripts/music_features.py=utf-8
 encoding//scripts/velescli.py=utf-8

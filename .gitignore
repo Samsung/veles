@@ -6,6 +6,7 @@
 *.pickle
 *.pyc
 *.pyo
+*.rst
 aclocal.m4
 autom4te.cache
 test-driver

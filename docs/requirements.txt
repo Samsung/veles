@@ -1,0 +1,3 @@
+sphinx-argparse>=0.1.9
+sphinxcontrib-napoleon>=0.2.7
+
