@@ -72,6 +72,8 @@ class Device(units.Pickleable):
     """
     def __init__(self):
         super(Device, self).__init__()
+        if os.getenv("CUDA_CACHE_DISABLE") is None:
+            os.putenv("CUDA_CACHE_DISABLE", "1")
         self._get_some_device()
         self._fill_device_info_performance_values()
         log_configs = "Selected the following OpenCL configurations:\n"

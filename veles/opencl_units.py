@@ -51,8 +51,6 @@ class OpenCLUnit(units.Unit):
 
     def initialize(self, device, **kwargs):
         super(OpenCLUnit, self).initialize(device=device, **kwargs)
-        if os.getenv("CUDA_CACHE_DISABLE") is None:
-            os.putenv("CUDA_CACHE_DISABLE", "1")
         self.device = device
 
     def run(self):
