@@ -74,20 +74,21 @@ class OpenCLUnit(units.Unit):
 
         program_ will be initialized to the resulting program object.
         """
-        if (not isinstance(cache_file_name, str) and
-            cache_file_name is not None):
-            raise ValueError("cache_file_name must be a string")
-        cache_file_name = cache_file_name + (".3" if PY3 else ".2")
-        if cache_file_name is not None and not os.path.isabs(cache_file_name):
-            cache_file_name = os.path.join(root.common.cache_dir,
-                                           cache_file_name)
-        if self.cache and os.path.exists("%s.cache" % cache_file_name):
-            binaries = self._load_from_cache(cache_file_name, defines, dtype)
-            if binaries is not None:
-                self.program_ = self.device.queue_.context.create_program(
-                    binaries, binary=True)
-                self.debug("Used %s.cache", cache_file_name)
-                return
+        if cache_file_name is not None:
+            if not isinstance(cache_file_name, str):
+                raise ValueError("cache_file_name must be a string")
+            cache_file_name = cache_file_name + (".3" if PY3 else ".2")
+            if not os.path.isabs(cache_file_name):
+                cache_file_name = os.path.join(root.common.cache_dir,
+                                               cache_file_name)
+            if self.cache and os.path.exists("%s.cache" % cache_file_name):
+                binaries = self._load_from_cache(cache_file_name, defines,
+                                                 dtype)
+                if binaries is not None:
+                    self.program_ = self.device.queue_.context.create_program(
+                        binaries, binary=True)
+                    self.debug("Used %s.cache", cache_file_name)
+                    return
         source = self._generate_source(defines, dtype)
         self.program_ = self.device.queue_.context.create_program(
             source, root.common.ocl_dirs)
