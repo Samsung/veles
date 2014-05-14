@@ -17,6 +17,7 @@ function renderGraphviz(desc) {
 
 var updating = false;
 var active_workflow_id = null;
+var detailed_workflow_id = null;
 var listed_workflows = null;
 var svg_cache = {};
 
@@ -40,6 +41,11 @@ function updateUI() {
       success: function(ret) {
         console.log("Received response");
         listed_workflows = ret;
+        if (!ret) {
+          updating = false;
+          console.log("Server returned an empty response " + ret);
+          return;
+        }
         var workflows = Object.keys(ret).map(function(key) {
           return { "key": key, "value": ret[key] };
         });
@@ -146,40 +152,49 @@ function activateListItem(item_id) {
     active_workflow_id = item_id;
     $("#" + item_id).addClass("active");
   }
+  var full_update = true;
+  if (detailed_workflow_id == item_id) {
+    full_update = false;
+  } else {
+    detailed_workflow_id = item_id;
+  }
   var workflow = listed_workflows[item_id];
   var details = "";
-  details += '<div class="detailed-description">\n';
-  details += '<div class="panel panel-borderless">\n';
-  details += '<div class="panel-heading details-panel-heading">';
-  details += 'Actions</div>\n';
-  details += '<div class="btn-group btn-group-justified">\n';
-  details += '<div class="btn-group">\n';
-  details += '<button type="button" class="btn btn-default" ';
-  details += 'onclick="showPlots(\'';
-  details += item_id;
-  details += '\')">View plots';
-  details += '</button>\n';
-  details += '</div>\n';
-  details += '<div class="btn-group">\n';
-  details += '<button type="button" class="btn btn-default" ';
-  details += 'onclick="showLogs(\'';
-  details += item_id;
-  details += '\')">View logs';
-  details += '</button>\n';
-  details += '</div>\n';
-  details += '<div class="btn-group">\n';
-  details += '<button type="button" class="btn btn-default">Suspend';
-  details += '</button>\n';
-  details += '</div>\n';
-  details += '<div class="btn-group">\n';
-  details += '<button type="button" class="btn btn-danger">Cancel</button>\n';
-  details += '</div>\n';
-  details += '</div>\n';
-  details += '</div>\n';
-  details += '<div class="panel panel-borderless">\n';
-  details += '<div class="panel-heading details-panel-heading">Slaves';
-  details += '</div>\n';
-  details += '<div class="panel panel-default panel-margin-zero">\n';
+  if (full_update) {
+    details += '<div class="detailed-description">\n';
+    details += '<div class="panel panel-borderless">\n';
+    details += '<div class="panel-heading details-panel-heading">';
+    details += 'Actions</div>\n';
+    details += '<div class="btn-group btn-group-justified">\n';
+    details += '<div class="btn-group">\n';
+    details += '<button type="button" class="btn btn-default" ';
+    details += 'onclick="showPlots(\'';
+    details += item_id;
+    details += '\')">View plots';
+    details += '</button>\n';
+    details += '</div>\n';
+    details += '<div class="btn-group">\n';
+    details += '<button type="button" class="btn btn-default" ';
+    details += 'onclick="showLogs(\'';
+    details += item_id;
+    details += '\')">View logs';
+    details += '</button>\n';
+    details += '</div>\n';
+    details += '<div class="btn-group">\n';
+    details += '<button type="button" class="btn btn-default">Suspend';
+    details += '</button>\n';
+    details += '</div>\n';
+    details += '<div class="btn-group">\n';
+    details += '<button type="button" class="btn btn-danger">Cancel</button>\n';
+    details += '</div>\n';
+    details += '</div>\n';
+    details += '</div>\n';
+    details += '<div class="panel panel-borderless">\n';
+    details += '<div class="panel-heading details-panel-heading">Slaves';
+    details += '</div>\n';
+    details += '<div class="panel panel-default panel-margin-zero" ';
+    details += 'id="slaves-table">\n';
+  }
   details += '<table class="table table-condensed">\n';
   details += '<thead>\n';
   details += '<tr>\n';
@@ -222,39 +237,47 @@ function activateListItem(item_id) {
     details += '</td>\n';
     details += '<td class="center-cell">\n';
     if (slave.status != 'Offline') {
-      details += '<i class="glyphicon glyphicon-pause"><a class="slave-action" href="#">pause</a></i>, <i class="glyphicon glyphicon-remove"><a class="slave-action" href="#">remove</a></i>\n';
+      details += '<i class="glyphicon glyphicon-pause"><a class="slave-action" ';
+      details += 'href="#">pause</a></i>, <i class="glyphicon glyphicon-remove">';
+      details += '<a class="slave-action" href="#">remove</a></i>\n';
     }
     details += '</td>\n';
     details += '</tr>\n';
   });
   details += '</tbody>\n';
   details += '</table>\n';
-  details += '</div>\n';
-  details += '</div>\n';
-  details += '</div>\n';
-  details += '<div class="detailed-text"><h3 class="media-heading">';
-  details += workflow.name;
-  details += '</h3>\n';
-  details += workflow.description;
-  details += 'This workflow is managed by ';
-  details += '<i class="glyphicon glyphicon-user"><a href="#"">';
-  details += workflow.user;
-  details += '</a></i> on <a href="#">';
-  details += workflow.master;
-  details += "</a> and has ";
-  details += Object.keys(workflow.slaves).length;
-  details += ' nodes.<br/>';
-  details += "Log ID: <strong>" + workflow.log_id + "</strong><br/>";
-  details += 'ØMQ endpoints for custom plots:<br/><strong>';
-  details += workflow.custom_plots;
-  details += '</strong><br/><br/>';
-  var svg = workflow.svg.clone();
-  svg.attr("id", "workflow-svg");
-  details += svg.wrap('<div>').parent().html();
-  details += '</div>\n';
+  if (full_update) {
+    details += '</div>\n';
+    details += '</div>\n';
+    details += '</div>\n';
+    details += '<div class="detailed-text"><h3 class="media-heading">';
+    details += workflow.name;
+    details += '</h3>\n';
+    details += workflow.description;
+    details += 'This workflow is managed by ';
+    details += '<i class="glyphicon glyphicon-user"><a href="#"">';
+    details += workflow.user;
+    details += '</a></i> on <a href="#">';
+    details += workflow.master;
+    details += "</a> and has ";
+    details += Object.keys(workflow.slaves).length;
+    details += ' nodes.<br/>';
+    details += "Log ID: <strong>" + workflow.log_id + "</strong><br/>";
+    details += 'ØMQ endpoints for custom plots:<br/><strong>';
+    details += workflow.custom_plots;
+    details += '</strong><br/><br/>';
+    var svg = workflow.svg.clone();
+    svg.attr("id", "workflow-svg");
+    details += svg.wrap('<div>').parent().html();
+    details += '</div>\n';
+  }
   objs = $.parseHTML(details);
   $("#details-loading-indicator").remove();
-  $('#workflow-details').empty().append(objs);
+  if (full_update) {
+    $('#workflow-details').empty().append(objs);
+  } else {
+    $('#slaves-table').empty().append(objs);
+  }
 }
 
 function showPlots(item_id) {
