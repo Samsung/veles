@@ -24,7 +24,6 @@ encoding//veles/workflow.py=utf-8
 encoding//veles/znicz/__init__.py=utf-8
 encoding//veles/znicz/external/__init__.py=utf-8
 encoding//veles/znicz/normalization.py=utf-8
-encoding//veles/znicz/samples/imagenet_caffe.py=utf-8
 encoding//veles/znicz/samples/lines.py=utf-8
 encoding//veles/znicz/samples/lines_config.py=utf-8
 encoding//veles/znicz/tests/unit/test_dropout.py=utf-8
