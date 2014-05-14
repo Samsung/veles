@@ -4,6 +4,11 @@
 This scripts starts the Veles platform and executes the user's workflow
 (called model).
 
+.. argparse::
+   :module: scripts.velescli
+   :func: create_args_parser
+   :prog: velescli
+
 @copyright:  Copyright 2013 Samsung Electronics Co., Ltd.
 @contact:    g.kuznetsov@samsung.com
 '''
@@ -36,6 +41,54 @@ if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
     FileNotFoundError = IOError  # pylint: disable=W0622
     IsADirectoryError = IOError  # pylint: disable=W0622
     PermissionError = IOError  # pylint: disable=W0622
+
+
+def create_args_parser():
+    """
+    Creates argument parser
+    """
+    parser = argparse.ArgumentParser(
+        description=Main.LOGO,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = Launcher.init_parser(parser=parser)
+    parser = Device.init_parser(parser=parser)
+    parser.add_argument("--no-logo", default=False,
+                        help="Do not print VELES version, copyright and "
+                        "other information on startup.",
+                        action='store_true')
+    parser.add_argument("-v", "--verbose", type=str, default="info",
+                        choices=Main.LOG_LEVEL_MAP.keys(),
+                        help="set verbosity level [default: %(default)s]")
+    parser.add_argument("--debug", type=str, default="",
+                        help="set DEBUG logging level for these names "
+                             "(separated by commas)")
+    parser.add_argument("--debug-pickle", default=False,
+                        help="turn on pickle diagnostics",
+                        action='store_true')
+    parser.add_argument("-r", "--random-seed", type=str,
+                        default="/dev/urandom:16",
+                        help="set random seed, e.g. "
+                             "veles/samples/seed:1024,:1024 or "
+                             "/dev/urandom:16:uint32")
+    parser.add_argument('-w', '--snapshot', default="",
+                        help='workflow snapshot')
+    parser.add_argument('workflow',
+                        help='path to the Python script with workflow')
+    parser.add_argument('config', default="-",
+                        help='path to the configuration file')
+    parser.add_argument('config_list',
+                        help="list of configuration overloads like: \n"
+                        "root.global_alpha=0.006\n"
+                        "root.snapshot_prefix='test_pr'",
+                        nargs='*', metavar="configs...")
+    try:
+        class NoEscapeCompleter(argcomplete.CompletionFinder):
+            def quote_completions(self, completions, *args, **kwargs):
+                return completions
+        NoEscapeCompleter()(parser)
+    except:
+        pass
+    return parser
 
 
 class Main(Logger):
@@ -76,50 +129,6 @@ class Main(Logger):
 
     LOG_LEVEL_MAP = {"debug": logging.DEBUG, "info": logging.INFO,
                      "warning": logging.WARNING, "error": logging.ERROR}
-
-    def _init_parser(self):
-        parser = argparse.ArgumentParser(
-            description=Main.LOGO,
-            formatter_class=argparse.RawDescriptionHelpFormatter)
-        parser = Launcher.init_parser(parser=parser)
-        parser = Device.init_parser(parser=parser)
-        parser.add_argument("--no-logo", default=False,
-                            help="Do not print VELES version, copyright and "
-                            "other information on startup.",
-                            action='store_true')
-        parser.add_argument("-v", "--verbose", type=str, default="info",
-                            choices=Main.LOG_LEVEL_MAP.keys(),
-                            help="set verbosity level [default: %(default)s]")
-        parser.add_argument("--debug", type=str, default="",
-                            help="set DEBUG logging level for these names "
-                                 "(separated by commas)")
-        parser.add_argument("--debug-pickle", default=False,
-                            help="turn on pickle diagnostics",
-                            action='store_true')
-        parser.add_argument("-r", "--random-seed", type=str,
-                            default="/dev/urandom:16",
-                            help="set random seed, e.g. "
-                                 "veles/samples/seed:1024,:1024 or "
-                                 "/dev/urandom:16:uint32")
-        parser.add_argument('-w', '--snapshot', default="",
-                            help='workflow snapshot')
-        parser.add_argument('workflow',
-                            help='path to the Python script with workflow')
-        parser.add_argument('config', default="-",
-                            help='path to the configuration file')
-        parser.add_argument('config_list',
-                            help="list of configuration overloads like: \n"
-                            "root.global_alpha=0.006\n"
-                            "root.snapshot_prefix='test_pr'",
-                            nargs='*', metavar="configs...")
-        try:
-            class NoEscapeCompleter(argcomplete.CompletionFinder):
-                def quote_completions(self, completions, *args, **kwargs):
-                    return completions
-            NoEscapeCompleter()(parser)
-        except:
-            pass
-        return parser
 
     def _load_model(self, fname_workflow, fname_snapshot):
         self.debug("Loading the model \"%s\"...", fname_workflow)
@@ -300,7 +309,7 @@ class Main(Logger):
     def run(self):
         """VELES Machine Learning Platform Command Line Interface
         """
-        parser = self._init_parser()
+        parser = create_args_parser()
         args = parser.parse_args()
         fname_config = args.config
         if fname_config == "-":
