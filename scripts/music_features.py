@@ -25,7 +25,7 @@ import re
 import sys
 import time
 import traceback
-import units
+import veles.units as units
 from snd_features import SoundFeatures
 from audio_file_loader import AudioFileLoader
 from sound_feature_extraction.library import Library
