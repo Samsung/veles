@@ -1,59 +1,81 @@
 """
 Created on May 23, 2013
 
-Random generators.
+VELES reproducible random generators.
 
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
+
+
 import numpy
+import os
 import threading
 
+from veles.config import root
 import veles.formats as formats
 
 
-_lock = threading.Lock()
-
-
-class Rand(object):
-    """Random generator.
+class RandomGenerator(object):
+    """Random generator with exact reproducibility property.
 
     Attributes:
-        state: random state.
+        state: the random generator state.
     """
-    def __init__(self):
-        if numpy.random.get_state is not None:
-            self.state = numpy.random.get_state()
 
+    _lock = threading.Lock()
+
+    def threadsafe(fn):
+        def wrapped(*args, **kwargs):
+            with RandomGenerator._lock:
+                res = fn(*args, **kwargs)
+            return res
+        return wrapped
+
+    def __init__(self, key):
+        self._key = key
+        self._saved_state = None
+        self.restore_state()
+
+    @property
+    def key(self):
+        return self._key
+
+    @property
+    def state(self):
+        return self._state
+
+    @property
+    def seed_file_name(self):
+        return os.path.join(root.common.cache_dir,
+                            "random_seed_%s.npy" % str(self.key))
+
+    @threadsafe
     def seed(self, seed, dtype=None, count=None):
-        global _lock
-        try:
-            _lock.acquire()
-            if numpy.random.get_state is not None:
-                state = numpy.random.get_state()
-            if type(seed) == str:
-                fin = open(seed, "rb")
+        self._state = None
+        self.save_state()
+        if seed is None:
+            seed = numpy.fromfile(self.seed_file_name)
+        elif isinstance(seed, str):
+            if not os.path.exists(seed):
+                raise ValueError("No such file - %s" % seed)
+            with open(seed, "rb") as fin:
                 seed = numpy.zeros(count, dtype=dtype)
                 n = fin.readinto(seed)
-                fin.close()
-                seed = seed[:n // seed[0].nbytes]
-            numpy.random.seed(seed)
-            if numpy.random.get_state is not None:
-                self.state = numpy.random.get_state()
-                numpy.random.set_state(state)
-        finally:
-            _lock.release()
+            seed = seed[:n // seed[0].nbytes]
+        numpy.random.seed(seed)
+        numpy.save(self.seed_file_name, seed)
+        self.restore_state()
 
+    @threadsafe
     def normal(self, loc=0.0, scale=1.0, size=None):
         """numpy.normal() with saving the random state.
         """
-        global _lock
-        _lock.acquire()
         self.save_state()
         retval = numpy.random.normal(loc=loc, scale=scale, size=size)
         self.restore_state()
-        _lock.release()
         return retval
 
+    @threadsafe
     def fill(self, arr, vle_min=-1.0, vle_max=1.0):
         """Fills numpy array with random numbers.
 
@@ -62,8 +84,6 @@ class Rand(object):
             vle_min: minimum value in random distribution.
             vle_max: maximum value in random distribution.
         """
-        global _lock
-        _lock.acquire()
         self.save_state()
         arr = formats.ravel(arr)
         if arr.dtype in (numpy.complex64, numpy.complex128):
@@ -76,8 +96,8 @@ class Rand(object):
             arr[:] = (numpy.random.rand(arr.size) * (vle_max - vle_min) +
                       vle_min)[:]
         self.restore_state()
-        _lock.release()
 
+    @threadsafe
     def fill_normal_real(self, arr, mean, stddev, clip_to_sigma=5.0):
         """
         #Fills real-valued numpy array with random normal distribution.
@@ -88,8 +108,6 @@ class Rand(object):
         #    stddev:
         #    min_val, max_val (optional): clipping values of output data.
     """
-        global _lock
-        _lock.acquire()
         self.save_state()
         arr = formats.ravel(arr)
         arr[:] = numpy.random.normal(loc=mean, scale=stddev, size=arr.size)[:]
@@ -97,13 +115,11 @@ class Rand(object):
         numpy.clip(arr, mean - clip_to_sigma * stddev,
                    mean + clip_to_sigma * stddev, out=arr)
         self.restore_state()
-        _lock.release()
 
+    @threadsafe
     def shuffle(self, arr):
         """numpy.shuffle() with saving the random state.
         """
-        global _lock
-        _lock.acquire()
         self.save_state()
         if numpy.random.shuffle is not None:
             numpy.random.shuffle(arr)
@@ -119,52 +135,56 @@ class Rand(object):
                 arr[i] = arr[j]
                 arr[j] = t
         self.restore_state()
-        _lock.release()
 
+    @threadsafe
     def permutation(self, x):
         """numpy.permutation() with saving the random state.
         """
-        global _lock
-        _lock.acquire()
         self.save_state()
         retval = numpy.random.permutation(x)
         self.restore_state()
-        _lock.release()
         return retval
 
+    @threadsafe
     def randint(self, low, high=None, size=None):
         """Returns random integer(s) from [low, high).
         """
-        global _lock
-        _lock.acquire()
         self.save_state()
         retval = numpy.random.randint(low, high, size)
         self.restore_state()
-        _lock.release()
         return retval
 
+    @threadsafe
     def rand(self, *args):
-        global _lock
-        _lock.acquire()
         self.save_state()
         retval = numpy.random.rand(*args)
         self.restore_state()
-        _lock.release()
         return retval
 
     def save_state(self):
         if numpy.random.get_state is None:
             return
-        self.saved_state = numpy.random.get_state()
-        numpy.random.set_state(self.state)
+        self._saved_state = numpy.random.get_state()
+        if self._state is not None:
+            numpy.random.set_state(self._state)
 
     def restore_state(self):
         if numpy.random.get_state is None:
             return
-        self.state = numpy.random.get_state()
-        numpy.random.set_state(self.saved_state)
+        self._state = numpy.random.get_state()
+        if self._saved_state is not None:
+            numpy.random.set_state(self._saved_state)
+
+    threadsafe = staticmethod(threadsafe)
+
+
+__generators__ = {}
 
 
 # Default global random instances.
-default = Rand()
-default2 = Rand()
+def get(key=1):
+    res = __generators__.get(key)
+    if res is None:
+        res = RandomGenerator(key)
+        __generators__[key] = res
+    return res

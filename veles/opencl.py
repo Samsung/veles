@@ -20,7 +20,7 @@ import opencl4py as cl
 from veles.config import root, get
 import veles.formats as formats
 import veles.opencl_types as opencl_types
-import veles.rnd as rnd
+import veles.random_generator as rnd
 import veles.units as units
 import veles.external.prettytable as prettytable
 
@@ -311,7 +311,7 @@ class Device(units.Pickleable):
         self.info("Matricies are: [%d, %d] * [%d, %d] = [%d, %d]" % (
             self.AB_WIDTH, self.A_HEIGHT, self.B_HEIGHT, self.AB_WIDTH,
             self.A_HEIGHT, self.B_HEIGHT))
-        self.rnd_state = rnd.default.state
+        self.rnd_state = rnd.get().state
 
         xdtype = ("complex" if dtype in (numpy.complex64, numpy.complex128)
                   else "real")
@@ -324,7 +324,7 @@ class Device(units.Pickleable):
             a_rnd = {}
             cc["a_rnd"] = a_rnd
         if a_rnd.get(xdtype) is None:
-            rnd.default.fill(self.a.v, -0.1, 0.1)
+            rnd.get().fill(self.a.v, -0.1, 0.1)
             a_rnd[xdtype] = self.a.v.copy()
         else:
             self.a.v[:] = a_rnd[xdtype][:]
@@ -337,7 +337,7 @@ class Device(units.Pickleable):
             b_rnd = {}
             cc["b_rnd"] = b_rnd
         if b_rnd.get(xdtype) is None:
-            rnd.default.fill(self.b.v, -0.1, 0.1)
+            rnd.get().fill(self.b.v, -0.1, 0.1)
             b_rnd[xdtype] = self.b.v.copy()
         else:
             self.b.v[:] = b_rnd[xdtype][:]
@@ -350,7 +350,7 @@ class Device(units.Pickleable):
             bias_rnd = {}
             cc["bias_rnd"] = bias_rnd
         if bias_rnd.get(xdtype) is None:
-            rnd.default.fill(self.bias.v, -0.1, 0.1)
+            rnd.get().fill(self.bias.v, -0.1, 0.1)
             bias_rnd[xdtype] = self.bias.v.copy()
         else:
             self.bias.v[:] = bias_rnd[xdtype][:]
@@ -364,7 +364,7 @@ class Device(units.Pickleable):
         del(self.bias)
         del(self.b)
         del(self.a)
-        rnd.default.state = self.rnd_state
+        rnd.get().state = self.rnd_state
         del(self.rnd_state)
         del(self.A_HEIGHT)
         del(self.B_HEIGHT)

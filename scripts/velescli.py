@@ -53,7 +53,7 @@ from veles.config import root
 from veles.logger import Logger
 from veles.launcher import Launcher
 from veles.opencl import Device
-import veles.rnd as rnd
+import veles.random_generator as rnd
 
 if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
     FileNotFoundError = IOError  # pylint: disable=W0622
@@ -225,6 +225,14 @@ class Main(Logger):
                 else:
                     self.critical("Random generator file name is empty")
                     sys.exit(errno.ENOENT)
+            if fname == "-":
+                try:
+                    rnd.get(index + 1).seed(None)
+                except:
+                    self.exception("Failed to seed the random generator %d "
+                                   "with the last used seed.", index + 1)
+                    sys.exit(Main.EXIT_FAILURE)
+                continue
             if not os.path.isabs(fname):
                 new_fname = os.path.abspath(fname)
                 if os.path.exists(new_fname):
@@ -239,15 +247,12 @@ class Main(Logger):
             count = int(vals[1]) if len(vals) > 1 else 16
             dtype = numpy.dtype(vals[2]) if len(vals) > 2 else numpy.int32
 
-            rnd_name = "default"
-            if index > 1:
-                rnd_name += str(index)
-            self.debug("Seeding with %d samples of type %s from %s",
-                       count, str(dtype), fname)
+            self.debug("Seeding with %d samples of type %s from %s to %d",
+                       count, str(dtype), fname, index + 1)
             try:
-                rnd.__dict__[rnd_name].seed(numpy.fromfile(fname, dtype=dtype,
-                                                           count=count),
-                                            dtype=dtype)
+                rnd.get(index + 1).seed(numpy.fromfile(fname, dtype=dtype,
+                                                       count=count),
+                                        dtype=dtype)
             except:
                 self.exception("Failed to seed the random generator with %s",
                                fname)
