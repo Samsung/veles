@@ -1,18 +1,36 @@
 #!/usr/bin/python3
 # encoding: utf-8
 '''
-This scripts starts the Veles platform and executes the user's workflow
-(called model).
+This script starts the Veles platform and executes the user's model (workflow).
+
+Contact:
+    g.kuznetsov@samsung.com
+    v.markovtsev@samsung.com
 
 .. argparse::
    :module: scripts.velescli
-   :func: create_args_parser
+   :func: create_args_parser_sphinx
    :prog: velescli
 
-@copyright:  Copyright 2013 Samsung Electronics Co., Ltd.
-@contact:    g.kuznetsov@samsung.com
-'''
+   ::
 
+
+'''
+__module_veles_logo__ = \
+    "        _   _ _____ _     _____ _____\n" + \
+    "       | | | |  ___| |   |  ___/  ___|  " + \
+    "Version 0.3.0 Wed, 23 Apr 2014 14:46:21 +0400\n" + \
+    "       | | | | |__ | |   | |__ \ `––.   " + \
+    "Copyright © 2013 Samsung Electronics Co., Ltd.\n" + \
+    "       | | | |  __|| |   |  __| `––. \  " + \
+    "All rights reserved. Any unauthorized use of\n" + \
+    "       \ \_/ / |___| |___| |___/\__/ /  " + \
+    "this software is strictly prohibited and is\n" + \
+    "        \___/\____/\_____|____/\____/   " + \
+    "a subject of your country's laws.\n" + \
+    "       \u200B\n"
+
+__doc__ += __module_veles_logo__  # nopep8
 
 try:
     import argcomplete
@@ -43,52 +61,11 @@ if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
     PermissionError = IOError  # pylint: disable=W0622
 
 
-def create_args_parser():
+def create_args_parser_sphinx():
     """
-    Creates argument parser
+    This is a top-level function to please Sphinx.
     """
-    parser = argparse.ArgumentParser(
-        description=Main.LOGO,
-        formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser = Launcher.init_parser(parser=parser)
-    parser = Device.init_parser(parser=parser)
-    parser.add_argument("--no-logo", default=False,
-                        help="Do not print VELES version, copyright and "
-                        "other information on startup.",
-                        action='store_true')
-    parser.add_argument("-v", "--verbose", type=str, default="info",
-                        choices=Main.LOG_LEVEL_MAP.keys(),
-                        help="set verbosity level [default: %(default)s]")
-    parser.add_argument("--debug", type=str, default="",
-                        help="set DEBUG logging level for these names "
-                             "(separated by commas)")
-    parser.add_argument("--debug-pickle", default=False,
-                        help="turn on pickle diagnostics",
-                        action='store_true')
-    parser.add_argument("-r", "--random-seed", type=str,
-                        default="/dev/urandom:16",
-                        help="set random seed, e.g. "
-                             "veles/samples/seed:1024,:1024 or "
-                             "/dev/urandom:16:uint32")
-    parser.add_argument('-w', '--snapshot', default="",
-                        help='workflow snapshot')
-    parser.add_argument('workflow',
-                        help='path to the Python script with workflow')
-    parser.add_argument('config', default="-",
-                        help='path to the configuration file')
-    parser.add_argument('config_list',
-                        help="list of configuration overloads like: \n"
-                        "root.global_alpha=0.006\n"
-                        "root.snapshot_prefix='test_pr'",
-                        nargs='*', metavar="configs...")
-    try:
-        class NoEscapeCompleter(argcomplete.CompletionFinder):
-            def quote_completions(self, completions, *args, **kwargs):
-                return completions
-        NoEscapeCompleter()(parser)
-    except:
-        pass
-    return parser
+    return Main.init_parser(True)
 
 
 class Main(Logger):
@@ -129,6 +106,54 @@ class Main(Logger):
 
     LOG_LEVEL_MAP = {"debug": logging.DEBUG, "info": logging.INFO,
                      "warning": logging.WARNING, "error": logging.ERROR}
+
+    @staticmethod
+    def init_parser(sphinx=False):
+        """
+        Creates the command line argument parser.
+        """
+        parser = argparse.ArgumentParser(
+            description=Main.LOGO if not sphinx else "",
+            formatter_class=argparse.RawDescriptionHelpFormatter)
+        parser = Launcher.init_parser(parser=parser)
+        parser = Device.init_parser(parser=parser)
+        parser.add_argument("--no-logo", default=False,
+                            help="Do not print VELES version, copyright and "
+                            "other information on startup.",
+                            action='store_true')
+        parser.add_argument("-v", "--verbose", type=str, default="info",
+                            choices=Main.LOG_LEVEL_MAP.keys(),
+                            help="set verbosity level [default: %(default)s]")
+        parser.add_argument("--debug", type=str, default="",
+                            help="set DEBUG logging level for these names "
+                                 "(separated by commas)")
+        parser.add_argument("--debug-pickle", default=False,
+                            help="turn on pickle diagnostics",
+                            action='store_true')
+        parser.add_argument("-r", "--random-seed", type=str,
+                            default="/dev/urandom:16",
+                            help="set random seed, e.g. "
+                                 "veles/samples/seed:1024,:1024 or "
+                                 "/dev/urandom:16:uint32")
+        parser.add_argument('-w', '--snapshot', default="",
+                            help='workflow snapshot')
+        parser.add_argument('workflow',
+                            help='path to the Python script with workflow')
+        parser.add_argument('config', default="-",
+                            help='path to the configuration file')
+        parser.add_argument('config_list',
+                            help="list of configuration overloads like: \n"
+                            "root.global_alpha=0.006\n"
+                            "root.snapshot_prefix='test_pr'",
+                            nargs='*', metavar="configs...")
+        try:
+            class NoEscapeCompleter(argcomplete.CompletionFinder):
+                def quote_completions(self, completions, *args, **kwargs):
+                    return completions
+            NoEscapeCompleter()(parser)
+        except:
+            pass
+        return parser
 
     def _load_model(self, fname_workflow, fname_snapshot):
         self.debug("Loading the model \"%s\"...", fname_workflow)
@@ -309,7 +334,7 @@ class Main(Logger):
     def run(self):
         """VELES Machine Learning Platform Command Line Interface
         """
-        parser = create_args_parser()
+        parser = Main.init_parser()
         args = parser.parse_args()
         fname_config = args.config
         if fname_config == "-":
