@@ -129,8 +129,7 @@ class Device(units.Pickleable):
 
     @property
     def max_group_size(self):
-        block_size = self.device_info.BLOCK_SIZE["float"]
-        return block_size * block_size
+        return self.queue_.device.max_work_group_size
 
     def _get_some_device(self, **kwargs):
         """Gets some device from the available OpenCL devices.
