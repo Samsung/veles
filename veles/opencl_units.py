@@ -82,7 +82,8 @@ class OpenCLUnit(units.Unit):
                             help="Force OpenCL units to run on CPU.")
         return parser
 
-    def build_program(self, defines=None, cache_file_name=None, dtype=None):
+    def build_program(self, defines=None, cache_file_name=None, dtype=None,
+                      show_ocl_logs=True):
         """Builds the OpenCL program.
 
         program_ will be initialized to the resulting program object.
@@ -105,7 +106,7 @@ class OpenCLUnit(units.Unit):
         source = self._generate_source(defines, dtype)
         self.program_ = self.device.queue_.context.create_program(
             source, root.common.ocl_dirs)
-        if len(self.program_.build_logs):
+        if show_ocl_logs and len(self.program_.build_logs):
             for s in self.program_.build_logs:
                 s = s.strip()
                 if not s:

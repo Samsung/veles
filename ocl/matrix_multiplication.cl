@@ -32,6 +32,9 @@
 #ifdef ALIGNED
 #undef ALIGNED
 #endif
+#ifdef valid
+#undef valid
+#endif
 #if (AB_COMMON % BLOCK_SIZE) == 0
 #define N_BLOCKS (AB_COMMON / BLOCK_SIZE)
 #if ((A_WIDTH % BLOCK_SIZE) == 0) && ((B_WIDTH % BLOCK_SIZE) == 0)
@@ -170,9 +173,9 @@
 
   int idx = get_global_id(1) * B_WIDTH + get_global_id(0);
 #ifdef ALIGNED
-  bool valid = true;
+  #define valid 1
 #else
-  bool valid = (get_global_id(1) < A_WIDTH) && (get_global_id(0) < B_WIDTH);
+  int valid = (get_global_id(1) < A_WIDTH) && (get_global_id(0) < B_WIDTH);
 #endif
 
   #undef A_LIMIT
