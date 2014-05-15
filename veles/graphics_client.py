@@ -286,10 +286,10 @@ if __name__ == "__main__":
                         help="ZeroMQ endpoint to receive updates from.")
     parser.add_argument("--webagg-discovery-fifo", nargs='?',
                         default=None, help="Matplotlib drawing backend.")
-    args = parser.parse_args()
-    client = GraphicsClient(args.backend, args.endpoint,
-                            webagg_fifo=args.webagg_discovery_fifo)
-    if args.backend == "WebAgg":
+    cmdargs = parser.parse_args()
+    client = GraphicsClient(cmdargs.backend, cmdargs.endpoint,
+                            webagg_fifo=cmdargs.webagg_discovery_fifo)
+    if cmdargs.backend == "WebAgg":
         client_thread = threading.Thread(target=client.run)
         client_thread.start()
         reactor.run()
