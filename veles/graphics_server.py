@@ -118,7 +118,7 @@ class GraphicsServer(Logger):
         if self._debug_pickle:
             import objgraph
             restored = pickle.loads(data)
-            objgraph.show_refs(restored, too_many=25)
+            objgraph.show_refs(restored, too_many=40)
         self.debug("Broadcasting %d bytes" % len(data))
         self.zmq_connection.send(data)
 

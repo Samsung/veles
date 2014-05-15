@@ -36,6 +36,7 @@ class Pickleable(logger.Logger):
     """
     def init_unpickled(self):
         self.stripped_pickle_ = False
+        self._pickle_lock_ = threading.Lock()
         for key, value in self._method_storage.items():
             class_method = getattr(value, key)
             setattr(self, key, functools.partial(class_method, self))
@@ -48,17 +49,28 @@ class Pickleable(logger.Logger):
         """
 
         state = {}
+        linked_values = {}
         for k, v in self.__dict__.items():
-            if k[len(k) - 1] != "_" and not callable(v):
-                state[k] = v
+            if k[-1] != "_" and not callable(v):
+                # Dereference the linked attributes in case of stripped pickle
+                if (self.stripped_pickle and k[:2] == "__" and
+                        isinstance(getattr(self.__class__, k[2:]),
+                                   LinkableAttribute)):
+                    linked_values[k[2:]] = getattr(self, k[2:])
+                    state[k] = None
+                else:
+                    state[k] = v
             else:
                 state[k] = None
+        state.update(linked_values)
 
         # we have to check class attributes too
         # but we do not care of overriding (in __setstate__)
-        class_attributes = {i: v for i, v in self.__class__.__dict__.items()
-                            if isinstance(v, LinkableAttribute)}
-        state['class_attributes__'] = class_attributes
+        if not self.stripped_pickle:
+            class_attributes = {i: v
+                                for i, v in self.__class__.__dict__.items()
+                                if isinstance(v, LinkableAttribute)}
+            state['class_attributes__'] = class_attributes
         return state
 
     def __setstate__(self, state):
@@ -83,7 +95,13 @@ class Pickleable(logger.Logger):
 
     @stripped_pickle.setter
     def stripped_pickle(self, value):
+        """A lock is taken if this is set to True and is released on False.
+        """
+        if value:
+            self._pickle_lock_.acquire()
         self.stripped_pickle_ = value
+        if not value:
+            self._pickle_lock_.release()
 
 
 class Distributable(Pickleable):
