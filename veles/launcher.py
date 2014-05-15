@@ -130,6 +130,11 @@ class Launcher(logger.Logger):
                             default=kwargs.get("matplotlib_backend",
                                                root.common.matplotlib_backend),
                             help="Matplotlib drawing backend.")
+        parser.add_argument("--no-graphics-client",
+                            default=kwargs.get("graphics_client", False),
+                            help="Do not launch the graphics client. Server "
+                            "will still be started unless matplotlib backend "
+                            "is an empty string.", action='store_true')
         parser.add_argument("-b", "--background",
                             default=kwargs.get("background", False),
                             help="Run in background as a daemon.",
@@ -261,9 +266,9 @@ class Launcher(logger.Logger):
                 self._launch_status()
             if workflow.plotters_are_enabled:
                 self.graphics_server, self.graphics_client = \
-                    graphics_server.GraphicsServer.launch_pair(
+                    graphics_server.GraphicsServer.launch(
                         workflow.thread_pool, self.matplotlib_backend,
-                        self._set_webagg_port)
+                        self._set_webagg_port, self.args.no_graphics_client)
             if self.is_master:
                 self._agent = server.Server(self.args.listen_address, workflow)
                 # Launch the nodes described in the configuration file/string
@@ -337,7 +342,8 @@ class Launcher(logger.Logger):
                 IOLoop.instance().stop()
                 self.tornado_ioloop_thread.join()
         # Wait for the own graphics client to terminate normally
-        if self.workflow.plotters_are_enabled:
+        if (self.workflow.plotters_are_enabled and
+                self.graphics_client is not None):
             attempt = 0
             while self.graphics_client.poll() is None and attempt < 10:
                 self.graphics_server.shutdown()

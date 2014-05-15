@@ -37,6 +37,7 @@ class ZmqSubscriber(ZmqConnection):
         self.graphics = graphics
 
     def messageReceived(self, message):
+        self.graphics.debug("Received %d bytes", len(message[0]))
         self.graphics.update(pickle.loads(memoryview(
             message[0])[len('graphics'):]))
 

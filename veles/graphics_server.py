@@ -110,8 +110,10 @@ class GraphicsServer(Logger):
         self.enqueue(None)
 
     @staticmethod
-    def launch_pair(thread_pool, backend, webagg_callback=None):
+    def launch(thread_pool, backend, webagg_callback=None, only_server=False):
         server = GraphicsServer(thread_pool)
+        if only_server:
+            return server, None
         if six.PY3:
             python = "python3"
         else:
