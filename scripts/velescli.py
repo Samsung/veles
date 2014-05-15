@@ -48,6 +48,7 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 import veles
 from veles.config import root
+from veles.graphics_server import GraphicsServer
 from veles.logger import Logger
 from veles.launcher import Launcher
 from veles.opencl import Device
@@ -118,6 +119,7 @@ class Main(Logger):
         parser = Launcher.init_parser(parser=parser)
         parser = Device.init_parser(parser=parser)
         parser = OpenCLUnit.init_parser(parser=parser)
+        parser = GraphicsServer.init_parser(parser)
         parser.add_argument("--no-logo", default=False,
                             help="Do not print VELES version, copyright and "
                             "other information on startup.",

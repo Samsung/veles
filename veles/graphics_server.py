@@ -5,6 +5,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
+import argparse
 import array
 import errno
 import fcntl
@@ -53,6 +54,9 @@ class GraphicsServer(Logger):
             "GraphicsServer was not previously initialized")
         super(GraphicsServer, self).__init__()
         thread_pool.register_on_shutdown(self.shutdown)
+        parser = GraphicsServer.init_parser()
+        args, _ = parser.parse_known_args()
+        self._debug_pickle = args.debug_graphics_pickle
         zmq_endpoints = [ZmqEndpoint("bind", "inproc://veles-plots"),
                          ZmqEndpoint("bind", "rndipc://veles-ipc-plots-:")]
         interfaces = []
@@ -78,6 +82,15 @@ class GraphicsServer(Logger):
                                                  self.endpoints["ipc"]] +
                                                 self.endpoints["epgm"]))
 
+    @staticmethod
+    def init_parser(parser=None):
+        parser = parser or argparse.ArgumentParser()
+        parser.add_argument("--debug-graphics-pickle", default=False,
+                            action="store_true",
+                            help="Save plotter object trees during server "
+                            "send.")
+        return parser
+
     def interfaces(self):
         max_possible = 128
         max_bytes = max_possible * 32
@@ -101,6 +114,9 @@ class GraphicsServer(Logger):
             yield (name.decode(), ip)
 
     def enqueue(self, obj):
+        if self._debug_pickle:
+            import objgraph
+            objgraph.show_refs(obj)
         data = pickle.dumps(obj)
         self.debug("Broadcasting %d bytes" % len(data))
         self.zmq_connection.send(data)
