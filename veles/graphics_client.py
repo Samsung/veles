@@ -12,7 +12,6 @@ import logging
 import os
 import platform
 import signal
-from six.moves import cPickle as pickle
 import socket
 import subprocess
 import sys
@@ -25,6 +24,7 @@ from veles.external.txzmq import ZmqConnection, ZmqEndpoint
 
 from veles.config import root
 from veles.logger import Logger
+from veles.pickle2 import pickle, setup_pickle_debug
 
 
 class ZmqSubscriber(ZmqConnection):
@@ -277,7 +277,6 @@ class GraphicsClient(Logger):
 
 
 if __name__ == "__main__":
-    Logger.setup(level=logging.INFO)
     parser = argparse.ArgumentParser()
     parser.add_argument("-b", "--backend", nargs='?',
                         default=root.common.matplotlib_backend,
@@ -286,9 +285,22 @@ if __name__ == "__main__":
                         help="ZeroMQ endpoint to receive updates from.")
     parser.add_argument("--webagg-discovery-fifo", nargs='?',
                         default=None, help="Matplotlib drawing backend.")
+    LOG_LEVEL_MAP = {"debug": logging.DEBUG, "info": logging.INFO,
+                     "warning": logging.WARNING, "error": logging.ERROR}
+    parser.add_argument("-v", "--verbose", type=str, default="info",
+                        choices=LOG_LEVEL_MAP.keys(),
+                        help="set verbosity level [default: %(default)s]")
     cmdargs = parser.parse_args()
+
+    log_level = LOG_LEVEL_MAP[cmdargs.verbose]
+    Logger.setup(level=log_level)
+    if log_level == logging.DEBUG:
+        setup_pickle_debug()
+
     client = GraphicsClient(cmdargs.backend, cmdargs.endpoint,
                             webagg_fifo=cmdargs.webagg_discovery_fifo)
+    if log_level == logging.DEBUG:
+        client.debug("Activated pickle debugging")
     if cmdargs.backend == "WebAgg":
         client_thread = threading.Thread(target=client.run)
         client_thread.start()

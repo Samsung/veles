@@ -42,9 +42,7 @@ import errno
 import logging
 import numpy
 import os
-from six.moves import cPickle as pickle
 import runpy
-import six
 import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
@@ -54,6 +52,7 @@ from veles.logger import Logger
 from veles.launcher import Launcher
 from veles.opencl import Device
 from veles.opencl_units import OpenCLUnit
+from veles.pickle2 import pickle, setup_pickle_debug
 import veles.random_generator as rnd
 
 if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
@@ -314,31 +313,6 @@ class Main(Logger):
             except:
                 print(Main.LOGO.replace("©", "(c)"))
 
-    def _set_pickle_debug(self, args):
-        if not args.debug_pickle:
-            return
-        if not six.PY3:
-            self.warning("Pickle debugging is only available for Python 3.x")
-            return
-
-        def dump(obj, file, protocol=None, fix_imports=True):
-            pickle._Pickler(file, protocol, fix_imports=fix_imports).dump(obj)
-
-        pickle.dump = dump
-        orig_save = pickle._Pickler.save
-
-        def save(self, obj):
-            try:
-                orig_save(self, obj)
-            except:
-                import traceback
-                import pdb
-                print("\033[1;31mPickle failure\033[0m")
-                traceback.print_exc()
-                pdb.set_trace()
-
-        pickle._Pickler.save = save
-
     def run(self):
         """VELES Machine Learning Platform Command Line Interface
         """
@@ -355,7 +329,8 @@ class Main(Logger):
         for name in filter(str.strip, args.debug.split(',')):
             logging.getLogger(name).setLevel(logging.DEBUG)
         self._seed_random(args.random_seed)
-        self._set_pickle_debug(args)
+        if args.debug_pickle:
+            setup_pickle_debug(args)
 
         wm = self._load_model(fname_workflow, args.snapshot)
         self._apply_config(fname_config, args.config_list)
