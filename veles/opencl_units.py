@@ -21,6 +21,7 @@ import veles.formats as formats
 import veles.opencl_types as opencl_types
 import veles.units as units
 import veles.workflow
+from builtins import isinstance
 
 
 class OpenCLUnit(units.Unit):
@@ -44,6 +45,7 @@ class OpenCLUnit(units.Unit):
         parser = OpenCLUnit.init_parser()
         args, _ = parser.parse_known_args()
         self._force_cpu = args.cpu
+        self._kernel_ = None
 
     @property
     def cache(self):
@@ -114,8 +116,27 @@ class OpenCLUnit(units.Unit):
     def get_kernel(self, name):
         return self.program_.get_kernel(name)
 
-    def execute_kernel(self, krn, global_size, local_size):
-        return self.device.queue_.execute_kernel(krn, global_size, local_size)
+    def assign_kernel(self, name):
+        self._kernel_ = self.get_kernel(name)
+
+    def execute_kernel(self, global_size, local_size, kernel=None):
+        return self.device.queue_.execute_kernel(kernel or self._kernel_,
+                                                 global_size, local_size)
+
+    def set_arg(self, index, arg):
+        if isinstance(arg, formats.Vector):
+            self._kernel_.set_arg(index, arg.v_)
+        else:
+            self._kernel_.set_arg(index, arg)
+
+    def set_args(self, *args):
+        filtered_args = []
+        for arg in args:
+            if isinstance(arg, formats.Vector):
+                filtered_args.append(arg.v_)
+            else:
+                filtered_args.append(arg)
+        self._kernel_.set_args(*filtered_args)
 
     def _generate_source(self, defines, dtype=None):
         if defines and not isinstance(defines, dict):
@@ -252,7 +273,7 @@ class OpenCLBenchmark(OpenCLUnit):
         """
         super(OpenCLBenchmark, self).initialize(device=device, **kwargs)
         self.build_program()
-        self.kernel_ = self.get_kernel("benchmark")
+        self.assign_kernel("benchmark")
         self.input_A_.initialize(self.device)
         self.input_B_.initialize(self.device)
         self.output_C_.initialize(self.device)
@@ -268,9 +289,7 @@ class OpenCLBenchmark(OpenCLUnit):
                        formats.roundup(self.size, self.block_size)]
         local_size = [self.block_size, self.block_size]
         tstart = time.time()
-        event = self.device.queue_.execute_kernel(self.kernel_, global_size,
-                                                  local_size)
-        event.wait()
+        self.execute_kernel(global_size, local_size).wait()
         self.output_C_.map_read()
         tfinish = time.time()
         delta = tfinish - tstart
