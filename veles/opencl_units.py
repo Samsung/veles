@@ -5,6 +5,7 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 '''
 
 
+import argparse
 from copy import copy
 import numpy
 import os
@@ -40,6 +41,9 @@ class OpenCLUnit(units.Unit):
         super(OpenCLUnit, self).init_unpickled()
         self.program_ = None
         self.cl_sources_ = {}
+        parser = OpenCLUnit.init_parser()
+        args, _ = parser.parse_known_args()
+        self._force_cpu = args.cpu
 
     @property
     def cache(self):
@@ -54,7 +58,7 @@ class OpenCLUnit(units.Unit):
         self.device = device
 
     def run(self):
-        if self.device:
+        if self.device and not self._force_cpu:
             self.ocl_run()
         else:
             self.cpu_run()
@@ -68,6 +72,13 @@ class OpenCLUnit(units.Unit):
         """Run on GPU/any OpenCL capable device.
         """
         return self.cpu_run()
+
+    @staticmethod
+    def init_parser(parser=None):
+        parser = parser or argparse.ArgumentParser()
+        parser.add_argument("--cpu", default=False, action="store_true",
+                            help="Force OpenCL units to run on CPU.")
+        return parser
 
     def build_program(self, defines=None, cache_file_name=None, dtype=None):
         """Builds the OpenCL program.

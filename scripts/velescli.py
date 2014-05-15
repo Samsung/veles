@@ -53,6 +53,7 @@ from veles.config import root
 from veles.logger import Logger
 from veles.launcher import Launcher
 from veles.opencl import Device
+from veles.opencl_units import OpenCLUnit
 import veles.random_generator as rnd
 
 if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
@@ -117,6 +118,7 @@ class Main(Logger):
             formatter_class=argparse.RawDescriptionHelpFormatter)
         parser = Launcher.init_parser(parser=parser)
         parser = Device.init_parser(parser=parser)
+        parser = OpenCLUnit.init_parser(parser=parser)
         parser.add_argument("--no-logo", default=False,
                             help="Do not print VELES version, copyright and "
                             "other information on startup.",
