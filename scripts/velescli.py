@@ -125,9 +125,9 @@ class Main(Logger):
                             action='store_true')
         parser.add_argument("-v", "--verbose", type=str, default="info",
                             choices=Main.LOG_LEVEL_MAP.keys(),
-                            help="set verbosity level [default: %(default)s]")
+                            help="set logging verbosity level")
         parser.add_argument("--debug", type=str, default="",
-                            help="set DEBUG logging level for these names "
+                            help="set DEBUG logging level for these classes "
                                  "(separated by commas)")
         parser.add_argument("--debug-pickle", default=False,
                             help="turn on pickle diagnostics",
@@ -142,7 +142,8 @@ class Main(Logger):
         parser.add_argument('workflow',
                             help='path to the Python script with workflow')
         parser.add_argument('config', default="-",
-                            help='path to the configuration file')
+                            help='path to the configuration file\
+                            (write "-" to search in as <WORKFLOW>_config.py)')
         parser.add_argument('config_list',
                             help="list of configuration overloads like: \n"
                             "root.global_alpha=0.006\n"

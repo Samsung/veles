@@ -31,6 +31,8 @@ def create_commandline_parser():
                         help="Noise amplitude")
     parser.add_argument("-b", "--maxblur", type=int, default=15,
                         help="Max blur kernel size (odd values only)")
+    parser.add_argument("-i", "--inverted", action="store_true",
+                        help="Invert colors on generated images")
     parser.add_argument("output", type=str,
                         help='Output directory (should be set!)')
     return parser
@@ -306,10 +308,12 @@ class ImageGenerator(object):
     Args:
             max_blur(int): max blur kernel size
             noise_amp(float): additive gaussian noise amplitude
+            invert(bool): invert colors on generated images
     """
-    def __init__(self, max_blur, noise_amp):
+    def __init__(self, max_blur, noise_amp, invert):
         self._max_blur = max_blur
         self._noise_amp = noise_amp
+        self._invert = invert
 
     def generate(self, size, label):
         """
@@ -380,6 +384,10 @@ class ImageGenerator(object):
                                      size=img.shape)
             img = np.clip(img.astype(dtype=np.float32) + noise, 0,
                                 255).astype(dtype=np.uint8)
+
+        #INVERT
+        if self._invert:
+            img = 255 - img
         return img
 
 if __name__ == "__main__":
@@ -392,7 +400,7 @@ if __name__ == "__main__":
     learn_size = args.filescount
     test_size = args.filescount
 
-    generator = ImageGenerator(args.maxblur, args.noise)
+    generator = ImageGenerator(args.maxblur, args.noise, args.inverted)
     size = args.size
 
     shutil.rmtree(out_dir, ignore_errors=True)
