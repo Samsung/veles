@@ -114,10 +114,11 @@ class GraphicsServer(Logger):
             yield (name.decode(), ip)
 
     def enqueue(self, obj):
+        data = pickle.dumps(obj)
         if self._debug_pickle:
             import objgraph
-            objgraph.show_refs(obj)
-        data = pickle.dumps(obj)
+            restored = pickle.loads(data)
+            objgraph.show_refs(restored, too_many=25)
         self.debug("Broadcasting %d bytes" % len(data))
         self.zmq_connection.send(data)
 
