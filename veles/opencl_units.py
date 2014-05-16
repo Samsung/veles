@@ -21,7 +21,6 @@ import veles.formats as formats
 import veles.opencl_types as opencl_types
 import veles.units as units
 import veles.workflow
-from builtins import isinstance
 
 
 class OpenCLUnit(units.Unit):

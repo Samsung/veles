@@ -44,6 +44,10 @@ class RandomGenerator(object):
     def state(self):
         return self._state
 
+    @state.setter
+    def state(self, vle):
+        self._state = vle
+
     @property
     def seed_file_name(self):
         return os.path.join(root.common.cache_dir,
