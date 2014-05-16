@@ -25,7 +25,7 @@ import veles.external.pydot as pydot
 
 class UttermostPoint(Unit):
     def __init__(self, workflow, **kwargs):
-        kwargs["view_group"] = kwargs.get("view_group", "START_END")
+        kwargs["view_group"] = kwargs.get("view_group", "SERVICE")
         super(UttermostPoint, self).__init__(workflow, **kwargs)
 
 
@@ -293,7 +293,7 @@ class Workflow(Unit):
                          "LOADER": "cyan",
                          "TRAINER": "coral",
                          "EVALUATOR": "plum",
-                         "START_END": "lightgrey"}
+                         "SERVICE": "lightgrey"}
 
     def print_stats(self, by_name=False, top_number=5):
         timers = {}
