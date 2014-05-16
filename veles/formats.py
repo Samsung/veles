@@ -210,7 +210,7 @@ class Vector(units.Pickleable):
 
     @v.setter
     def v(self, value):
-        if self.v_ is not None:
+        if self.v_ is not None and not eq_addr(self._v, value):
             raise error.ErrExists("OpenCL buffer already assigned, "
                                   "call reset() beforehand.")
         self._v = value
