@@ -277,9 +277,7 @@ class OpenCLBenchmark(OpenCLUnit):
         self.input_A_.initialize(self.device)
         self.input_B_.initialize(self.device)
         self.output_C_.initialize(self.device)
-        self.kernel_.set_arg(0, self.input_A_.v_)
-        self.kernel_.set_arg(1, self.input_B_.v_)
-        self.kernel_.set_arg(2, self.output_C_.v_)
+        self.set_args(self.input_A_, self.input_B_, self.output_C_)
 
     def estimate(self):
         """
@@ -314,8 +312,9 @@ class OpenCLWorkflow(OpenCLUnit, veles.workflow.Workflow):
         Run by a slave.
         """
         if not self._power_:
-            bench = OpenCLBenchmark(self, device=self.device)
+            bench = OpenCLBenchmark(self)
+            bench.initialize(device=self.device)
             self._power_ = bench.estimate()
             self.del_ref(bench)
-            self.info("Computing power is %.6f", self._power)
+            self.info("Computing power is %.6f", self._power_)
         return self._power_
