@@ -37,9 +37,12 @@ try:
 except:
     pass
 import argparse
+import bz2
 from email.utils import formatdate
 import errno
+import gzip
 import logging
+import lzma
 import numpy
 import os
 import runpy
@@ -107,6 +110,13 @@ class Main(Logger):
 
     LOG_LEVEL_MAP = {"debug": logging.DEBUG, "info": logging.INFO,
                      "warning": logging.WARNING, "error": logging.ERROR}
+
+    CODECS = {
+        ".pickle": lambda name: open(name, "rb"),
+        ".gz": lambda name: gzip.GzipFile(name, "rb"),
+        ".bz2": lambda name: bz2.BZ2File(name, "rb"),
+        ".xz": lambda name: lzma.LZMAFile(name, "rb")
+    }
 
     @staticmethod
     def init_parser(sphinx=False):
@@ -265,7 +275,9 @@ class Main(Logger):
     def _load_workflow(self, fname_snapshot):
         fname_snapshot = fname_snapshot.strip()
         if os.path.exists(fname_snapshot):
-            with open(fname_snapshot, "rb") as fin:
+            _, ext = os.path.splitext(fname_snapshot)
+            codec = Main.CODECS[ext]
+            with codec(fname_snapshot) as fin:
                 return pickle.load(fin)
         if fname_snapshot != "":
             self.warning("Workflow snapshot %s does not exist",
