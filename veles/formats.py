@@ -201,8 +201,19 @@ class Vector(units.Pickleable):
     def __init__(self):
         super(Vector, self).__init__()
         self.device = None
-        self.v = None
+        self._v = None
         self.supposed_maxvle = 1.0
+
+    @property
+    def v(self):
+        return self._v
+
+    @v.setter
+    def v(self, value):
+        if self.v_ is not None:
+            raise error.ErrExists("OpenCL buffer already assigned, "
+                                  "call reset() beforehand.")
+        self._v = value
 
     def init_unpickled(self):
         super(Vector, self).init_unpickled()
