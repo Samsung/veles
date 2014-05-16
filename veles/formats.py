@@ -283,9 +283,8 @@ class Vector(units.Pickleable):
             cl.CL_MEM_READ_WRITE | cl.CL_MEM_USE_HOST_PTR, ravel(self.v))
 
     def initialize(self, device=None):
-        self.lock_.acquire()
-        self._initialize(device)
-        self.lock_.release()
+        with self.lock_:
+            self._initialize(device)
 
     def _map(self, flags):
         if self.device is None:
