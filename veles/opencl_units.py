@@ -198,7 +198,7 @@ class OpenCLUnit(units.Unit):
                 real_source = self._generate_source(defines, dtype).encode()
                 if cached_source != real_source:
                     return None
-                for dep in self._scan_include_dependencies():
+                for dep in set(self._scan_include_dependencies()):
                     cached_source = tar.extractfile(
                         os.path.basename(dep)).read()
                     with open(dep, "rb") as fr:
@@ -228,7 +228,7 @@ class OpenCLUnit(units.Unit):
             ti.mode = int("666", 8)
             source_io.seek(0)
             tar.addfile(ti, fileobj=source_io)
-            for dep in self._scan_include_dependencies():
+            for dep in set(self._scan_include_dependencies()):
                 ti = tarfile.TarInfo(os.path.basename(dep))
                 ti.size = os.path.getsize(dep)
                 ti.mode = int("666", 8)
