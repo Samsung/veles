@@ -17,7 +17,7 @@ class AccumulatingPlotter(plotter.Plotter):
     the series with a polynomial of power "fit_poly_power" in terms of least
     squares.
 
-    Should be assigned before initialize():
+    Must be assigned before initialize():
         input
         input_field
 
@@ -135,7 +135,7 @@ class AccumulatingPlotter(plotter.Plotter):
 class MatrixPlotter(plotter.Plotter):
     """Plotter for drawing matrixes as table.
 
-    Should be assigned before initialize():
+    Must be assigned before initialize():
         input
         input_field
 
@@ -316,7 +316,7 @@ class MatrixPlotter(plotter.Plotter):
 class Image(plotter.Plotter):
     """Plotter for drawing N images.
 
-    Should be assigned before initialize():
+    Must be assigned before initialize():
         inputs
         input_fields
 
@@ -411,7 +411,7 @@ class Image(plotter.Plotter):
 class Plot(plotter.Plotter):
     """Plotter for drawing N plots together.
 
-    Should be assigned before initialize():
+    Must be assigned before initialize():
         inputs
         input_fields
         input_styles
@@ -466,7 +466,7 @@ class Plot(plotter.Plotter):
 class Histogram(plotter.Plotter):
     """Plotter for drawing histogram.
 
-    Should be assigned before initialize():
+    Must be assigned before initialize():
         mse
 
     Updates after run():
@@ -571,7 +571,7 @@ class Histogram(plotter.Plotter):
 class MultiHistogram(plotter.Plotter):
     """Plotter for drawing weights as 2D.
 
-    Should be assigned before initialize():
+    Must be assigned before initialize():
         input
         input_field
 
