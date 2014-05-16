@@ -54,7 +54,7 @@ class Snapshotter(units.Unit):
         self.compress_level = kwargs.get("compress_level", 9)
         self.interval = kwargs.get("interval", 1)
         self.time_interval = kwargs.get("time_interval", 1)
-        self.time = None
+        self.time = 0
         self._skipped_counter = 0
         self.file_name = ""
         self.suffix = None
