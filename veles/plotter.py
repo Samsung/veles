@@ -23,7 +23,7 @@ class Plotter(Unit):
         kwargs["view_group"] = view_group
         super(Plotter, self).__init__(workflow, **kwargs)
         self.last_run = time.time()
-        self.redraw_threshold = 0.1
+        self.redraw_threshold = 0.5
 
     def redraw(self):
         """ Do the actual drawing here
