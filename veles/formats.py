@@ -336,7 +336,7 @@ class Vector(units.Pickleable):
         """
         self.lock_.acquire()
         self._unmap()
-        self.v = None
         self.v_ = None
+        self._v = None
         self.map_flags = 0
         self.lock_.release()
