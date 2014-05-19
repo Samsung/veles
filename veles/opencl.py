@@ -184,6 +184,13 @@ class Device(units.Pickleable):
             self.device_info.BLOCK_SIZE.update(device_info.BLOCK_SIZE)
             self.device_info.dt.update(device_info.dt)
             self.device_info.min_dt.update(device_info.min_dt)
+            if (self.queue_.device.vendor.find("Intel") >= 0 and
+                self.queue_.device.type == cl.CL_DEVICE_TYPE_CPU):
+                sz = 16
+                self.warning("Workaround: will set BLOCK_SIZE to %d "
+                             "because of the Intel CPU device", sz)
+                for k in self.device_info.BLOCK_SIZE:
+                    self.device_info.BLOCK_SIZE[k] = sz
             return
         if not root.common.test_unknown_device:
             return
