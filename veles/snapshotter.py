@@ -21,33 +21,26 @@ if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
     FileNotFoundError = IOError  # pylint: disable=W0622
 
 
-class Snapshotter(units.Unit):
-    """Takes workflow snapshots.
+class SnapshotterBase(units.Unit):
+    """Base class for various data exporting units.
 
     Defines:
         file_name - the file name of the last snapshot
-        time: time of the last snapshot
+        time - the time of the last snapshot
 
     Must be defined before initialize():
         suffix - the file name suffix where to take snapshots
 
     Attributes:
         compress - the compression applied to pickles: None or '', gz, bz2, xz
+        compress_level - the compression level in [0..9]
         interval - take only one snapshot within this run() invocation number
         time_interval - take no more than one snapshot within this time window
     """
 
-    CODECS = {
-        None: lambda n, l: open(n, "wb"),
-        "": lambda n, l: open(n, "wb"),
-        "gz": lambda n, l: gzip.GzipFile(n, "wb", compresslevel=l),
-        "bz2": lambda n, l: bz2.BZ2File(n, "wb", compresslevel=l),
-        "xz": lambda n, l: lzma.LZMAFile(n, "wb", preset=l)
-    }
-
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = kwargs.get("view_group", "SERVICE")
-        super(Snapshotter, self).__init__(workflow, **kwargs)
+        super(SnapshotterBase, self).__init__(workflow, **kwargs)
         self.directory = kwargs.get("directory", "/tmp")
         self.prefix = kwargs.get("prefix", "")
         self.compress = kwargs.get("compress", "gz")
@@ -60,7 +53,7 @@ class Snapshotter(units.Unit):
         self.suffix = None
 
     def initialize(self, **kwargs):
-        super(Snapshotter, self).initialize(**kwargs)
+        super(SnapshotterBase, self).initialize(**kwargs)
         self.time = time.time()
 
     def run(self):
@@ -69,6 +62,41 @@ class Snapshotter(units.Unit):
             return
         if time.time() - self.time < self.time_interval:
             return
+        self.export()
+        self.time = time.time()
+
+    def export(self):
+        """This method should be overridden in inherited classes.
+        """
+        pass
+
+
+class Snapshotter(SnapshotterBase):
+    """Takes workflow snapshots.
+
+    Defines:
+        file_name - the file name of the last snapshot
+        time - the time of the last snapshot
+
+    Must be defined before initialize():
+        suffix - the file name suffix where to take snapshots
+
+    Attributes:
+        compress - the compression applied to pickles: None or '', gz, bz2, xz
+        compress_level - the compression level in [0..9]
+        interval - take only one snapshot within this run() invocation number
+        time_interval - take no more than one snapshot within this time window
+    """
+
+    CODECS = {
+        None: lambda n, l: open(n, "wb"),
+        "": lambda n, l: open(n, "wb"),
+        "gz": lambda n, l: gzip.GzipFile(n, "wb", compresslevel=l),
+        "bz2": lambda n, l: bz2.BZ2File(n, "wb", compresslevel=l),
+        "xz": lambda n, l: lzma.LZMAFile(n, "wb", preset=l)
+    }
+
+    def export(self):
         ext = ("." + self.compress) if self.compress else ""
         rel_file_name = "%s_%s.%d.pickle%s" % (
             self.prefix, self.suffix, 3 if six.PY3 else 2, ext)
@@ -82,7 +110,6 @@ class Snapshotter(units.Unit):
         if os.path.exists(file_name_link):
             os.remove(file_name_link)
         os.symlink(rel_file_name, file_name_link)
-        self.time = time.time()
 
     def _open_file(self):
         return Snapshotter.CODECS[self.compress](self.file_name,
