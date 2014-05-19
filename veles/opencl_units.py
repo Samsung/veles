@@ -125,7 +125,7 @@ class OpenCLUnit(units.Unit):
 
     def set_arg(self, index, arg):
         if isinstance(arg, formats.Vector):
-            self._kernel_.set_arg(index, arg.v_)
+            self._kernel_.set_arg(index, arg.devmem)
         else:
             self._kernel_.set_arg(index, arg)
 
@@ -133,7 +133,7 @@ class OpenCLUnit(units.Unit):
         filtered_args = []
         for arg in args:
             if isinstance(arg, formats.Vector):
-                filtered_args.append(arg.v_)
+                filtered_args.append(arg.devmem)
             else:
                 filtered_args.append(arg)
         self._kernel_.set_args(*filtered_args)
@@ -264,9 +264,9 @@ class OpenCLBenchmark(OpenCLUnit):
         self.input_B_ = formats.Vector()
         self.output_C_ = formats.Vector()
         msize = [self.size, self.size]
-        self.input_A_.v = numpy.zeros(msize, dtype=numpy.double)
-        self.input_B_.v = numpy.zeros(msize, dtype=numpy.double)
-        self.output_C_.v = numpy.zeros(msize, dtype=numpy.double)
+        self.input_A_.mem = numpy.zeros(msize, dtype=numpy.double)
+        self.input_B_.mem = numpy.zeros(msize, dtype=numpy.double)
+        self.output_C_.mem = numpy.zeros(msize, dtype=numpy.double)
 
     def initialize(self, device, **kwargs):
         """Compiles the benchmarking kernel.

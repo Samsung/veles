@@ -497,10 +497,10 @@ class Histogram(plotter.Plotter):
         ax.patch.set_facecolor('#ffe6ca')
         # ax.patch.set_alpha(0.45)
 
-        ymax = self.input.v.max() * 1.3
-        ymin = self.input.v.min()
-        xmax = self.x.v.max()
-        xmin = self.x.v.min()
+        ymax = self.input.mem.max() * 1.3
+        ymin = self.input.mem.min()
+        xmax = self.x.mem.max()
+        xmin = self.x.mem.min()
         nbars = self.n_bars[0]
 
         width = ((xmax - xmin) / self.n_bars) * 0.8
@@ -602,7 +602,7 @@ class MultiHistogram(plotter.Plotter):
         super(MultiHistogram, self).initialize(**kwargs)
         if self.hist_number > self.limit:
             self.hist_number = self.limit
-        self.value.v = numpy.zeros(
+        self.value.mem = numpy.zeros(
             [self.hist_number, self.n_bars], dtype=numpy.int64)
 
     def redraw(self):
@@ -612,8 +612,8 @@ class MultiHistogram(plotter.Plotter):
         fig.patch.set_facecolor('#E8D6BB')
         # fig.patch.set_alpha(0.45)
 
-        n_cols = int(numpy.round(numpy.sqrt(self.value.v.shape[0])))
-        n_rows = int(numpy.ceil(self.value.v.shape[0] / n_cols))
+        n_cols = int(numpy.round(numpy.sqrt(self.value.mem.shape[0])))
+        n_rows = int(numpy.ceil(self.value.mem.shape[0] / n_cols))
         i = 0
         for _ in range(0, n_rows):
             for _ in range(0, n_cols):
@@ -646,9 +646,9 @@ class MultiHistogram(plotter.Plotter):
                 if n_cols > 3:
                     ax.set_xticklabels([])
                 i += 1
-                if i >= self.value.v.shape[0]:
+                if i >= self.value.mem.shape[0]:
                     break
-            if i >= self.value.v.shape[0]:
+            if i >= self.value.mem.shape[0]:
                 break
 
         self.show_figure(fig)
@@ -661,14 +661,14 @@ class MultiHistogram(plotter.Plotter):
         for i in range(0, self.hist_number):
             self.value.map_write()
             self.input.map_read()
-            mx = self.input.v[i].max()
-            mi = self.input.v[i].min()
+            mx = self.input.mem[i].max()
+            mi = self.input.mem[i].min()
             d = mx - mi
             if not d:
                 return
             d = (self.n_bars - 1) / d
             self.value[i] = 0
-            for x in self.input.v[i]:
+            for x in self.input.mem[i]:
                 i_bar = int(numpy.floor((x - mi) * d))
                 self.value[i, i_bar] += 1
 

@@ -262,7 +262,7 @@ class Device(units.Pickleable):
                            ("double2" if dtype[-1] == "2" else "double",
                             self.AB_WIDTH, self.B_HEIGHT, self.A_HEIGHT))
                     c = cc[key].copy()
-                    c -= self.c.v
+                    c -= self.c.mem
                     c = numpy.sqrt(numpy.square(numpy.real(c)) +
                                    numpy.square(numpy.imag(c)))
                     self.info(
@@ -324,46 +324,46 @@ class Device(units.Pickleable):
                   else "real")
 
         self.a = formats.Vector()
-        self.a.v = numpy.zeros([self.A_HEIGHT, self.AB_WIDTH],
+        self.a.mem = numpy.zeros([self.A_HEIGHT, self.AB_WIDTH],
                                dtype=opencl_types.dtypes[dtype])
         a_rnd = cc.get("a_rnd")
         if a_rnd is None:
             a_rnd = {}
             cc["a_rnd"] = a_rnd
         if a_rnd.get(xdtype) is None:
-            rnd.get().fill(self.a.v, -0.1, 0.1)
-            a_rnd[xdtype] = self.a.v.copy()
+            rnd.get().fill(self.a.mem, -0.1, 0.1)
+            a_rnd[xdtype] = self.a.mem.copy()
         else:
-            self.a.v[:] = a_rnd[xdtype][:]
+            self.a.mem[:] = a_rnd[xdtype][:]
 
         self.b = formats.Vector()
-        self.b.v = numpy.zeros([self.B_HEIGHT, self.AB_WIDTH],
+        self.b.mem = numpy.zeros([self.B_HEIGHT, self.AB_WIDTH],
                                dtype=opencl_types.dtypes[dtype])
         b_rnd = cc.get("b_rnd")
         if b_rnd is None:
             b_rnd = {}
             cc["b_rnd"] = b_rnd
         if b_rnd.get(xdtype) is None:
-            rnd.get().fill(self.b.v, -0.1, 0.1)
-            b_rnd[xdtype] = self.b.v.copy()
+            rnd.get().fill(self.b.mem, -0.1, 0.1)
+            b_rnd[xdtype] = self.b.mem.copy()
         else:
-            self.b.v[:] = b_rnd[xdtype][:]
+            self.b.mem[:] = b_rnd[xdtype][:]
 
         self.bias = formats.Vector()
-        self.bias.v = numpy.zeros(self.B_HEIGHT,
+        self.bias.mem = numpy.zeros(self.B_HEIGHT,
                                   dtype=opencl_types.dtypes[dtype])
         bias_rnd = cc.get("bias_rnd")
         if bias_rnd is None:
             bias_rnd = {}
             cc["bias_rnd"] = bias_rnd
         if bias_rnd.get(xdtype) is None:
-            rnd.get().fill(self.bias.v, -0.1, 0.1)
-            bias_rnd[xdtype] = self.bias.v.copy()
+            rnd.get().fill(self.bias.mem, -0.1, 0.1)
+            bias_rnd[xdtype] = self.bias.mem.copy()
         else:
-            self.bias.v[:] = bias_rnd[xdtype][:]
+            self.bias.mem[:] = bias_rnd[xdtype][:]
 
         self.c = formats.Vector()
-        self.c.v = numpy.zeros([self.A_HEIGHT, self.B_HEIGHT],
+        self.c.mem = numpy.zeros([self.A_HEIGHT, self.B_HEIGHT],
                                dtype=opencl_types.dtypes[dtype])
 
     def _cleanup_after_test(self):
@@ -381,16 +381,16 @@ class Device(units.Pickleable):
         """Pure single core CPU test.
         """
         dtype = (
-            numpy.complex128 if self.a.v.dtype in (
+            numpy.complex128 if self.a.mem.dtype in (
                 numpy.complex64, numpy.complex128) else numpy.float64)
-        a = numpy.empty(self.a.v.shape, dtype=dtype)
-        a[:] = self.a.v[:]
-        bt = self.b.v.transpose()
+        a = numpy.empty(self.a.mem.shape, dtype=dtype)
+        a[:] = self.a.mem[:]
+        bt = self.b.mem.transpose()
         b = numpy.empty(bt.shape, dtype=dtype)
         b[:] = bt[:]
-        bias = numpy.empty(self.bias.v.shape, dtype=dtype)
-        bias[:] = self.bias.v[:]
-        c = numpy.empty(self.c.v.shape, dtype=dtype)
+        bias = numpy.empty(self.bias.mem.shape, dtype=dtype)
+        bias[:] = self.bias.mem[:]
+        c = numpy.empty(self.c.mem.shape, dtype=dtype)
         t1 = time.time()
         numpy.dot(a, b, c)
         c[:] += bias
@@ -435,10 +435,10 @@ class Device(units.Pickleable):
         self.c.initialize(self)
         self.bias.initialize(self)
 
-        krn.set_arg(0, self.a.v_)
-        krn.set_arg(1, self.b.v_)
-        krn.set_arg(2, self.c.v_)
-        krn.set_arg(3, self.bias.v_)
+        krn.set_arg(0, self.a.devmem)
+        krn.set_arg(1, self.b.devmem)
+        krn.set_arg(2, self.c.devmem)
+        krn.set_arg(3, self.bias.devmem)
 
         global_size = [formats.roundup(self.B_HEIGHT, BLOCK_SIZE),
                        formats.roundup(self.A_HEIGHT, BLOCK_SIZE)]

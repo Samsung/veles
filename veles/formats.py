@@ -175,9 +175,9 @@ class Vector(units.Pickleable):
 
     Attributes:
         device: OpenCL device.
-        v: property for numpy array.
-        v_: OpenCL buffer mapped to v.
-        _v: numpy array.
+        mem: property for numpy array.
+        devmem: OpenCL buffer mapped to mem.
+        _mem: numpy array.
         supposed_maxvle: supposed maximum element value.
         map_arr_: pyopencl map object.
         map_flags: flags of the current map.
@@ -188,37 +188,37 @@ class Vector(units.Pickleable):
         2. Connect units be data:
             u2.b = u1.a
         3. Initialize numpy array:
-            a.v = numpy.zeros(...)
+            a.mem = numpy.zeros(...)
         4. Initialize an object with device:
             a.initialize(device)
         5. Set OpenCL buffer as kernel parameter:
-            krn.set_arg(0, a.v_)
+            krn.set_arg(0, a.devmem)
 
     Example of how to update vector:
         1. Call a.map_write() or a.map_invalidate()
-        2. Update a.v
+        2. Update a.mem
         3. Call a.unmap() before executing OpenCL kernel
     """
     def __init__(self):
         super(Vector, self).__init__()
         self.device = None
-        self._v = None
+        self._mem = None
         self.supposed_maxvle = 1.0
 
     @property
-    def v(self):
-        return self._v
+    def mem(self):
+        return self._mem
 
-    @v.setter
-    def v(self, value):
-        if self.v_ is not None and not eq_addr(self._v, value):
+    @mem.setter
+    def mem(self, value):
+        if self.devmem is not None and not eq_addr(self._mem, value):
             raise error.ErrExists("OpenCL buffer already assigned, "
                                   "call reset() beforehand.")
-        self._v = value
+        self._mem = value
 
     def init_unpickled(self):
         super(Vector, self).init_unpickled()
-        self.v_ = None
+        self.devmem = None
         self.map_arr_ = None
         self.map_flags = 0
         self.lock_ = threading.Lock()
@@ -228,24 +228,26 @@ class Vector(units.Pickleable):
         """
         if (self.device is not None and self.device.pid_ == os.getpid()):
             self.map_read()
-        return super(Vector, self).__getstate__()
+        state = super(Vector, self).__getstate__()
+        state['devmem'] = None
+        return state
 
     def __bool__(self):
-        return self._v is not None and len(self._v) > 0
+        return self._mem is not None and len(self._mem) > 0
 
     def __nonzero__(self):
         return self.__bool__()
 
     def __lshift__(self, value):
-        self._v = value
+        self._mem = value
 
     def __rlshift__(self, other):
-        other.extend(self._v)
+        other.extend(self._mem)
 
     def __len__(self):
         """To enable [] operator.
         """
-        return self._v.size
+        return self._mem.size
 
     def __del__(self):
         self.reset()
@@ -253,12 +255,12 @@ class Vector(units.Pickleable):
     def __getitem__(self, key):
         """To enable [] operator.
         """
-        return self._v[key]
+        return self._mem[key]
 
     def __setitem__(self, key, value):
         """To enable [] operator.
         """
-        self._v[key] = value
+        self._mem[key] = value
 
     def _converted_dtype(self, dtype):
         if dtype == numpy.float32:
@@ -272,16 +274,16 @@ class Vector(units.Pickleable):
         return None
 
     def _initialize(self, device):
-        if self._v is None or self.v_ is not None:
+        if self._mem is None or self.devmem is not None:
             return
         if device is not None:
             self.device = device
         if self.device is None:
             return
-        self._v = cl.realign_array(self._v, self.device.device_info.memalign,
+        self._mem = cl.realign_array(self._mem, self.device.device_info.memalign,
                                   numpy)
-        self.v_ = self.device.queue_.context.create_buffer(
-            cl.CL_MEM_READ_WRITE | cl.CL_MEM_USE_HOST_PTR, ravel(self._v))
+        self.devmem = self.device.queue_.context.create_buffer(
+            cl.CL_MEM_READ_WRITE | cl.CL_MEM_USE_HOST_PTR, ravel(self._mem))
 
     def initialize(self, device=None):
         with self.lock_:
@@ -299,10 +301,10 @@ class Vector(units.Pickleable):
                 self.device.device_info.version < 1.1999):
             # 'cause available only starting with 1.2
             flags = cl.CL_MAP_WRITE
-        ev, self.map_arr_ = self.device.queue_.map_buffer(self.v_, flags,
-                                                          self._v.nbytes)
+        ev, self.map_arr_ = self.device.queue_.map_buffer(self.devmem, flags,
+                                                          self._mem.nbytes)
         if (int(cl.ffi.cast("size_t", self.map_arr_)) !=
-            self._v.__array_interface__["data"][0]):
+            self._mem.__array_interface__["data"][0]):
             raise error.ErrOpenCL("map_buffer returned different pointer")
         del ev
         self.map_flags = flags
@@ -310,7 +312,7 @@ class Vector(units.Pickleable):
     def _unmap(self):
         if self.map_arr_ is None:
             return
-        ev = self.device.queue_.unmap_buffer(self.v_, self.map_arr_)
+        ev = self.device.queue_.unmap_buffer(self.devmem, self.map_arr_)
         ev.wait()
         self.map_arr_ = None
         self.map_flags = 0
@@ -340,7 +342,7 @@ class Vector(units.Pickleable):
         """
         self.lock_.acquire()
         self._unmap()
-        self.v_ = None
-        self._v = None
+        self.devmem = None
+        self._mem = None
         self.map_flags = 0
         self.lock_.release()
