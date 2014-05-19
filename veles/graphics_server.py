@@ -56,7 +56,8 @@ class GraphicsServer(Logger):
         thread_pool.register_on_shutdown(self.shutdown)
         parser = GraphicsServer.init_parser()
         args, _ = parser.parse_known_args()
-        self._debug_pickle = args.debug_graphics_pickle
+        self._debug_pickle = args.graphics_pickle_debug
+        print(self._debug_pickle)
         zmq_endpoints = [ZmqEndpoint("bind", "inproc://veles-plots"),
                          ZmqEndpoint("bind", "rndipc://veles-ipc-plots-:")]
         interfaces = []
@@ -85,7 +86,7 @@ class GraphicsServer(Logger):
     @staticmethod
     def init_parser(parser=None):
         parser = parser or argparse.ArgumentParser()
-        parser.add_argument("--debug-graphics-pickle", default=False,
+        parser.add_argument("--graphics-pickle-debug", default=False,
                             action="store_true",
                             help="Save plotter object trees during server "
                             "send.")
@@ -115,12 +116,14 @@ class GraphicsServer(Logger):
 
     def enqueue(self, obj):
         data = pickle.dumps(obj)
-        if self._debug_pickle:
+        if getattr(self, "_debug_pickle", False):
             import objgraph
             restored = pickle.loads(data)
             objgraph.show_refs(restored, too_many=40)
         self.debug("Broadcasting %d bytes" % len(data))
-        self.zmq_connection.send(data)
+        zmq_connection = getattr(self, "zmq_connection")
+        if zmq_connection is not None:
+            zmq_connection.send(data)
 
     def shutdown(self):
         self.debug("Shutting down")
