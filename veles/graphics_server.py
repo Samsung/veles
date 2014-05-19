@@ -57,7 +57,6 @@ class GraphicsServer(Logger):
         parser = GraphicsServer.init_parser()
         args, _ = parser.parse_known_args()
         self._debug_pickle = args.graphics_pickle_debug
-        print(self._debug_pickle)
         zmq_endpoints = [ZmqEndpoint("bind", "inproc://veles-plots"),
                          ZmqEndpoint("bind", "rndipc://veles-ipc-plots-:")]
         interfaces = []
