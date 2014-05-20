@@ -8,6 +8,7 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 import argparse
 from copy import copy
 import numpy
+import opencl4py
 import os
 import re
 from six.moves import cPickle as pickle
@@ -120,8 +121,14 @@ class OpenCLUnit(units.Unit):
         self._kernel_ = self.get_kernel(name)
 
     def execute_kernel(self, global_size, local_size, kernel=None):
-        return self.device.queue_.execute_kernel(kernel or self._kernel_,
-                                                 global_size, local_size)
+        try:
+            return self.device.queue_.execute_kernel(kernel or self._kernel_,
+                                                     global_size, local_size)
+        except opencl4py.CLRuntimeError:
+            self.error("execute_kernel(%s) has failed. global_size = %s, "
+                       "local_size = %s", (kernel or self._kernel_).name,
+                       str(global_size), str(local_size))
+            raise
 
     def set_arg(self, index, arg):
         if isinstance(arg, formats.Vector):
