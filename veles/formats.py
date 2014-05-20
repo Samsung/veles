@@ -141,8 +141,8 @@ def normalize_pointwise(a):
     IAdd[zs] = -1.0
     IAdd[zs] -= mins[zs]
 
-    logging.info("%f %f %f %f" % (IMul.min(), IMul.max(),
-                                  IAdd.min(), IAdd.max()))
+    logging.getLogger("Loader").debug("%f %f %f %f" % (IMul.min(), IMul.max(),
+                                                       IAdd.min(), IAdd.max()))
 
     return (IMul, IAdd)
 
