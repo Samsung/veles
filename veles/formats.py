@@ -170,6 +170,22 @@ def norm_image(a, yuv=False):
     return aa.astype(numpy.uint8)
 
 
+class NumDiff(object):
+    """Numeric differentiation helper.
+    """
+    def __init__(self):
+        self.h = 1.0e-8
+        self.points = (2.0 * self.h, self.h, -self.h, -2.0 * self.h)
+        self.coeffs = numpy.array([-1.0, 8.0, -8.0, 1.0],
+                                    dtype=numpy.float64)
+        self.divizor = 12.0 * self.h
+        self.errs = numpy.zeros_like(self.points)
+
+    @property
+    def derivative(self):
+        return ((self.errs * self.coeffs).sum() / self.divizor)
+
+
 class Vector(units.Pickleable):
     """Container class for numpy array backed by OpenCL buffer.
 
