@@ -20,16 +20,25 @@ from veles.network_common import NetworkAgent, StringLineReceiver
 class ZmqDealer(ZmqConnection):
     socketType = zmq.DEALER
 
-    def __init__(self, nid, host, *endpoints):
+    RECEIVERS = {
+        "GETTING_JOB":
+        lambda self, message: self.host.job_received(message[2]),
+        "WAIT":
+        lambda self, message: self.host.update_result_received(message[2])
+    }
+
+    def __init__(self, nid, host, *endpoints, ignore_invalid_states=False):
         super(ZmqDealer, self).__init__(endpoints)
         self.id = nid.encode()
         self.host = host
+        self.ignore_invalid_states = ignore_invalid_states
 
     def messageReceived(self, message):
-        if self.host.state.current == "GETTING_JOB":
-            self.host.job_received(message[2])
-        elif self.host.state.current == "WAIT":
-            self.host.update_result_received(message[2])
+        receiver = ZmqDealer.RECEIVERS.get(self.host.state.current)
+        if receiver is None and not self.ignore_invalid_states:
+            raise RuntimeError("Received a message in an invalid state %s" %
+                               self.host.state.current)
+        receiver(self, message)
 
     def request(self, command, message=b''):
         self.send([self.id, b''] + [command.encode(), message])
