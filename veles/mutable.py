@@ -162,16 +162,29 @@ class LinkableAttribute(object):
         # updating the attribute value since the object already exists and thus
         # we are ignoring __init__()
         setattr(*args[:3])
-        if len(args) > 3:
-            instance.duplex = args[3]
+        LinkableAttribute._set_option(instance, 3, "duplex", *args, **kwargs)
+        LinkableAttribute._set_option(instance, 4, "assignment_guard",
+                                      *args, **kwargs)
 
-    def __init__(self, obj, name, value, duplex=False):
+    @staticmethod
+    def _set_option(instance, index, name, *args, **kwargs):
+        """Called from __new__, this method is a convenience ctor option setter
+        """
+        if len(args) > index:
+            setattr(instance, name, args[index])
+        else:
+            value = kwargs.get(name)
+            if value is not None:
+                setattr(instance, name, value)
+
+    def __init__(self, obj, name, value, duplex=False, assignment_guard=True):
         if obj is None:
             raise UnboundLocalError(
                 self.__class__,
                 "can not be created without an instance to bind: instance=",
                 obj, "name=", name, "value=", value)
         self.duplex = duplex
+        self.assignment_guard = assignment_guard
         # getting here means that passed the instance check in  __new__
         # real name of the attribute
         self.real_attribute_name = '__' + name
@@ -202,6 +215,11 @@ class LinkableAttribute(object):
                 pointer = getattr(obj, self.real_attribute_name)
                 setattr(pointer[0], pointer[1], value)
                 return
+            elif self.assignment_guard:
+                raise RuntimeError("Attempted to set the value of linked "
+                                   "property '%s' in object %s and duplex is "
+                                   "switched off." % (
+                                   self.exposed_attribute_name, str(obj)))
             else:
                 # play the trick with getattr(*pointer) in __get__
                 value = (None, '', value)

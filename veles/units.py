@@ -540,17 +540,21 @@ class Unit(Distributable):
                 with dst._gate_lock_:
                     dst.link_from(last)
 
-    def link_attrs(self, other, *args):
+    def link_attrs(self, other, *args, two_way=False):
         """
         Assigns attributes from other to self, respecting whether each is
         mutable or immutable. In the latter case, an attribute link is created.
+
+        Parameters:
+            two_way: in case of an attribute link with an immutable field,
+                     allows/disables editing it's value in this object.
         """
         for arg in args:
             if (isinstance(arg, tuple) and len(arg) == 2 and
                     isinstance(arg[0], str) and isinstance(arg[1], str)):
-                self._link_attr(other, *arg)
+                self._link_attr(other, *arg, two_way=two_way)
             elif isinstance(arg, str):
-                self._link_attr(other, arg, arg)
+                self._link_attr(other, arg, arg, two_way)
             else:
                 raise TypeError(repr(arg) + " is not a valid attributes pair")
 
@@ -574,12 +578,12 @@ class Unit(Distributable):
             res += "\t%s" % repr(link)
         print(res)
 
-    def _link_attr(self, other, mine, yours):
+    def _link_attr(self, other, mine, yours, two_way):
         attr = getattr(other, yours)
         if (isinstance(attr, tuple) or isinstance(attr, int) or
                 isinstance(attr, float) or isinstance(attr, complex) or
                 isinstance(attr, bool) or isinstance(attr, str)):
-            LinkableAttribute(self, mine, (other, yours))
+            LinkableAttribute(self, mine, (other, yours), duplex=two_way)
         else:
             setattr(self, mine, attr)
 
