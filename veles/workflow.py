@@ -179,8 +179,10 @@ class Workflow(Unit):
 
     def generate_data_for_master(self):
         data = []
+        self.debug("Generating the update for master...")
         for unit in self.units:
             data.append(unit.generate_data_for_master())
+        self.debug("Done with generating the update for master")
         return data
 
     def generate_data_for_slave(self, slave):
@@ -191,23 +193,29 @@ class Workflow(Unit):
         if not has_data:
             # Try again later
             return False
+        self.debug("Generating a job for slave %s", slave.id)
         for unit in self.units:
             data.append(unit.generate_data_for_slave(slave))
+        self.debug("Done with generating a job for slave %s", slave.id)
         return data
 
     def apply_data_from_master(self, data):
         if not isinstance(data, list):
             raise ValueError("data must be a list")
+        self.debug("Applying the job from master")
         for i in range(0, len(data)):
             if data[i] is not None:
                 self.units[i].apply_data_from_master(data[i])
+        self.debug("Done with applying the job from master")
 
     def apply_data_from_slave(self, data, slave):
         if not isinstance(data, list):
             raise ValueError("data must be a list")
+        self.debug("Applying the update from slave %s", slave.id)
         for i in range(len(self.units)):
             if data[i] is not None:
                 self.units[i].apply_data_from_slave(data[i], slave)
+        self.debug("Done with applying the update from slave %s", slave.id)
 
     def drop_slave(self, slave):
         for i in range(len(self.units)):
