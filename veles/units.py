@@ -583,7 +583,7 @@ class Unit(Distributable):
         if (isinstance(attr, tuple) or isinstance(attr, int) or
                 isinstance(attr, float) or isinstance(attr, complex) or
                 isinstance(attr, bool) or isinstance(attr, str)):
-            LinkableAttribute(self, mine, (other, yours), duplex=two_way)
+            LinkableAttribute(self, mine, (other, yours), two_way=two_way)
         else:
             setattr(self, mine, attr)
 

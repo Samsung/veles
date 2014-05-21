@@ -162,7 +162,7 @@ class LinkableAttribute(object):
         # updating the attribute value since the object already exists and thus
         # we are ignoring __init__()
         setattr(*args[:3])
-        LinkableAttribute._set_option(instance, 3, "duplex", *args, **kwargs)
+        LinkableAttribute._set_option(instance, 3, "two_way", *args, **kwargs)
         LinkableAttribute._set_option(instance, 4, "assignment_guard",
                                       *args, **kwargs)
 
@@ -177,13 +177,13 @@ class LinkableAttribute(object):
             if value is not None:
                 setattr(instance, name, value)
 
-    def __init__(self, obj, name, value, duplex=False, assignment_guard=True):
+    def __init__(self, obj, name, value, two_way=False, assignment_guard=True):
         if obj is None:
             raise UnboundLocalError(
                 self.__class__,
                 "can not be created without an instance to bind: instance=",
                 obj, "name=", name, "value=", value)
-        self.duplex = duplex
+        self.two_way = two_way
         self.assignment_guard = assignment_guard
         # getting here means that passed the instance check in  __new__
         # real name of the attribute
@@ -210,14 +210,14 @@ class LinkableAttribute(object):
     def __set__(self, obj, value):
         if not (isinstance(value, tuple) and len(value) == 2 and
                 isinstance(value[0], object) and isinstance(value[1], str)):
-            if self.duplex:
+            if self.two_way:
                 # update the referenced attribute value and return
                 pointer = getattr(obj, self.real_attribute_name)
                 setattr(pointer[0], pointer[1], value)
                 return
             elif self.assignment_guard:
                 raise RuntimeError("Attempted to set the value of linked "
-                                   "property '%s' in object %s and duplex is "
+                                   "property '%s' in object %s and two_way is "
                                    "switched off." % (
                                    self.exposed_attribute_name, str(obj)))
             else:
@@ -233,8 +233,8 @@ class LinkableAttribute(object):
         obj.__delattr__(self.real_attribute_name)
 
 
-def link(obj_dst, name_dst, obj_src, name_src, duplex=False):
+def link(obj_dst, name_dst, obj_src, name_src, two_way=False):
     """Establishes a link from obj_src's "name_src" attribute to obj_dst's
     "name_dst" one using LinkableAttribute.
     """
-    LinkableAttribute(obj_dst, name_dst, (obj_src, name_src), duplex)
+    LinkableAttribute(obj_dst, name_dst, (obj_src, name_src), two_way)
