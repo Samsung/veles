@@ -22,10 +22,18 @@ from veles.network_common import NetworkAgent, StringLineReceiver
 class ZmqRouter(ZmqConnection):
     socketType = zmq.ROUTER
 
-    def __init__(self, host, *endpoints):
+    COMMANDS = {
+        b'job':
+        lambda protocol, payload: protocol.jobRequestReceived(),
+        b'update':
+        lambda protocol, payload: protocol.updateReceived(payload[1])
+    }
+
+    def __init__(self, host, *endpoints, ignore_unknown_commands=False):
         super(ZmqRouter, self).__init__(endpoints)
         self.host = host
         self.routing = {}
+        self.ignore_unknown_commands = ignore_unknown_commands
 
     def messageReceived(self, message):
         i = message.index(b'')
@@ -38,11 +46,11 @@ class ZmqRouter(ZmqConnection):
             self.host.error("ZeroMQ sent unknown node ID %s", node_id)
             self.reply(node_id, bytes(False))
             return
-        command = payload[0]
-        if command == b'job':
-            protocol.jobRequestReceived()
-        elif command == b'update':
-            protocol.updateReceived(payload[1])
+        command = ZmqRouter.COMMANDS.get(payload[0])
+        if command is None and not self.ignore_unknown_commands:
+            raise RuntimeError("Received an unknown command %s",
+                               command.decode())
+        command(protocol, payload)
 
     def reply(self, node_id, message):
         self.send(self.routing.pop(node_id) + [node_id.encode(), b'',
