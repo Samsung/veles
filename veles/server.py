@@ -29,8 +29,9 @@ class ZmqRouter(ZmqConnection):
         lambda protocol, payload: protocol.updateReceived(payload[1])
     }
 
-    def __init__(self, host, *endpoints, ignore_unknown_commands=False):
+    def __init__(self, host, *endpoints, **kwargs):
         super(ZmqRouter, self).__init__(endpoints)
+        ignore_unknown_commands = kwargs.get("ignore_unknown_commands", False)
         self.host = host
         self.routing = {}
         self.ignore_unknown_commands = ignore_unknown_commands

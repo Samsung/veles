@@ -540,7 +540,7 @@ class Unit(Distributable):
                 with dst._gate_lock_:
                     dst.link_from(last)
 
-    def link_attrs(self, other, *args, two_way=False):
+    def link_attrs(self, other, *args, **kwargs):
         """
         Assigns attributes from other to self, respecting whether each is
         mutable or immutable. In the latter case, an attribute link is created.
@@ -549,6 +549,7 @@ class Unit(Distributable):
             two_way: in case of an attribute link with an immutable field,
                      allows/disables editing it's value in this object.
         """
+        two_way = kwargs.get("two_way", False)
         for arg in args:
             if (isinstance(arg, tuple) and len(arg) == 2 and
                     isinstance(arg[0], str) and isinstance(arg[1], str)):

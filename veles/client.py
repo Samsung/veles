@@ -27,8 +27,9 @@ class ZmqDealer(ZmqConnection):
         lambda self, message: self.host.update_result_received(message[2])
     }
 
-    def __init__(self, nid, host, *endpoints, ignore_invalid_states=False):
+    def __init__(self, nid, host, *endpoints, **kwargs):
         super(ZmqDealer, self).__init__(endpoints)
+        ignore_invalid_states = kwargs.get("ignore_invalid_states", False)
         self.id = nid.encode()
         self.host = host
         self.ignore_invalid_states = ignore_invalid_states
