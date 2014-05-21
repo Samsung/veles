@@ -473,9 +473,9 @@ class Histogram(plotter.Plotter):
         kwargs["name"] = name
         super(Histogram, self).__init__(workflow, **kwargs)
         self.gl_min = 0
-        self.gl_max = 0
-        self.x = None
-        self.y = None  # formats.Vector()
+        self.gl_max = 1
+        self.x = []
+        self.y = []
         self.pp = None
         self.show_figure = self.nothing
 
@@ -494,6 +494,7 @@ class Histogram(plotter.Plotter):
             raise error.ErrBadFormat(
                 "Shape of X %s not equal shape of Y %s !" %
                 (len(self.x), len(self.y)))
+
         ymax = numpy.max(self.y) * 1.3
         ymin = numpy.min(self.y)
         xmax = numpy.max(self.x)
