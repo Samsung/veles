@@ -7,6 +7,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 import numpy
 
+import veles.error as error
 import veles.formats as formats
 import veles.plotter as plotter
 
@@ -464,25 +465,17 @@ class Plot(plotter.Plotter):
 
 
 class Histogram(plotter.Plotter):
-    """Plotter for drawing histogram.
-
-    Must be assigned before initialize():
-        mse
-
-    Updates after run():
-
-    Creates within initialize():
-
+    """
+    Plotter for drawing histogram.
     """
     def __init__(self, workflow, **kwargs):
         name = kwargs.get("name", "Histogram")
-        n_bars = kwargs.get("n_bars", 20)
         kwargs["name"] = name
-        kwargs["n_bars"] = n_bars
         super(Histogram, self).__init__(workflow, **kwargs)
-        self.n_bars = n_bars
+        self.gl_min = 0
+        self.gl_max = 0
         self.x = None
-        self.input = None  # formats.Vector()
+        self.y = None  # formats.Vector()
         self.pp = None
         self.show_figure = self.nothing
 
@@ -497,13 +490,17 @@ class Histogram(plotter.Plotter):
         ax.patch.set_facecolor('#ffe6ca')
         # ax.patch.set_alpha(0.45)
 
-        ymax = self.input.mem.max() * 1.3
-        ymin = self.input.mem.min()
-        xmax = self.x.mem.max()
-        xmin = self.x.mem.min()
-        nbars = self.n_bars[0]
+        if len(self.x) != len(self.y):
+            raise error.ErrBadFormat(
+                "Shape of X %s not equal shape of Y %s !" %
+                (len(self.x), len(self.y)))
+        ymax = numpy.max(self.y) * 1.3
+        ymin = numpy.min(self.y)
+        xmax = numpy.max(self.x)
+        xmin = numpy.min(self.x)
+        nbars = len(self.x)
 
-        width = ((xmax - xmin) / self.n_bars) * 0.8
+        width = ((xmax - xmin) / nbars) * 0.8
         t0 = 0.65 * ymax
         l1 = width * 0.5
 
@@ -535,17 +532,17 @@ class Histogram(plotter.Plotter):
         width = ((xmax - xmin) / nbars) * 0.8
         N = numpy.linspace(xmin, xmax, num=nbars,
                            endpoint=True)
-        ax.bar(N, self.input, color='#ffa0ef', width=width,
+        ax.bar(N, self.y, color='#ffa0ef', width=width,
                edgecolor='lavender')
         # , edgecolor='red')
         # D889B8
         # B96A9A
-        ax.set_xlabel('Errors', fontsize=20)
-        ax.set_ylabel('Input Data', fontsize=20)
-        ax.set_title(self.name.replace("Histogram ", ""))
-        ax.axis([xmin, xmax + ((xmax - xmin) / self.n_bars), ymin, ymax])
+        ax.set_xlabel("X min = %.6g, max = %.6g" %
+                (self.gl_min, self.gl_max), fontsize=20)
+        ax.set_ylabel('Y', fontsize=20)
+        ax.axis([xmin, xmax + ((xmax - xmin) / nbars), ymin, ymax])
         ax.grid(True)
-        leg = ax.legend((self.name.replace("Histogram ", "")))
+        leg = ax.legend("Y ")
                         # 'upper center')
         frame = leg.get_frame()
         frame.set_facecolor('#E8D6BB')
@@ -554,7 +551,7 @@ class Histogram(plotter.Plotter):
         for l in leg.get_lines():
             l.set_linewidth(1.5)
 
-        for x, y in zip(N, self.input):
+        for x, y in zip(N, self.y):
             if y > koef - l2 * 0.75:
                 self.pp.text(x + l1, y - l2 * 0.75, '%.0f' % y, ha='center',
                              va='bottom', fontsize=l3, rotation=90)
