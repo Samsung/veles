@@ -64,7 +64,7 @@ class Test(unittest.TestCase):
         a = A()
         a.number = 77
         b = B()
-        LinkableAttribute(b, "number", (a, "number"))
+        LinkableAttribute(b, "number", (a, "number"), assignment_guard=False)
         # link(b, "number", a, "number")
         self.assertEqual(77, a.number)
         self.assertEqual(77, b.number)
