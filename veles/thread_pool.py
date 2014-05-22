@@ -118,17 +118,23 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                         else " It was not killed due to the lack of _stop in "
                         " Thread class of the current Python interpreter.")
         ThreadPool.pools.remove(self)
+        if not len(ThreadPool.pools):
+            sys.exit = ThreadPool.sysexit_initial
         self.debug("I am destroyed")
         self.shutting_down = False
 
     @staticmethod
     def thread_can_be_forced_to_stop(thread):
-        return hasattr(thread, "_stop") and callable(thread._stop)
+        return hasattr(thread, "_stop") and callable(thread._stop) and \
+            thread != threading.main_thread() and thread.is_alive()
 
     @staticmethod
     def force_thread_to_stop(thread):
         if ThreadPool.thread_can_be_forced_to_stop(thread):
-            thread._stop()
+            try:
+                thread._stop()
+            except Exception as ex:
+                print("Failed to kill %s" % str(thread), ex)
 
     @staticmethod
     def shutdown_pools(execute_remaining=True, force=False, timeout=0.25):
@@ -145,7 +151,6 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         Terminates the running program safely.
         """
         ThreadPool.shutdown_pools()
-        sys.exit = ThreadPool.sysexit_initial
         ThreadPool.debug_deadlocks()
         sys.exit(retcode)
 
