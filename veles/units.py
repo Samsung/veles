@@ -47,7 +47,6 @@ class Pickleable(logger.Logger):
     def __getstate__(self):
         """Selects the attributes to pickle.
         """
-
         state = {}
         linked_values = {}
         for k, v in self.__dict__.items():
