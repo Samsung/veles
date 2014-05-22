@@ -22,8 +22,10 @@ class CalculatorTester(Unit):
         self.b = None
         self.c = None
 
-    def run(self):
+    def run1(self):
         self.c = self.a + self.b
+
+    def run2(self):
         self.a = self.b ** 2
 
 
@@ -40,12 +42,13 @@ class Test(unittest.TestCase):
         u3.C = 1
         calc.link_attrs(u1, ("a", "A"))
         calc.link_attrs(u2, ("b", "B"))
-        calc.link_attrs(u3, ("c", "C"))
-        calc.run()
+        calc.link_attrs(u3, ("c", "C"), two_way=True)
+        calc.run1()
+        self.assertRaises(RuntimeError, calc.run2)
         self.assertEqual(56, u1.A)
         self.assertEqual(-4, u2.B)
-        self.assertEqual(1, u3.C)
-        self.assertEqual(16, calc.a)
+        self.assertEqual(52, u3.C)
+        self.assertEqual(56, calc.a)
         self.assertEqual(-4, calc.b)
         self.assertEqual(52, calc.c)
 
