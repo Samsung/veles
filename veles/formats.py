@@ -177,7 +177,7 @@ class NumDiff(object):
         self.h = 1.0e-8
         self.points = (2.0 * self.h, self.h, -self.h, -2.0 * self.h)
         self.coeffs = numpy.array([-1.0, 8.0, -8.0, 1.0],
-                                    dtype=numpy.float64)
+                                  dtype=numpy.float64)
         self.divizor = 12.0 * self.h
         self.errs = numpy.zeros_like(self.points)
 
@@ -296,8 +296,9 @@ class Vector(units.Pickleable):
             self.device = device
         if self.device is None:
             return
-        self._mem = cl.realign_array(self._mem, self.device.device_info.memalign,
-                                  numpy)
+        self._mem = cl.realign_array(self._mem,
+                                     self.device.device_info.memalign,
+                                     numpy)
         self.devmem = self.device.queue_.context.create_buffer(
             cl.CL_MEM_READ_WRITE | cl.CL_MEM_USE_HOST_PTR, ravel(self._mem))
 
@@ -320,7 +321,7 @@ class Vector(units.Pickleable):
         ev, self.map_arr_ = self.device.queue_.map_buffer(self.devmem, flags,
                                                           self._mem.nbytes)
         if (int(cl.ffi.cast("size_t", self.map_arr_)) !=
-            self._mem.__array_interface__["data"][0]):
+                self._mem.__array_interface__["data"][0]):
             raise error.ErrOpenCL("map_buffer returned different pointer")
         del ev
         self.map_flags = flags

@@ -185,7 +185,7 @@ class Device(units.Pickleable):
             self.device_info.dt.update(device_info.dt)
             self.device_info.min_dt.update(device_info.min_dt)
             if (self.queue_.device.vendor.find("Intel") >= 0 and
-                self.queue_.device.type == cl.CL_DEVICE_TYPE_CPU):
+                    self.queue_.device.type == cl.CL_DEVICE_TYPE_CPU):
                 sz = 16
                 self.warning("Workaround: will set BLOCK_SIZE to %d "
                              "because of the Intel CPU device", sz)
@@ -325,7 +325,7 @@ class Device(units.Pickleable):
 
         self.a = formats.Vector()
         self.a.mem = numpy.zeros([self.A_HEIGHT, self.AB_WIDTH],
-                               dtype=opencl_types.dtypes[dtype])
+                                 dtype=opencl_types.dtypes[dtype])
         a_rnd = cc.get("a_rnd")
         if a_rnd is None:
             a_rnd = {}
@@ -338,7 +338,7 @@ class Device(units.Pickleable):
 
         self.b = formats.Vector()
         self.b.mem = numpy.zeros([self.B_HEIGHT, self.AB_WIDTH],
-                               dtype=opencl_types.dtypes[dtype])
+                                 dtype=opencl_types.dtypes[dtype])
         b_rnd = cc.get("b_rnd")
         if b_rnd is None:
             b_rnd = {}
@@ -351,7 +351,7 @@ class Device(units.Pickleable):
 
         self.bias = formats.Vector()
         self.bias.mem = numpy.zeros(self.B_HEIGHT,
-                                  dtype=opencl_types.dtypes[dtype])
+                                    dtype=opencl_types.dtypes[dtype])
         bias_rnd = cc.get("bias_rnd")
         if bias_rnd is None:
             bias_rnd = {}
@@ -364,7 +364,7 @@ class Device(units.Pickleable):
 
         self.c = formats.Vector()
         self.c.mem = numpy.zeros([self.A_HEIGHT, self.B_HEIGHT],
-                               dtype=opencl_types.dtypes[dtype])
+                                 dtype=opencl_types.dtypes[dtype])
 
     def _cleanup_after_test(self):
         del(self.c)
