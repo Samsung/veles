@@ -218,8 +218,8 @@ class LinkableAttribute(object):
             elif self.assignment_guard:
                 raise RuntimeError("Attempted to set the value of linked "
                                    "property '%s' in object %s and two_way is "
-                                   "switched off." % (
-                                   self.exposed_attribute_name, str(obj)))
+                                   "switched off." %
+                                   (self.exposed_attribute_name, str(obj)))
             else:
                 # play the trick with getattr(*pointer) in __get__
                 value = (None, '', value)

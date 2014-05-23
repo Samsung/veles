@@ -37,7 +37,7 @@ class TestRandom(unittest.TestCase):
         states.mem = self.states.copy()
         n_rounds = numpy.array([self.n_rounds], dtype=numpy.int32)
         output.mem = numpy.zeros(states.mem.shape[0] * 128 // 8 * n_rounds[0],
-                               dtype=numpy.uint64)
+                                 dtype=numpy.uint64)
 
         states.initialize(self.device)
         output.initialize(self.device)

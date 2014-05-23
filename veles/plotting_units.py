@@ -540,7 +540,7 @@ class Histogram(plotter.Plotter):
         # D889B8
         # B96A9A
         ax.set_xlabel("X min = %.6g, max = %.6g" %
-                (self.gl_min, self.gl_max), fontsize=20)
+                      (self.gl_min, self.gl_max), fontsize=20)
         ax.set_ylabel('Y', fontsize=20)
         ax.axis([xmin, xmax + ((xmax - xmin) / nbars), ymin, ymax])
         ax.grid(True)
