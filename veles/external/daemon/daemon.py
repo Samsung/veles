@@ -19,6 +19,7 @@
 import atexit
 import copy
 import errno
+import lockfile
 import os
 import signal
 import socket
@@ -346,6 +347,8 @@ class DaemonContext(object):
         redirect_stream(sys.stderr, self.stderr)
 
         if self.pidfile is not None:
+            if isinstance(self.pidfile, str):
+                self.pidfile = lockfile.FileLock(self.pidfile)
             self.pidfile.__enter__()
 
         self._is_open = True
@@ -376,10 +379,9 @@ class DaemonContext(object):
             """
         if not self.is_open:
             return
-
         if self.pidfile is not None:
-            # Follow the interface for telling a context manager to exit,
-            # <URL:http://docs.python.org/library/stdtypes.html#typecontextmanager>.
+            # Follow the interface for telling a context manager to exit, see
+            # http://docs.python.org/library/stdtypes.html#typecontextmanager
             self.pidfile.__exit__(None, None, None)
 
         self._is_open = False
