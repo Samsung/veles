@@ -10,7 +10,9 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 import argparse
 import logging
 import multiprocessing as mp
+import os
 import socket
+import sys
 import threading
 import time
 import tornado.escape
@@ -21,6 +23,10 @@ import uuid
 from veles.config import root
 import veles.external.daemon as daemon
 import veles.logger as logger
+
+
+if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
+    PermissionError = IOError  # pylint: disable=W0622
 
 
 debug_mode = False
@@ -201,8 +207,7 @@ class WebStatus(logger.Logger):
 
 
 def main():
-    ws = WebStatus()
-    ws.run()
+    WebStatus().run()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -212,7 +217,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     debug_mode = args.debug
     if not debug_mode:
-        with daemon.DaemonContext():
+        pidfile = root.common.web_status_pidfile
+        if not os.access(os.path.dirname(pidfile), os.W_OK):
+            raise PermissionError(pidfile)
+        print("Daemonizing, PID will be in ", pidfile, ".lock")
+        with daemon.DaemonContext(pidfile=pidfile):
             logger.Logger.setup(level=logging.INFO)
             logger.Logger.redirect_all_logging_to_file(
                 root.common.web_status_log_file, backups=9)
