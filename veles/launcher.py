@@ -15,14 +15,15 @@ import getpass
 import json
 import os
 import paramiko
+from six import BytesIO
 import socket
 import sys
 import threading
 import time
-from tornado.ioloop import IOLoop
-from tornado.httpclient import AsyncHTTPClient
-from twisted.internet import reactor, threads, task
+from twisted.internet import reactor, threads
 from twisted.web.html import escape
+from twisted.web.client import Agent, HTTPConnectionPool, FileBodyProducer
+from twisted.web.http_headers import Headers
 import uuid
 
 import veles.client as client
@@ -105,6 +106,9 @@ class Launcher(logger.Logger):
         self._initialized = False
         self._running = False
         self._start_time = None
+        self._notify_update_interval = kwargs.get(
+            "status_update_interval",
+            root.common.web_status_notification_interval)
 
     def __getstate__(self):
         return {}
@@ -261,10 +265,10 @@ class Launcher(logger.Logger):
             self._agent = client.Client(self.args.master_address, workflow)
         else:
             if self.reports_web_status:
-                self.tornado_ioloop_thread = threading.Thread(
-                    target=IOLoop.instance().start)
-                self._notify_task = task.LoopingCall(self._notify_status)
-                self._notify_agent = AsyncHTTPClient()
+                timeout = self._notify_update_interval / 2
+                self._web_status_agent = Agent(
+                    reactor, pool=HTTPConnectionPool(reactor),
+                    connectTimeout=timeout)
                 # Launch the status server if it's not been running yet
                 self._launch_status()
             if workflow.plotters_are_enabled:
@@ -327,9 +331,8 @@ class Launcher(logger.Logger):
                 write_on_disk=bool(self.args.workflow_graph))
         if self.reports_web_status:
             self.start_time = time.time()
-            self.tornado_ioloop_thread.start()
-            self._notify_task.start(
-                root.common.web_status_notification_interval, now=False)
+            reactor.callLater(self._notify_update_interval,
+                              self._notify_status)
         if not self.is_slave:
             threads.deferToThreadPool(reactor, self.workflow.thread_pool,
                                       self.workflow.run)
@@ -338,13 +341,6 @@ class Launcher(logger.Logger):
     def _on_stop(self):
         self._initialized = False
         self._running = False
-        # Kill the Web status Server notification task and thread
-        if self.reports_web_status:
-            if self._notify_task.running:
-                self._notify_task.stop()
-            if self.tornado_ioloop_thread.is_alive():
-                IOLoop.instance().stop()
-                self.tornado_ioloop_thread.join()
         # Wait for the own graphics client to terminate normally
         if (self.workflow.plotters_are_enabled and
                 self.graphics_client is not None):
@@ -459,15 +455,13 @@ class Launcher(logger.Logger):
         self.info("Found out the WebAgg port: %d", port)
         self._webagg_port = port
 
-    def _handle_notify_request(self, response):
-        if response.error:
-            self.warning(
-                "Failed to upload the status update to %s:%s",
-                root.common.web_status_host, root.common.web_status_port)
-        else:
-            self.debug("Successfully updated the status")
+    def _on_notify_status_error(self, error):
+        self.warning("Failed to upload the status: %s", str(error))
+        reactor.callLater(self._notify_update_interval, self._notify_status)
 
-    def _notify_status(self):
+    def _notify_status(self, response=None):
+        if not self._running:
+            return
         mins, secs = divmod(time.time() - self.start_time, 60)
         hours, mins = divmod(mins, 60)
         ret = {'id': self.id,
@@ -484,13 +478,12 @@ class Launcher(logger.Logger):
                'custom_plots': "<br/>".join(self.plots_endpoints),
                'description':
                "<br />".join(escape(self.workflow.__doc__).split("\n"))}
-        timeout = root.common.web_status_notification_interval / 2
-        self._notify_agent.fetch("http://%s:%d/%s" %
-                                 (root.common.web_status_host,
-                                  root.common.web_status_port,
-                                  root.common.web_status_update),
-                                 self._handle_notify_request,
-                                 method='POST', headers=None,
-                                 connect_timeout=timeout,
-                                 request_timeout=timeout,
-                                 body=json.dumps(ret))
+        url = "http://%s:%d/%s" % (root.common.web_status_host,
+                                   root.common.web_status_port,
+                                   root.common.web_status_update)
+        headers = Headers({b'User-Agent': [b'twisted']})
+        body = FileBodyProducer(BytesIO(json.dumps(ret).encode('charmap')))
+        d = self._web_status_agent.request(
+            b'POST', url.encode('ascii'), headers=headers, bodyProducer=body)
+        d.addCallback(self._notify_status)
+        d.addErrback(self._on_notify_status_error)
