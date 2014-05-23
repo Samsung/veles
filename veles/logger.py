@@ -7,6 +7,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 from copy import copy
 import logging.handlers
+import os
 from pymongo import MongoClient
 import re
 import sys
@@ -97,11 +98,9 @@ class Logger(object):
         logging.info("Saving logs to %s", file_name)
         if not sys.stdout.isatty():
             logging.getLogger().handlers[0] = handler
-            sys.stdout = open(file_name, 'w')
-            sys.stderr = sys.stdout
-            logging.info("Continuing to log here")
-        else:
-            logging.getLogger().addFilter(handler)
+            sys.stderr = open("%s.stderr%s" % os.path.splitext(file_name), 'w')
+        logging.getLogger().addFilter(handler)
+        logging.info("Continuing to log in %s", file_name)
 
     @staticmethod
     def duplicate_all_logging_to_mongo(addr, docid):
