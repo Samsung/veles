@@ -482,7 +482,7 @@ def change_working_directory(directory):
         """
     try:
         os.chdir(directory)
-    except Exception as exc:
+    except:
         error = DaemonOSEnvironmentError(
             "Unable to change working directory (%(exc)s)"
             % vars())
@@ -500,7 +500,7 @@ def change_root_directory(directory):
     try:
         os.chdir(directory)
         os.chroot(directory)
-    except Exception as exc:
+    except:
         error = DaemonOSEnvironmentError(
             "Unable to change root directory (%(exc)s)"
             % vars())
@@ -512,7 +512,7 @@ def change_file_creation_mask(mask):
         """
     try:
         os.umask(mask)
-    except Exception as exc:
+    except:
         error = DaemonOSEnvironmentError(
             "Unable to change file creation mask (%(exc)s)"
             % vars())
@@ -530,7 +530,7 @@ def change_process_owner(uid, gid):
     try:
         os.setgid(gid)
         os.setuid(uid)
-    except Exception as exc:
+    except:
         error = DaemonOSEnvironmentError(
             "Unable to change file creation mask (%(exc)s)"
             % vars())
@@ -550,8 +550,8 @@ def prevent_core_dump():
     try:
         # Ensure the resource limit exists on this platform, by requesting
         # its current value
-        core_limit_prev = resource.getrlimit(core_resource)
-    except ValueError as exc:
+        resource.getrlimit(core_resource)
+    except ValueError:
         error = DaemonOSEnvironmentError(
             "System does not support RLIMIT_CORE resource limit (%(exc)s)"
             % vars())
@@ -571,7 +571,7 @@ def detach_process_context():
         Reference: “Advanced Programming in the Unix Environment”,
         section 13.3, by W. Richard Stevens, published 1993 by
         Addison-Wesley.
-    
+
         """
 
     def fork_then_exit_parent(error_message):
@@ -585,9 +585,7 @@ def detach_process_context():
             pid = os.fork()
             if pid > 0:
                 os._exit(0)
-        except OSError as exc:
-            exc_errno = exc.errno
-            exc_strerror = exc.strerror
+        except OSError:
             error = DaemonProcessDetachError(
                 "%(error_message)s: [%(exc_errno)d] %(exc_strerror)s" % vars())
             raise error
@@ -602,7 +600,7 @@ def is_process_started_by_init():
 
         The `init` process has the process ID of 1; if that is our
         parent process ID, return ``True``, otherwise ``False``.
-    
+
         """
     result = False
 
@@ -625,8 +623,7 @@ def is_socket(fd):
     file_socket = socket.fromfd(fd, socket.AF_INET, socket.SOCK_RAW)
 
     try:
-        socket_type = file_socket.getsockopt(
-            socket.SOL_SOCKET, socket.SO_TYPE)
+        file_socket.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
     except socket.error as exc:
         exc_errno = exc.args[0]
         if exc_errno == errno.ENOTSOCK:
@@ -649,7 +646,6 @@ def is_process_started_by_superserver():
         attaches it to the standard streams of the child process. If
         that is the case for this process, return ``True``, otherwise
         ``False``.
-    
         """
     result = False
 
@@ -700,6 +696,7 @@ def close_file_descriptor_if_open(fd):
 
 
 MAXFD = 2048
+
 
 def get_maximum_file_descriptors():
     """ Return the maximum number of open file descriptors for this process.
