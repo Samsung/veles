@@ -5,6 +5,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
+from __future__ import division
 import numpy
 
 import veles.error as error
