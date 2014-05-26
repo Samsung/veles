@@ -12,7 +12,7 @@ import threading
 import opencl4py as cl
 
 import veles.error as error
-import veles.units as units
+from veles.distributable import Pickleable
 
 
 def roundup(num, align):
@@ -186,7 +186,7 @@ class NumDiff(object):
         return (self.errs * self.coeffs).sum() / self.divizor
 
 
-class Vector(units.Pickleable):
+class Vector(Pickleable):
     """Container class for numpy array backed by OpenCL buffer.
 
     Attributes:

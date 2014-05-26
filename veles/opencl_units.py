@@ -16,15 +16,31 @@ from six import BytesIO
 from six import PY3
 import tarfile
 import time
+from zope.interface import implementer, Interface
+from zope.interface.verify import verifyObject
 
 from veles.config import root
 import veles.formats as formats
 import veles.opencl_types as opencl_types
-import veles.units as units
-import veles.workflow
+from veles.units import Unit, IUnit
+from veles.workflow import Workflow
 
 
-class OpenCLUnit(units.Unit):
+class IOpenCLUnit(Interface):
+    """Requires cpu and ocl run() methods for OpenCLUnit.
+    """
+
+    def cpu_run():
+        """Run on CPU.
+        """
+
+    def ocl_run():
+        """Run on GPU/any OpenCL capable device.
+        """
+
+
+@implementer(IUnit)
+class OpenCLUnit(Unit):
     """Unit that operates using OpenCL.
 
     Attributes:
@@ -35,6 +51,7 @@ class OpenCLUnit(units.Unit):
     """
     def __init__(self, workflow, **kwargs):
         super(OpenCLUnit, self).__init__(workflow, **kwargs)
+        self.verify_interface(IOpenCLUnit)
         self.device = None
         self._cache = kwargs.get("cache", True)
 
@@ -56,7 +73,6 @@ class OpenCLUnit(units.Unit):
         self._cache = value
 
     def initialize(self, device, **kwargs):
-        super(OpenCLUnit, self).initialize(device=device, **kwargs)
         self.device = device
 
     def run(self):
@@ -64,16 +80,6 @@ class OpenCLUnit(units.Unit):
             self.ocl_run()
         else:
             self.cpu_run()
-
-    def cpu_run(self):
-        """Run on CPU only.
-        """
-        return super(OpenCLUnit, self).run()
-
-    def ocl_run(self):
-        """Run on GPU/any OpenCL capable device.
-        """
-        return self.cpu_run()
 
     @staticmethod
     def init_parser(parser=None):
@@ -254,6 +260,7 @@ class OpenCLUnit(units.Unit):
             tar.addfile(ti, fileobj=binaries_io)
 
 
+@implementer(IOpenCLUnit)
 class OpenCLBenchmark(OpenCLUnit):
     """
     Executes an OpenCL benchmark to estimate the computing power of the device.
@@ -300,8 +307,14 @@ class OpenCLBenchmark(OpenCLUnit):
         delta = tfinish - tstart
         return 1000 / delta
 
+    def cpu_run(self):
+        self.estimate()
 
-class OpenCLWorkflow(OpenCLUnit, veles.workflow.Workflow):
+    def ocl_run(self):
+        self.estimate()
+
+
+class OpenCLWorkflow(Workflow):
     """Base class for OpenCL workflows.
     """
 
@@ -311,6 +324,7 @@ class OpenCLWorkflow(OpenCLUnit, veles.workflow.Workflow):
     def init_unpickled(self):
         super(OpenCLWorkflow, self).init_unpickled()
         self._power_ = None
+        self.device = None
 
     @property
     def computing_power(self):
@@ -325,3 +339,7 @@ class OpenCLWorkflow(OpenCLUnit, veles.workflow.Workflow):
             self.del_ref(bench)
             self.info("Computing power is %.6f", self._power_)
         return self._power_
+
+    def initialize(self, device, **kwargs):
+        super(OpenCLWorkflow, self).initialize(device=device, **kwargs)
+        self.device = device

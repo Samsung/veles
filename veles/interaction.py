@@ -9,11 +9,14 @@ from IPython.config.loader import Config
 from IPython.terminal.embed import InteractiveShellEmbed
 import select
 import sys
+from zope.interface import implementer
 
-from veles.units import Unit
+from veles.distributable import TriviallyDistributable
+from veles.units import Unit, IUnit
 
 
-class Shell(Unit):
+@implementer(IUnit)
+class Shell(Unit, TriviallyDistributable):
     """
     Runs embedded IPython
     """
@@ -28,7 +31,6 @@ class Shell(Unit):
         self.cfg.HistoryManager.enabled = False
 
     def initialize(self, **kwargs):
-        super(Shell, self).initialize(**kwargs)
         self.shell_ = InteractiveShellEmbed(config=self.cfg,
                                             banner1=Shell.BANNER1,
                                             banner2=Shell.BANNER2)

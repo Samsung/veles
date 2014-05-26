@@ -15,15 +15,33 @@ import sys
 import tempfile
 import time
 import threading
+from zope.interface import implementer
+from zope.interface.verify import verifyObject
 
 from veles.config import root
-from veles.units import Unit
+from veles.distributable import IDistributable
+from veles.units import Unit, TrivialUnit, IUnit
 from veles.external.prettytable import PrettyTable
 from veles.external.progressbar import ProgressBar, Percentage, Bar
 import veles.external.pydot as pydot
 
 
-class UttermostPoint(Unit):
+class Repeater(TrivialUnit):
+    """Completes a typical control flow cycle, usually joining the first unit
+    with the last one.
+    """
+
+    def __init__(self, workflow, **kwargs):
+        kwargs["view_group"] = kwargs.get("view_group", "PLUMBING")
+        super(Repeater, self).__init__(workflow, **kwargs)
+
+    def open_gate(self, src):
+        """Gate is always open.
+        """
+        return True
+
+
+class UttermostPoint(TrivialUnit):
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = kwargs.get("view_group", "SERVICE")
         super(UttermostPoint, self).__init__(workflow, **kwargs)
@@ -43,6 +61,7 @@ class EndPoint(UttermostPoint):
     Attributes:
         sem_: semaphore.
     """
+
     def __init__(self, workflow, **kwargs):
         kwargs["name"] = kwargs.get("name", "End")
         super(EndPoint, self).__init__(workflow, **kwargs)
@@ -54,6 +73,7 @@ class EndPoint(UttermostPoint):
         self.workflow.on_workflow_finished()
 
 
+@implementer(IUnit, IDistributable)
 class Workflow(Unit):
     """Base class for unit sets which are logically connected and belong to
     the same host.
@@ -123,7 +143,6 @@ class Workflow(Unit):
         return self._units if hasattr(self, "_units") else []
 
     def initialize(self, **kwargs):
-        super(Workflow, self).initialize(**kwargs)
         fin_text = "all units are initialized"
         maxlen = max([len(u.name) for u in self.units] + [len(fin_text)])
         progress = ProgressBar(maxval=len(self.units),
@@ -135,6 +154,8 @@ class Workflow(Unit):
         progress.start()
         for unit in self.start_point.dependecy_list():
             progress.widgets[-1] = unit.name + ' ' * (maxlen - len(unit.name))
+            if not self.is_standalone:
+                unit.verify_interface(IDistributable)
             try:
                 unit.initialize(**kwargs)
             except:

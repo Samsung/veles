@@ -18,10 +18,11 @@ import traceback
 import opencl4py as cl
 
 from veles.config import root, get
+from veles.distributable import Pickleable
 import veles.formats as formats
 import veles.opencl_types as opencl_types
 import veles.random_generator as rnd
-import veles.units as units
+from veles.units import TrivialUnit
 import veles.external.prettytable as prettytable
 
 
@@ -61,7 +62,7 @@ class DeviceInfo(object):
             self.BLOCK_SIZE[dtype] = 8
 
 
-class Device(units.Pickleable):
+class Device(Pickleable):
     """OpenCL device helper class.
 
     Attributes:
@@ -405,7 +406,7 @@ class Device(units.Pickleable):
         """Do test for specific context.
         """
 
-        class WorkflowStub(units.Unit):
+        class WorkflowStub(TrivialUnit):
             def __init__(self):
                 super(WorkflowStub, self).__init__(self)
 

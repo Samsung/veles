@@ -8,9 +8,10 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 from six.moves import cPickle as pickle, queue
 from veles.external.txzmq import ZmqConnection, ZmqEndpoint
 import zmq
+from zope.interface import implementer
 
-
-from veles.units import Unit
+from veles.distributable import TriviallyDistributable
+from veles.units import Unit, IUnit
 
 
 class ZmqPuller(ZmqConnection):
@@ -32,7 +33,8 @@ class ZmqPuller(ZmqConnection):
         self.owner.data_received(pickle.loads(message))
 
 
-class ZeroMQLoader(Unit):
+@implementer(IUnit)
+class ZeroMQLoader(Unit, TriviallyDistributable):
     """
     Listens to incoming ZeroMQ sockets.
     """

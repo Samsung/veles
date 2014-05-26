@@ -24,6 +24,7 @@ encoding//veles/external/pydot.py=latin1
 encoding//veles/workflow.py=utf-8
 encoding//veles/znicz/__init__.py=utf-8
 encoding//veles/znicz/external/__init__.py=utf-8
+encoding//veles/znicz/learning_rate_adjust.py=utf-8
 encoding//veles/znicz/normalization.py=utf-8
 encoding//veles/znicz/samples/lines.py=utf-8
 encoding//veles/znicz/samples/lines_config.py=utf-8

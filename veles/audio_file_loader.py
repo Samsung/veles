@@ -8,13 +8,15 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 import logging
 import os
 from itertools import repeat, chain
+from zope.interface import implementer
 
 from veles.snd_file_loader import SndFileLoader
 from veles.ffmpeg_file_loader import FFmpegFileLoader
-import veles.units as units
+from veles.units import Unit, IUnit
 
 
-class AudioFileLoader(units.Unit):
+@implementer(IUnit)
+class AudioFileLoader(Unit):
     """
     Decodes the specified audio file to the raw signed PCM 16 bit format
     using the decoder based on the file extension.

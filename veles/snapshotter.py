@@ -12,16 +12,19 @@ import os
 import six
 import sys
 import time
+from zope.interface import implementer
 
+from veles.distributable import TriviallyDistributable
 from veles.pickle2 import pickle
-import veles.units as units
+from veles.units import Unit, IUnit
 
 
 if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
     FileNotFoundError = IOError  # pylint: disable=W0622
 
 
-class SnapshotterBase(units.Unit):
+@implementer(IUnit)
+class SnapshotterBase(Unit, TriviallyDistributable):
     """Base class for various data exporting units.
 
     Defines:
@@ -53,7 +56,6 @@ class SnapshotterBase(units.Unit):
         self.suffix = None
 
     def initialize(self, **kwargs):
-        super(SnapshotterBase, self).initialize(**kwargs)
         self.time = time.time()
 
     def run(self):

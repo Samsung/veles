@@ -11,11 +11,11 @@ from zope.interface import implementer
 
 import veles.error as error
 import veles.formats as formats
-import veles.plotter as plotter
+from veles.plotter import Plotter, IPlotter
 
 
-@implementer(plotter.IPlotter)
-class AccumulatingPlotter(plotter.Plotter):
+@implementer(IPlotter)
+class AccumulatingPlotter(Plotter):
     """Accumulates supplied values and draws the plot of the last "last"
     points, as well as the whole picture in miniature. Optionally, approximates
     the series with a polynomial of power "fit_poly_power" in terms of least
@@ -33,7 +33,7 @@ class AccumulatingPlotter(plotter.Plotter):
         values: history of all parameter values given to plotter.
         input: connector to take values from.
         input_field: name of field in input we want to plot.
-        name(): label of figure used for drawing. If two ploters share
+        name(): label of figure used for drawing. If two plotters share
             the same name(), their plots will appear together.
         plot_style: Style of lines used for plotting. See
             http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.plot
@@ -136,8 +136,8 @@ class AccumulatingPlotter(plotter.Plotter):
         super(AccumulatingPlotter, self).run()
 
 
-@implementer(plotter.IPlotter)
-class MatrixPlotter(plotter.Plotter):
+@implementer(IPlotter)
+class MatrixPlotter(Plotter):
     """Plotter for drawing matrixes as table.
 
     Must be assigned before initialize():
@@ -317,8 +317,8 @@ class MatrixPlotter(plotter.Plotter):
         return figure
 
 
-@implementer(plotter.IPlotter)
-class Image(plotter.Plotter):
+@implementer(IPlotter)
+class Image(Plotter):
     """Plotter for drawing N images.
 
     Must be assigned before initialize():
@@ -412,8 +412,8 @@ class Image(plotter.Plotter):
         return figure
 
 
-@implementer(plotter.IPlotter)
-class Plot(plotter.Plotter):
+@implementer(IPlotter)
+class Plot(Plotter):
     """Plotter for drawing N plots together.
 
     Must be assigned before initialize():
@@ -467,8 +467,8 @@ class Plot(plotter.Plotter):
         return figure
 
 
-@implementer(plotter.IPlotter)
-class Histogram(plotter.Plotter):
+@implementer(IPlotter)
+class Histogram(Plotter):
     """
     Plotter for drawing histogram.
     """
@@ -568,8 +568,8 @@ class Histogram(plotter.Plotter):
         return fig
 
 
-@implementer(plotter.IPlotter)
-class MultiHistogram(plotter.Plotter):
+@implementer(IPlotter)
+class MultiHistogram(Plotter):
     """Plotter for drawing weights as 2D.
 
     Must be assigned before initialize():

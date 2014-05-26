@@ -197,6 +197,12 @@ class GraphicsClient(Logger):
                 self.warning("%s does not provide IPlotter interface",
                              str(plotter))
                 return
+            try:
+                plotter.verify_interface(self.IPlotter)
+            except:
+                self.exception("Plotter %s is not fully implemented, skipped",
+                               plotter.name)
+                return
             if self._pdf_trigger:
                 reactor.callLater(0, self._save_pdf, plotter)
             else:
