@@ -498,7 +498,6 @@ class Histogram(plotter.Plotter):
             raise error.ErrBadFormat(
                 "Shape of X %s not equal shape of Y %s !" %
                 (len(self.x), len(self.y)))
-
         ymax = numpy.max(self.y) * 1.3
         ymin = numpy.min(self.y)
         xmax = numpy.max(self.x)
@@ -673,3 +672,59 @@ class MultiHistogram(plotter.Plotter):
                 self.value[i, i_bar] += 1
 
         super(MultiHistogram, self).run()
+
+
+class TableMaxMin(plotter.Plotter):
+    """
+    Plotter for drawing histogram.
+    """
+    def __init__(self, workflow, **kwargs):
+        name = kwargs.get("name", "Table")
+        kwargs["name"] = name
+        super(TableMaxMin, self).__init__(workflow, **kwargs)
+        self.row_labels = ["max", "min"]
+        self.col_labels = []
+        self.y = []
+        self.values = formats.Vector()
+        self.pp = None
+        self.show_figure = self.nothing
+
+    def initialize(self, **kwargs):
+        super(TableMaxMin, self).initialize(**kwargs)
+        self.values.mem = numpy.zeros(
+            [2, len(self.y)], dtype=numpy.float64)
+
+    def redraw(self):
+        fig = self.pp.figure(self.name)
+        fig.clf()
+        fig.patch.set_facecolor('#E8D6BB')
+        ax = fig.add_subplot(1, 1, 1)
+        ax.cla()
+        ax.patch.set_facecolor('#ffe6ca')
+        vals = []
+        for row in self.values.mem:
+            vals.append(list("%.6f" % x for x in row))
+        the_table = ax.table(
+            cellText=vals,
+            #colWidths=[0.1] * len(self.y),
+            rowLabels=self.row_labels, colLabels=self.col_labels,
+            loc='center right')
+        the_table.set_fontsize(36)
+        self.show_figure(fig)
+        fig.canvas.draw()
+        super(TableMaxMin, self).redraw()
+        return fig
+
+    def run(self):
+        if len(self.col_labels) != len(self.y):
+            raise error.ErrBadFormat(
+                "Shape of col_names %s not equal shape of Y %s !" %
+                (len(self.col_labels), len(self.y)))
+        for i, y in enumerate(self.y):
+            if self.y[i] is not None:
+                self.values.mem[0, i] = y.mem.max()
+                self.values.mem[1, i] = y.mem.min()
+            else:
+                self.values[0, i] = "None"
+                self.values[1, i] = "None"
+        super(TableMaxMin, self).run()
