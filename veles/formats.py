@@ -189,6 +189,9 @@ class NumDiff(object):
 class Vector(Pickleable):
     """Container class for numpy array backed by OpenCL buffer.
 
+    Arguments:
+        data(:class:`numpy.ndarray`): `mem` attribute will be assigned to this
+
     Attributes:
         device: OpenCL device.
         mem: property for numpy array.
@@ -215,11 +218,15 @@ class Vector(Pickleable):
         2. Update a.mem
         3. Call a.unmap() before executing OpenCL kernel
     """
-    def __init__(self):
+    def __init__(self, data=None):
         super(Vector, self).__init__()
         self.device = None
         self._mem = None
         self.supposed_maxvle = 1.0
+        if data is not None:
+            assert isinstance(data, numpy.ndarray)
+            self.mem = data
+            self.map_invalidate()
 
     @property
     def mem(self):
