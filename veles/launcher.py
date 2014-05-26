@@ -331,8 +331,8 @@ class Launcher(logger.Logger):
                 write_on_disk=bool(self.args.workflow_graph))
         if self.reports_web_status:
             self.start_time = time.time()
-            reactor.callLater(self._notify_update_interval,
-                              self._notify_status)
+            self._notify_update_last_time = self.start_time
+            self._notify_status()
         if not self.is_slave:
             threads.deferToThreadPool(reactor, self.workflow.thread_pool,
                                       self.workflow.run)
@@ -462,6 +462,12 @@ class Launcher(logger.Logger):
     def _notify_status(self, response=None):
         if not self._running:
             return
+        time_passed = time.time() - self._notify_update_last_time
+        if time_passed < self._notify_update_interval:
+            reactor.callLater(self._notify_update_interval - time_passed,
+                              self._notify_status)
+            return
+        self._notify_update_last_time = time.time()
         mins, secs = divmod(time.time() - self.start_time, 60)
         hours, mins = divmod(mins, 60)
         ret = {'id': self.id,
