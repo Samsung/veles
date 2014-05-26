@@ -113,7 +113,7 @@ class WebStatusServer(logger.Logger):
                 break
             request_id = cmd["request"]
             self.pending_requests[request_id].finish_post(cmd["result"])
-            del(self.pending_requests[request_id])
+            del self.pending_requests[request_id]
 
     def run(self):
         self.info("HTTP server is running")
@@ -193,7 +193,7 @@ class WebStatus(logger.Logger):
                         for mid in garbage:
                             self.info("Removing the garbage collected master %"
                                       "%s", mid)
-                            del(self.masters[mid])
+                            del self.masters[mid]
                         self.debug("Request %s: %s", cmd["request"], str(ret))
                         self.cmd_queue_out.put_nowait(
                             {"request": cmd["request"], "result": ret})

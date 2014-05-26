@@ -183,7 +183,7 @@ class NumDiff(object):
 
     @property
     def derivative(self):
-        return ((self.errs * self.coeffs).sum() / self.divizor)
+        return (self.errs * self.coeffs).sum() / self.divizor
 
 
 class Vector(units.Pickleable):
@@ -242,7 +242,7 @@ class Vector(units.Pickleable):
     def __getstate__(self):
         """Get data from OpenCL device before pickling.
         """
-        if (self.device is not None and self.device.pid_ == os.getpid()):
+        if self.device is not None and self.device.pid_ == os.getpid():
             self.map_read()
         state = super(Vector, self).__getstate__()
         state['devmem'] = None
@@ -311,7 +311,7 @@ class Vector(units.Pickleable):
             return
         if self.map_arr_ is not None:
             # already mapped properly, nothing to do
-            if (self.map_flags != cl.CL_MAP_READ or flags == cl.CL_MAP_READ):
+            if self.map_flags != cl.CL_MAP_READ or flags == cl.CL_MAP_READ:
                 return
             self._unmap()
         if (flags == cl.CL_MAP_WRITE_INVALIDATE_REGION and

@@ -38,7 +38,7 @@ class ZmqRouter(ZmqConnection):
 
     def messageReceived(self, message):
         i = message.index(b'')
-        assert(i > 0)
+        assert i > 0
         routing, node_id, payload = \
             message[:i - 1], message[i - 1].decode(), message[i + 1:]
         self.routing[node_id] = routing
@@ -143,7 +143,7 @@ class VelesProtocol(StringLineReceiver):
     @id.setter
     def id(self, value):
         if self._id is not None:
-            del(self.factory.protocols[self._id])
+            del self.factory.protocols[self._id]
         self._id = value
         self.factory.protocols[self._id] = self
 
@@ -158,8 +158,8 @@ class VelesProtocol(StringLineReceiver):
     def connectionLost(self, reason):
         self.state.drop()
         if not self.host.workflow.is_running:
-            del(self.nodes[self.id])
-            del(self.factory.protocols[self._id])
+            del self.nodes[self.id]
+            del self.factory.protocols[self._id]
             if len(self.nodes) == 0:
                 self.host.launcher.stop()
         elif self.id in self.nodes:
@@ -168,7 +168,7 @@ class VelesProtocol(StringLineReceiver):
                 self.host.workflow.drop_slave,
                 SlaveDescription(**self.nodes[self.id]))
             if self.id in self.factory.protocols:
-                del(self.factory.protocols[self._id])
+                del self.factory.protocols[self._id]
 
     def lineReceived(self, line):
         self.host.debug("%s lineReceived:  %s", self.id, line)

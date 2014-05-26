@@ -170,10 +170,10 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         Private method - handler for SIGUSR1.
         """
-        print("SIGUSR1 was received, dumping current frames...")
+        print "SIGUSR1 was received, dumping current frames..."
         for tid, stack in sys._current_frames().items():
-            print("-" * 80)
-            print("Thread #%d:" % tid)
+            print "-" * 80
+            print "Thread #%d:" % tid
             traceback.print_stack(stack)
 
     @staticmethod

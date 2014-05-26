@@ -512,7 +512,7 @@ class Unit(Distributable):
         with self._gate_lock_:
             for src in self.links_from:
                 with src._gate_lock_:
-                    del(src.links_to[self])
+                    del src.links_to[self]
             self.links_from.clear()
 
     def unlink_after(self):
@@ -522,7 +522,7 @@ class Unit(Distributable):
         with self._gate_lock_:
             for dst in self.links_to:
                 with dst._gate_lock_:
-                    del(dst.links_from[self])
+                    del dst.links_from[self]
             self.links_to.clear()
 
     def insert_after(self, *chain):
@@ -576,7 +576,7 @@ class Unit(Distributable):
         res += "\n\033[1;36mOutgoing links:\033[0m\n"
         for link in self.links_to:
             res += "\t%s" % repr(link)
-        print(res)
+        print res
 
     def _link_attr(self, other, mine, yours, two_way):
         attr = getattr(other, yours)

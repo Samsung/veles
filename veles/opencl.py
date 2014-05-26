@@ -367,15 +367,15 @@ class Device(units.Pickleable):
                                  dtype=opencl_types.dtypes[dtype])
 
     def _cleanup_after_test(self):
-        del(self.c)
-        del(self.bias)
-        del(self.b)
-        del(self.a)
+        del self.c
+        del self.bias
+        del self.b
+        del self.a
         rnd.get().state = self.rnd_state
-        del(self.rnd_state)
-        del(self.A_HEIGHT)
-        del(self.B_HEIGHT)
-        del(self.AB_WIDTH)
+        del self.rnd_state
+        del self.A_HEIGHT
+        del self.B_HEIGHT
+        del self.AB_WIDTH
 
     def _do_cpu_test(self, cc, key):
         """Pure single core CPU test.
