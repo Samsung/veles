@@ -713,7 +713,6 @@ class TableMaxMin(Plotter):
         the_table.set_fontsize(36)
         self.show_figure(fig)
         fig.canvas.draw()
-        super(TableMaxMin, self).redraw()
         return fig
 
     def run(self):
