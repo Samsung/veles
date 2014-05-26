@@ -143,6 +143,6 @@ class MongoLogHandler(logging.Handler):
         data = copy(record.__dict__)
         for bs in "levelno", "funcName", "args", "msg", "module", \
                   "processName", "msecs":
-            del(data[bs])
+            del data[bs]
         data["session"] = self.id
         self._collection.insert(data)

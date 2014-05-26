@@ -44,7 +44,7 @@ class SoundFeatures(units.Unit):
         try:
             logging.info("Extracting features from " + name)
             result = extr.calculate(data)
-            if (self.report_path is not None):
+            if self.report_path is not None:
                 extr.report(os.path.join(self.report_path,
                                          os.path.basename(name) + ".dot"))
             return result

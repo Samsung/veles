@@ -83,7 +83,7 @@ class Workflow(Unit):
         self._is_running = False
         self._sync_event_ = threading.Event()
         self._sync_event_.set()
-        del(Unit.timers[self])
+        del Unit.timers[self]
 
     def __repr__(self):
         return super(Workflow, self).__repr__() + \
