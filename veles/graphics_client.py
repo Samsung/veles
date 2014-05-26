@@ -71,6 +71,8 @@ class GraphicsClient(Logger):
                                              self._sigint_handler)
         self._sigusr2_initial = signal.signal(signal.SIGUSR2,
                                               self._sigusr2_handler)
+        from veles.plotter import IPlotter
+        self.IPlotter = IPlotter
 
     def __del__(self):
         signal.signal(signal.SIGINT, self._sigint_initial)
@@ -191,6 +193,10 @@ class GraphicsClient(Logger):
             plotter.patches = self.patches
             plotter.pp = self.pp
             plotter.show_figure = self.show_figure
+            if not self.IPlotter.providedBy(plotter):
+                self.warning("%s does not provide IPlotter interface",
+                             str(plotter))
+                return
             if self._pdf_trigger:
                 reactor.callLater(0, self._save_pdf, plotter)
             else:

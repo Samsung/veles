@@ -7,12 +7,14 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 from __future__ import division
 import numpy
+from zope.interface import implementer
 
 import veles.error as error
 import veles.formats as formats
 import veles.plotter as plotter
 
 
+@implementer(plotter.IPlotter)
 class AccumulatingPlotter(plotter.Plotter):
     """Accumulates supplied values and draws the plot of the last "last"
     points, as well as the whole picture in miniature. Optionally, approximates
@@ -46,6 +48,7 @@ class AccumulatingPlotter(plotter.Plotter):
         fit_poly_power: the approximation polynomial's power. If set to 0,
         do no approximation.
     """
+
     def __init__(self, workflow, **kwargs):
         name = kwargs.get("name", "Errors number")
         self.plot_style = kwargs.get("plot_style", "k-")
@@ -118,7 +121,6 @@ class AccumulatingPlotter(plotter.Plotter):
         self.show_figure(figure)
         if self.redraw_plot:
             figure.canvas.draw()
-        super(AccumulatingPlotter, self).redraw()
         return figure
 
     def run(self):
@@ -134,6 +136,7 @@ class AccumulatingPlotter(plotter.Plotter):
         super(AccumulatingPlotter, self).run()
 
 
+@implementer(plotter.IPlotter)
 class MatrixPlotter(plotter.Plotter):
     """Plotter for drawing matrixes as table.
 
@@ -311,10 +314,10 @@ class MatrixPlotter(plotter.Plotter):
         self.pp.ion()
         self.show_figure(figure)
         figure.canvas.draw()
-        super(MatrixPlotter, self).redraw()
         return figure
 
 
+@implementer(plotter.IPlotter)
 class Image(plotter.Plotter):
     """Plotter for drawing N images.
 
@@ -406,10 +409,10 @@ class Image(plotter.Plotter):
 
         self.show_figure(figure)
         figure.canvas.draw()
-        super(Image, self).redraw()
         return figure
 
 
+@implementer(plotter.IPlotter)
 class Plot(plotter.Plotter):
     """Plotter for drawing N plots together.
 
@@ -461,10 +464,10 @@ class Plot(plotter.Plotter):
 
         self.show_figure(figure)
         figure.canvas.draw()
-        super(Plot, self).redraw()
         return figure
 
 
+@implementer(plotter.IPlotter)
 class Histogram(plotter.Plotter):
     """
     Plotter for drawing histogram.
@@ -563,10 +566,10 @@ class Histogram(plotter.Plotter):
 
         self.show_figure(fig)
         fig.canvas.draw()
-        super(Histogram, self).redraw()
         return fig
 
 
+@implementer(plotter.IPlotter)
 class MultiHistogram(plotter.Plotter):
     """Plotter for drawing weights as 2D.
 
@@ -652,8 +655,6 @@ class MultiHistogram(plotter.Plotter):
 
         self.show_figure(fig)
         fig.canvas.draw()
-
-        super(MultiHistogram, self).redraw()
         return fig
 
     def run(self):
