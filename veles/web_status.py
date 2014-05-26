@@ -159,6 +159,7 @@ class WebStatus(logger.Logger):
     def run(self):
         self.cmd_thread.start()
         self.process.start()
+        self.process.join()
 
     def stop(self):
         self.exiting = True
@@ -220,8 +221,9 @@ if __name__ == "__main__":
         pidfile = root.common.web_status_pidfile
         if not os.access(os.path.dirname(pidfile), os.W_OK):
             raise PermissionError(pidfile)
-        print("Daemonizing, PID will be in ", pidfile, ".lock")
+        print("Daemonizing, PID will be in ", pidfile + ".lock")
         with daemon.DaemonContext(pidfile=pidfile):
+            print("Daemonized")
             logger.Logger.setup(level=logging.INFO)
             logger.Logger.redirect_all_logging_to_file(
                 root.common.web_status_log_file, backups=9)

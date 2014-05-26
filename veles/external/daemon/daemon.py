@@ -333,6 +333,7 @@ class DaemonContext(object):
         change_working_directory(self.working_directory)
         change_process_owner(self.uid, self.gid)
 
+        self.ppid = os.getpid()
         if self.detach_process:
             detach_process_context()
 
@@ -379,7 +380,8 @@ class DaemonContext(object):
             """
         if not self.is_open:
             return
-        if self.pidfile is not None:
+        if self.pidfile is not None and (not self.detach_process or
+                                         self.ppid != os.getpid()):
             # Follow the interface for telling a context manager to exit, see
             # http://docs.python.org/library/stdtypes.html#typecontextmanager
             self.pidfile.__exit__(None, None, None)
