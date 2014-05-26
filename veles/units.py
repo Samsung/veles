@@ -576,7 +576,7 @@ class Unit(Distributable):
         res += "\n\033[1;36mOutgoing links:\033[0m\n"
         for link in self.links_to:
             res += "\t%s" % repr(link)
-        print res
+        print(res)
 
     def _link_attr(self, other, mine, yours, two_way):
         attr = getattr(other, yours)
