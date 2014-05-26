@@ -45,7 +45,7 @@ class TestPickle(unittest.TestCase):
             pass
         with open("cache/test.pickle", "wb") as fout:
             pickle.dump(pt, fout)
-        del(pt)
+        del pt
         with open("cache/test.pickle", "rb") as fin:
             pt = pickle.load(fin)
         self.assertListEqual([g_pt, pt.d, pt.c, pt.b, pt.a, pt.h_],
