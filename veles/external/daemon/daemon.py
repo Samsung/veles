@@ -435,6 +435,13 @@ class DaemonContext(object):
                 exclude_descriptors.add(item.fileno())
             else:
                 exclude_descriptors.add(item)
+        for fd in os.listdir("/proc/self/fd"):
+            file = os.path.join("/proc/self/fd", fd)
+            if not os.path.exists(file):
+                continue
+            file = os.readlink(file)
+            if file in {"/dev/urandom", "/dev/random"}:
+                exclude_descriptors.add(int(fd))
         return exclude_descriptors
 
     def _make_signal_handler(self, target):
