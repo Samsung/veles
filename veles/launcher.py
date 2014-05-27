@@ -175,6 +175,9 @@ class Launcher(logger.Logger):
         parser.add_argument("--yarn-nodes", type=str, default=None,
                             help="Discover the nodes from this YARN "
                             "ResourceManager's address.")
+        parser.add_argument("--max-nodes", type=int, default=0,
+                            help="Max number of slaves launched. 0 means "
+                            "unlimited number.")
         return parser
 
     @property
@@ -418,6 +421,8 @@ class Launcher(logger.Logger):
         filtered_argv.append("-i %s" % self.log_id)
         slave_args = " ".join(filtered_argv)
         self.debug("Slave args: %s", slave_args)
+        total_slaves = 0
+        max_slaves = self.args.max_nodes or len(self.slaves)
         for node in self.slaves:
             host, devs = node.split('/')
             marray = devs.split('x')
@@ -436,7 +441,12 @@ class Launcher(logger.Logger):
                     progs.append("%s %s -d %d:%d" %
                                  (os.path.abspath(sys.argv[0]),
                                   slave_args, oclpnum, d))
+            if total_slaves + len(progs) > max_slaves:
+                progs = progs[:max_slaves - total_slaves]
+            total_slaves += len(progs)
             self._launch_remote_progs(host, *progs)
+            if total_slaves >= max_slaves:
+                break
 
     def _launch_remote_progs(self, host, *progs):
         self.info("Launching %d instance(s) on %s", len(progs), host)
@@ -445,12 +455,16 @@ class Launcher(logger.Logger):
         pc = paramiko.SSHClient()
         try:
             pc.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            pc.connect(host, look_for_keys=True, timeout=0.1)
+            try:
+                pc.connect(host, look_for_keys=True, timeout=0.2)
+            except paramiko.ssh_exception.SSHException:
+                self.exception("Failed to connect to %s", host)
+                return
             for prog in progs:
                 self.debug("Launching %s", prog)
                 pc.exec_command("cd '%s' && %s" % (cwd, prog))
         except:
-            self.exception()
+            self.exception("Failed to launch '%s' on %s", prog, host)
         finally:
             pc.close()
 
