@@ -93,9 +93,12 @@ class Unit(Distributable):
         self._gate_lock_ = threading.Lock()
         self._run_lock_ = threading.Lock()
         self._is_initialized = False
-        self.run = self._track_call(self.run, "run_was_called")
-        self.run = self._measure_time(self.run, Unit.timers)
-        self.initialize = self._track_call(self.initialize, "_is_initialized")
+        if hasattr(self, "run"):
+            self.run = self._track_call(self.run, "run_was_called")
+            self.run = self._measure_time(self.run, Unit.timers)
+        if hasattr(self, "initialize"):
+            self.initialize = self._track_call(self.initialize,
+                                               "_is_initialized")
         Unit.timers[self] = 0
 
     def __getstate__(self):
