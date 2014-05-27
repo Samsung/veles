@@ -37,6 +37,7 @@ try:
 except:
     pass
 import argparse
+import atexit
 import bz2
 from email.utils import formatdate
 import errno
@@ -45,6 +46,7 @@ import logging
 import lzma
 import numpy
 import os
+import resource
 import runpy
 import sys
 
@@ -327,6 +329,10 @@ class Main(Logger):
             except:
                 print(Main.LOGO.replace("©", "(c)"))
 
+    def print_max_rss(self):
+        res = resource.getrusage(resource.RUSAGE_SELF)
+        self.info("Peak resident memory used: %d Kb", res.ru_maxrss)
+
     def run(self):
         """VELES Machine Learning Platform Command Line Interface
         """
@@ -345,6 +351,7 @@ class Main(Logger):
         self._seed_random(args.random_seed)
         if args.debug_pickle:
             setup_pickle_debug(args)
+        atexit.register(self.print_max_rss)
 
         wm = self._load_model(fname_workflow, args.snapshot)
         self._apply_config(fname_config, args.config_list)
