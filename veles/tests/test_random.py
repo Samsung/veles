@@ -11,13 +11,23 @@ import logging
 import numpy
 import os
 import unittest
+from zope.interface import implementer
 
 from veles.config import root
 import veles.formats as formats
 import veles.opencl as opencl
-from veles.opencl_units import OpenCLUnit
+from veles.opencl_units import OpenCLUnit, IOpenCLUnit
 import veles.random_generator as rnd
 from veles.tests.dummy_workflow import DummyWorkflow
+
+
+@implementer(IOpenCLUnit)
+class TrivialOpenCLUnit(OpenCLUnit):
+    def cpu_run(self):
+        pass
+
+    def ocl_run(self):
+        pass
 
 
 class TestRandom(unittest.TestCase):
@@ -42,7 +52,7 @@ class TestRandom(unittest.TestCase):
         states.initialize(self.device)
         output.initialize(self.device)
 
-        obj = OpenCLUnit(DummyWorkflow())
+        obj = TrivialOpenCLUnit(DummyWorkflow())
         obj.initialize(device=self.device)
         obj.cl_sources_["random.cl"] = {}
         obj.build_program({}, os.path.join(root.common.cache_dir,
@@ -70,8 +80,8 @@ class TestRandom(unittest.TestCase):
         for i in range(self.n_states):
             s = states[i]
             self.p = 0
-            for j in range(self.n_rounds):
-                for k in range(16):
+            for _ in range(self.n_rounds):
+                for _ in range(16):
                     output[offs] = self._next_rand(s)
                     offs += 1
         logging.debug("cpu output:")
