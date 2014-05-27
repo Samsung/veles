@@ -7,7 +7,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 import unittest
 
-from veles.units import Unit
+from veles.units import TrivialUnit
 from veles.tests.dummy_workflow import DummyWorkflow
 
 
@@ -15,7 +15,7 @@ class UnitMock(object):
     pass
 
 
-class CalculatorTester(Unit):
+class CalculatorTester(TrivialUnit):
     def __init__(self, workflow):
         super(CalculatorTester, self).__init__(workflow)
         self.a = None
