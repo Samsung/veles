@@ -9,13 +9,13 @@ import os
 import pickle
 import unittest
 
-import veles.units as units
+from veles.distributable import Pickleable
 
 
 g_pt = 0
 
 
-class PickleTest(units.Pickleable):
+class PickleTest(Pickleable):
     """Pickle test.
     """
     def __init__(self, a="A", b="B", c="C"):
