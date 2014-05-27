@@ -674,7 +674,8 @@ class MultiHistogram(Plotter):
         super(MultiHistogram, self).run()
 
 
-class TableMaxMin(plotter.Plotter):
+@implementer(IPlotter)
+class TableMaxMin(Plotter):
     """
     Plotter for drawing histogram.
     """
@@ -706,7 +707,7 @@ class TableMaxMin(plotter.Plotter):
             vals.append(list("%.6f" % x for x in row))
         the_table = ax.table(
             cellText=vals,
-            #colWidths=[0.1] * len(self.y),
+            # colWidths=[0.1] * len(self.y),
             rowLabels=self.row_labels, colLabels=self.col_labels,
             loc='center right')
         the_table.set_fontsize(36)
