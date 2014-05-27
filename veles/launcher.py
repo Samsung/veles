@@ -22,7 +22,8 @@ import threading
 import time
 from twisted.internet import reactor, threads
 from twisted.web.html import escape
-from twisted.web.client import Agent, HTTPConnectionPool, FileBodyProducer
+from twisted.web.client import (Agent, HTTPConnectionPool, FileBodyProducer,
+                                getPage)
 from twisted.web.http_headers import Headers
 import uuid
 
@@ -109,6 +110,8 @@ class Launcher(logger.Logger):
         self._notify_update_interval = kwargs.get(
             "status_update_interval",
             root.common.web_status_notification_interval)
+        if self.args.yarn_nodes is not None and self.is_master:
+            self._discover_nodes_from_yarn(self.args.yarn_nodes)
 
     def __getstate__(self):
         return {}
@@ -169,6 +172,9 @@ class Launcher(logger.Logger):
         parser.add_argument("--workflow-graph", type=str,
                             default=kwargs.get("workflow_graph", ""),
                             help="Save workflow graph to this file.")
+        parser.add_argument("--yarn-nodes", type=str, default=None,
+                            help="Discover the nodes from this YARN "
+                            "ResourceManager's address.")
         return parser
 
     @property
@@ -415,10 +421,7 @@ class Launcher(logger.Logger):
         for node in self.slaves:
             host, devs = node.split('/')
             marray = devs.split('x')
-            if len(marray) > 1:
-                multiplier = int(marray[1])
-            else:
-                multiplier = 1
+            multiplier = int(marray[1]) if len(marray) > 1 else 1
             oclpnums, ocldevnum = marray[0].split(':')
             oclpnum = int(oclpnums)
             ocldevarr = ocldevnum.split('-')
@@ -489,7 +492,29 @@ class Launcher(logger.Logger):
                                    root.common.web_status_update)
         headers = Headers({b'User-Agent': [b'twisted']})
         body = FileBodyProducer(BytesIO(json.dumps(ret).encode('charmap')))
+        self.debug("Uploading status update to %s", url)
         d = self._web_status_agent.request(
             b'POST', url.encode('ascii'), headers=headers, bodyProducer=body)
         d.addCallback(self._notify_status)
         d.addErrback(self._on_notify_status_error)
+
+    def _discover_nodes_from_yarn(self, address):
+        if address.find(':') < 0:
+            address += ":8088"
+        if address[:7] != "http://":
+            address = "http://" + address
+        address += "/ws/v1/cluster/nodes"
+        self.debug("Requesting GET %s", address)
+        getPage(address.encode('ascii')).addCallbacks(
+            callback=self._parse_yarn_nodes_json,
+            errback=lambda error: self.warning("Failed to get the nodes list "
+                                               "from YARN ResourceManager: %s",
+                                               str(error)))
+
+    def _parse_yarn_nodes_json(self, response):
+        rstr = response.decode()
+        self.debug("Received YARN response: %s", rstr)
+        tree = json.loads(rstr)
+        for node in tree["nodes"]["node"]:
+            self._slaves.append(node["nodeHostName"] + "/0:0")
+        reactor.callLater(0, self._launch_nodes)
