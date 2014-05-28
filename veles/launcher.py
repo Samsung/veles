@@ -331,6 +331,8 @@ class Launcher(logger.Logger):
         if not self._initialized:
             raise RuntimeError("Launcher was not initialized")
         self._running = True
+        if not self.is_standalone:
+            self._agent.initialize()
         reactor.addSystemEventTrigger('before', 'shutdown', self._on_stop)
         reactor.addSystemEventTrigger('after', 'shutdown', self._print_stats)
         self._start_time = time.time()

@@ -62,6 +62,17 @@ SlaveDescription = namedtuple("SlaveDescription",
                               ['id', 'mid', 'pid', 'power', 'host', 'state'])
 
 
+def make_slave_desc(info):
+    args = dict(info)
+    for f in SlaveDescription._fields:
+        if f not in args:
+            args[f] = None
+    for f in info:
+        if f not in SlaveDescription._fields:
+            del args[f]
+    return SlaveDescription(**args)
+
+
 class VelesProtocol(StringLineReceiver):
     """A communication controller from server to client.
 
@@ -134,7 +145,10 @@ class VelesProtocol(StringLineReceiver):
         self.host = factory.host
         self.nodes = self.host.nodes
         self._id = None
+        self._not_a_slave = False
         self.state = fysom.Fysom(VelesProtocol.FSM_DESCRIPTION, self)
+        self._responders = {"WAIT": self._respondInWAIT,
+                            "WORK": self._respondInWORK}
 
     @property
     def id(self):
@@ -151,11 +165,17 @@ class VelesProtocol(StringLineReceiver):
     def address(self):
         return "%s:%d" % (self.addr.host, self.addr.port)
 
+    @property
+    def not_a_slave(self):
+        return self._not_a_slave
+
     def connectionMade(self):
         self.hip = self.transport.getHost().host
         self.state.connect()
 
     def connectionLost(self, reason):
+        if self.not_a_slave:
+            return
         self.state.drop()
         if not self.host.workflow.is_running:
             del self.nodes[self.id]
@@ -166,7 +186,7 @@ class VelesProtocol(StringLineReceiver):
             threads.deferToThreadPool(
                 reactor, self.host.workflow.thread_pool,
                 self.host.workflow.drop_slave,
-                SlaveDescription(**self.nodes[self.id]))
+                make_slave_desc(self.nodes[self.id]))
             if self.id in self.factory.protocols:
                 del self.factory.protocols[self._id]
 
@@ -177,52 +197,14 @@ class VelesProtocol(StringLineReceiver):
             self.host.error("%s Could not parse the received line, dropping "
                             "it", self.id)
             return
-        if self.state.current == "WAIT":
-            mysha = self.host.workflow.checksum()
-            your_sha = msg.get("checksum")
-            if not your_sha:
-                self.host.error("Did not receive the workflow checksum")
-                self._sendError("Workflow checksum is missing")
-                return
-            if mysha != your_sha:
-                self._sendError("Workflow checksum mismatch")
-                return
-            must_reply = False
-            msgid = msg.get("id")
-            if not msgid:
-                self.id = str(uuid.uuid4())
-                must_reply = True
-            else:
-                self.id = msgid
-                if not self.nodes.get(self.id):
-                    self.host.warning("Did not recognize the received ID %s",
-                                      self.id)
-                    must_reply = True
-            if must_reply:
-                try:
-                    _, mid, pid = self._extractClientInformation(msg)
-                except Exception as e:
-                    self.host.error(str(e))
-                    return
-                retmsg = {'endpoint': self.host.endpoint(mid, pid, self.hip)}
-                if not msgid:
-                    retmsg['id'] = self.id
-                self.sendLine(retmsg)
-            self.state.identify()
-        elif self.state.current == "WORK":
-            cmd = msg.get("cmd")
-            if not cmd:
-                self.host.error("%s Client sent something which is not "
-                                "a command: %s. Sending back the error "
-                                "message", self.id, line)
-                self._sendError("No command found")
-                return
-            self.host.error("%s Unsupported %s command. Sending back the "
-                            "error message", self.id, cmd)
-            self._sendError("Unsupported command")
+        if self._checkQuery(msg):
+            return
+        if self.not_a_slave:
+            self._sendError("You must reconnect as a slave to send commands")
+        responder = self._responders.get(self.state.current)
+        if responder is not None:
+            responder(msg, line)
         else:
-            self.host.error("%s Invalid state %s",
-                            self.id, self.state.current)
             self._sendError("You sent me something which is not allowed in my "
                             "current state %s" % self.state.current)
 
@@ -250,7 +232,7 @@ class VelesProtocol(StringLineReceiver):
         upd = threads.deferToThreadPool(
             reactor, self.host.workflow.thread_pool,
             self.host.workflow.apply_update, data,
-            SlaveDescription(**self.nodes[self.id]))
+            make_slave_desc(self.nodes[self.id]))
         upd.addCallback(self.updateFinished)
 
     def updateFinished(self, result):
@@ -268,6 +250,77 @@ class VelesProtocol(StringLineReceiver):
             super(VelesProtocol, self).sendLine(json.dumps(line))
         else:
             StringLineReceiver.sendLine(self, json.dumps(line))
+
+    def _checkQuery(self, msg):
+        """Respond to possible informational requests.
+        """
+        query = msg.get('query')
+        if query is None:
+            return False
+        self._not_a_slave = True
+        responders = {"nodes": lambda _: self.sendLine(self.nodes),
+                     "endpoints":
+                     lambda _: self.sendLine(self.host.zmq_endpoints)}
+        responder = responders.get(query)
+        if responder is None:
+            self._sendError("%s query is not supported" % query)
+        else:
+            responder()
+
+    def _respondInWAIT(self, msg, line):
+        mysha = self.host.workflow.checksum()
+        your_sha = msg.get("checksum")
+        if not your_sha:
+            self.host.error("Did not receive the workflow checksum")
+            self._sendError("Workflow checksum is missing")
+            return
+        if mysha != your_sha:
+            self._sendError("Workflow checksum mismatch")
+            return
+        must_reply = False
+        msgid = msg.get("id")
+        if not msgid:
+            self.id = str(uuid.uuid4())
+            must_reply = True
+        else:
+            self.id = msgid
+            if not self.nodes.get(self.id):
+                self.host.warning("Did not recognize the received ID %s",
+                                  self.id)
+                must_reply = True
+        if must_reply:
+            try:
+                _, mid, pid = self._extractClientInformation(msg)
+            except Exception as e:
+                self.host.error(str(e))
+                return
+            data = self.host.workflow.generate_initial_data_for_slave(
+                make_slave_desc(self.nodes[self.id]))
+            retmsg = {'endpoint': self.host.endpoint(mid, pid, self.hip),
+                      'data': data}
+            if not msgid:
+                retmsg['id'] = self.id
+            self.sendLine(retmsg)
+        data = msg.get('data')
+        if data is not None:
+            threads.deferToThreadPool(
+                reactor, self.host.workflow.thread_pool,
+                self.host.workflow.apply_initial_data_from_slave,
+                data, make_slave_desc(self.nodes[self.id]))
+            self.nodes[self.id]['data'] = [d for d in data if d is not None]
+        self.state.identify()
+
+    def _respondInWORK(self, msg, line):
+        cmd = msg.get("cmd")
+        if not cmd:
+            self.host.error("%s Client sent something which is not a command: "
+                            "%s. Sending back the error message",
+                            self.id, line)
+            self._sendError("No command found")
+            return
+        self.host.error("%s Unsupported %s command. Sending back the error "
+                        "message", self.id, cmd)
+        self._sendError("Unsupported command")
 
     def _extractClientInformation(self, msg):
         power = msg.get("power")
@@ -315,7 +368,7 @@ class VelesProtocol(StringLineReceiver):
         job = threads.deferToThreadPool(
             reactor, self.host.workflow.thread_pool,
             self.host.workflow.request_job,
-            SlaveDescription(**self.nodes[self.id]))
+            make_slave_desc(self.nodes[self.id]))
         job.addCallback(self.jobRequestFinished)
 
 
@@ -367,3 +420,6 @@ class Server(NetworkAgent):
                 return self.zmq_endpoints["ipc"]
         else:
             return self.zmq_endpoints["tcp"].replace("*", hip)
+
+    def initialize(self):
+        pass

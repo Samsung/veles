@@ -60,6 +60,6 @@ class Plotter(Unit, TriviallyDistributable):
     def generate_data_for_master(self):
         return True
 
-    def apply_data_from_slave(self, data, slave=None):
+    def apply_data_from_slave(self, data, slave):
         if not self.gate_block and not self.gate_skip:
             self.run()

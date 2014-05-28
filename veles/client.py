@@ -137,6 +137,12 @@ class VelesProtocol(StringLineReceiver):
                 cid, self, ZmqEndpoint("connect", endpoint))
             self.factory.host.info("Connected to ZeroMQ endpoint %s",
                                    endpoint)
+            data = msg.get('data')
+            if data is not None:
+                threads.deferToThreadPool(
+                    reactor, self.factory.host.workflow.thread_pool,
+                    self.factory.host.workflow.apply_initial_data_from_master,
+                    data)
             self.request_job()
             return
         self.disconnect("Invalid state %s", self.state.current)
@@ -181,7 +187,9 @@ class VelesProtocol(StringLineReceiver):
         self.sendLine(common)
 
     def request_id(self):
-        self.sendLine(self._common_id())
+        request = self._common_id()
+        request['data'] = self.factory.host.initial_data
+        self.sendLine(request)
         self.state.request_id()
 
     def request_job(self):
@@ -251,4 +259,12 @@ class Client(NetworkAgent):
         self.workflow = workflow
         self.launcher = workflow.workflow
         self.factory = VelesProtocolFactory(self)
+        self._initial_data = None
         reactor.connectTCP(self.address, self.port, self.factory, timeout=300)
+
+    @property
+    def initial_data(self):
+        return self._initial_data
+
+    def initialize(self):
+        self._initial_data = self.workflow.generate_initial_data_for_master()

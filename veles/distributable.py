@@ -8,7 +8,7 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 import functools
 from six.moves import cPickle as pickle
 import threading
-from zope.interface import Interface, implementer
+from zope.interface import Interface, Attribute, implementer
 
 import veles.logger as logger
 from veles.mutable import LinkableAttribute
@@ -121,6 +121,7 @@ class Distributable(Pickleable):
         self._apply_data_from_slave_threadsafe = \
             kwargs.get("apply_data_from_slave_threadsafe", True)
         super(Distributable, self).__init__(**kwargs)
+        self.negotiates_on_connect = False
         self.add_method_to_storage("generate_data_for_slave")
         self.add_method_to_storage("apply_data_from_slave")
 
@@ -179,6 +180,10 @@ class IDistributable(Interface):
     computation environments.
     """
 
+    negotiates_on_connect = Attribute("""Flag indicating whether """
+        """generate() and apply() must be called during the initial """
+        """connect phase.""")
+
     def generate_data_for_master():
         """Data for master should be generated here. This function is executed
         on a slave instance.
@@ -187,7 +192,7 @@ class IDistributable(Interface):
             data of any type or None if there is nothing to send.
         """
 
-    def generate_data_for_slave(slave=None):
+    def generate_data_for_slave(slave):
         """Data for slave should be generated here. This function is executed
         on a master instance.
         This method is guaranteed to be threadsafe if
@@ -212,7 +217,7 @@ class IDistributable(Interface):
             None.
         """
 
-    def apply_data_from_slave(data, slave=None):
+    def apply_data_from_slave(data, slave):
         """Data from slave should be applied here. This function is executed
         on a master instance.
         This method is guaranteed to be threadsafe if
@@ -225,7 +230,7 @@ class IDistributable(Interface):
             None.
         """
 
-    def drop_slave(slave=None):
+    def drop_slave(slave):
         """Unexpected slave disconnection leads to this function call.
         This method is guaranteed to be threadsafe if
         apply_data_from_slave_threadsafe is set to True in __init__ (default).
@@ -240,14 +245,14 @@ class TriviallyDistributable(object):
     def generate_data_for_master(self):
         return None
 
-    def generate_data_for_slave(self, slave=None):
+    def generate_data_for_slave(self, slave):
         return None
 
     def apply_data_from_master(self, data):
         pass
 
-    def apply_data_from_slave(self, data, slave=None):
+    def apply_data_from_slave(self, data, slave):
         pass
 
-    def drop_slave(self, slave=None):
+    def drop_slave(self, slave):
         pass
