@@ -406,6 +406,9 @@ class Device(Pickleable):
         """Do test for specific context.
         """
 
+        from zope.interface import implementer
+        from veles.opencl_units import OpenCLUnit, IOpenCLUnit
+
         class WorkflowStub(TrivialUnit):
             def __init__(self):
                 super(WorkflowStub, self).__init__(self)
@@ -416,9 +419,15 @@ class Device(Pickleable):
             def del_ref(self, unit):
                 pass
 
-        from veles.opencl_units import OpenCLUnit
+        @implementer(IOpenCLUnit)
+        class TrivialOpenCLUnit(OpenCLUnit):
+            def cpu_run(self):
+                pass
 
-        obj = OpenCLUnit(WorkflowStub())
+            def ocl_run(self):
+                pass
+
+        obj = TrivialOpenCLUnit(WorkflowStub())
         obj.initialize(device=self)
         obj.cl_sources_["forward.cl"] = {}
         defines = {
