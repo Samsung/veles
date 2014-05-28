@@ -183,6 +183,8 @@ class Workflow(Unit):
         self.on_workflow_finished(True)
 
     def on_workflow_finished(self, slave_force=False):
+        for unit in self.units:
+            unit.stop()
         self._run_time_finished_ = time.time()
         self.is_running = False
         if not self.is_slave or slave_force:

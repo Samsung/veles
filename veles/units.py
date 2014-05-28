@@ -39,6 +39,10 @@ class IUnit(Interface):
         """Do the job here.
         """
 
+    def stop():
+        """If run() blocks, interrupt it here.
+        """
+
 
 class Unit(Distributable):
     """General unit in data stream model.
@@ -223,6 +227,11 @@ class Unit(Distributable):
     @run_was_called.setter
     def run_was_called(self, value):
         self._ran = value
+
+    def stop(self):
+        """By default, do nothing and consider run() to always finish.
+        """
+        pass
 
     def initialize_dependent(self):
         """Invokes initialize() on dependent units on the same thread.
