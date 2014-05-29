@@ -191,8 +191,10 @@ class LinkableAttribute(object):
         # original name without underscores is used in __get__ to find
         # the class attribute faster
         self.exposed_attribute_name = name
+
         # assign the attribute of the hosting class
         setattr(type(obj), name, self)
+
         # assign the attribute value to "obj"
         setattr(obj, self.real_attribute_name, value)
 
@@ -216,10 +218,14 @@ class LinkableAttribute(object):
                 setattr(pointer[0], pointer[1], value)
                 return
             elif self.assignment_guard:
-                raise RuntimeError("Attempted to set the value of linked "
-                                   "property '%s' in object %s and two_way is "
-                                   "switched off." %
-                                   (self.exposed_attribute_name, str(obj)))
+                # FIXME(a.kazantsev): the following is a patch for constructor
+                # assignment.
+                if (type(obj) == type(object) or
+                    hasattr(obj, self.exposed_attribute_name)):
+                    raise RuntimeError("Attempted to set the value of linked "
+                                       "property '%s' in object %s and "
+                                       "two_way is switched off." %
+                                       (self.exposed_attribute_name, str(obj)))
             else:
                 # play the trick with getattr(*pointer) in __get__
                 value = (None, '', value)

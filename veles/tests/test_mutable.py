@@ -134,6 +134,26 @@ class Test(unittest.TestCase):
             self.assertEqual(cc[i].number, 123)
             self.assertEqual(ccc[i].number, 123)
 
+    def testLinkableAttributeOneWay(self):
+        class A(object):
+            pass
+
+        class B(object):
+            pass
+
+        a = A()
+        a.number = 77
+        b = B()
+        b.number = 88
+        LinkableAttribute(b, "number", (a, "number"))
+        self.assertEqual(b.number, 77)
+        try:
+            b.number = 99
+            err = True
+        except RuntimeError:
+            err = False
+        self.assertFalse(err, "Two way assignment disabled")
+
 
 if __name__ == "__main__":
     unittest.main()
