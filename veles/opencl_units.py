@@ -17,7 +17,6 @@ from six import PY3
 import tarfile
 import time
 from zope.interface import implementer, Interface
-from zope.interface.verify import verifyObject
 
 from veles.config import root
 import veles.formats as formats
