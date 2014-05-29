@@ -267,7 +267,7 @@ class Unit(Distributable):
                 walk.append((child, node))
         return units
 
-    def open_gate(self, src):
+    def open_gate(self, *args):
         """Called before run() or initialize().
 
         Returns:
@@ -277,31 +277,34 @@ class Unit(Distributable):
         with self._gate_lock_:
             if not len(self.links_from):
                 return True
-            if src in self.links_from:
-                self.links_from[src] = True
-            if not all(self.links_from.values()):
-                return False
-            for src in self.links_from:  # reset activation flags
-                self.links_from[src] = False
+            for src in args:
+                if src in self.links_from:
+                    self.links_from[src] = True
+                if not all(self.links_from.values()):
+                    return False
+                for src in self.links_from:  # reset activation flags
+                    self.links_from[src] = False
         return True
 
-    def link_from(self, src):
+    def link_from(self, *args):
         """Adds notification link.
         """
         with self._gate_lock_:
-            self.links_from[src] = False
-            with src._gate_lock_:
-                src.links_to[self] = False
+            for src in args:
+                self.links_from[src] = False
+                with src._gate_lock_:
+                    src.links_to[self] = False
 
-    def unlink_from(self, src):
+    def unlink_from(self, *args):
         """Unlinks self from src.
         """
         with self._gate_lock_:
-            with src._gate_lock_:
-                if self in src.links_to:
-                    del src.links_to[self]
-            if src in self.links_from:
-                del self.links_from[src]
+            for src in args:
+                with src._gate_lock_:
+                    if self in src.links_to:
+                        del src.links_to[self]
+                if src in self.links_from:
+                    del self.links_from[src]
 
     def unlink_all(self):
         """Unlinks self from other units.
