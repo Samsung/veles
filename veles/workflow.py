@@ -17,7 +17,6 @@ import time
 import threading
 import inspect
 from zope.interface import implementer
-from zope.interface.verify import verifyObject
 
 from veles.config import root
 from veles.distributable import IDistributable
@@ -348,7 +347,8 @@ class Workflow(Unit):
             unit = boilerplate.pop()
             visited_units.add(unit)
             node = pydot.Node(hex(id(unit)))
-            node.set("label", '<<b>%s</b><br/><font point-size=\"8\">%s</font>>'
+            node.set("label",
+                     '<<b>%s</b><br/><font point-size=\"8\">%s</font>>'
                      % (unit.name, inspect.getfile(unit.__class__)))
             node.set("shape", "rect")
             node.add_style("rounded")

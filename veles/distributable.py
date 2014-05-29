@@ -180,9 +180,9 @@ class IDistributable(Interface):
     computation environments.
     """
 
-    negotiates_on_connect = Attribute("""Flag indicating whether """
-        """generate() and apply() must be called during the initial """
-        """connect phase.""")
+    negotiates_on_connect = Attribute(
+        """Flag indicating whether generate() and apply() must be called """
+        """during the initial connect phase.""")
 
     def generate_data_for_master():
         """Data for master should be generated here. This function is executed

@@ -259,8 +259,8 @@ class VelesProtocol(StringLineReceiver):
             return False
         self._not_a_slave = True
         responders = {"nodes": lambda _: self.sendLine(self.nodes),
-                     "endpoints":
-                     lambda _: self.sendLine(self.host.zmq_endpoints)}
+                      "endpoints":
+                      lambda _: self.sendLine(self.host.zmq_endpoints)}
         responder = responders.get(query)
         if responder is None:
             self._sendError("%s query is not supported" % query)
