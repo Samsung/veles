@@ -105,29 +105,6 @@ class Snapshotter(SnapshotterBase):
         self.file_name = os.path.join(self.directory, rel_file_name)
         with self._open_file() as fout:
             pickle.dump(self.workflow, fout)
-        logged = set()
-        for u in self.workflow._units:
-            if (hasattr(u, "weights") and hasattr(u.weights, "mem")
-                and u.weights.mem is not None
-                and id(u.weights.mem) not in logged):
-                self.info("%s: Weights range: [%.6f, %.6f]",
-                          u.__class__.__name__,
-                          u.weights.mem.min(), u.weights.mem.max())
-                logged.add(id(u.weights.mem))
-            if (hasattr(u, "bias") and hasattr(u.bias, "mem")
-                and u.bias.mem is not None
-                and id(u.bias.mem) not in logged):
-                self.info("%s: Bias range: [%.6f, %.6f]",
-                          u.__class__.__name__,
-                          u.bias.mem.min(), u.bias.mem.max())
-                logged.add(id(u.bias.mem))
-            if (hasattr(u, "output") and hasattr(u.output, "mem")
-                and u.output.mem is not None
-                and id(u.output.mem) not in logged):
-                self.info("%s: Output range: [%.6f, %.6f]",
-                          u.__class__.__name__,
-                          u.output.mem.min(), u.output.mem.max())
-                logged.add(id(u.output.mem))
         self.info("Wrote %s" % self.file_name)
         file_name_link = os.path.join(
             self.directory, "%s_current.%d.pickle%s" % (
