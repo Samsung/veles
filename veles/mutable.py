@@ -6,6 +6,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 from copy import copy
+import inspect
 import marshal
 import types
 
@@ -210,18 +211,16 @@ class LinkableAttribute(object):
         return getattr(*pointer)
 
     def __set__(self, obj, value):
-        if not (isinstance(value, tuple) and len(value) == 2 and
-                isinstance(value[0], object) and isinstance(value[1], str)):
+        if not LinkableAttribute.__is_reference__(value):
             if self.two_way:
                 # update the referenced attribute value and return
                 pointer = getattr(obj, self.real_attribute_name)
                 setattr(pointer[0], pointer[1], value)
                 return
             elif self.assignment_guard:
-                # FIXME(a.kazantsev): the following is a patch for constructor
-                # assignment.
-                if (type(obj) == type(object) or
-                    hasattr(obj, self.exposed_attribute_name)):
+                prev_value = getattr(obj, self.real_attribute_name, None)
+                if inspect.isclass(obj) or \
+                   LinkableAttribute.__is_reference__(prev_value):
                     raise RuntimeError("Attempted to set the value of linked "
                                        "property '%s' in object %s and "
                                        "two_way is switched off." %
@@ -237,6 +236,11 @@ class LinkableAttribute(object):
 
     def __delete__(self, obj):
         obj.__delattr__(self.real_attribute_name)
+
+    @staticmethod
+    def __is_reference__(value):
+        return isinstance(value, tuple) and len(value) == 2 and \
+            isinstance(value[0], object) and isinstance(value[1], str)
 
 
 def link(obj_dst, name_dst, obj_src, name_src, two_way=False):
