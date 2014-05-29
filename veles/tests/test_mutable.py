@@ -18,6 +18,11 @@ class B(object):
     pass
 
 
+class C(object):
+    def __init__(self):
+        self.number = 255
+
+
 class Test(unittest.TestCase):
     def testBool(self):
         a = Bool()
@@ -80,6 +85,14 @@ class Test(unittest.TestCase):
         self.assertEqual(77, b.number)
         self.assertRaises(ValueError,
                           LinkableAttribute(b, "number", (b, "number")))
+
+    def testLinkableAttribute2(self):
+        a = A()
+        a.number = 77
+        c = C()
+        LinkableAttribute(c, "number", (a, "number"))
+        c2 = C()
+        LinkableAttribute(c2, "number", (a, "number"))
 
 
 if __name__ == "__main__":
