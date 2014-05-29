@@ -15,6 +15,7 @@ import sys
 import tempfile
 import time
 import threading
+import inspect
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
@@ -347,7 +348,8 @@ class Workflow(Unit):
             unit = boilerplate.pop()
             visited_units.add(unit)
             node = pydot.Node(hex(id(unit)))
-            node.set("label", unit.name)
+            node.set("label", '<<b>%s</b><br/><font point-size=\"8\">%s</font>>'
+                     % (unit.name, inspect.getfile(unit.__class__)))
             node.set("shape", "rect")
             node.add_style("rounded")
             node.add_style("filled")
