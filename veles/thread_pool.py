@@ -4,7 +4,6 @@ Created on Jan 21, 2014
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
-
 import copy
 import logging
 import signal
@@ -20,12 +19,14 @@ from twisted.python import threadpool
 import veles.logger as logger
 
 
+sysexit_initial = None
+
+
 class ThreadPool(threadpool.ThreadPool, logger.Logger):
     """
     Pool of threads.
     """
 
-    sysexit_initial = None
     sigint_initial = None
     pools = []
 
@@ -45,15 +46,17 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         self.start()
         self.on_shutdowns = []
         self.shutting_down = False
+
         if not ThreadPool.pools:
-            ThreadPool.sysexit_initial = sys.exit
+            global sysexit_initial
+            sysexit_initial = sys.exit
             sys.exit = ThreadPool.exit
             ThreadPool.sigint_initial = \
                 signal.signal(signal.SIGINT, ThreadPool.sigint_handler)
             signal.signal(signal.SIGUSR1, ThreadPool.sigusr1_handler)
         ThreadPool.pools.append(self)
 
-    def __fini__(self):
+    def __del__(self):
         if not self.joined:
             self.shutdown(False, True)
 
@@ -119,7 +122,8 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                         " Thread class of the current Python interpreter.")
         ThreadPool.pools.remove(self)
         if not len(ThreadPool.pools):
-            sys.exit = ThreadPool.sysexit_initial
+            global sysexit_initial
+            sys.exit = sysexit_initial
         self.debug("I am destroyed")
         self.shutting_down = False
 
