@@ -66,6 +66,7 @@ class Unit(Distributable):
     def __init__(self, workflow, **kwargs):
         self.name = kwargs.get("name")
         self.view_group = kwargs.get("view_group")
+        self._demand = []
         super(Unit, self).__init__(**kwargs)
         self.verify_interface(IUnit)
         self._links_from = {}
@@ -103,6 +104,7 @@ class Unit(Distributable):
         if hasattr(self, "initialize"):
             self.initialize = self._track_call(self.initialize,
                                                "_is_initialized")
+            self.initialize = self._check_attrs(self.initialize, self.demand)
         Unit.timers[self] = 0
 
     def __getstate__(self):
@@ -120,6 +122,10 @@ class Unit(Distributable):
                                      self.name)
         else:
             return object.__repr__(self)
+
+    @property
+    def demand(self):
+        return self._demand
 
     @property
     def links_from(self):
@@ -440,6 +446,17 @@ class Unit(Distributable):
             res = fn(*args, **kwargs)
             setattr(self, name, True)
             return res
+
+        return wrapped
+
+    def _check_attrs(self, fn, attrs):
+        def wrapped(*args, **kwargs):
+            for attr in attrs:
+                val = getattr(self, attr, None)
+                if val is None:
+                    raise AttributeError("Attribute %s of unit %s is not "
+                                         "linked" % (attr, repr(self)))
+            return fn(*args, **kwargs)
 
         return wrapped
 
