@@ -12,7 +12,7 @@ import threading
 
 
 new_event = threading.Event()
-thread_args = None
+thread_args = (None, None)
 
 
 def wait():

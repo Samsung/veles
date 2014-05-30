@@ -38,7 +38,7 @@ class Bool(object):
 
     def __bool__(self):
         initial = self.expr[0][0]
-        value = initial if not callable(initial) else initial()
+        value = initial if not callable(initial) else initial()  # pylint: disable(E1102) # nopep8
         for method in self.expr[1:]:
             value = method[1](method[0], value)
         return value
