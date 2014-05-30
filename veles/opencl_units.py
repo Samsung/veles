@@ -232,31 +232,35 @@ class OpenCLUnit(Unit):
             return None
 
     def _save_to_cache(self, cache_file_name):
-        with tarfile.open("%s.cache" % cache_file_name, "w:gz") as tar:
-            source_io = BytesIO()
-            source_io.write(self.program_.source)
-            ti = tarfile.TarInfo("source.cl")
-            ti.size = source_io.tell()
-            ti.mode = int("666", 8)
-            source_io.seek(0)
-            tar.addfile(ti, fileobj=source_io)
-            for dep in set(self._scan_include_dependencies()):
-                ti = tarfile.TarInfo(os.path.basename(dep))
-                ti.size = os.path.getsize(dep)
+        try:
+            with tarfile.open("%s.cache" % cache_file_name, "w:gz") as tar:
+                source_io = BytesIO()
+                source_io.write(self.program_.source)
+                ti = tarfile.TarInfo("source.cl")
+                ti.size = source_io.tell()
                 ti.mode = int("666", 8)
-                with open(dep, "rb") as fr:
-                    tar.addfile(ti, fileobj=fr)
-            binaries_io = BytesIO()
-            pickler = pickle.Pickler(binaries_io)
-            binaries = {"binaries": self.program_.binaries,
-                        "devices": [(d.name, d.platform.name)
-                                    for d in self.program_.devices]}
-            pickler.dump(binaries)
-            ti = tarfile.TarInfo("binaries.pickle")
-            ti.size = binaries_io.tell()
-            ti.mode = int("666", 8)
-            binaries_io.seek(0)
-            tar.addfile(ti, fileobj=binaries_io)
+                source_io.seek(0)
+                tar.addfile(ti, fileobj=source_io)
+                for dep in set(self._scan_include_dependencies()):
+                    ti = tarfile.TarInfo(os.path.basename(dep))
+                    ti.size = os.path.getsize(dep)
+                    ti.mode = int("666", 8)
+                    with open(dep, "rb") as fr:
+                        tar.addfile(ti, fileobj=fr)
+                binaries_io = BytesIO()
+                pickler = pickle.Pickler(binaries_io)
+                binaries = {"binaries": self.program_.binaries,
+                            "devices": [(d.name, d.platform.name)
+                                        for d in self.program_.devices]}
+                pickler.dump(binaries)
+                ti = tarfile.TarInfo("binaries.pickle")
+                ti.size = binaries_io.tell()
+                ti.mode = int("666", 8)
+                binaries_io.seek(0)
+                tar.addfile(ti, fileobj=binaries_io)
+        except:
+            self.exception("Failed to save the cache file %s:",
+                           cache_file_name)
 
 
 @implementer(IOpenCLUnit)
