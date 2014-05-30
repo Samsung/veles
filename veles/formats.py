@@ -246,6 +246,13 @@ class Vector(Pickleable):
         self.map_flags = 0
         self.lock_ = threading.Lock()
 
+    def threadsafe(fn):
+        def wrapped(self, *args, **kwargs):
+            with self.lock_:
+                res = fn(self, *args, **kwargs)
+            return res
+        return wrapped
+
     def __getstate__(self):
         """Get data from OpenCL device before pickling.
         """
@@ -309,9 +316,9 @@ class Vector(Pickleable):
         self.devmem = self.device.queue_.context.create_buffer(
             cl.CL_MEM_READ_WRITE | cl.CL_MEM_USE_HOST_PTR, ravel(self._mem))
 
+    @threadsafe
     def initialize(self, device=None):
-        with self.lock_:
-            self._initialize(device)
+        self._initialize(device)
 
     def _map(self, flags):
         if self.device is None:
@@ -341,32 +348,29 @@ class Vector(Pickleable):
         self.map_arr_ = None
         self.map_flags = 0
 
+    @threadsafe
     def map_read(self):
-        self.lock_.acquire()
         self._map(cl.CL_MAP_READ)
-        self.lock_.release()
 
+    @threadsafe
     def map_write(self):
-        self.lock_.acquire()
         self._map(cl.CL_MAP_WRITE)
-        self.lock_.release()
 
+    @threadsafe
     def map_invalidate(self):
-        self.lock_.acquire()
         self._map(cl.CL_MAP_WRITE_INVALIDATE_REGION)
-        self.lock_.release()
 
+    @threadsafe
     def unmap(self):
-        self.lock_.acquire()
         self._unmap()
-        self.lock_.release()
 
+    @threadsafe
     def reset(self):
         """Sets buffers to None
         """
-        self.lock_.acquire()
         self._unmap()
         self.devmem = None
         self._mem = None
         self.map_flags = 0
-        self.lock_.release()
+
+    threadsafe = staticmethod(threadsafe)
