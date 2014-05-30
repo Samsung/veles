@@ -135,15 +135,15 @@ class Test(unittest.TestCase):
             self.assertEqual(ccc[i].number, 123)
 
     def testLinkableAttributeOneWay(self):
-        class A(object):
+        class AC(object):
             pass
 
-        class B(object):
+        class BC(object):
             pass
 
-        a = A()
+        a = AC()
         a.number = 77
-        b = B()
+        b = BC()
         b.number = 88
         LinkableAttribute(b, "number", (a, "number"))
         self.assertEqual(b.number, 77)
