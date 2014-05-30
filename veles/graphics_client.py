@@ -91,11 +91,6 @@ class GraphicsClient(Logger):
             import matplotlib.lines as lines
             import matplotlib.patches as patches
             import matplotlib.pyplot as pp
-            import veles.plotting_units  # do not remove
-            try:
-                import veles.znicz.nn_plotting_units  # do not remove
-            except ImportError:
-                self.warning("Failed to import veles.znicz.nn_plotting_units")
             pp.ion()
             self.matplotlib = matplotlib
             self.cm = cm
