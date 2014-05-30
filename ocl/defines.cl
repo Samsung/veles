@@ -66,6 +66,16 @@ inline c_dtype c_relu(c_dtype a) {
   return (c_dtype)(a.x > 15 ? a.x : log(exp(a.x) + 1), a.y);
 }
 
+inline c_dtype c_log_act(c_dtype a) {
+  // FIXME(a.kazantsev): add proper implementation.
+  return (c_dtype)(log(a.x + sqrt(a.x * a.x + 1)), a.y);
+}
+
+inline c_dtype c_log_back(c_dtype a) {
+  // FIXME(a.kazantsev): add proper implementation.
+  return (c_dtype)(rsqrt(a.x * a.x + 1), a.y);
+}
+
 #elif sizeof_c_dtype == sizeof_dtype
 
 #define c_re(a) (a)
@@ -78,6 +88,8 @@ inline c_dtype c_relu(c_dtype a) {
 #define c_dist2(a, b) (((a) - (b)) * ((a) - (b)))
 #define c_norm(a) fabs(a)
 #define c_relu(a) ((a) > 15 ? (a) : log(exp(a) + 1))
+#define c_log_act(a) log(a + sqrt(a * a + 1))
+#define c_log_back(a) rsqrt(a * a + 1)
 
 #else
 
