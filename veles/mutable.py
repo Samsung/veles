@@ -20,17 +20,17 @@ class Bool(object):
         a & b       <=>  a and b
         a ^ b       <=>  a != b
         ~a          <=>  not a
-        a << True   <=>  a = True
-        a << False  <=>  a = False
-        a << b      <=>  a = copy(b)
+        a <<= True   <=>  a = True
+        a <<= False  <=>  a = False
+        a <<= b      <=>  a = copy(b)
         a = b       <=>  a is b
-        a << function() -> False|True
+        a <<= function() -> False|True
         bool(a), int(a)
     """
 
     def __init__(self, value=False):
         self.__expr = [[None]]
-        self << value
+        self <<= value
 
     @property
     def expr(self):
@@ -46,15 +46,15 @@ class Bool(object):
     def __nonzero__(self):
         return self.__bool__()
 
-    def __lshift__(self, value):
+    def __ilshift__(self, value):
         if len(self.__expr) > 1:
             raise RuntimeError("Derived expressions cannot be assigned to.")
         if isinstance(value, Bool):
             self.__expr = copy(value.__expr)
-            return
+            return self
         if isinstance(value, bool) or callable(value):
             self.__expr[0][0] = value
-            return
+            return self
         raise TypeError("Value must be a boolean value or a function")
 
     def __derive(name):

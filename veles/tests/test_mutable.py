@@ -31,17 +31,17 @@ class Test(unittest.TestCase):
         self.assertTrue(b)
         c = a | b
         self.assertTrue(c)
-        b << False
+        b <<= False
         self.assertFalse(a)
         self.assertFalse(b)
         self.assertFalse(c)
         c = a & b
         self.assertFalse(c)
-        a << True
+        a <<= True
         self.assertTrue(a)
         self.assertFalse(b)
         self.assertFalse(c)
-        b << True
+        b <<= True
         self.assertTrue(a)
         self.assertTrue(b)
         self.assertTrue(c)
@@ -49,17 +49,17 @@ class Test(unittest.TestCase):
         self.assertTrue(a)
         self.assertTrue(b)
         self.assertFalse(c)
-        a << False
+        a <<= False
         self.assertFalse(a)
         self.assertTrue(c)
-        b << False
+        b <<= False
         self.assertFalse(a)
         self.assertFalse(b)
         self.assertFalse(c)
         c = ~a
         self.assertFalse(a)
         self.assertTrue(c)
-        a << True
+        a <<= True
         self.assertTrue(a)
         self.assertFalse(c)
         c = a & ~b
