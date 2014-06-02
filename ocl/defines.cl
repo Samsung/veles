@@ -110,7 +110,7 @@ inline float atom_add_float(__global float *addr, float vle) {
     sum += vle;
     int v = *(int*)&oldsum;
     int w = *(int*)&sum;
-    int u = atom_cmpxchg((__global volatile int *)addr, v, w);
+    int u = atomic_cmpxchg((__global volatile int *)addr, v, w);
     sum = *(float*)&u;
   }
   while (sum != oldsum);
