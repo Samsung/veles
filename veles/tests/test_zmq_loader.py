@@ -11,16 +11,19 @@ import unittest
 import zmq
 
 from veles.external.txzmq import ZmqConnection
-from veles.pickle2 import pickle
 from veles.workflow import Workflow
 from veles.zmq_loader import ZeroMQLoader
 
 
-class ZmqPusher(ZmqConnection):
-    socketType = zmq.PUSH
+class ZmqDealer(ZmqConnection):
+    socketType = zmq.DEALER
 
     def __init__(self, *endpoints):
-        super(ZmqPusher, self).__init__(endpoints)
+        super(ZmqDealer, self).__init__(endpoints)
+
+    def request(self, cid, data):
+        self.send(cid, True)
+        self.send_pickled(data)
 
 
 class DummyLauncher(object):
@@ -57,12 +60,12 @@ class Test(unittest.TestCase):
         except zmq.error.ZMQError:
             self.fail("Unable to bind")
             return
-        loader.receive_data("test")
+        loader.receive_data(None, "test")
         loader.run()
         self.assertEqual("test", loader.output)
         ep = loader.generate_data_for_master()["ZmqLoaderEndpoints"]["inproc"]
-        pusher = ZmqPusher(ep)
-        reactor.callWhenRunning(pusher.send, pickle.dumps('hello'))
+        dealer = ZmqDealer(ep)
+        reactor.callWhenRunning(dealer.request, b'test', 'hello')
 
         def run():
             loader.run()

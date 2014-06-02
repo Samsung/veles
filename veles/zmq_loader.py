@@ -5,7 +5,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
-from six.moves import cPickle as pickle, queue
+from six.moves import queue
 from veles.external.txzmq import ZmqConnection, ZmqEndpoint
 import zmq
 from zope.interface import implementer
@@ -14,12 +14,13 @@ from veles.distributable import IDistributable
 from veles.units import Unit, IUnit
 
 
-class ZmqPuller(ZmqConnection):
-    socketType = zmq.PULL
+class ZmqRouter(ZmqConnection):
+    socketType = zmq.ROUTER
 
     def __init__(self, owner, *endpoints):
-        super(ZmqPuller, self).__init__(endpoints)
+        super(ZmqRouter, self).__init__(endpoints)
         self._owner = owner
+        self.routing = {}
 
     @property
     def owner(self):
@@ -30,7 +31,13 @@ class ZmqPuller(ZmqConnection):
         self._owner = value
 
     def messageReceived(self, message):
-        self.owner.receive_data(pickle.loads(message[0]))
+        routing, cid, payload = message
+        self.routing[cid] = routing
+        self.owner.receive_data(cid, payload)
+
+    def reply(self, cid, message):
+        self.send(self.routing.pop(cid), True)
+        self.send_pickled(message)
 
 
 @implementer(IUnit, IDistributable)
@@ -43,6 +50,7 @@ class ZeroMQLoader(Unit):
         super(ZeroMQLoader, self).__init__(workflow, **kwargs)
         self._queue = queue.Queue(kwargs.get("queue_size", 0))
         self.output = 0
+        self.cid = None
         self._endpoints = {}
         self.negotiates_on_connect = True
 
@@ -60,7 +68,7 @@ class ZeroMQLoader(Unit):
             ZmqEndpoint("bind", "rndipc://veles-ipc-zmqloader-:"),
             "tcp":
             ZmqEndpoint("bind", "rndtcp://*:1024:65535:1")})
-        self._zmq_socket = ZmqPuller(self, *sorted(self.endpoints.values()))
+        self._zmq_socket = ZmqRouter(self, *sorted(self.endpoints.values()))
 
         zmq_ipc_fn, zmq_tcp_port = self._zmq_socket.rnd_vals
         self.endpoints.update({
@@ -72,13 +80,15 @@ class ZeroMQLoader(Unit):
             ZmqEndpoint("connect", "tcp://*:%d" % zmq_tcp_port)})
 
     def run(self):
-        self.output = self._queue.get()
+        if self.cid is not None:
+            self._zmq_socket.reply(self.cid, None)
+        self.cid, self.output = self._queue.get()
 
     def stop(self):
-        self.receive_data(None)
+        self.receive_data(None, None)
 
-    def receive_data(self, data):
-        self._queue.put_nowait(data)
+    def receive_data(self, cid, data):
+        self._queue.put_nowait((cid, data))
 
     def apply_data_from_slave(self, data, slave):
         self._endpoints[slave.id] = (slave, data["ZmqLoaderEndpoints"])
