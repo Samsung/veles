@@ -3,6 +3,7 @@ ZeroMQ connection.
 """
 from collections import deque, namedtuple
 import sys
+import six
 from six.moves import cPickle as pickle
 import os
 
@@ -18,7 +19,6 @@ from twisted.internet.interfaces import IFileDescriptor, IReadDescriptor
 from twisted.python import log
 
 from zmq import zmq_version_info
-from builtins import bytearray
 ZMQ3 = zmq_version_info()[0] >= 3
 
 from .manager import ZmqContextManager
@@ -259,7 +259,8 @@ class ZmqConnection(object):
                     pos = 0
                     for d in self._data:
                         buffer[pos:pos + len(d)] = d
-                    self._object = pickle.loads(buffer)
+                    self._object = pickle.loads(buffer if six.PY3
+                                                else str(buffer))
                 self._data = []
 
             @property

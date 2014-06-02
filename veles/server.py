@@ -37,7 +37,7 @@ class ZmqRouter(ZmqConnection):
         self.ignore_unknown_commands = ignore_unknown_commands
 
     def messageReceived(self, message):
-        routing, node_id, *payload = message
+        routing, node_id, payload = message[0], message[1], message[2:]
         node_id = node_id.decode('charmap')
         self.routing[node_id] = routing
         protocol = self.host.factory.protocols.get(node_id)
