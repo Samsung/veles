@@ -316,14 +316,13 @@ class ZmqConnection(object):
         """
         if self.shutted_down:
             return
+        end_flags = constants.NOBLOCK | (constants.SNDMORE if more else 0)
         if isinstance(message, bytes):
-            self.socket.send(message, constants.NOBLOCK)
+            self.socket.send(message, end_flags)
         else:
             for m in message[:-1]:
                 self.socket.send(m, constants.NOBLOCK | constants.SNDMORE)
-            self.socket.send(
-                message[-1],
-                constants.NOBLOCK | (constants.SNDMORE if more else 0))
+            self.socket.send(message[-1], end_flags)
 
         if self.read_scheduled is None:
             self.read_scheduled = reactor.callLater(0, self.doRead)

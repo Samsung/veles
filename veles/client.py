@@ -22,15 +22,15 @@ class ZmqDealer(ZmqConnection):
 
     RECEIVERS = {
         "GETTING_JOB":
-        lambda self, message: self.host.job_received(message[2]),
+        lambda self, message: self.host.job_received(message),
         "WAIT":
-        lambda self, message: self.host.update_result_received(message[2])
+        lambda self, message: self.host.update_result_received(message)
     }
 
     def __init__(self, nid, host, *endpoints, **kwargs):
         super(ZmqDealer, self).__init__(endpoints)
         ignore_invalid_states = kwargs.get("ignore_invalid_states", False)
-        self.id = nid.encode()
+        self.id = nid.encode('charmap')
         self.host = host
         self.ignore_invalid_states = ignore_invalid_states
 
@@ -39,10 +39,10 @@ class ZmqDealer(ZmqConnection):
         if receiver is None and not self.ignore_invalid_states:
             raise RuntimeError("Received a message in an invalid state %s" %
                                self.host.state.current)
-        receiver(self, message)
+        receiver(self, *message)
 
     def request(self, command, message=b''):
-        self.send([self.id, b''] + [command.encode()], True)
+        self.send([self.id, command.encode('charmap')], True)
         self.send_pickled(message)
 
 
@@ -149,7 +149,7 @@ class VelesProtocol(StringLineReceiver):
         self.disconnect("Invalid state %s", self.state.current)
 
     def job_received(self, job):
-        if job == bytes(False):
+        if not job:
             self.factory.host.info("Job was refused")
             self.state.refuse_job()
             self.factory.host.launcher.stop()

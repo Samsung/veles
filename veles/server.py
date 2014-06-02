@@ -26,7 +26,7 @@ class ZmqRouter(ZmqConnection):
         b'job':
         lambda protocol, payload: protocol.jobRequestReceived(),
         b'update':
-        lambda protocol, payload: protocol.updateReceived(payload[1])
+        lambda protocol, payload: protocol.updateReceived(payload)
     }
 
     def __init__(self, host, *endpoints, **kwargs):
@@ -37,24 +37,29 @@ class ZmqRouter(ZmqConnection):
         self.ignore_unknown_commands = ignore_unknown_commands
 
     def messageReceived(self, message):
-        i = message.index(b'')
-        assert i > 0
-        routing, node_id, payload = \
-            message[:i - 1], message[i - 1].decode(), message[i + 1:]
+        routing, node_id, *payload = message
+        node_id = node_id.decode('charmap')
         self.routing[node_id] = routing
         protocol = self.host.factory.protocols.get(node_id)
         if protocol is None:
             self.host.error("ZeroMQ sent unknown node ID %s", node_id)
-            self.reply(node_id, bytes(False))
+            self.reply(node_id, False)
+            return
+        if len(payload) != 2:
+            self.host.error("ZeroMQ sent an invalid payload %s with node ID "
+                            "%s", str(payload), node_id)
+            self.reply(node_id, False)
             return
         command = ZmqRouter.COMMANDS.get(payload[0])
         if command is None and not self.ignore_unknown_commands:
-            raise RuntimeError("Received an unknown command %s",
-                               command.decode())
-        command(protocol, payload)
+            self.host.error("Received an unknown command %s with node ID %s",
+                            command.decode(), node_id)
+            self.reply(node_id, False)
+            return
+        command(protocol, payload[1])
 
     def reply(self, node_id, message):
-        self.send(self.routing.pop(node_id) + [node_id.encode(), b''], True)
+        self.send(self.routing.pop(node_id), True)
         self.send_pickled(message)
 
 
@@ -226,7 +231,7 @@ class VelesProtocol(StringLineReceiver):
             self.host.zmq_connection.reply(self.id, data)
         else:
             self.state.refuse_job()
-            self.host.zmq_connection.reply(self.id, bytes(False))
+            self.host.zmq_connection.reply(self.id, False)
 
     def updateReceived(self, data):
         self.state.receive_update()
@@ -242,9 +247,9 @@ class VelesProtocol(StringLineReceiver):
             return
         self.state.apply_update()
         if result:
-            self.host.zmq_connection.reply(self.id, bytes(True))
+            self.host.zmq_connection.reply(self.id, True)
         else:
-            self.host.zmq_connection.reply(self.id, bytes(False))
+            self.host.zmq_connection.reply(self.id, False)
 
     def sendLine(self, line):
         if six.PY3:
