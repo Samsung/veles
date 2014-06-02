@@ -6,6 +6,7 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 
 
 import functools
+import six
 from six.moves import cPickle as pickle
 import threading
 from zope.interface import Interface, Attribute, implementer
@@ -105,11 +106,13 @@ class Distributable(Pickleable):
 
     def _data_threadsafe(self, fn, name):
         def wrapped(*args, **kwargs):
-            if not self._data_lock_.acquire(
-                    timeout=Distributable.DEADLOCK_TIME):
-                self.error("Deadlock in %s: %s", self.name, name)
-            else:
-                self._data_lock_.release()
+            if six.PY3:
+                # Deadlock checks are possible on Python 3 only
+                if not self._data_lock_.acquire(
+                        timeout=Distributable.DEADLOCK_TIME):
+                    self.error("Deadlock in %s: %s", self.name, name)
+                else:
+                    self._data_lock_.release()
             with self._data_lock_:
                 return fn(*args, **kwargs)
 
