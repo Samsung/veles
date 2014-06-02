@@ -220,13 +220,9 @@ class Vector(Pickleable):
     """
     def __init__(self, data=None):
         super(Vector, self).__init__()
+        self._mem = data
         self.device = None
-        self._mem = None
         self.supposed_maxvle = 1.0
-        if data is not None:
-            assert isinstance(data, numpy.ndarray)
-            self.mem = data
-            self.map_invalidate()
 
     @property
     def mem(self):
