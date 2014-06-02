@@ -2,6 +2,8 @@
 ZeroMQ connection.
 """
 from collections import deque, namedtuple
+import sys
+from six.moves import cPickle as pickle
 import os
 
 from zmq import constants, error
@@ -16,6 +18,7 @@ from twisted.internet.interfaces import IFileDescriptor, IReadDescriptor
 from twisted.python import log
 
 from zmq import zmq_version_info
+from builtins import bytearray
 ZMQ3 = zmq_version_info()[0] >= 3
 
 from .manager import ZmqContextManager
@@ -89,6 +92,9 @@ class ZmqConnection(object):
     tcpKeepaliveCount = 0
     tcpKeepaliveIdle = 0
     tcpKeepaliveInterval = 0
+
+    PICKLE_START = b'<pickle>'
+    PICKLE_END = b'</pickle>'
 
     def __init__(self, endpoints, identity=None):
         """
@@ -196,13 +202,24 @@ class ZmqConnection(object):
         if self.factory:
             self.factory.reactor.removeReader(self)
 
-    def _readMultipart(self):
+    def _readMultipart(self, unpickler):
         """
         Read multipart in non-blocking manner, returns with ready message
         or raising exception (in case of no more messages available).
         """
         while True:
-            self.recv_parts.append(self.socket.recv(constants.NOBLOCK))
+            part = self.socket.recv(constants.NOBLOCK)
+            if part == ZmqConnection.PICKLE_START:
+                unpickler.active = True
+                continue
+            if part == ZmqConnection.PICKLE_END:
+                unpickler.active = False
+                self.recv_parts.append(unpickler.object)
+            elif not unpickler.active:
+                self.recv_parts.append(part)
+            else:
+                unpickler.consume(part)
+                continue
             if not self.socket.get(constants.RCVMORE):
                 result, self.recv_parts = self.recv_parts, []
 
@@ -225,6 +242,34 @@ class ZmqConnection(object):
                 self.read_scheduled.cancel()
             self.read_scheduled = None
 
+        class Unpickler(object):
+            def __init__(self):
+                self._active = False
+
+            @property
+            def active(self):
+                return self._active
+
+            @active.setter
+            def active(self, value):
+                self._active = value
+                if not value:
+                    size = sum([len(d) for d in self._data])
+                    buffer = bytearray(size)
+                    pos = 0
+                    for d in self._data:
+                        buffer[pos:pos + len(d)] = d
+                    self._object = pickle.loads(buffer)
+                self._data = []
+
+            @property
+            def object(self):
+                return self._object
+
+            def consume(self, data):
+                self._data.append(data)
+
+        unpickler = Unpickler()
         while True:
             if self.factory is None:  # disconnected
                 return
@@ -235,7 +280,7 @@ class ZmqConnection(object):
                 return
 
             try:
-                message = self._readMultipart()
+                message = self._readMultipart(unpickler)
             except error.ZMQError as e:
                 if e.errno == constants.EAGAIN:
                     continue
@@ -254,7 +299,7 @@ class ZmqConnection(object):
         """
         return 'ZMQ'
 
-    def send(self, message):
+    def send(self, message, more=False):
         """
         Send message via ZeroMQ socket.
 
@@ -276,7 +321,30 @@ class ZmqConnection(object):
         else:
             for m in message[:-1]:
                 self.socket.send(m, constants.NOBLOCK | constants.SNDMORE)
-            self.socket.send(message[-1], constants.NOBLOCK)
+            self.socket.send(
+                message[-1],
+                constants.NOBLOCK | (constants.SNDMORE if more else 0))
+
+        if self.read_scheduled is None:
+            self.read_scheduled = reactor.callLater(0, self.doRead)
+
+    def send_pickled(self, message):
+        if self.shutted_down:
+            return
+
+        class Writer(object):
+            def __init__(self, socket):
+                self.socket = socket
+
+            def write(self, data):
+                self.socket.send(data, constants.NOBLOCK | constants.SNDMORE)
+
+        w = Writer(self.socket)
+        self.socket.send(ZmqConnection.PICKLE_START,
+                         constants.NOBLOCK | constants.SNDMORE)
+        pickle.dump(message, w,
+                    protocol=(4 if sys.version_info > (3, 4) else 2))
+        self.socket.send(ZmqConnection.PICKLE_END, constants.NOBLOCK)
 
         if self.read_scheduled is None:
             self.read_scheduled = reactor.callLater(0, self.doRead)

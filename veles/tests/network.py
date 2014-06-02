@@ -6,13 +6,14 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import logging
-import pickle
+import threading
 from twisted.internet import reactor
 import unittest
 
 import veles.client as client
 import veles.server as server
 import veles.workflow
+from veles.tests import DummyLauncher
 
 
 class TestWorkflow(veles.workflow.Workflow):
@@ -21,22 +22,24 @@ class TestWorkflow(veles.workflow.Workflow):
     update_applied = False
     power_requested = False
     job_dropped = False
+    event = threading.Event()
 
     def __init__(self, **kwargs):
-        super(TestWorkflow, self).__init__(self, **kwargs)
+        super(TestWorkflow, self).__init__(DummyLauncher(), **kwargs)
+        self.is_running = True
 
-    def request_job(self, slave):
+    def generate_data_for_slave(self, slave):
         TestWorkflow.job_requested = True
-        return pickle.dumps({'objective': 'win'})
+        return {'objective': 'win'}
 
-    def do_job(self, data):
-        job = pickle.loads(data)
+    def do_job(self, job, callback):
         if isinstance(job, dict):
             TestWorkflow.job_done = True
-        return data
+        callback(job)
 
-    def apply_update(self, update, slave):
-        obj = pickle.loads(update)
+    def apply_update(self, obj, slave):
+        if TestWorkflow.update_applied:
+            TestWorkflow.event.set()
         if isinstance(obj, dict):
             TestWorkflow.update_applied = True
             return True
@@ -45,7 +48,8 @@ class TestWorkflow(veles.workflow.Workflow):
     def drop_slave(self, slave):
         TestWorkflow.job_dropped = True
 
-    def get_computing_power(self):
+    @property
+    def computing_power(self):
         TestWorkflow.power_requested = True
         return 100
 
@@ -71,13 +75,19 @@ class Test(unittest.TestCase):
         self.slave = TestWorkflow()
         self.server = server.Server("127.0.0.1:5050", self.master)
         self.client = client.Client("127.0.0.1:5050", self.slave)
-        reactor.callLater(0.1, reactor.stop)
+        self.stopper = threading.Thread(target=self.stop)
+        self.stopper.start()
+
+    def stop(self):
+        TestWorkflow.event.wait(0.1)
+        reactor.callFromThread(reactor.stop)
 
     def tearDown(self):
         pass
 
     def testWork(self):
         reactor.run()
+        self.stopper.join()
         self.assertTrue(TestWorkflow.job_requested, "Job was not requested.")
         self.assertTrue(TestWorkflow.job_done, "Job was not done.")
         self.assertTrue(TestWorkflow.update_applied, "Update was not applied.")

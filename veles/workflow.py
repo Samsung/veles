@@ -10,7 +10,6 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 import datetime
 import hashlib
-from six.moves import cPickle as pickle
 import sys
 import tempfile
 import time
@@ -190,8 +189,7 @@ class Workflow(Unit):
         if not self.is_slave or slave_force:
             self.workflow.on_workflow_finished()
         else:
-            data = pickle.dumps(self.generate_data_for_master())
-            self._do_job_callback_(data)
+            self._do_job_callback_(self.generate_data_for_master())
 
     def add_ref(self, unit):
         if unit not in self.units:
@@ -213,6 +211,11 @@ class Workflow(Unit):
         return data
 
     def generate_data_for_slave(self, slave):
+        """
+        Produces a new job, when a slave asks for it. Run by a master.
+        """
+        if not self.is_running:
+            return None
         data = []
         has_data = True
         for unit in self.units:
@@ -255,24 +258,11 @@ class Workflow(Unit):
             self.units[i].drop_slave(slave)
         self.warning("Dropped the job from %s", slave.id)
 
-    def request_job(self, slave):
-        """
-        Produces a new job, when a slave asks for it. Run by a master.
-        """
-        if not self.is_running:
-            return None
-        data = self.generate_data_for_slave(slave)
-        if data is not None and not data:
-            # Try again later
-            return False
-        return pickle.dumps(data) if data is not None else None
-
     def do_job(self, data, callback):
         """
         Executes this workflow on the given source data. Run by a slave.
         """
-        real_data = pickle.loads(data)
-        self.apply_data_from_master(real_data)
+        self.apply_data_from_master(data)
         self._do_job_callback_ = callback
         try:
             self.run()
@@ -287,8 +277,7 @@ class Workflow(Unit):
         if len(data) == 0:
             self.drop_slave(slave)
             return
-        real_data = pickle.loads(data)
-        self.apply_data_from_slave(real_data, slave)
+        self.apply_data_from_slave(data, slave)
 
     def generate_initial_data_for_master(self):
         data = []
@@ -329,7 +318,8 @@ class Workflow(Unit):
         self.debug("Done with applying the initial data from slave %s",
                    slave.id)
 
-    def get_computing_power(self):
+    @property
+    def computing_power(self):
         """
         Estimates this slave's computing power for initial perfect balancing.
         Run by a slave.

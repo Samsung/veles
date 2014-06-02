@@ -27,6 +27,9 @@ class DummyLauncher(object):
     def on_workflow_finished(self):
         pass
 
+    def stop(self):
+        pass
+
 
 class DummyWorkflow(Workflow):
     """

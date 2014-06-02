@@ -42,7 +42,8 @@ class ZmqDealer(ZmqConnection):
         receiver(self, message)
 
     def request(self, command, message=b''):
-        self.send([self.id, b''] + [command.encode(), message])
+        self.send([self.id, b''] + [command.encode()], True)
+        self.send_pickled(message)
 
 
 class VelesProtocol(StringLineReceiver):

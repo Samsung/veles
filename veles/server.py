@@ -54,8 +54,8 @@ class ZmqRouter(ZmqConnection):
         command(protocol, payload)
 
     def reply(self, node_id, message):
-        self.send(self.routing.pop(node_id) + [node_id.encode(), b'',
-                  message])
+        self.send(self.routing.pop(node_id) + [node_id.encode(), b''], True)
+        self.send_pickled(message)
 
 
 SlaveDescription = namedtuple("SlaveDescription",
@@ -178,8 +178,9 @@ class VelesProtocol(StringLineReceiver):
             return
         self.state.drop()
         if not self.host.workflow.is_running:
-            del self.nodes[self.id]
-            del self.factory.protocols[self._id]
+            if self.id in self.nodes:
+                del self.nodes[self.id]
+            del self.factory.protocols[self.id]
             if len(self.nodes) == 0:
                 self.host.launcher.stop()
         elif self.id in self.nodes:
@@ -188,7 +189,7 @@ class VelesProtocol(StringLineReceiver):
                 self.host.workflow.drop_slave,
                 make_slave_desc(self.nodes[self.id]))
             if self.id in self.factory.protocols:
-                del self.factory.protocols[self._id]
+                del self.factory.protocols[self.id]
 
     def lineReceived(self, line):
         self.host.debug("%s lineReceived:  %s", self.id, line)
@@ -326,17 +327,17 @@ class VelesProtocol(StringLineReceiver):
         power = msg.get("power")
         mid = msg.get("mid")
         pid = msg.get("pid")
-        if not power:
+        if power is None:
             self._sendError("I need your computing power")
             raise Exception("Newly connected client did not send "
                             "it's computing power value, sending back "
                             "the error message")
-        if not mid:
+        if mid is None:
             self._sendError("I need your machine id")
             raise Exception("Newly connected client did not send "
                             "it's machine id, sending back the error "
                             "message")
-        if not pid:
+        if pid is None:
             self._sendError("I need your process id")
             raise Exception("Newly connected client did not send "
                             "it's process id, sending back the error "
@@ -367,7 +368,7 @@ class VelesProtocol(StringLineReceiver):
     def _requestJob(self):
         job = threads.deferToThreadPool(
             reactor, self.host.workflow.thread_pool,
-            self.host.workflow.request_job,
+            self.host.workflow.generate_data_for_slave,
             make_slave_desc(self.nodes[self.id]))
         job.addCallback(self.jobRequestFinished)
 
