@@ -59,8 +59,7 @@ class ZmqRouter(ZmqConnection):
         command(protocol, payload[1])
 
     def reply(self, node_id, message):
-        self.send(self.routing.pop(node_id), True)
-        self.send_pickled(message)
+        self.send(self.routing.pop(node_id), message)
 
 
 SlaveDescription = namedtuple("SlaveDescription",

@@ -22,8 +22,7 @@ class ZmqDealer(ZmqConnection):
         super(ZmqDealer, self).__init__(endpoints)
 
     def request(self, cid, data):
-        self.send(cid, True)
-        self.send_pickled(data)
+        self.send(cid, data)
 
 
 class DummyLauncher(object):
@@ -65,7 +64,7 @@ class Test(unittest.TestCase):
         self.assertEqual("test", loader.output)
         ep = loader.generate_data_for_master()["ZmqLoaderEndpoints"]["inproc"]
         dealer = ZmqDealer(ep)
-        reactor.callWhenRunning(dealer.request, b'test', 'hello')
+        reactor.callWhenRunning(dealer.request, b'test', b'hello')
 
         def run():
             loader.run()
@@ -75,7 +74,7 @@ class Test(unittest.TestCase):
         runner.start()
         reactor.run()
         runner.join()
-        self.assertEqual('hello', loader.output)
+        self.assertEqual(b'hello', loader.output)
 
 
 if __name__ == "__main__":

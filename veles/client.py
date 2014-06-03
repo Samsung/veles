@@ -42,8 +42,7 @@ class ZmqDealer(ZmqConnection):
         receiver(self, *message)
 
     def request(self, command, message=b''):
-        self.send([self.id, command.encode('charmap')], True)
-        self.send_pickled(message)
+        self.send(self.id, command.encode('charmap'), message)
 
 
 class VelesProtocol(StringLineReceiver):

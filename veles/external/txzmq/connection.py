@@ -325,7 +325,7 @@ class ZmqConnection(object):
         """
         return 'ZMQ'
 
-    def send(self, message, more=False):
+    def send(self, *message, pickles_compression="snappy"):
         """
         Send message via ZeroMQ socket.
 
@@ -336,24 +336,33 @@ class ZmqConnection(object):
         After writing read is scheduled as ZeroMQ may not signal incoming
         messages after we touched socket with write request.
 
-        :param message: message data, could be either list of str (multipart
-            message) or just str
-        :type message: str or list of str
+        :param message: message data, a series of objects; if an object is
+        an instance of bytes, it will be sent as-is, otherwise, it will be
+        pickled and optionally compressed. Object must not be a string.
+        :param pickles_compression: the compression to apply to pickled
+        objects. Supported values are None or "", "gzip", "snappy" and "xz".
+        :type pickles_compression: str
         """
         if self.shutted_down:
             return
-        end_flags = constants.NOBLOCK | (constants.SNDMORE if more else 0)
-        if isinstance(message, bytes):
-            self.socket.send(message, end_flags)
-        else:
-            for m in message[:-1]:
-                self.socket.send(m, constants.NOBLOCK | constants.SNDMORE)
-            self.socket.send(message[-1], end_flags)
+
+        def send_part(msg, last):
+            flag = constants.SNDMORE if not last else 0
+            if isinstance(msg, bytes):
+                self.socket.send(msg, constants.NOBLOCK | flag)
+            elif isinstance(msg, str):
+                raise ValueError("All strings must be encoded into bytes")
+            else:
+                self._send_pickled(msg, last, pickles_compression)
+
+        for m in message[:-1]:
+            send_part(m, False)
+        send_part(message[-1], True)
 
         if self.read_scheduled is None:
             self.read_scheduled = reactor.callLater(0, self.doRead)
 
-    def send_pickled(self, message, compression="snappy"):
+    def _send_pickled(self, message, last, compression):
         if self.shutted_down:
             return
 
@@ -384,10 +393,9 @@ class ZmqConnection(object):
                          constants.NOBLOCK | constants.SNDMORE)
         pickle.dump(message, pickler, protocol=(4 if sys.version_info > (3, 4)
                                                 else 3 if six.PY3 else 2))
-        self.socket.send(ZmqConnection.PICKLE_END, constants.NOBLOCK)
-
-        if self.read_scheduled is None:
-            self.read_scheduled = reactor.callLater(0, self.doRead)
+        self.socket.send(
+            ZmqConnection.PICKLE_END,
+            constants.NOBLOCK | (constants.SNDMORE if not last else 0))
 
     def messageReceived(self, message):
         """
