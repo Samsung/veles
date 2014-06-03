@@ -75,6 +75,9 @@ class Test(unittest.TestCase):
         reactor.run()
         runner.join()
         self.assertEqual(b'hello', loader.output)
+        data = loader.generate_data_for_master()
+        self.assertTrue("ZmqLoaderEndpoints" in data.keys())
+        self.assertIsInstance(data["ZmqLoaderEndpoints"], dict)
 
 
 if __name__ == "__main__":
