@@ -74,7 +74,12 @@ class Unit(Distributable):
         self._gate_block = Bool(False)
         self._gate_skip = Bool(False)
         self._ran = False
-        self._timings = kwargs.get("timings", get(root.common.timings, False))
+        timings = get(root.common.timings, None)
+        if timings is not None and isinstance(timings, set):
+            timings = self.__class__.__name__ in timings
+        else:
+            timings = False
+        self._timings = kwargs.get("timings", timings)
         self._workflow = None
         self.workflow = workflow
         self._id = str(uuid.uuid4())
@@ -436,7 +441,7 @@ class Unit(Distributable):
             if self in storage:
                 storage[self] += delta
             if self.timings:
-                self.debug("%s took %.2f sec", fn.__name__, delta)
+                self.debug("%s took %.6f sec", fn.__name__, delta)
             return res
 
         return wrapped
