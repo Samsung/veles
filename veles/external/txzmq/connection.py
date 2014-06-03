@@ -325,7 +325,7 @@ class ZmqConnection(object):
         """
         return 'ZMQ'
 
-    def send(self, *message, pickles_compression="snappy"):
+    def send(self, *message, **kwargs):
         """
         Send message via ZeroMQ socket.
 
@@ -345,6 +345,7 @@ class ZmqConnection(object):
         """
         if self.shutted_down:
             return
+        pickles_compression = kwargs.get("pickles_compression", "snappy")
 
         def send_part(msg, last):
             flag = constants.SNDMORE if not last else 0
