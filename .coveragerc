@@ -1,18 +1,52 @@
 [report]
 omit = */veles/external/hog.py
        */veles/external/__init__.py
-       */veles/external/prettytable.py
        */veles/external/pydot.py
+       */veles/external/freetype/ft_errors.py
+       */veles/external/freetype/__init__.py
+       */veles/external/freetype/ft_types.py
+       */veles/external/freetype/ft_structs.py
+       */veles/external/freetype/ft_enums/ft_lcd_filters.py
+       */veles/external/freetype/ft_enums/ft_load_flags.py
+       */veles/external/freetype/ft_enums/ft_stroker_linecaps.py
+       */veles/external/freetype/ft_enums/ft_glyph_formats.py
+       */veles/external/freetype/ft_enums/ft_encodings.py
+       */veles/external/freetype/ft_enums/ft_glyph_bbox_modes.py
+       */veles/external/freetype/ft_enums/__init__.py
+       */veles/external/freetype/ft_enums/tt_apple_ids.py
+       */veles/external/freetype/ft_enums/ft_fstypes.py
+       */veles/external/freetype/ft_enums/ft_face_flags.py
+       */veles/external/freetype/ft_enums/tt_name_ids.py
+       */veles/external/freetype/ft_enums/ft_kerning_modes.py
+       */veles/external/freetype/ft_enums/ft_outline_flags.py
+       */veles/external/freetype/ft_enums/tt_ms_ids.py
+       */veles/external/freetype/ft_enums/ft_style_flags.py
+       */veles/external/freetype/ft_enums/ft_pixel_modes.py
+       */veles/external/freetype/ft_enums/tt_mac_ids.py
+       */veles/external/freetype/ft_enums/ft_stroker_linejoins.py
+       */veles/external/freetype/ft_enums/tt_platforms.py
+       */veles/external/freetype/ft_enums/ft_open_modes.py
+       */veles/external/freetype/ft_enums/tt_mac_langids.py
+       */veles/external/freetype/ft_enums/ft_render_modes.py
+       */veles/external/freetype/ft_enums/tt_ms_langids.py
+       */veles/external/freetype/ft_enums/ft_load_targets.py
+       */veles/external/freetype/ft_enums/tt_adobe_ids.py
+       */veles/external/freetype/ft_enums/ft_stroker_borders.py
+       */veles/external/progressbar/__init__.py
+       */veles/external/progressbar/widgets.py
+       */veles/external/progressbar/progressbar.py
+       */veles/external/progressbar/compat.py
+       */veles/external/prettytable.py
+       */veles/external/daemon/__init__.py
        */veles/external/daemon/daemon.py
+       */veles/external/daemon/version/__init__.py
        */veles/external/daemon/version/version_info.py
        */veles/external/fysom/__init__.py
-       */veles/external/progressbar/compat.py
-       */veles/external/progressbar/__init__.py
-       */veles/external/progressbar/progressbar.py
-       */veles/external/progressbar/widgets.py
        */veles/external/txzmq/__init__.py
        */veles/external/txzmq/connection.py
        */veles/external/txzmq/manager.py
+       */veles/znicz/external/__init__.py
+       */veles/znicz/external/xmltodict.py
 exclude_lines =
     pragma: no cover
     def __repr__
