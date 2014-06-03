@@ -81,7 +81,8 @@ class ZeroMQLoader(Unit):
 
     def run(self):
         if self.cid is not None:
-            self._zmq_socket.reply(self.cid, None)
+            result = self.workflow.generate_data_for_master()
+            self._zmq_socket.reply(self.cid, result)
         self.cid, self.output = self._queue.get()
 
     def stop(self):

@@ -2,10 +2,13 @@
 ZeroMQ connection.
 """
 from collections import deque, namedtuple
+import gzip
 import sys
 import six
 from six.moves import cPickle as pickle
 import os
+import snappy
+import lzma
 
 from zmq import constants, error
 from zmq import Socket
@@ -93,8 +96,10 @@ class ZmqConnection(object):
     tcpKeepaliveIdle = 0
     tcpKeepaliveInterval = 0
 
-    PICKLE_START = b'<pickle>'
-    PICKLE_END = b'</pickle>'
+    PICKLE_START = b'vpb'
+    PICKLE_END = b'vpe'
+    CODECS = {None: b'\x00', "": b'\x00', "gzip": b'\x01', "snappy": b'\x02',
+              "xz": b'\x03'}
 
     def __init__(self, endpoints, identity=None):
         """
@@ -209,8 +214,9 @@ class ZmqConnection(object):
         """
         while True:
             part = self.socket.recv(constants.NOBLOCK)
-            if part == ZmqConnection.PICKLE_START:
+            if part.startswith(ZmqConnection.PICKLE_START):
                 unpickler.active = True
+                unpickler.codec = part[len(ZmqConnection.PICKLE_START)]
                 continue
             if part == ZmqConnection.PICKLE_END:
                 unpickler.active = False
@@ -264,11 +270,30 @@ class ZmqConnection(object):
                 self._data = []
 
             @property
+            def codec(self):
+                return self._codec
+
+            @codec.setter
+            def codec(self, value):
+                self._codec = value if six.PY3 else ord(value)
+
+            @property
             def object(self):
                 return self._object
 
             def consume(self, data):
-                self._data.append(data)
+                codec = self._codec
+                if codec == 2:
+                    chunk = snappy.decompress(data)
+                elif codec == 0:
+                    chunk = data
+                elif codec == 1:
+                    chunk = gzip.decompress(data)
+                elif codec == 3:
+                    chunk = lzma.decompress(data)
+                else:
+                    raise RuntimeError("Unknown compression type")
+                self._data.append(chunk)
 
         unpickler = Unpickler()
         while True:
@@ -328,22 +353,37 @@ class ZmqConnection(object):
         if self.read_scheduled is None:
             self.read_scheduled = reactor.callLater(0, self.doRead)
 
-    def send_pickled(self, message):
+    def send_pickled(self, message, compression="snappy"):
         if self.shutted_down:
             return
 
-        class Writer(object):
-            def __init__(self, socket):
-                self.socket = socket
+        class Pickler(object):
+            def __init__(self, socket, codec):
+                self._socket = socket
+                self._codec = codec if six.PY3 else ord(codec)
 
             def write(self, data):
-                self.socket.send(data, constants.NOBLOCK | constants.SNDMORE)
+                codec = self._codec
+                if codec == 2:
+                    chunk = snappy.compress(data)
+                elif codec == 0:
+                    chunk = data
+                elif codec == 1:
+                    chunk = gzip.compress(data)
+                elif codec == 3:
+                    chunk = lzma.compress(data)
+                else:
+                    raise RuntimeError("Unknown compression type")
+                self._socket.send(chunk, constants.NOBLOCK | constants.SNDMORE)
 
-        w = Writer(self.socket)
-        self.socket.send(ZmqConnection.PICKLE_START,
+        codec = ZmqConnection.CODECS.get(compression)
+        if codec is None:
+            raise ValueError("Unknown compression type: %s" % compression)
+        pickler = Pickler(self.socket, codec[0])
+        self.socket.send(ZmqConnection.PICKLE_START + codec,
                          constants.NOBLOCK | constants.SNDMORE)
-        pickle.dump(message, w,
-                    protocol=(4 if sys.version_info > (3, 4) else 2))
+        pickle.dump(message, pickler, protocol=(4 if sys.version_info > (3, 4)
+                                                else 3 if six.PY3 else 2))
         self.socket.send(ZmqConnection.PICKLE_END, constants.NOBLOCK)
 
         if self.read_scheduled is None:
