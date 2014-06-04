@@ -67,6 +67,7 @@ class Unit(Distributable):
         self.name = kwargs.get("name")
         self.view_group = kwargs.get("view_group")
         self._demand = []
+        self._id = str(uuid.uuid4())
         super(Unit, self).__init__(**kwargs)
         self.verify_interface(IUnit)
         self._links_from = {}
@@ -82,7 +83,6 @@ class Unit(Distributable):
         self._timings = kwargs.get("timings", timings)
         self._workflow = None
         self.workflow = workflow
-        self._id = str(uuid.uuid4())
         self.add_method_to_storage("initialize")
         self.add_method_to_storage("run")
 
@@ -110,7 +110,11 @@ class Unit(Distributable):
             self.initialize = self._track_call(self.initialize,
                                                "_is_initialized")
             self.initialize = self._check_attrs(self.initialize, self.demand)
-        Unit.timers[self] = 0
+        Unit.timers[self.id] = 0
+
+    def __del__(self):
+        if self.id in Unit.timers:
+            del Unit.timers[self.id]
 
     def __getstate__(self):
         state = super(Unit, self).__getstate__()
@@ -438,8 +442,8 @@ class Unit(Distributable):
             res = fn(*args, **kwargs)
             fp = time.time()
             delta = fp - sp
-            if self in storage:
-                storage[self] += delta
+            if self.id in storage:
+                storage[self.id] += delta
             if self.timings:
                 self.debug("%s took %.6f sec", fn.__name__, delta)
             return res

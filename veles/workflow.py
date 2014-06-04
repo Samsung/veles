@@ -103,7 +103,7 @@ class Workflow(Unit):
         self._is_running = False
         self._sync_event_ = threading.Event()
         self._sync_event_.set()
-        del Unit.timers[self]
+        del Unit.timers[self.id]
 
     def __repr__(self):
         return super(Workflow, self).__repr__() + \
@@ -369,8 +369,14 @@ class Workflow(Unit):
 
     def print_stats(self, by_name=False, top_number=5):
         timers = {}
+        key_unit_map = {}
+        for unit in self.units:
+            key_unit_map[unit.id] = unit
         for key, value in Unit.timers.items():
-            uid = key.__class__.__name__ if not by_name else key.name()
+            unit = key_unit_map.get(key)
+            if unit is None:
+                continue
+            uid = unit.__class__.__name__ if not by_name else unit.name()
             if id not in timers:
                 timers[uid] = 0
             timers[uid] += value
