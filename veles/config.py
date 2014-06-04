@@ -107,5 +107,5 @@ root.common.dtype = opencl_types.dtype_map[root.common.precision_type]
 root.common.ocl_dirs = (os.environ.get("VELES_OPENCL_DIRS", "").split(":") +
                         [os.path.join(root.common.veles_dir, "ocl")])
 root.common.opencl_dir = os.path.join(root.common.veles_dir, "veles")
-root.common.test_dataset_root = "/data/veles"
+root.common.test_dataset_root = "/data/veles/datasets"
 root.common.web_status_root = os.path.join(root.common.veles_dir, "web_status")
