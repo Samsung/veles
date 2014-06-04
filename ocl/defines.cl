@@ -6,7 +6,7 @@
 #define _DEFINES_
 
 /// @brief Pragmas for features.
-#if sizeof_dtype == 8
+#if (sizeof_dtype == 8) && (__OPENCL_VERSION__ < 120)
 #pragma OPENCL EXTENSION cl_khr_fp64: enable
 #endif
 
