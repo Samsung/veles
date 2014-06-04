@@ -613,8 +613,8 @@ class MultiHistogram(Plotter):
         fig.patch.set_facecolor('#E8D6BB')
         # fig.patch.set_alpha(0.45)
 
-        n_cols = int(numpy.round(numpy.sqrt(self.value.mem.shape[0])))
-        n_rows = int(numpy.ceil(self.value.mem.shape[0] / n_cols))
+        n_cols = int(numpy.round(numpy.sqrt(self.value.shape[0])))
+        n_rows = int(numpy.ceil(self.value.shape[0] / n_cols))
         i = 0
         for _ in range(0, n_rows):
             for _ in range(0, n_cols):
@@ -647,9 +647,9 @@ class MultiHistogram(Plotter):
                 if n_cols > 3:
                     ax.set_xticklabels([])
                 i += 1
-                if i >= self.value.mem.shape[0]:
+                if i >= self.value.shape[0]:
                     break
-            if i >= self.value.mem.shape[0]:
+            if i >= self.value.shape[0]:
                 break
 
         self.show_figure(fig)
@@ -703,7 +703,7 @@ class TableMaxMin(Plotter):
         ax.cla()
         ax.patch.set_facecolor('#ffe6ca')
         vals = []
-        for row in self.values.mem:
+        for row in self.values:
             vals.append(list("%.6f" % x for x in row))
         the_table = ax.table(
             cellText=vals,
