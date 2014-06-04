@@ -9,6 +9,7 @@ import time
 from zope.interface import Interface, Attribute, implementer
 
 from veles.distributable import TriviallyDistributable
+from veles.formats import Vector
 from veles.graphics_server import GraphicsServer
 from veles.units import Unit, IUnit
 
@@ -45,6 +46,14 @@ class Plotter(Unit, TriviallyDistributable):
         kwargs["view_group"] = view_group
         super(Plotter, self).__init__(workflow, **kwargs)
         self.redraw_threshold = 0.5
+
+    def __getstate__(self):
+        state = super(Plotter, self).__getstate__()
+        if self.stripped_pickle:
+            for an, av in state.items():
+                if isinstance(av, Vector):
+                    state[an] = av.mem
+        return state
 
     def initialize(self, **kwargs):
         self.last_run_ = time.time()
