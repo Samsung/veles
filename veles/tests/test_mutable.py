@@ -24,6 +24,9 @@ class C(object):
 
 
 class Test(unittest.TestCase):
+    def set_flag(self, b):
+        b.flag = True
+
     def testBool(self):
         a = Bool()
         self.assertFalse(a)
@@ -37,14 +40,29 @@ class Test(unittest.TestCase):
         self.assertFalse(c)
         c = a & b
         self.assertFalse(c)
+        c.flag = False
+
+        c.on_false = self.set_flag
         a <<= True
         self.assertTrue(a)
         self.assertFalse(b)
         self.assertFalse(c)
+        self.assertTrue(c.flag)
+        c.on_false = None
+        c.on_true = self.set_flag
         b <<= True
         self.assertTrue(a)
         self.assertTrue(b)
         self.assertTrue(c)
+        self.assertTrue(c.flag)
+        a.unref(c)
+        b.unref(c)
+        c.flag = False
+        c.on_false = self.set_flag
+        c.on_true = None
+        b <<= False
+        self.assertFalse(c.flag)
+        b <<= True
         c = a ^ b
         self.assertTrue(a)
         self.assertTrue(b)

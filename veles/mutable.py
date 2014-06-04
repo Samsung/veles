@@ -30,6 +30,9 @@ class Bool(object):
 
     def __init__(self, value=False):
         self.__expr = [[None]]
+        self.__influences = {self}
+        self.on_true = None
+        self.on_false = None
         self <<= value
 
     @property
@@ -54,9 +57,12 @@ class Bool(object):
             raise RuntimeError("Derived expressions cannot be assigned to.")
         if isinstance(value, Bool):
             self.__expr = copy(value.__expr)
+            value.__influences.add(self)
+            self.touch()
             return self
         if isinstance(value, bool) or callable(value):
             self.__expr[0][0] = value
+            self.touch()
             return self
         raise TypeError("Value must be a boolean value or a function")
 
@@ -80,6 +86,7 @@ class Bool(object):
                 if res is not None:
                     return res
             res = Bool(self)
+            value.__influences.add(res)
             res.expr.append((value, getattr(Bool, method)))
             return res
         return wrapped
@@ -133,6 +140,32 @@ class Bool(object):
             func_code = marshal.loads(expr[2])
             es.append((expr[0],
                        types.FunctionType(func_code, globals(), expr[1])))
+
+    def touch(self):
+        """
+        Raises events on influenced Bool-s.
+        Crashes badly on Python 3.4.
+        """
+        influenced = copy(self.__influences)
+        pending = copy(influenced)
+        while len(pending):
+            item = pending.pop()
+            new = item.__influences - influenced
+            influenced.update(new)
+            pending.update(new)
+
+        for b in influenced:
+            if b.on_true is None and b.on_false is None:
+                continue
+            if b:
+                if b.on_true is not None:
+                    b.on_true(b)
+            else:
+                if b.on_false is not None:
+                    b.on_false(b)
+
+    def unref(self, item):
+        self.__influences.remove(item)
 
 
 class LinkableAttribute(object):
