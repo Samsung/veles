@@ -66,7 +66,7 @@ class Unit(Distributable):
     def __init__(self, workflow, **kwargs):
         self.name = kwargs.get("name")
         self.view_group = kwargs.get("view_group")
-        self._demand = []
+        self._demanded = []
         self._id = str(uuid.uuid4())
         super(Unit, self).__init__(**kwargs)
         self.verify_interface(IUnit)
@@ -109,7 +109,7 @@ class Unit(Distributable):
         if hasattr(self, "initialize"):
             self.initialize = self._track_call(self.initialize,
                                                "_is_initialized")
-            self.initialize = self._check_attrs(self.initialize, self.demand)
+            self.initialize = self._check_attrs(self.initialize, self.demanded)
         Unit.timers[self.id] = 0
 
     def __del__(self):
@@ -133,8 +133,17 @@ class Unit(Distributable):
             return object.__repr__(self)
 
     @property
-    def demand(self):
-        return self._demand
+    def demanded(self):
+        return self._demanded
+
+    def demand(self, *args):
+        """
+        Adds attributes which must be linked before initialize(), setting each
+        to None.
+        """
+        for attr in args:
+            setattr(self, attr, None)
+            self.demanded.append(attr)
 
     @property
     def links_from(self):
