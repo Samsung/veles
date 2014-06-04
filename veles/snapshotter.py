@@ -103,10 +103,10 @@ class Snapshotter(SnapshotterBase):
         rel_file_name = "%s_%s.%d.pickle%s" % (
             self.prefix, self.suffix, 3 if six.PY3 else 2, ext)
         self.file_name = os.path.join(self.directory, rel_file_name)
-        self.info("Snapshotting into %s" % self.file_name)
+        self.debug("Snapshotting...")
         with self._open_file() as fout:
             pickle.dump(self.workflow, fout)
-        self.info("Snapshotted")
+        self.info("Snapshotted to %s" % self.file_name)
         file_name_link = os.path.join(
             self.directory, "%s_current.%d.pickle%s" % (
                 self.prefix, 3 if six.PY3 else 2, ext))
