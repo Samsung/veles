@@ -13,6 +13,7 @@ import logging
 import os
 import platform
 import signal
+import snappy
 import socket
 import subprocess
 import sys
@@ -39,7 +40,8 @@ class ZmqSubscriber(ZmqConnection):
 
     def messageReceived(self, message):
         self.graphics.debug("Received %d bytes", len(message[0]))
-        self.graphics.update(pickle.loads(message[0][len('graphics'):]))
+        obj = pickle.loads(snappy.decompress(message[0][len('graphics'):]))
+        self.graphics.update(obj)
 
 
 class GraphicsClient(Logger):
@@ -207,9 +209,9 @@ class GraphicsClient(Logger):
                                plotter.name)
                 return
             if self._pdf_trigger:
-                reactor.callLater(0, self._save_pdf, plotter)
+                reactor.callFromThread(self._save_pdf, plotter)
             else:
-                reactor.callLater(0, plotter.redraw)
+                reactor.callFromThread(plotter.redraw)
         else:
             self.debug("Received the command to terminate")
             self.shutdown()

@@ -12,6 +12,7 @@ import fcntl
 import os
 import six
 from six.moves import cPickle as pickle, zip
+import snappy
 import socket
 import struct
 import subprocess
@@ -119,6 +120,7 @@ class GraphicsServer(Logger):
             import objgraph
             restored = pickle.loads(data)
             objgraph.show_refs(restored, too_many=40)
+        data = snappy.compress(data)
         self.debug("Broadcasting %d bytes" % len(data))
         zmq_connection = getattr(self, "zmq_connection")
         if zmq_connection is not None:
