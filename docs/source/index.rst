@@ -1,9 +1,9 @@
 Veles Machine Learning Platform
 ===============================
 
-
 .. toctree::
     :maxdepth: 1
+    :numbered:
 
     manualrst_eclipse_setup
     manualrst_veles_first_run
