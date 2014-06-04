@@ -8,6 +8,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 import argparse
 import datetime
 import errno
+import gc
 import logging
 import os
 import platform
@@ -46,6 +47,7 @@ class GraphicsClient(Logger):
     """
 
     ui_update_interval = 0.01
+    gc_limit = 10
 
     def __init__(self, back, *endpoints, **kwargs):
         super(GraphicsClient, self).__init__()
@@ -61,6 +63,7 @@ class GraphicsClient(Logger):
         self._started = False
         self._shutted_down = False
         self.webagg_fifo = webagg_fifo
+        self._gc_counter = 0
         self._pdf_lock = threading.Lock()
         self._pdf_trigger = False
         self._pdf_pages = None
@@ -182,6 +185,11 @@ class GraphicsClient(Logger):
         """Processes one plotting event.
         """
         if plotter is not None:
+            self._gc_counter += 1
+            if self._gc_counter >= GraphicsClient.gc_limit:
+                gc.collect()
+                self._gc_counter = 0
+
             plotter.matplotlib = self.matplotlib
             plotter.cm = self.cm
             plotter.lines = self.lines
