@@ -339,8 +339,10 @@ class Vector(Pickleable):
     def _unmap(self):
         if self.map_arr_ is None:
             return
-        ev = self.device.queue_.unmap_buffer(self.devmem, self.map_arr_)
-        ev.wait()
+        # Workaround Python 3.4.0 incorrect destructor order call bug
+        if self.device.queue_.handle is not None:
+            ev = self.device.queue_.unmap_buffer(self.devmem, self.map_arr_)
+            ev.wait()
         self.map_arr_ = None
         self.map_flags = 0
 
