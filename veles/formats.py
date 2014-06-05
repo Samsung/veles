@@ -172,6 +172,8 @@ def norm_image(a, yuv=False):
 
 class NumDiff(object):
     """Numeric differentiation helper.
+
+    WARNING: it is invalid for single precision float data type.
     """
     def __init__(self):
         self.h = 1.0e-8
