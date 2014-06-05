@@ -340,7 +340,10 @@ class Vector(Pickleable):
         if self.map_arr_ is None:
             return
         # Workaround Python 3.4.0 incorrect destructor order call bug
-        if self.device.queue_.handle is not None:
+        if self.device.queue_.handle is None:
+            logging.warning("OpenCL device queue is None but Vector devmem "
+                            "was not explicitly unmapped.")
+        else:
             ev = self.device.queue_.unmap_buffer(self.devmem, self.map_arr_)
             ev.wait()
         self.map_arr_ = None
