@@ -182,6 +182,10 @@ class Workflow(Unit):
         self.on_workflow_finished(True)
 
     def on_workflow_finished(self, slave_force=False):
+        if hasattr(self, "_on_workflow_finished_guard_"):
+            self.warning("Double call of on_workflow_finished")
+            return
+        self._on_workflow_finished_guard_ = True
         for unit in self.units:
             unit.stop()
         self._run_time_finished_ = time.time()
@@ -190,6 +194,7 @@ class Workflow(Unit):
             self.workflow.on_workflow_finished()
         else:
             self._do_job_callback_(self.generate_data_for_master())
+        del self._on_workflow_finished_guard_
 
     def add_ref(self, unit):
         if unit not in self.units:
