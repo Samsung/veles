@@ -495,7 +495,7 @@ class Histogram(Plotter):
         # ax.patch.set_alpha(0.45)
 
         if len(self.x) != len(self.y):
-            raise error.ErrBadFormat(
+            raise error.BadFormatError(
                 "Shape of X %s not equal shape of Y %s !" %
                 (len(self.x), len(self.y)))
         ymax = numpy.max(self.y) * 1.3
@@ -717,7 +717,7 @@ class TableMaxMin(Plotter):
 
     def run(self):
         if len(self.col_labels) != len(self.y):
-            raise error.ErrBadFormat(
+            raise error.BadFormatError(
                 "Shape of col_names %s not equal shape of Y %s !" %
                 (len(self.col_labels), len(self.y)))
         for i, y in enumerate(self.y):

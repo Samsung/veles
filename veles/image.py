@@ -31,7 +31,7 @@ asitis_count = 0
 
 def resize(a, width, height, interpolation=BILINEAR, require_copy=False):
     if a.dtype != numpy.uint8:
-        raise error.ErrBadFormat("a.dtype should be numpy.uint8")
+        raise error.BadFormatError("a.dtype should be numpy.uint8")
     if a.shape[1] == width and a.shape[0] == height:
         global asitis_count
         asitis_count += 1

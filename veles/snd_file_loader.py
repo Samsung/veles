@@ -30,13 +30,13 @@ class SndFileLoader(object):
                                       libsndfile.SFM_READ,
                                       byref(info))
         if not handle:
-            raise error.ErrBadFormat("Audio file " + file_name + " does not "
-                                     "exist or is in an unsupported format.")
+            raise error.BadFormatError("Audio file " + file_name + " does not "
+                                       "exist or is in an unsupported format.")
 
         if info.channels > 2:
-            raise error.ErrBadFormat("Audio file " + file_name +
-                                     " has more than two channels. "
-                                     "Only mono or stereo are allowed.")
+            raise error.BadFormatError("Audio file " + file_name +
+                                       " has more than two channels. "
+                                       "Only mono or stereo are allowed.")
         return {"handle": handle, "samples": info.frames,
                 "sampling_rate": info.samplerate, "channels": info.channels,
                 "info": info}

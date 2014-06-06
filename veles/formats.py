@@ -38,7 +38,7 @@ def assert_addr(a, b):
     """Raises an exception if addresses of the supplied arrays differ.
     """
     if not eq_addr(a, b):
-        raise error.ErrBadFormat("Addresses of the arrays are not equal.")
+        raise error.BadFormatError("Addresses of the arrays are not equal.")
 
 
 def ravel(a):
@@ -73,7 +73,7 @@ def interleave(a):
         for i in range(sh[-1]):
             b[:, :, i] = a[i, :, :]
     else:
-        raise error.ErrBadFormat("a should be of shape 4 or 3.")
+        raise error.BadFormatError("a should be of shape 4 or 3.")
     return b
 
 
@@ -116,7 +116,7 @@ def normalize_mean_disp(a):
 
 def normalize_exp(a):
     if a.dtype in (numpy.complex64, numpy.complex128):
-        raise error.ErrNotImplemented()
+        raise NotImplementedError()
     a -= a.max()
     numpy.exp(a, a)
     smm = a.sum()
@@ -233,8 +233,8 @@ class Vector(Pickleable):
     @mem.setter
     def mem(self, value):
         if self.devmem is not None and not eq_addr(self._mem, value):
-            raise error.ErrExists("OpenCL buffer already assigned, "
-                                  "call reset() beforehand.")
+            raise error.AlreadyExistsError("OpenCL buffer already assigned, "
+                                           "call reset() beforehand.")
         self._mem = value
 
     def init_unpickled(self):
@@ -334,7 +334,7 @@ class Vector(Pickleable):
                                                           self._mem.nbytes)
         if (int(cl.ffi.cast("size_t", self.map_arr_)) !=
                 self._mem.__array_interface__["data"][0]):
-            raise error.ErrOpenCL("map_buffer returned different pointer")
+            raise error.OpenCLError("map_buffer returned different pointer")
         del ev
         self.map_flags = flags
 

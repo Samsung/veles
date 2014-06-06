@@ -64,4 +64,4 @@ def numpy_dtype_to_opencl(dtype):
         return "uint"
     if dtype == numpy.uint64:
         return "ulong"
-    raise error.ErrNotExists()
+    raise error.NotExistsError()

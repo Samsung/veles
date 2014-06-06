@@ -13,31 +13,38 @@ class VelesException(Exception):
     pass
 
 
-class ErrNotExists(VelesException):
-    """Exception, raised when something does not exist.
+class NotExistsError(VelesException):
+    """Raised when something does not exist.
     """
     pass
 
 
-class ErrExists(VelesException):
-    """Exception, raised when something already exists.
+class AlreadyExistsError(VelesException):
+    """Raised when something already exists.
     """
     pass
 
 
-class ErrNotImplemented(VelesException):
-    """Exception, raised when something is not implemented.
+class BadFormatError(VelesException):
+    """Raised when bad format of data occured somethere.
     """
     pass
 
 
-class ErrBadFormat(VelesException):
-    """Exception, raised when bad format of data occured somethere.
+class OpenCLError(VelesException):
+    """Raised when OpenCL error occured.
     """
     pass
 
 
-class ErrOpenCL(VelesException):
-    """Exception, raised when OpenCL error occured.
+class Bug(VelesException):
+    """Raised when something goes wrong but it shouldn't.
+    """
+    pass
+
+
+class MasterSlaveCommunicationError(VelesException):
+    """Raised when master or slaves discovers data inconsistency during the
+    communication.
     """
     pass
