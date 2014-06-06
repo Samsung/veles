@@ -18,13 +18,9 @@
 /// Definitions for complex numbers
 #if sizeof_c_dtype == sizeof_dtype * 2
 
-inline dtype c_re(c_dtype a) {
-  return a.x;
-}
-
-inline c_dtype c_from_re(dtype re) {
-  return (c_dtype)(re, 0);
-}
+#define I ((c_dtype)(0, 1))
+#define c_re(a) ((a).x)
+#define c_from_re(x) ((c_dtype)((x), 0))
 
 inline c_dtype c_mul(c_dtype a, c_dtype b) {
   return (c_dtype)(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
@@ -76,6 +72,16 @@ inline c_dtype c_log_back(c_dtype a) {
   return (c_dtype)(rsqrt(a.x * a.x + 1), a.y);
 }
 
+inline c_dtype c_sin(c_dtype z) {
+  c_dtype iz = c_mul(I, z);
+  return (dtype)0.5 * c_mul(I, c_exp(-iz) - c_exp(iz));
+}
+
+inline c_dtype c_cos(c_dtype z) {
+  c_dtype iz = c_mul(I, z);
+  return (dtype)0.5 * (c_exp(-iz) + c_exp(iz));
+}
+
 #elif sizeof_c_dtype == sizeof_dtype
 
 #define c_re(a) (a)
@@ -90,6 +96,8 @@ inline c_dtype c_log_back(c_dtype a) {
 #define c_relu(a) ((a) > 15 ? (a) : log(exp(a) + 1))
 #define c_log_act(a) log(a + sqrt(a * a + 1))
 #define c_log_back(a) rsqrt(a * a + 1)
+#define c_sin(a) sin(a)
+#define c_cos(a) cos(a)
 
 #else
 
