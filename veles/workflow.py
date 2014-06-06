@@ -197,7 +197,7 @@ class Workflow(Unit):
     def add_ref(self, unit):
         if unit is self:
             raise ValueError("Attempted to add self to self")
-            self.units.append(unit)
+        self.units.append(unit)
 
     def del_ref(self, unit):
         if unit in self.units:
