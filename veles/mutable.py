@@ -20,11 +20,12 @@ class Bool(object):
         a & b       <=>  a and b
         a ^ b       <=>  a != b
         ~a          <=>  not a
-        a <<= True   <=>  a = True
-        a <<= False  <=>  a = False
-        a <<= b      <=>  a = copy(b)
+        a <<= True  <=>  a = True
+        a <<= False <=>  a = False
+        a <<= b     <=>  a = bool(b)
         a = b       <=>  a is b
         a <<= function() -> False|True
+        a(b)        <=>  a = copy(b)
         bool(a), int(a)
     """
 
@@ -33,7 +34,11 @@ class Bool(object):
         self.__influences = {self}
         self.on_true = None
         self.on_false = None
-        self <<= value
+        if not isinstance(value, Bool):
+            self <<= value
+        else:
+            self.__expr = copy(value.__expr)
+            value.__influences.add(self)
 
     @property
     def expr(self):
@@ -56,8 +61,7 @@ class Bool(object):
         if len(self.__expr) > 1:
             raise RuntimeError("Derived expressions cannot be assigned to.")
         if isinstance(value, Bool):
-            self.__expr = copy(value.__expr)
-            value.__influences.add(self)
+            self.__expr[0][0] = bool(value)
             self.touch()
             return self
         if isinstance(value, bool) or callable(value):
