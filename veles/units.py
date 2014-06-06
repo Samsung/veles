@@ -142,7 +142,12 @@ class Unit(Distributable):
         to None.
         """
         for attr in args:
-            setattr(self, attr, None)
+            try:
+                setattr(self, attr, None)
+            except AttributeError:
+                self.error("Are you trying to set the value of a property "
+                           "without a setter?")
+                raise
             self.demanded.append(attr)
 
     @property
