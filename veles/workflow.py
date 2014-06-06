@@ -182,10 +182,9 @@ class Workflow(Unit):
         self.on_workflow_finished(True)
 
     def on_workflow_finished(self, slave_force=False):
-        if hasattr(self, "_on_workflow_finished_guard_"):
-            self.warning("Double call of on_workflow_finished")
+        if not self.is_running:
+            # Break an infinite loop if Workflow belongs to Workflow
             return
-        self._on_workflow_finished_guard_ = True
         for unit in self.units:
             unit.stop()
         self._run_time_finished_ = time.time()
@@ -194,10 +193,10 @@ class Workflow(Unit):
             self.workflow.on_workflow_finished()
         else:
             self._do_job_callback_(self.generate_data_for_master())
-        del self._on_workflow_finished_guard_
 
     def add_ref(self, unit):
-        if unit not in self.units:
+        if unit is self:
+            raise ValueError("Attempted to add self to self")
             self.units.append(unit)
 
     def del_ref(self, unit):
