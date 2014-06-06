@@ -270,6 +270,12 @@ class Launcher(logger.Logger):
         workflow.run_is_blocking = False
         if self.is_slave or self.matplotlib_backend == "":
             workflow.plotters_are_enabled = False
+
+        def shutdown():
+            reactor.callLater(0, reactor.sigInt)
+
+        # Ensure reactor stops in some rare cases when it does not normally
+        self.workflow.thread_pool.register_on_shutdown(shutdown)
         if self.is_slave:
             self._agent = client.Client(self.args.master_address, workflow)
         else:
@@ -350,6 +356,8 @@ class Launcher(logger.Logger):
 
     @threadsafe
     def _on_stop(self):
+        if not self._initialized:
+            return
         self._initialized = False
         self._running = False
         # Wait for the own graphics client to terminate normally
