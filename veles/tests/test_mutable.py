@@ -8,6 +8,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 import unittest
 
 from veles.mutable import Bool, LinkableAttribute
+from veles.pickle2 import pickle
 
 
 class A(object):
@@ -82,6 +83,16 @@ class Test(unittest.TestCase):
         self.assertFalse(c)
         c = a & ~b
         self.assertTrue(c)
+
+    def testBoolPickling(self):
+        a = Bool()
+        self.assertFalse(a)
+        b = Bool(True)
+        self.assertTrue(b)
+        c = a | b
+        c.on_true = self.set_flag
+        c2 = pickle.loads(pickle.dumps(c))
+        self.assertEqual(None, c2.on_true)
 
     def testLinkableAttribute(self):
         a = A()

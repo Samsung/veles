@@ -140,6 +140,9 @@ class Bool(object):
             func_code = marshal.loads(expr[2])
             es.append((expr[0],
                        types.FunctionType(func_code, globals(), expr[1])))
+        self.on_true = None
+        self.on_false = False
+        self.__influences = {self}
 
     def touch(self):
         """
