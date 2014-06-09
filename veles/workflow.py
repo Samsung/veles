@@ -96,6 +96,7 @@ class Workflow(Unit):
         self.start_point = StartPoint(self)
         self.end_point = EndPoint(self)
         self.negotiates_on_connect = True
+        self._checksum = None
 
     def init_unpickled(self):
         super(Workflow, self).init_unpickled()
@@ -408,13 +409,15 @@ class Workflow(Unit):
                 self.info("Total run time:\n%s", str(table))
 
     def checksum(self):
-        sha1 = hashlib.sha1()
-        model_name = sys.modules[self.__module__].__file__
-        try:
-            with open(model_name, "r") as f:
-                sha1.update(f.read().encode())
-        except:
-            self.exception("Failed to calculate checksum of %s",
-                           model_name)
-            raise
-        return sha1.hexdigest()
+        if self._checksum is None:
+            sha1 = hashlib.sha1()
+            model_name = sys.modules[self.__module__].__file__
+            try:
+                with open(model_name, "rb") as f:
+                    sha1.update(f.read())
+            except:
+                self.exception("Failed to calculate checksum of %s",
+                               model_name)
+                raise
+            self._checksum = sha1.hexdigest()
+        return self._checksum
