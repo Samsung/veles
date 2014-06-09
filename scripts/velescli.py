@@ -17,18 +17,18 @@ Contact:
 
 '''
 __module_veles_logo__ = \
-    "        _   _ _____ _     _____ _____\n" + \
-    "       | | | |  ___| |   |  ___/  ___|  " + \
-    "Version 0.3.0 Wed, 23 Apr 2014 14:46:21 +0400\n" + \
-    "       | | | | |__ | |   | |__ \ `––.   " + \
-    "Copyright © 2013 Samsung Electronics Co., Ltd.\n" + \
-    "       | | | |  __|| |   |  __| `––. \  " + \
-    "All rights reserved. Any unauthorized use of\n" + \
-    "       \ \_/ / |___| |___| |___/\__/ /  " + \
-    "this software is strictly prohibited and is\n" + \
-    "        \___/\____/\_____|____/\____/   " + \
-    "a subject of your country's laws.\n" + \
-    "       \u200B\n"
+    r"        _   _ _____ _     _____ _____\n" + \
+    r"       | | | |  ___| |   |  ___/  ___|  " + \
+    r"Version 0.3.0 Wed, 23 Apr 2014 14:46:21 +0400\n" + \
+    r"       | | | | |__ | |   | |__ \ `––.   " + \
+    r"Copyright © 2013 Samsung Electronics Co., Ltd.\n" + \
+    r"       | | | |  __|| |   |  __| `––. \  " + \
+    r"All rights reserved. Any unauthorized use of\n" + \
+    r"       \ \_/ / |___| |___| |___/\__/ /  " + \
+    r"this software is strictly prohibited and is\n" + \
+    r"        \___/\____/\_____|____/\____/   " + \
+    r"a subject of your country's laws.\n" + \
+    r"       \u200B\n"
 
 __doc__ += __module_veles_logo__  # nopep8
 
@@ -166,7 +166,7 @@ class Main(Logger):
             class NoEscapeCompleter(argcomplete.CompletionFinder):
                 def quote_completions(self, completions, *args, **kwargs):
                     return completions
-            NoEscapeCompleter()(parser)
+            NoEscapeCompleter()(parser)  # pylint: disable=E1102
         except:
             pass
         return parser
@@ -350,7 +350,7 @@ class Main(Logger):
             logging.getLogger(name).setLevel(logging.DEBUG)
         self._seed_random(args.random_seed)
         if args.debug_pickle:
-            setup_pickle_debug(args)
+            setup_pickle_debug()
         atexit.register(self.print_max_rss)
 
         wm = self._load_model(fname_workflow, args.snapshot)
