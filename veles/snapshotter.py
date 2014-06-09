@@ -59,6 +59,8 @@ class SnapshotterBase(Unit, TriviallyDistributable):
         self.time = time.time()
 
     def run(self):
+        if self.is_slave:
+            return
         self._skipped_counter += 1
         if self._skipped_counter < self.interval:
             return
