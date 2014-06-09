@@ -29,10 +29,9 @@ class TestThreadPool(unittest.TestCase):
             raise
 
     def _job(self, n_jobs, data_lock):
-        time.sleep(numpy.random.rand() * 2 + 1)
-        data_lock.acquire()
-        n_jobs[0] -= 1
-        data_lock.release()
+        time.sleep(numpy.random.rand() + 0.1)
+        with data_lock:
+            n_jobs[0] -= 1
 
     def test_32_threads(self):
         logging.info("Will test ThreadPool with 32 max threads.")
@@ -42,9 +41,8 @@ class TestThreadPool(unittest.TestCase):
                                       queue_size=32)
         n = 100
         for _ in range(n):
-            data_lock.acquire()
-            n_jobs[0] += 1
-            data_lock.release()
+            with data_lock:
+                n_jobs[0] += 1
             pool.request(self._job, (n_jobs, data_lock))
         pool.shutdown(execute_remaining=True)
         self.assertEqual(
@@ -60,9 +58,8 @@ class TestThreadPool(unittest.TestCase):
                                       queue_size=320)
         n = 100
         for _ in range(n):
-            data_lock.acquire()
-            n_jobs[0] += 1
-            data_lock.release()
+            with data_lock:
+                n_jobs[0] += 1
             pool.request(self._job, (n_jobs, data_lock))
         pool.shutdown(execute_remaining=True)
         self.assertEqual(
@@ -79,9 +76,8 @@ class TestThreadPool(unittest.TestCase):
         n = 10
         t0 = time.time()
         for _ in range(n):
-            data_lock.acquire()
-            n_jobs[0] += 1
-            data_lock.release()
+            with data_lock:
+                n_jobs[0] += 1
             pool.request(self._job, (n_jobs, data_lock))
         t1 = time.time()
         pool.shutdown(execute_remaining=False, force=True, timeout=0)
@@ -101,9 +97,8 @@ class TestThreadPool(unittest.TestCase):
                                       queue_size=32)
         n = 10
         for _ in range(n):
-            data_lock.acquire()
-            n_jobs[0] += 1
-            data_lock.release()
+            with data_lock:
+                n_jobs[0] += 1
             pool.request(self._job, (n_jobs, data_lock))
         pool.shutdown(execute_remaining=True)
         self.assertEqual(
