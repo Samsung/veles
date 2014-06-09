@@ -25,7 +25,7 @@ def wait():
             os.kill(os.getpid(), signal.SIGINT)
 
 
-thread = threading.Thread(target=wait)
+thread = threading.Thread(target=wait, name='timeout')
 thread.start()
 sysexit = sys.exit
 

@@ -175,6 +175,14 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         Private method - handler for SIGUSR1.
         """
         print("SIGUSR1 was received, dumping current frames...")
+        ThreadPool._print_thread_stacks()
+
+    @staticmethod
+    def _print_thread_stacks():
+        if not hasattr(sys, "_current_frames"):
+            print("Threads' stacks printing is not implemented for this "
+                  "Python interpreter")
+            return
         for tid, stack in sys._current_frames().items():
             print("-" * 80)
             print("Thread #%d:" % tid)
@@ -183,8 +191,14 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     @staticmethod
     def debug_deadlocks():
         if threading.activeCount() > 1:
+            if threading.activeCount() == 2:
+                for thread in threading._active.values():
+                    if thread.name == 'timeout':
+                        # veles.tests.timeout registers atexit
+                        return
             logging.warning("There are currently more than 1 threads still "
                             "running. A deadlock is likely to happen.\n%s",
                             str(threading._active)
                             if hasattr(threading, "_active")
                             else "<unable to list active threads>")
+            ThreadPool._print_thread_stacks()
