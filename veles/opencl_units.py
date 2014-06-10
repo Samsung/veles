@@ -93,21 +93,22 @@ class OpenCLUnit(Unit):
 
         program_ will be initialized to the resulting program object.
         """
-        if cache_file_name is not None:
-            if not isinstance(cache_file_name, str):
-                raise ValueError("cache_file_name must be a string")
-            cache_file_name = cache_file_name + (".3" if PY3 else ".2")
-            if not os.path.isabs(cache_file_name):
-                cache_file_name = os.path.join(root.common.cache_dir,
-                                               cache_file_name)
-            if self.cache and os.path.exists("%s.cache" % cache_file_name):
-                binaries = self._load_from_cache(cache_file_name, defines,
-                                                 dtype)
-                if binaries is not None:
-                    self.program_ = self.device.queue_.context.create_program(
-                        binaries, binary=True)
-                    self.debug("Used %s.cache", cache_file_name)
-                    return
+        if cache_file_name is None:
+            cache_file_name = self.name
+        if not isinstance(cache_file_name, str):
+            raise ValueError("cache_file_name must be a string")
+        cache_file_name = cache_file_name + (".3" if PY3 else ".2")
+        if not os.path.isabs(cache_file_name):
+            cache_file_name = os.path.join(root.common.cache_dir,
+                                           cache_file_name)
+        if self.cache and os.path.exists("%s.cache" % cache_file_name):
+            binaries = self._load_from_cache(cache_file_name, defines,
+                                             dtype)
+            if binaries is not None:
+                self.program_ = self.device.queue_.context.create_program(
+                    binaries, binary=True)
+                self.debug("Used %s.cache", cache_file_name)
+                return
         source = self._generate_source(defines, dtype)
         self.program_ = self.device.queue_.context.create_program(
             source, root.common.ocl_dirs)
@@ -232,6 +233,8 @@ class OpenCLUnit(Unit):
             return None
 
     def _save_to_cache(self, cache_file_name):
+        if not cache_file_name:
+            raise ValueError("Cache file name cannot be empty")
         try:
             with tarfile.open("%s.cache" % cache_file_name, "w:gz") as tar:
                 source_io = BytesIO()
@@ -300,6 +303,7 @@ class OpenCLBenchmark(OpenCLUnit):
         """
         Launches and waits for the benchmark to finish.
         """
+        self.debug("Running...")
         global_size = [formats.roundup(self.size, self.block_size),
                        formats.roundup(self.size, self.block_size)]
         local_size = [self.block_size, self.block_size]
@@ -308,7 +312,9 @@ class OpenCLBenchmark(OpenCLUnit):
         self.output_C_.map_read()
         tfinish = time.time()
         delta = tfinish - tstart
-        return 1000 / delta
+        res = 1000 / delta
+        self.debug("Result is %.2f", res)
+        return res
 
     def cpu_run(self):
         self.estimate()
@@ -340,7 +346,7 @@ class OpenCLWorkflow(Workflow):
             bench.initialize(device=self.device)
             self._power_ = bench.estimate()
             self.del_ref(bench)
-            self.info("Computing power is %.6f", self._power_)
+            self.info("Computing power is %.2f", self._power_)
         return self._power_
 
     def initialize(self, device, **kwargs):
