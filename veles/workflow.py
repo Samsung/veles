@@ -107,6 +107,7 @@ class Workflow(Unit):
         self._sync_event_ = threading.Event()
         self._sync_event_.set()
         self._run_time_ = 0
+        self._method_time_ = {"run": 0}
         del Unit.timers[self.id]
 
     def __repr__(self):
@@ -191,7 +192,9 @@ class Workflow(Unit):
             return
         for unit in self.units:
             unit.stop()
-        self._run_time_ += time.time() - self._run_time_started_
+        run_time = time.time() - self._run_time_started_
+        self._run_time_ += run_time
+        self._method_time_["run"] += run_time
         self.is_running = False
         if not self.is_slave or slave_force:
             self.workflow.on_workflow_finished()
@@ -211,11 +214,25 @@ class Workflow(Unit):
         def wrapped(self, *args, **kwargs):
             t = time.time()
             res = fn(self, *args, **kwargs)
-            self._run_time_ += time.time() - t
+            if self.is_slave:
+                self._run_time_ += time.time() - t
+            return res
+        return wrapped
+
+    def method_timed(fn):
+        def wrapped(self, *args, **kwargs):
+            t = time.time()
+            res = fn(self, *args, **kwargs)
+            mt = self._method_time_.get(fn.__name__)
+            if mt is None:
+                mt = 0
+            mt += time.time() - t
+            self._method_time_[fn.__name__] = mt
             return res
         return wrapped
 
     @run_timed
+    @method_timed
     def generate_data_for_master(self):
         data = []
         self.debug("Generating the update for master...")
@@ -228,6 +245,7 @@ class Workflow(Unit):
         return data
 
     @run_timed
+    @method_timed
     def generate_data_for_slave(self, slave):
         """
         Produces a new job, when a slave asks for it. Run by a master.
@@ -251,7 +269,8 @@ class Workflow(Unit):
         self.debug("Done with generating a job for slave %s", slave.id)
         return data
 
-    # Not run_timed, since it is included into do_job()
+    @run_timed
+    @method_timed
     def apply_data_from_master(self, data):
         if not isinstance(data, list):
             raise ValueError("data must be a list")
@@ -263,6 +282,7 @@ class Workflow(Unit):
         self.debug("Done with applying the job from master")
 
     @run_timed
+    @method_timed
     def apply_data_from_slave(self, data, slave):
         if not isinstance(data, list):
             raise ValueError("data must be a list")
@@ -276,12 +296,12 @@ class Workflow(Unit):
         return True
 
     @run_timed
+    @method_timed
     def drop_slave(self, slave):
         for i in range(len(self.units)):
             self.units[i].drop_slave(slave)
         self.warning("Dropped the job from %s", slave.id)
 
-    @run_timed
     def do_job(self, data, update, callback):
         """
         Executes this workflow on the given source data. Run by a slave.
@@ -297,6 +317,7 @@ class Workflow(Unit):
             self.stop()
 
     run_timed = staticmethod(run_timed)
+    method_timed = staticmethod(method_timed)
 
     def generate_initial_data_for_master(self):
         data = []
@@ -413,12 +434,22 @@ class Workflow(Unit):
             table.add_row("Σ", int(top_time * 100 / time_all),
                           datetime.timedelta(seconds=top_time), "Top 5")
             self.info("Unit run time statistics top:\n%s", str(table))
-            if not self.is_master and hasattr(self, "_run_time_"):
-                table = PrettyTable("measured", "real", "η,%")
-                table.add_row(datetime.timedelta(seconds=time_all),
-                              datetime.timedelta(seconds=self._run_time_),
-                              int(time_all * 100 / self._run_time_))
-                self.info("Total run time:\n%s", str(table))
+            table = PrettyTable("units", "real", "η,%")
+            table.add_row(datetime.timedelta(seconds=time_all),
+                          datetime.timedelta(seconds=self._run_time_),
+                          int(time_all * 100 / self._run_time_))
+            self.info("Total run time:\n%s", str(table))
+            table = PrettyTable("method", "%", "time")
+            table.align["method"] = "l"
+            time_all = 0
+            for k, v in sorted(self._method_time_.items()):
+                time_all += v
+                table.add_row(k, int(v * 100 / self._run_time_),
+                              datetime.timedelta(seconds=v))
+            if self.is_slave:
+                table.add_row("Σ", int(time_all * 100 / self._run_time_),
+                              datetime.timedelta(seconds=time_all))
+            self.info("Workflow methods run time:\n%s", str(table))
 
     def checksum(self):
         if self._checksum is None:
