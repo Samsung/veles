@@ -67,6 +67,8 @@ class EndPoint(UttermostPoint):
 
     def init_unpickled(self):
         super(EndPoint, self).init_unpickled()
+        # on_workflow_finished() applies to Workflow's run time
+        del Unit.timers[self.id]
 
     def run(self):
         self.workflow.on_workflow_finished()
@@ -104,6 +106,7 @@ class Workflow(Unit):
         self._is_running = False
         self._sync_event_ = threading.Event()
         self._sync_event_.set()
+        self._run_time_ = 0
         del Unit.timers[self.id]
 
     def __repr__(self):
@@ -188,7 +191,7 @@ class Workflow(Unit):
             return
         for unit in self.units:
             unit.stop()
-        self._run_time_finished_ = time.time()
+        self._run_time_ += time.time() - self._run_time_started_
         self.is_running = False
         if not self.is_slave or slave_force:
             self.workflow.on_workflow_finished()
@@ -204,6 +207,15 @@ class Workflow(Unit):
         if unit in self.units:
             self.units.remove(unit)
 
+    def run_timed(fn):
+        def wrapped(self, *args, **kwargs):
+            t = time.time()
+            res = fn(self, *args, **kwargs)
+            self._run_time_ += time.time() - t
+            return res
+        return wrapped
+
+    @run_timed
     def generate_data_for_master(self):
         data = []
         self.debug("Generating the update for master...")
@@ -215,6 +227,7 @@ class Workflow(Unit):
         self.debug("Done with generating the update for master")
         return data
 
+    @run_timed
     def generate_data_for_slave(self, slave):
         """
         Produces a new job, when a slave asks for it. Run by a master.
@@ -238,6 +251,7 @@ class Workflow(Unit):
         self.debug("Done with generating a job for slave %s", slave.id)
         return data
 
+    # Not run_timed, since it is included into do_job()
     def apply_data_from_master(self, data):
         if not isinstance(data, list):
             raise ValueError("data must be a list")
@@ -248,26 +262,33 @@ class Workflow(Unit):
                 unit.apply_data_from_master(data[i])
         self.debug("Done with applying the job from master")
 
+    @run_timed
     def apply_data_from_slave(self, data, slave):
         if not isinstance(data, list):
             raise ValueError("data must be a list")
-        self.debug("Applying the update from slave %s", slave.id)
+        sid = slave.id if slave is not None else "self"
+        self.debug("Applying the update from slave %s", sid)
         for i in range(len(self.units)):
             unit = self.units[i]
             if data[i] is not None and not unit.negotiates_on_connect:
                 unit.apply_data_from_slave(data[i], slave)
-        self.debug("Done with applying the update from slave %s", slave.id)
+        self.debug("Done with applying the update from slave %s", sid)
+        return True
 
+    @run_timed
     def drop_slave(self, slave):
         for i in range(len(self.units)):
             self.units[i].drop_slave(slave)
         self.warning("Dropped the job from %s", slave.id)
 
-    def do_job(self, data, callback):
+    @run_timed
+    def do_job(self, data, update, callback):
         """
         Executes this workflow on the given source data. Run by a slave.
         """
         self.apply_data_from_master(data)
+        if update is not None:
+            self.apply_data_from_slave(update, None)
         self._do_job_callback_ = callback
         try:
             self.run()
@@ -275,14 +296,7 @@ class Workflow(Unit):
             self.exception("Failed to run the workflow")
             self.stop()
 
-    def apply_update(self, data, slave):
-        """
-        Harness the results of a slave's job. Run by a master.
-        """
-        if len(data) == 0:
-            self.drop_slave(slave)
-            return
-        self.apply_data_from_slave(data, slave)
+    run_timed = staticmethod(run_timed)
 
     def generate_initial_data_for_master(self):
         data = []
@@ -399,13 +413,11 @@ class Workflow(Unit):
             table.add_row("Σ", int(top_time * 100 / time_all),
                           datetime.timedelta(seconds=top_time), "Top 5")
             self.info("Unit run time statistics top:\n%s", str(table))
-            if not self.is_master and hasattr(self, "_run_time_started_") and \
-               hasattr(self, "_run_time_finished_"):
-                rtime_all = self._run_time_finished_ - self._run_time_started_
+            if not self.is_master and hasattr(self, "_run_time_"):
                 table = PrettyTable("measured", "real", "η,%")
                 table.add_row(datetime.timedelta(seconds=time_all),
-                              datetime.timedelta(seconds=rtime_all),
-                              int(time_all * 100 / rtime_all))
+                              datetime.timedelta(seconds=self._run_time_),
+                              int(time_all * 100 / self._run_time_))
                 self.info("Total run time:\n%s", str(table))
 
     def checksum(self):

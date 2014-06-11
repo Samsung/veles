@@ -21,25 +21,26 @@ class ZmqDealer(ZmqConnection):
     socketType = zmq.DEALER
 
     RECEIVERS = {
-        "GETTING_JOB":
+        b'job':
         lambda self, message: self.host.job_received(message),
-        "WAIT":
-        lambda self, message: self.host.update_result_received(message)
+        b'update':
+        lambda self, message: self.host.update_result_received(message),
+        b'error':
+        lambda self, message: self.host.disconnect(message)
     }
 
-    def __init__(self, nid, host, *endpoints, **kwargs):
+    def __init__(self, nid, host, *endpoints):
         super(ZmqDealer, self).__init__(endpoints)
-        ignore_invalid_states = kwargs.get("ignore_invalid_states", False)
         self.id = nid.encode('charmap')
         self.host = host
-        self.ignore_invalid_states = ignore_invalid_states
 
     def messageReceived(self, message):
-        receiver = ZmqDealer.RECEIVERS.get(self.host.state.current)
-        if receiver is None and not self.ignore_invalid_states:
-            raise RuntimeError("Received a message in an invalid state %s" %
-                               self.host.state.current)
-        receiver(self, *message)
+        command = message[0]
+        receiver = ZmqDealer.RECEIVERS.get(command)
+        if receiver is None:
+            raise RuntimeError("Received an unknown command %s" %
+                               str(command))
+        receiver(self, *message[1:])
 
     def request(self, command, message=b''):
         self.send(self.id, command.encode('charmap'), message)
@@ -69,14 +70,14 @@ class VelesProtocol(StringLineReceiver):
                                     'dst': 'GETTING_JOB'},
             {'name': 'obtain_job', 'src': 'GETTING_JOB', 'dst': 'BUSY'},
             {'name': 'refuse_job', 'src': 'GETTING_JOB', 'dst': 'END'},
-            {'name': 'wait_update_notification', 'src': 'BUSY', 'dst': 'WAIT'},
+            {'name': 'complete_job', 'src': 'BUSY', 'dst': 'WAIT'},
         ],
         'callbacks': {
             'onchangestate': onFSMStateChanged
         }
     }
 
-    def __init__(self, addr, factory):
+    def __init__(self, addr, factory, async=False):
         """
         Initializes the protocol.
 
@@ -88,9 +89,19 @@ class VelesProtocol(StringLineReceiver):
         self.addr = addr
         self.factory = factory
         self.id = 'None'
+        self._last_update = None
+        self.async = async
         if not factory.state:
             factory.state = fysom.Fysom(VelesProtocol.FSM_DESCRIPTION, self)
         self.state = factory.state
+
+    @property
+    def async(self):
+        return self._async
+
+    @async.setter
+    def async(self, value):
+        self._async = value
 
     def connectionMade(self):
         self.factory.host.info("Connected")
@@ -156,18 +167,24 @@ class VelesProtocol(StringLineReceiver):
         threads.deferToThreadPool(reactor,
                                   self.factory.host.workflow.thread_pool,
                                   self.factory.host.workflow.do_job,
-                                  job, self.job_finished)
+                                  job, self._last_update, self.job_finished)
         self.state.obtain_job()
 
     def job_finished(self, update):
         if self.state.current == "BUSY":
-            self.state.wait_update_notification()
+            self._last_update = update
+            self.state.complete_job()
+            if self.async:
+                self.request_job()
             self.zmq_connection.request("update", update or b'')
             return
         self.factory.host.error("Invalid state %s", self.state.current)
 
     def update_result_received(self, result):
-        self.request_job()
+        if result is False:
+            self.factory.host.warning("Last update was rejected")
+        if not self.async:
+            self.request_job()
 
     def sendLine(self, line):
         if six.PY3:
@@ -206,12 +223,13 @@ class VelesProtocolFactory(ReconnectingClientFactory):
     RECONNECTION_INTERVAL = 1
     RECONNECTION_ATTEMPTS = 60
 
-    def __init__(self, host):
+    def __init__(self, host, async):
         if six.PY3:
             super(VelesProtocolFactory, self).__init__()
         self.host = host
         self.id = None
         self.state = None
+        self._async = async
         self.disconnect_time = None
 
     def startedConnecting(self, connector):
@@ -219,7 +237,7 @@ class VelesProtocolFactory(ReconnectingClientFactory):
                        self.host.address, self.host.port)
 
     def buildProtocol(self, addr):
-        return VelesProtocol(addr, self)
+        return VelesProtocol(addr, self, self._async)
 
     def clientConnectionLost(self, connector, reason):
         if not self.state or self.state.current not in ['ERROR', 'END']:
@@ -254,11 +272,11 @@ class Client(NetworkAgent):
     UDT/TCP client operating on a single socket.
     """
 
-    def __init__(self, configuration, workflow):
+    def __init__(self, configuration, workflow, async):
         super(Client, self).__init__(configuration)
         self.workflow = workflow
         self.launcher = workflow.workflow
-        self.factory = VelesProtocolFactory(self)
+        self.factory = VelesProtocolFactory(self, async)
         self._initial_data = None
         reactor.connectTCP(self.address, self.port, self.factory, timeout=300)
 

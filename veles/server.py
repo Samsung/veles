@@ -34,33 +34,51 @@ class ZmqRouter(ZmqConnection):
         super(ZmqRouter, self).__init__(endpoints)
         ignore_unknown_commands = kwargs.get("ignore_unknown_commands", False)
         self.host = host
-        self.routing = {}
+        self.routing = {b'job': {}, b'update': {}}
+        self._command = None
         self.ignore_unknown_commands = ignore_unknown_commands
 
-    def messageReceived(self, message):
-        routing, node_id, payload = message[0], message[1], message[2:]
+    def parseHeader(self, message):
+        try:
+            routing, node_id, command = message[0:3]
+        except ValueError:
+            self.host.error("ZeroMQ sent an invalid message %s",
+                            str(message[0:3]))
+            return
         node_id = node_id.decode('charmap')
-        self.routing[node_id] = routing
+        self.routing[command][node_id] = routing
         protocol = self.host.factory.protocols.get(node_id)
         if protocol is None:
             self.host.error("ZeroMQ sent unknown node ID %s", node_id)
-            self.reply(node_id, False)
+            self.reply(node_id, b'error', b'Unknown node ID')
             return
-        if len(payload) != 2:
-            self.host.error("ZeroMQ sent an invalid payload %s with node ID "
-                            "%s", str(payload), node_id)
-            self.reply(node_id, False)
-            return
-        command = ZmqRouter.COMMANDS.get(payload[0])
+        command = ZmqRouter.COMMANDS.get(command)
         if command is None and not self.ignore_unknown_commands:
             self.host.error("Received an unknown command %s with node ID %s",
-                            command.decode(), node_id)
-            self.reply(node_id, False)
+                            str(message[2]), node_id)
+            self.reply(node_id, b'error', b'Unknown command')
             return
-        command(protocol, payload[1])
+        return node_id, command, protocol
 
-    def reply(self, node_id, message):
-        self.send(self.routing.pop(node_id), message)
+    def messageReceived(self, message):
+        if self._command is None:
+            self.messageHeaderReceived(message)
+        self.host.debug("Received ZeroMQ message %s", str(message[0:3]))
+        try:
+            payload = message[3]
+        except IndexError:
+            self.host.error("ZeroMQ sent an invalid message %s with node ID "
+                            "%s", str(message), self.node_id)
+            self.reply(self.node_id, b'error', b'Invalid message')
+            return
+        self._command(self._protocol, payload)
+        self._command = None
+
+    def messageHeaderReceived(self, header):
+        self.node_id, self._command, self._protocol = self.parseHeader(header)
+
+    def reply(self, node_id, channel, message):
+        self.send(self.routing[channel].pop(node_id), channel, message)
 
 
 SlaveDescription = namedtuple("SlaveDescription",
@@ -116,9 +134,6 @@ class VelesProtocol(StringLineReceiver):
         'events': [
             {'name': 'connect', 'src': 'INIT', 'dst': 'WAIT'},
             {'name': 'identify', 'src': 'WAIT', 'dst': 'WORK'},
-            {'name': 'receive_update', 'src': 'WORK',
-                                       'dst': 'APPLYING_UPDATE'},
-            {'name': 'apply_update', 'src': 'APPLYING_UPDATE', 'dst': 'WORK'},
             {'name': 'request_job', 'src': 'WORK', 'dst': 'GETTING_JOB'},
             {'name': 'obtain_job', 'src': 'GETTING_JOB', 'dst': 'WORK'},
             {'name': 'refuse_job', 'src': 'GETTING_JOB', 'dst': 'WORK'},
@@ -151,6 +166,7 @@ class VelesProtocol(StringLineReceiver):
         self.nodes = self.host.nodes
         self._id = None
         self._not_a_slave = False
+        self._balance = 0
         self.state = fysom.Fysom(VelesProtocol.FSM_DESCRIPTION, self)
         self._responders = {"WAIT": self._respondInWAIT,
                             "WORK": self._respondInWORK}
@@ -227,17 +243,15 @@ class VelesProtocol(StringLineReceiver):
                 self.factory._job_requests.append(self)
                 return
             self.state.obtain_job()
-            self.host.debug("%s Job size: %d Kb", self.id, len(data) / 1000)
-            self.host.zmq_connection.reply(self.id, data)
+            self.host.zmq_connection.reply(self.id, b'job', data)
         else:
             self.state.refuse_job()
-            self.host.zmq_connection.reply(self.id, False)
+            self.host.zmq_connection.reply(self.id, b'job', False)
 
     def updateReceived(self, data):
-        self.state.receive_update()
         upd = threads.deferToThreadPool(
             reactor, self.host.workflow.thread_pool,
-            self.host.workflow.apply_update, data,
+            self.host.workflow.apply_data_from_slave, data,
             make_slave_desc(self.nodes[self.id]))
         upd.addCallback(self.updateFinished)
         for i, jr in enumerate(copy(self.factory._job_requests)):
@@ -245,14 +259,17 @@ class VelesProtocol(StringLineReceiver):
             jr._requestJob()
 
     def updateFinished(self, result):
-        if self.state.current != 'APPLYING_UPDATE':
-            # silently ignore anything received not in APPLYING_UPDATE state
+        if not self.state.current in ('WORK', 'GETTING_JOB'):
+            self.host.warning("Update was finished in an invalid state %s",
+                              self.state.current)
             return
-        self.state.apply_update()
         if result:
-            self.host.zmq_connection.reply(self.id, True)
+            self.host.zmq_connection.reply(self.id, b'update', True)
         else:
-            self.host.zmq_connection.reply(self.id, False)
+            self.host.zmq_connection.reply(self.id, b'update', False)
+        self._balance -= 1
+        if self._balance == 1:
+            self._requestJob()
 
     def sendLine(self, line):
         if six.PY3:
@@ -374,6 +391,9 @@ class VelesProtocol(StringLineReceiver):
         self.sendLine({'error': err})
 
     def _requestJob(self):
+        if self._balance > 1:
+            return
+        self._balance += 1
         job = threads.deferToThreadPool(
             reactor, self.host.workflow.thread_pool,
             self.host.workflow.generate_data_for_slave,
