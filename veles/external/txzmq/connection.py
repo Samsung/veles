@@ -215,6 +215,7 @@ class ZmqConnection(object):
         while True:
             part = self.socket.recv(constants.NOBLOCK)
             if part.startswith(ZmqConnection.PICKLE_START):
+                self.messageHeaderReceived(self.recv_parts)
                 unpickler.active = True
                 unpickler.codec = part[len(ZmqConnection.PICKLE_START)]
                 continue
@@ -408,6 +409,9 @@ class ZmqConnection(object):
         :param message: message data
         """
         raise NotImplementedError(self)
+
+    def messageHeaderReceived(self, header):
+        pass
 
     def _connectOrBind(self, endpoints):
         """
