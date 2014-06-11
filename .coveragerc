@@ -47,6 +47,22 @@ omit = */veles/external/hog.py
        */veles/external/txzmq/manager.py
        */veles/znicz/external/__init__.py
        */veles/znicz/external/xmltodict.py
+       */veles/znicz/samples/wine.py
+       */veles/znicz/samples/mnist.py
+       */veles/znicz/samples/__init__.py
+       */veles/znicz/samples/mnist_config.py
+       */veles/znicz/samples/channels_relu_conv_config.py
+       */veles/znicz/samples/lines.py
+       */veles/znicz/samples/kohonen_config.py
+       */veles/znicz/samples/lines_config.py
+       */veles/znicz/samples/kohonen.py
+       */veles/znicz/samples/channels_conv_config.py
+       */veles/znicz/samples/kanji_config.py
+       */veles/znicz/samples/kanji.py
+       */veles/znicz/samples/channels.py
+       */veles/znicz/samples/channels_config.py
+       */veles/znicz/samples/wine_config.py
+       
 exclude_lines =
     pragma: no cover
     def __repr__
