@@ -5,7 +5,6 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
-import filecmp
 import matplotlib
 matplotlib.use("cairo")
 import matplotlib.cm as cm
@@ -15,14 +14,35 @@ import matplotlib.pyplot as pp
 pp.ion()
 import numpy
 import os
+from PIL import Image
 import unittest
 
-from veles.plotting_units import MatrixPlotter
+from veles.plotting_units import AccumulatingPlotter, MatrixPlotter
 
 
 class Test(unittest.TestCase):
     def add_ref(self, workflow):
         pass
+
+    def run_plotter(self, plotter):
+        plotter.cm = cm
+        plotter.lines = lines
+        plotter.patches = patches
+        plotter.pp = pp
+        plotter.show_figure = self.show_figure
+        plotter.redraw()
+        tmp_file_name = "/tmp/%s.png" % plotter.__class__.__name__
+        pp.savefig(tmp_file_name)
+        return tmp_file_name
+
+    def compare_images(self, plotter):
+        img1, img2 = [numpy.array(Image.open(fn)) for fn in (
+            "/tmp/%s.png" % plotter.__class__.__name__,
+            os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         "res/%s.png" % plotter.__class__.__name__))]
+        diff = numpy.linalg.norm(img1 - img2)
+        print("Difference:", diff)
+        self.assertLess(diff, 10)
 
     def testMatrixPlotter(self):
         mp = MatrixPlotter(self, name="Matrix")
@@ -38,18 +58,21 @@ class Test(unittest.TestCase):
               [41, 59, 82, 105, 20, 69, 32, 13, 5355, 49],
               [9, 14, 12, 46, 206, 51, 1, 118, 72, 5405]]], order=2)
         mp.input_field = 0
-        mp.cm = cm
-        mp.lines = lines
-        mp.patches = patches
-        mp.pp = pp
-        mp.show_figure = self.show_figure
-        mp.redraw()
-        tmp_file_name = "/tmp/MatrixPlotter.png"
+        self.run_plotter(mp)
+        self.compare_images(mp)
+
+    def testAccumulatingPlotter(self):
+        ap = AccumulatingPlotter(self, name="Lines")
+        ap.input = numpy.arange(1, 20, 0.1)
+        ap.input_field = 0
+        ap._add_value()
+        tmp_file_name = self.run_plotter(ap)
+        for i in range(11):
+            ap.input_field = i + 1
+            ap._add_value()
+            ap.redraw()
         pp.savefig(tmp_file_name)
-        self.assertTrue(filecmp.cmp(
-            tmp_file_name,
-            os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                         "res/MatrixPlotter.png")))
+        self.compare_images(ap)
 
     def show_figure(self, figure):
         pass

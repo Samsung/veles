@@ -50,7 +50,8 @@ class AccumulatingPlotter(Plotter):
     """
 
     def __init__(self, workflow, **kwargs):
-        name = kwargs.get("name", "Errors number")
+        kwargs["name"] = kwargs.get("name", "Errors number")
+        super(AccumulatingPlotter, self).__init__(workflow, **kwargs)
         self.plot_style = kwargs.get("plot_style", "k-")
         self.clear_plot = kwargs.get("clear_plot", False)
         self.redraw_plot = kwargs.get("redraw_plot", False)
@@ -59,18 +60,11 @@ class AccumulatingPlotter(Plotter):
         self.fit_poly_power = kwargs.get("fit_poly_power", 2)
         self.minimap_size = kwargs.get("minimap", 0.25)
         self.line_width = kwargs.get("line_width", 2.0)
-        kwargs["name"] = name
-        kwargs["plot_style"] = self.plot_style
-        kwargs["clear_plot"] = self.clear_plot
-        kwargs["redraw_plot"] = self.redraw_plot
-        kwargs["ylim"] = self.ylim
-        super(AccumulatingPlotter, self).__init__(workflow, **kwargs)
         self.values = []
-        self.input = None  # Connector
-        self.input_field = None
         self.input_offs = 0
         self.pp = None
         self.show_figure = self.nothing
+        self.demand("input", "input_field")
 
     def redraw(self):
         self.pp.ioff()
@@ -124,6 +118,10 @@ class AccumulatingPlotter(Plotter):
         return figure
 
     def run(self):
+        self._add_value()
+        super(AccumulatingPlotter, self).run()
+
+    def _add_value(self):
         if type(self.input_field) == int:
             if self.input_field < 0 or self.input_field >= len(self.input):
                 return
@@ -133,7 +131,6 @@ class AccumulatingPlotter(Plotter):
         if type(value) == numpy.ndarray:
             value = value[self.input_offs]
         self.values.append(float(value))
-        super(AccumulatingPlotter, self).run()
 
 
 @implementer(IPlotter)
