@@ -7,6 +7,7 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 
 import six
 from six.moves import cPickle as pickle
+from pickle import PicklingError, UnpicklingError
 import warnings
 
 
@@ -28,7 +29,7 @@ def setup_pickle_debug():
     def save(self, obj):
         try:
             orig_save(self, obj)
-        except:
+        except PicklingError:
             import traceback
             import pdb
             print("\033[1;31mPickling failure\033[0m")
@@ -39,7 +40,7 @@ def setup_pickle_debug():
     def load(self):
         try:
             orig_load(self)
-        except:
+        except (UnpicklingError, ImportError):
             import traceback
             import pdb
             print("\033[1;31mUnpickling failure\033[0m")

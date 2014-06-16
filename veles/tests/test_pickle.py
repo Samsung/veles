@@ -6,10 +6,14 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import os
-import pickle
+import six
+import pdb
+import threading
 import unittest
+import warnings
 
 from veles.distributable import Pickleable
+from veles.pickle2 import setup_pickle_debug, pickle
 
 
 g_pt = 0
@@ -51,6 +55,38 @@ class TestPickle(unittest.TestCase):
         self.assertListEqual([g_pt, pt.d, pt.c, pt.b, pt.a, pt.h_],
                              [2, "D", None, "B", "AA", None],
                              "Pickle test failed.")
+
+    def test_setup_pickle_debug(self):
+        if not six.PY3:
+            with warnings.catch_warnings(record=True) as w:
+                setup_pickle_debug()
+                self.assertEqual(1, len(w))
+                return
+
+        flag = [False]
+
+        def set_trace():
+            # nonlocal flag raises SyntaxError on Python 2.7
+            flag[0] = True
+
+        pdb.set_trace = set_trace
+        dump = pickle.dump
+        dumps = pickle.dumps
+        load = pickle.load
+        loads = pickle.loads
+
+        setup_pickle_debug()
+        pickle.dumps(threading.Lock())
+        self.assertTrue(flag[0])
+
+        def recover_set_trace():
+            print("pdb.set_trace()")
+
+        pdb.set_trace = recover_set_trace
+        pickle.dump = dump
+        pickle.dumps = dumps
+        pickle.load = load
+        pickle.loads = loads
 
 
 if __name__ == "__main__":
