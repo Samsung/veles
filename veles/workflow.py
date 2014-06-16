@@ -8,8 +8,10 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
+from collections import OrderedDict, defaultdict
 import datetime
 import hashlib
+from itertools import chain
 import sys
 import tempfile
 import time
@@ -74,6 +76,12 @@ class EndPoint(UttermostPoint):
         self.workflow.on_workflow_finished()
 
 
+class MultiMap(OrderedDict, defaultdict):
+    def __init__(self, default_factory=list, *items, **kwargs):
+        OrderedDict.__init__(self, *items, **kwargs)
+        defaultdict.__init__(self, default_factory)
+
+
 @implementer(IUnit, IDistributable)
 class Workflow(Unit):
     """Base class for unit sets which are logically connected and belong to
@@ -94,7 +102,7 @@ class Workflow(Unit):
                                        generate_data_for_slave_threadsafe=True,
                                        apply_data_from_slave_threadsafe=False,
                                        **kwargs)
-        self._units = []
+        self._units = MultiMap()
         self.start_point = StartPoint(self)
         self.end_point = EndPoint(self)
         self.negotiates_on_connect = True
@@ -112,7 +120,49 @@ class Workflow(Unit):
 
     def __repr__(self):
         return super(Workflow, self).__repr__() + \
-            " with %d units" % len(self.units)
+            " with %d units" % len(self)
+
+    def __getitem__(self, key):
+        if isinstance(key, str):
+            units = self._units[key]
+            if len(units) == 0:
+                return None
+            if len(units) == 1:
+                return units[0]
+            return units
+        if isinstance(key, int):
+            observed = 0
+            for units in self._units.values():
+                if observed + len(units) > key:
+                    return units[key - observed]
+                observed += len(units)
+        raise TypeError("Key must be either a string or an integer.")
+
+    def __iter__(self):
+        class WorkflowIterator(object):
+            def __init__(self, workflow):
+                super(WorkflowIterator, self).__init__()
+                self._name_iter = workflow._units.values().__iter__()
+                self._unit_iter = None
+
+            def __next__(self):
+                if self._unit_iter is None:
+                    self._unit_iter = self._name_iter.__next__().__iter__()
+                unit = None
+                while unit is None:
+                    try:
+                        unit = self._unit_iter.__next__()
+                    except StopIteration:
+                        self._unit_iter = self._name_iter.__next__().__iter__()
+                return unit
+
+            def next(self):
+                return self.__next__()
+
+        return WorkflowIterator(self)
+
+    def __len__(self):
+        return sum([len(units) for units in self._units.values()])
 
     @property
     def is_running(self):
@@ -145,14 +195,15 @@ class Workflow(Unit):
 
     @property
     def units(self):
-        return self._units if hasattr(self, "_units") else []
+        units = getattr(self, "_units", {})
+        return list(chain(units.values()))
 
     def initialize(self, **kwargs):
         fin_text = "all units are initialized"
-        maxlen = max([len(u.name) for u in self.units] + [len(fin_text)])
-        progress = ProgressBar(maxval=len(self.units),
+        maxlen = max([len(u.name) for u in self] + [len(fin_text)])
+        progress = ProgressBar(maxval=len(self),
                                term_width=min(80,
-                                              len(self.units) + 8 + maxlen),
+                                              len(self) + 8 + maxlen),
                                widgets=[Percentage(), ' ', Bar(), ' ',
                                         ' ' * maxlen])
         self.info("Initializing units in %s...", self.name)
@@ -190,7 +241,7 @@ class Workflow(Unit):
         if not self.is_running:
             # Break an infinite loop if Workflow belongs to Workflow
             return
-        for unit in self.units:
+        for unit in self:
             unit.stop()
         run_time = time.time() - self._run_time_started_
         self._run_time_ += run_time
@@ -204,11 +255,11 @@ class Workflow(Unit):
     def add_ref(self, unit):
         if unit is self:
             raise ValueError("Attempted to add self to self")
-        self.units.append(unit)
+        self._units[unit.name].append(unit)
 
     def del_ref(self, unit):
-        if unit in self.units:
-            self.units.remove(unit)
+        if unit.name in self._units.keys():
+            self._units[unit.name].remove(unit)
 
     def run_timed(fn):
         def wrapped(self, *args, **kwargs):
@@ -236,7 +287,7 @@ class Workflow(Unit):
     def generate_data_for_master(self):
         data = []
         self.debug("Generating the update for master...")
-        for unit in self.units:
+        for unit in self:
             if not unit.negotiates_on_connect:
                 data.append(unit.generate_data_for_master())
             else:
@@ -254,14 +305,14 @@ class Workflow(Unit):
             return None
         data = []
         has_data = True
-        for unit in self.units:
+        for unit in self:
             if not unit.negotiates_on_connect:
                 has_data &= unit.has_data_for_slave
         if not has_data:
             # Try again later
             return False
         self.debug("Generating a job for slave %s", slave.id)
-        for unit in self.units:
+        for unit in self:
             if not unit.negotiates_on_connect:
                 data.append(unit.generate_data_for_slave(slave))
             else:
@@ -275,8 +326,8 @@ class Workflow(Unit):
         if not isinstance(data, list):
             raise ValueError("data must be a list")
         self.debug("Applying the job from master")
-        for i in range(0, len(data)):
-            unit = self.units[i]
+        for i in range(len(data)):
+            unit = self[i]
             if data[i] is not None and not unit.negotiates_on_connect:
                 unit.apply_data_from_master(data[i])
         self.debug("Done with applying the job from master")
@@ -288,8 +339,8 @@ class Workflow(Unit):
             raise ValueError("data must be a list")
         sid = slave.id if slave is not None else "self"
         self.debug("Applying the update from slave %s", sid)
-        for i in range(len(self.units)):
-            unit = self.units[i]
+        for i in range(len(self)):
+            unit = self[i]
             if data[i] is not None and not unit.negotiates_on_connect:
                 unit.apply_data_from_slave(data[i], slave)
         self.debug("Done with applying the update from slave %s", sid)
@@ -298,8 +349,8 @@ class Workflow(Unit):
     @run_timed
     @method_timed
     def drop_slave(self, slave):
-        for i in range(len(self.units)):
-            self.units[i].drop_slave(slave)
+        for i in range(len(self)):
+            self[i].drop_slave(slave)
         self.warning("Dropped the job from %s", slave.id)
 
     def do_job(self, data, update, callback):
@@ -322,7 +373,7 @@ class Workflow(Unit):
     def generate_initial_data_for_master(self):
         data = []
         self.debug("Generating the initial data for master...")
-        for unit in self.units:
+        for unit in self:
             if unit.negotiates_on_connect:
                 data.append(unit.generate_data_for_master())
         self.debug("Done with generating the initial data for master")
@@ -331,7 +382,7 @@ class Workflow(Unit):
     def generate_initial_data_for_slave(self, slave):
         data = []
         self.debug("Generating the initial data for slave...")
-        for unit in self.units:
+        for unit in self:
             if unit.negotiates_on_connect:
                 data.append(unit.generate_data_for_slave(slave))
         self.debug("Done with generating the initial data for slave")
@@ -342,7 +393,7 @@ class Workflow(Unit):
             raise ValueError("data must be a list")
         self.debug("Applying the initial data from master")
         for i in range(0, len(data)):
-            unit = self.units[i]
+            unit = self[i]
             if data[i] is not None and unit.negotiates_on_connect:
                 unit.apply_data_from_master(data[i])
         self.debug("Done with applying the initial data from master")
@@ -352,7 +403,7 @@ class Workflow(Unit):
             raise ValueError("data must be a list")
         self.debug("Applying the initial data from slave %s", slave.id)
         for i in range(0, len(data)):
-            unit = self.units[i]
+            unit = self[i]
             if data[i] is not None and unit.negotiates_on_connect:
                 unit.apply_data_from_slave(data[i], slave)
         self.debug("Done with applying the initial data from slave %s",
@@ -410,7 +461,7 @@ class Workflow(Unit):
     def print_stats(self, by_name=False, top_number=5):
         timers = {}
         key_unit_map = {}
-        for unit in self.units:
+        for unit in self:
             key_unit_map[unit.id] = unit
         for key, value in Unit.timers.items():
             unit = key_unit_map.get(key)
