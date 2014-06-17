@@ -8,47 +8,55 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import logging
-import pickle
 import socket
+import threading
 from twisted.internet import reactor
 import unittest
 
 from veles.config import root
 from veles.launcher import Launcher
-import veles.workflow
+from veles.workflow import Workflow
 
 
-class TestWorkflow(veles.workflow.Workflow):
+class TestWorkflow(Workflow):
     job_requested = False
     job_done = False
     job_dropped = False
     update_applied = False
     power_requested = False
+    event = threading.Event()
 
     def __init__(self, launcher, **kwargs):
         super(TestWorkflow, self).__init__(launcher, **kwargs)
 
-    def request_job(self, slave):
+    @Workflow.run_timed
+    @Workflow.method_timed
+    def generate_data_for_slave(self, slave):
         TestWorkflow.job_requested = True
-        return pickle.dumps({'objective': 'win'})
+        return [{'objective': 'win'}]
 
-    def do_job(self, data):
-        job = pickle.loads(data)
-        if isinstance(job, dict):
-            TestWorkflow.job_done = True
-        return data
-
-    def apply_update(self, update, slave):
-        obj = pickle.loads(update)
-        if isinstance(obj, dict):
+    @Workflow.run_timed
+    @Workflow.method_timed
+    def apply_data_from_slave(self, update, slave):
+        if TestWorkflow.update_applied:
+            TestWorkflow.event.set()
+        if isinstance(update, list) and isinstance(update[0], dict) and \
+                update[0]['objective'] == 'win':
             TestWorkflow.update_applied = True
             return True
         return False
 
+    def do_job(self, job, update, callback):
+        if isinstance(job, list) and isinstance(job[0], dict) and \
+                job[0]['objective'] == 'win':
+            TestWorkflow.job_done = True
+        callback(job)
+
     def drop_slave(self, slave):
         TestWorkflow.job_dropped = True
 
-    def get_computing_power(self):
+    @property
+    def computing_power(self):
         TestWorkflow.power_requested = True
         return 100
 
@@ -68,12 +76,19 @@ class Test(unittest.TestCase):
 
     def testConnectivity(self):
         reactor.callLater(0.1, reactor.stop)
+        self.stopper = threading.Thread(target=self.stop)
+        self.stopper.start()
         self.server.run()
+        self.stopper.join()
         self.assertTrue(TestWorkflow.job_requested, "Job was not requested.")
         self.assertTrue(TestWorkflow.job_done, "Job was not done.")
         self.assertTrue(TestWorkflow.update_applied, "Update was not applied.")
         self.assertTrue(TestWorkflow.power_requested,
                         "Power was not requested.")
+
+    def stop(self):
+        TestWorkflow.event.wait(0.1)
+        reactor.callFromThread(reactor.stop)
 
 
 if __name__ == "__main__":

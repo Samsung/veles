@@ -45,11 +45,10 @@ class ZmqContextManager(object):
             self.initialized = True
             self.connections = set()
             self.context = Context(self.ioThreads)
-            self.shutted_down = False
-            self.registerForShutdown()
+            reactor.addSystemEventTrigger('during', 'shutdown', self.shutdown)
 
     def __repr__(self):
-        return "ZmqContextManager()"
+        return "ZmqContextManager(%d threads)" % self.ioThreads
 
     def shutdown(self):
         """
@@ -59,22 +58,12 @@ class ZmqContextManager(object):
         and terminating ZeroMQ context. Also cleans up
         Twisted reactor.
         """
-        if self.shutted_down:
+        if not self.initialized:
             return
-        self.shutted_down = True
+        self.initialized = False
         for connection in self.connections.copy():
             connection.shutdown()
 
         self.connections = None
         self.context.term()
         self.context = None
-
-    def registerForShutdown(self):
-        """
-        Register factory to be automatically shut down
-        on reactor shutdown.
-
-        It is recommended that this method is called on any
-        created factory.
-        """
-        reactor.addSystemEventTrigger('during', 'shutdown', self.shutdown)

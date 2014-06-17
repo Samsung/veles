@@ -12,11 +12,11 @@ import unittest
 
 import veles.client as client
 import veles.server as server
-import veles.workflow
+from veles.workflow import Workflow
 from veles.tests import DummyLauncher
 
 
-class TestWorkflow(veles.workflow.Workflow):
+class TestWorkflow(Workflow):
     job_requested = False
     job_done = False
     update_applied = False
@@ -28,16 +28,20 @@ class TestWorkflow(veles.workflow.Workflow):
         super(TestWorkflow, self).__init__(DummyLauncher(), **kwargs)
         self.is_running = True
 
+    @Workflow.run_timed
+    @Workflow.method_timed
     def generate_data_for_slave(self, slave):
         TestWorkflow.job_requested = True
         return {'objective': 'win'}
 
-    def do_job(self, job, callback):
+    def do_job(self, job, update, callback):
         if isinstance(job, dict):
             TestWorkflow.job_done = True
         callback(job)
 
-    def apply_update(self, obj, slave):
+    @Workflow.run_timed
+    @Workflow.method_timed
+    def apply_data_from_slave(self, obj, slave):
         if TestWorkflow.update_applied:
             TestWorkflow.event.set()
         if isinstance(obj, dict):
@@ -74,7 +78,7 @@ class Test(unittest.TestCase):
         self.master = TestWorkflow()
         self.slave = TestWorkflow()
         self.server = server.Server("127.0.0.1:5050", self.master)
-        self.client = client.Client("127.0.0.1:5050", self.slave)
+        self.client = client.Client("127.0.0.1:5050", self.slave, async=False)
         self.stopper = threading.Thread(target=self.stop)
         self.stopper.start()
 
