@@ -126,10 +126,12 @@ class OpenCLUnit(Unit):
     def assign_kernel(self, name):
         self._kernel_ = self.get_kernel(name)
 
-    def execute_kernel(self, global_size, local_size, kernel=None):
+    def execute_kernel(self, global_size, local_size, kernel=None,
+                       need_event=False):
         try:
-            return self.device.queue_.execute_kernel(kernel or self._kernel_,
-                                                     global_size, local_size)
+            return self.device.queue_.execute_kernel(
+                kernel or self._kernel_, global_size, local_size,
+                need_event=need_event)
         except opencl4py.CLRuntimeError:
             self.error("execute_kernel(%s) has failed. global_size = %s, "
                        "local_size = %s", (kernel or self._kernel_).name,
@@ -308,7 +310,7 @@ class OpenCLBenchmark(OpenCLUnit):
                        formats.roundup(self.size, self.block_size)]
         local_size = [self.block_size, self.block_size]
         tstart = time.time()
-        self.execute_kernel(global_size, local_size).wait()
+        self.execute_kernel(global_size, local_size)
         self.output_C_.map_read()
         tfinish = time.time()
         delta = tfinish - tstart

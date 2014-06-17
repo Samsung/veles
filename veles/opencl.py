@@ -152,8 +152,7 @@ class Device(Pickleable):
         self.device_info = DeviceInfo(
             desc=desc, memsize=device.memsize,
             memalign=device.memalign, version=device.version)
-        self.queue_ = context.create_queue(
-            device, cl.CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE)
+        self.queue_ = context.create_queue(device)
 
     def _fill_device_info_performance_values(self):
         device_infos = {}
