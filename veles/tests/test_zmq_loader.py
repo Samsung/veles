@@ -49,7 +49,6 @@ class DummyLauncher(object):
 
 
 class Test(unittest.TestCase):
-
     def testZmqLoader(self):
         launcher = DummyLauncher(mode=0)
         wf = Workflow(launcher)
@@ -72,7 +71,10 @@ class Test(unittest.TestCase):
 
         runner = threading.Thread(target=run)
         runner.start()
-        reactor.run()
+        try:
+            reactor.run()
+        finally:
+            loader.stop()
         runner.join()
         self.assertEqual(b'hello', loader.output)
         data = loader.generate_data_for_master()
