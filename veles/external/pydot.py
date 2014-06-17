@@ -801,7 +801,7 @@ class Node(Common):
 
         node_attr = list()
 
-        for attr, value in self.obj_dict['attributes'].items():
+        for attr, value in sorted(self.obj_dict['attributes'].items()):
             if value is not None:
                 node_attr.append('%s=%s' % (attr, quote_if_necessary(value)))
             else:
@@ -997,7 +997,7 @@ class Edge(Common):
 
         edge_attr = list()
 
-        for attr, value in self.obj_dict['attributes'].items():
+        for attr, value in sorted(self.obj_dict['attributes'].items()):
 
             if value is not None:
                 edge_attr.append('%s=%s' % (attr, quote_if_necessary(value)))
@@ -1592,7 +1592,7 @@ class Graph(Common):
             graph.append('%s %s {\n' % (self.obj_dict['type'], self.obj_dict['name']))
 
 
-        for attr in self.obj_dict['attributes'].keys():
+        for attr in sorted(self.obj_dict['attributes'].keys()):
 
             if self.obj_dict['attributes'].get(attr, None) is not None:
 
