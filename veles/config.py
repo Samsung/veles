@@ -8,6 +8,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import os
+import pprint
 
 import veles.opencl_types as opencl_types
 
@@ -47,6 +48,24 @@ class Config(object):
                 self._defaults(value)
                 return
         super(Config, self).__setattr__(name, value)
+
+    def __repr__(self):
+        return str(self.__dict__)
+
+    def print(self, indent=1, width=80):
+        print('-' * width)
+        print("Current configuration:")
+
+        def fix_contents(contents):
+            fixed_contents = dict(contents)
+            for k, v in contents.items():
+                if isinstance(v, Config):
+                    fixed_contents[k] = fix_contents(v.__dict__)
+            return fixed_contents
+
+        contents = fix_contents(self.__dict__)
+        pprint.pprint(contents, indent=1, width=width)
+        print('-' * width)
 
 # : Global config
 root = Config()

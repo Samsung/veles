@@ -152,6 +152,12 @@ class Main(Logger):
                                  "/dev/urandom:16:uint32")
         parser.add_argument('-w', '--snapshot', default="",
                             help='workflow snapshot')
+        parser.add_argument("--dump-config", default=False,
+                            help="print the resulting workflow configuration",
+                            action='store_true')
+        parser.add_argument("--dry-run", default=False,
+                            help="do not run the loaded model",
+                            action='store_true')
         parser.add_argument('workflow',
                             help='path to the Python script with workflow')
         parser.add_argument('config', default="-",
@@ -355,9 +361,11 @@ class Main(Logger):
 
         wm = self._load_model(fname_workflow, args.snapshot)
         self._apply_config(fname_config, args.config_list)
-        self._run_workflow(wm)
-
-        self.info("End of job")
+        if args.dump_config:
+            root.print()
+        if not args.dry_run:
+            self._run_workflow(wm)
+            self.info("End of job")
         return Main.EXIT_SUCCESS
 
 
