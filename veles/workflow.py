@@ -126,7 +126,8 @@ class Workflow(Unit):
         if isinstance(key, str):
             units = self._units[key]
             if len(units) == 0:
-                return None
+                del self._units[key]
+                raise KeyError()
             if len(units) == 1:
                 return units[0]
             return units
@@ -136,6 +137,7 @@ class Workflow(Unit):
                 if observed + len(units) > key:
                     return units[key - observed]
                 observed += len(units)
+            raise IndexError()
         raise TypeError("Key must be either a string or an integer.")
 
     def __iter__(self):

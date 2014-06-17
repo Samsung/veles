@@ -55,8 +55,12 @@ class Test(unittest.TestCase):
         unit2 = wf["unit2"]
         self.assertTrue(isinstance(unit2, TrivialUnit))
         self.assertEqual("unit2", unit2.name)
-        fail = wf["fail"]
-        self.assertEqual(None, fail)
+        raises = False
+        try:
+            wf["fail"]
+        except KeyError:
+            raises = True
+        self.assertTrue(raises)
         unit = wf[0]
         self.assertEqual("Start", unit.name)
         unit = wf[1]
@@ -74,6 +78,12 @@ class Test(unittest.TestCase):
         self.assertEqual("unit2", unit.name)
         unit = wf[6]
         self.assertEqual("aaa", unit.name)
+        raises = False
+        try:
+            wf[7]
+        except IndexError:
+            raises = True
+        self.assertTrue(raises)
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'Test.testItarator']
