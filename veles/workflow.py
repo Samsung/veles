@@ -113,6 +113,7 @@ class Workflow(Unit):
         super(Workflow, self).init_unpickled()
         self.thread_pool.register_on_shutdown(self.stop)
         self._is_running = False
+        self._run_time_started_ = time.time()
         self._sync_event_ = threading.Event()
         self._sync_event_.set()
         self._run_time_ = 0
@@ -228,8 +229,8 @@ class Workflow(Unit):
         """Starts executing the workflow. This function is asynchronous,
         parent's on_workflow_finished() method will be called.
         """
-        self.is_running = True
         self._run_time_started_ = time.time()
+        self.is_running = True
         if not self.is_master:
             self.start_point.run_dependent()
         self._sync_event_.wait()
