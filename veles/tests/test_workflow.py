@@ -16,12 +16,18 @@ class Test(unittest.TestCase):
     def add_units(self, wf):
         u1 = TrivialUnit(wf, name="unit1")
         u1.tag = 0
+        u1.link_from(wf.start_point)
         u2 = TrivialUnit(wf, name="unit1")
         u2.tag = 1
+        u2.link_from(u1)
         u3 = TrivialUnit(wf, name="unit1")
         u3.tag = 2
-        TrivialUnit(wf, name="unit2")
-        TrivialUnit(wf, name="aaa")
+        u3.link_from(u2)
+        u4 = TrivialUnit(wf, name="unit2")
+        u4.link_from(u3)
+        u5 = TrivialUnit(wf, name="aaa")
+        u5.link_from(u4)
+        wf.end_point.link_from(u5)
 
     def testIterator(self):
         wf = Workflow(DummyLauncher())
@@ -84,6 +90,54 @@ class Test(unittest.TestCase):
         except IndexError:
             raises = True
         self.assertTrue(raises)
+
+    def testGraph(self):
+        wf = Workflow(DummyLauncher())
+        self.add_units(wf)
+        dot = wf.generate_graph(write_on_disk=False)
+        ids = []
+        for unit in wf:
+            ids.append(hex(id(unit)))
+            ids.append(ids[-1])
+            ids.append(ids[-1])
+        # Move EndPoint to the tail
+        backup = ids[3:6]
+        ids[3:-3] = ids[6:]
+        ids[-3:] = backup
+        ids = ids[1:-1]
+        valid = ('digraph Workflow {\n'
+                 'bgcolor=transparent;\n'
+                 '"%s" [fillcolor=lightgrey, gradientangle=90, '
+                 'label=<<b>Start</b><br/><font point-size="8">'
+                 'veles/workflow.py</font>>, shape=rect, '
+                 'style="rounded,filled"];\n'
+                 '"%s" -> "%s";\n'
+                 '"%s" [fillcolor=white, gradientangle=90, '
+                 'label=<<b>unit1</b><br/><font point-size="8">veles/units.py'
+                 '</font>>, shape=rect, style="rounded,filled"];\n'
+                 '"%s" -> "%s";\n'
+                 '"%s" [fillcolor=white, gradientangle=90, '
+                 'label=<<b>unit1</b><br/><font point-size="8">veles/units.py'
+                 '</font>>, shape=rect, style="rounded,filled"];\n'
+                 '"%s" -> "%s";\n'
+                 '"%s" [fillcolor=white, gradientangle=90, '
+                 'label=<<b>unit1</b><br/><font point-size="8">veles/units.py'
+                 '</font>>, shape=rect, style="rounded,filled"];\n'
+                 '"%s" -> "%s";\n'
+                 '"%s" [fillcolor=white, gradientangle=90, '
+                 'label=<<b>unit2</b><br/><font point-size="8">veles/units.py'
+                 '</font>>, shape=rect, style="rounded,filled"];\n'
+                 '"%s" -> "%s";\n'
+                 '"%s" [fillcolor=white, gradientangle=90, '
+                 'label=<<b>aaa</b><br/><font point-size="8">veles/units.py'
+                 '</font>>, shape=rect, style="rounded,filled"];\n'
+                 '"%s" -> "%s";\n'
+                 '"%s" [fillcolor=lightgrey, gradientangle=90, '
+                 'label=<<b>End</b><br/><font point-size="8">veles/workflow.py'
+                 '</font>>, shape=rect, style="rounded,filled"];\n'
+                 '}') % tuple(ids)
+        self.maxDiff = None
+        self.assertEqual(valid, dot)
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'Test.testItarator']

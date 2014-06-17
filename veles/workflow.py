@@ -452,7 +452,7 @@ class Workflow(Unit):
                 (_, filename) = tempfile.mkstemp(".png", "workflow_")
             self.info("Saving the workflow graph to %s", filename)
             g.write(filename, format='png')
-        desc = g.to_string()
+        desc = g.to_string().strip()
         self.debug("Graphviz workflow scheme:\n" + desc[:-1])
         return desc
 
