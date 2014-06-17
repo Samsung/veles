@@ -12,6 +12,7 @@ from collections import OrderedDict, defaultdict
 import datetime
 import hashlib
 from itertools import chain
+import os
 import sys
 import tempfile
 import time
@@ -430,9 +431,11 @@ class Workflow(Unit):
             unit = boilerplate.pop()
             visited_units.add(unit)
             node = pydot.Node(hex(id(unit)))
+            unit_file_name = os.path.relpath(inspect.getfile(unit.__class__),
+                                             root.common.veles_dir)
             node.set("label",
                      '<<b>%s</b><br/><font point-size=\"8\">%s</font>>'
-                     % (unit.name, inspect.getfile(unit.__class__)))
+                     % (unit.name, unit_file_name))
             node.set("shape", "rect")
             node.add_style("rounded")
             node.add_style("filled")
