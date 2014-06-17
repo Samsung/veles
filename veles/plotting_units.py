@@ -51,7 +51,7 @@ class AccumulatingPlotter(Plotter):
     """
 
     def __init__(self, workflow, **kwargs):
-        kwargs["name"] = kwargs.get("name", "Errors number")
+        kwargs["name"] = kwargs.get("name", "AccumulatingPlotter")
         super(AccumulatingPlotter, self).__init__(workflow, **kwargs)
         self.plot_style = kwargs.get("plot_style", "k-")
         self.clear_plot = kwargs.get("clear_plot", False)
@@ -148,7 +148,7 @@ class MatrixPlotter(Plotter):
 
     """
     def __init__(self, workflow, **kwargs):
-        name = kwargs.get("name", "Matrix")
+        name = kwargs.get("name", "MatrixPlotter")
         kwargs["name"] = name
         super(MatrixPlotter, self).__init__(workflow, **kwargs)
         self.input = None  # Connector
@@ -330,7 +330,6 @@ class ImagePlotter(Plotter):
 
     """
     def __init__(self, workflow, **kwargs):
-
         kwargs["name"] = kwargs.get("name", "ImagePlotter")
         super(ImagePlotter, self).__init__(workflow, **kwargs)
         self.yuv = Bool(kwargs.get("yuv", False))
@@ -340,14 +339,32 @@ class ImagePlotter(Plotter):
         self.demand("inputs", "input_fields")
         self.inputs = []
         self.input_fields = []
+        self._pics_to_draw = []
+        self.redraw_threshold = 1.5
 
-    def draw_image(self, ax, value):
-        if type(value) != numpy.ndarray:
-            ax.axis('off')
-            ax.text(0.5, 0.5, str(value), ha='center', va='center')
-            return
-        w = None
-        color = False
+    def __getstate__(self):
+        state = super(ImagePlotter, self).__getstate__()
+        if self.stripped_pickle:
+            pics_to_draw = []
+            for i, input_field in enumerate(self.input_fields):
+                value = None
+                if type(input_field) == int:
+                    if input_field >= 0 and input_field < len(self.inputs[i]):
+                        value = self.inputs[i][input_field]
+                else:
+                    value = self.inputs[i].__dict__[input_field]
+                    if isinstance(self.inputs[i], formats.Vector):
+                        value = value[0]
+                pics_to_draw.append(self._prepare_image(value)
+                                    if type(value) == numpy.ndarray
+                                    else str(value))
+
+            state["inputs"] = None
+            state["input_fields"] = None
+            state["_pics_to_draw"] = pics_to_draw
+        return state
+
+    def _prepare_image(self, value):
         l = len(value.shape)
         if l == 2:
             sy = value.shape[0]
@@ -363,11 +380,10 @@ class ImagePlotter(Plotter):
                     3, sy, sx)[1:2, :, :].reshape(sy, sx, 1)[:, :, 0:1]
                 w[:, :, 2:3] = value.reshape(
                     3, sy, sx)[2:3, :, :].reshape(sy, sx, 1)[:, :, 0:1]
-                color = True
+                value = w
             elif value.shape[2] == 3:
                 sy = value.shape[0]
                 sx = value.shape[1]
-                color = True
             else:
                 sy = int(numpy.round(numpy.sqrt(value.size)))
                 sx = int(numpy.round(value.size / sy))
@@ -377,33 +393,23 @@ class ImagePlotter(Plotter):
             sx = int(numpy.round(value.size / sy))
             value = value.reshape(sy, sx)
 
-        if w is None:
-            w = value.copy()
-
-        if color:
-            img = formats.norm_image(w, self.yuv)
-            ax.imshow(img, interpolation="nearest")
-        else:
-            img = formats.norm_image(w, self.yuv)
-            self.info("min: %.3f, max: %.3f", img.min(), img.max())
-            ax.imshow(img, interpolation="nearest", cmap=self.cm.gray)
+        return formats.norm_image(value, self.yuv)
 
     def redraw(self):
         figure = self.pp.figure(self.name)
         figure.clf()
 
-        for i, input_field in enumerate(self.input_fields):
-            value = None
-            if type(input_field) == int:
-                if input_field >= 0 and input_field < len(self.inputs[i]):
-                    value = self.inputs[i][input_field]
-            else:
-                value = self.inputs[i].__dict__[input_field]
-                if isinstance(self.inputs[i], formats.Vector):
-                    value = value[0]
-            ax = figure.add_subplot(len(self.input_fields), 1, i + 1)
+        for i, pic in enumerate(self._pics_to_draw):
+            ax = figure.add_subplot(len(self._pics_to_draw), 1, i + 1)
             ax.cla()
-            self.draw_image(ax, value)
+            if type(pic) != numpy.ndarray:
+                ax.axis('off')
+                ax.text(0.5, 0.5, str(pic), ha='center', va='center')
+                continue
+            if len(pic.shape) == 3:
+                ax.imshow(pic, interpolation="nearest")
+            else:
+                ax.imshow(pic, interpolation="nearest", cmap=self.cm.gray)
 
         self.show_figure(figure)
         figure.canvas.draw()

@@ -5,6 +5,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
+import io
 import matplotlib
 matplotlib.use("cairo")
 import matplotlib.cm as cm
@@ -16,6 +17,7 @@ import numpy
 import os
 from PIL import Image
 import unittest
+import pickle
 
 from veles.plotting_units import AccumulatingPlotter, MatrixPlotter, \
     ImagePlotter
@@ -29,19 +31,22 @@ class Test(unittest.TestCase):
         pass
 
     def run_plotter(self, plotter):
+        plotter.stripped_pickle = True
+        plotter = pickle.loads(pickle.dumps(plotter))
         plotter.cm = cm
         plotter.lines = lines
         plotter.patches = patches
         plotter.pp = pp
         plotter.show_figure = self.show_figure
         plotter.redraw()
-        tmp_file_name = "/tmp/%s.png" % plotter.__class__.__name__
-        pp.savefig(tmp_file_name)
-        return tmp_file_name
+        fio = io.BytesIO()
+        pp.savefig(fio, format="png")
+        fio.seek(0)
+        return plotter, fio
 
-    def compare_images(self, plotter):
+    def compare_images(self, plotter, fio):
         img1, img2 = [numpy.array(Image.open(fn)) for fn in (
-            "/tmp/%s.png" % plotter.__class__.__name__,
+            fio,
             os.path.join(os.path.dirname(os.path.abspath(__file__)),
                          "res/%s.png" % plotter.__class__.__name__))]
         diff = numpy.linalg.norm(img1 - img2)
@@ -62,21 +67,21 @@ class Test(unittest.TestCase):
               [41, 59, 82, 105, 20, 69, 32, 13, 5355, 49],
               [9, 14, 12, 46, 206, 51, 1, 118, 72, 5405]]], order=2)
         mp.input_field = 0
-        self.run_plotter(mp)
-        self.compare_images(mp)
+        self.compare_images(*self.run_plotter(mp))
 
     def testAccumulatingPlotter(self):
         ap = AccumulatingPlotter(self, name="Lines")
         ap.input = numpy.arange(1, 20, 0.1)
         ap.input_field = 0
         ap._add_value()
-        tmp_file_name = self.run_plotter(ap)
+        ap, fio = self.run_plotter(ap)
         for i in range(11):
             ap.input_field = i + 1
             ap._add_value()
             ap.redraw()
-        pp.savefig(tmp_file_name)
-        self.compare_images(ap)
+        pp.savefig(fio, format="png")
+        fio.seek(0)
+        self.compare_images(ap, fio)
 
     def testImagePlotter(self):
         img = ImagePlotter(self, name="Image")
@@ -85,8 +90,7 @@ class Test(unittest.TestCase):
         img.inputs[-1][0][0, 0] = 0
         img.input_fields.extend([0, 0])
         matplotlib.pyplot.switch_backend('agg')
-        self.run_plotter(img)
-        self.compare_images(img)
+        self.compare_images(*self.run_plotter(img))
         matplotlib.pyplot.switch_backend('cairo')
 
 
