@@ -17,11 +17,15 @@ import os
 from PIL import Image
 import unittest
 
-from veles.plotting_units import AccumulatingPlotter, MatrixPlotter
+from veles.plotting_units import AccumulatingPlotter, MatrixPlotter, \
+    ImagePlotter
 
 
 class Test(unittest.TestCase):
     def add_ref(self, workflow):
+        pass
+
+    def show_figure(self, figure):
         pass
 
     def run_plotter(self, plotter):
@@ -74,8 +78,16 @@ class Test(unittest.TestCase):
         pp.savefig(tmp_file_name)
         self.compare_images(ap)
 
-    def show_figure(self, figure):
-        pass
+    def testImagePlotter(self):
+        img = ImagePlotter(self, name="Image")
+        img.inputs.append([numpy.zeros((100, 100))])
+        img.inputs.append([numpy.ones((100, 100)) * 255])
+        img.inputs[-1][0][0, 0] = 0
+        img.input_fields.extend([0, 0])
+        matplotlib.pyplot.switch_backend('agg')
+        self.run_plotter(img)
+        self.compare_images(img)
+        matplotlib.pyplot.switch_backend('cairo')
 
 
 if __name__ == "__main__":

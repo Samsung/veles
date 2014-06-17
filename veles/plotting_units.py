@@ -11,6 +11,7 @@ from zope.interface import implementer
 
 import veles.error as error
 import veles.formats as formats
+from veles.mutable import Bool
 from veles.plotter import Plotter, IPlotter
 
 
@@ -156,6 +157,7 @@ class MatrixPlotter(Plotter):
         self.patches = None
         self.lines = None
         self.show_figure = self.nothing
+        self.demand("input", "input_field")
 
     def redraw(self):
         self.pp.ioff()
@@ -315,7 +317,7 @@ class MatrixPlotter(Plotter):
 
 
 @implementer(IPlotter)
-class Image(Plotter):
+class ImagePlotter(Plotter):
     """Plotter for drawing N images.
 
     Must be assigned before initialize():
@@ -328,17 +330,16 @@ class Image(Plotter):
 
     """
     def __init__(self, workflow, **kwargs):
-        name = kwargs.get("name", "Image")
-        yuv = kwargs.get("yuv", False)
-        kwargs["name"] = name
-        kwargs["yuv"] = yuv
-        super(Image, self).__init__(workflow, **kwargs)
-        self.inputs = []
-        self.input_fields = []
-        self.yuv = [1 if yuv else 0]
+
+        kwargs["name"] = kwargs.get("name", "ImagePlotter")
+        super(ImagePlotter, self).__init__(workflow, **kwargs)
+        self.yuv = Bool(kwargs.get("yuv", False))
         self.cm = None
         self.pp = None
         self.show_figure = self.nothing
+        self.demand("inputs", "input_fields")
+        self.inputs = []
+        self.input_fields = []
 
     def draw_image(self, ax, value):
         if type(value) != numpy.ndarray:
@@ -380,11 +381,11 @@ class Image(Plotter):
             w = value.copy()
 
         if color:
-            img = formats.norm_image(w, self.yuv[0])
+            img = formats.norm_image(w, self.yuv)
             ax.imshow(img, interpolation="nearest")
         else:
-            img = formats.norm_image(w, self.yuv[0])
-            print("IMAGE:", img.min(), img.max())
+            img = formats.norm_image(w, self.yuv)
+            self.info("min: %.3f, max: %.3f", img.min(), img.max())
             ax.imshow(img, interpolation="nearest", cmap=self.cm.gray)
 
     def redraw(self):
@@ -410,7 +411,7 @@ class Image(Plotter):
 
 
 @implementer(IPlotter)
-class Plot(Plotter):
+class ImmediatePlotter(Plotter):
     """Plotter for drawing N plots together.
 
     Must be assigned before initialize():
@@ -429,15 +430,12 @@ class Plot(Plotter):
         ylim: bounds of the plot y-axis.
     """
     def __init__(self, workflow, **kwargs):
-        name = kwargs.get("name")
-        ylim = kwargs.get("yuv")
-        kwargs["name"] = name
-        kwargs["ylim"] = ylim
-        super(Plot, self).__init__(workflow, **kwargs)
+        kwargs["name"] = kwargs.get("name")
+        super(ImmediatePlotter, self).__init__(workflow, **kwargs)
         self.inputs = []
         self.input_fields = []
         self.input_styles = []
-        self.ylim = ylim
+        self.ylim = kwargs.get("ylim")
         self.pp = None
         self.show_figure = self.nothing
 
