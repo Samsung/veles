@@ -13,6 +13,7 @@ import zmq
 from veles.external.txzmq import ZmqConnection
 from veles.workflow import Workflow
 from veles.zmq_loader import ZeroMQLoader
+from veles.tests import timeout
 
 
 class ZmqDealer(ZmqConnection):
@@ -49,6 +50,7 @@ class DummyLauncher(object):
 
 
 class Test(unittest.TestCase):
+    @timeout(2)
     def testZmqLoader(self):
         launcher = DummyLauncher(mode=0)
         wf = Workflow(launcher)
