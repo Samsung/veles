@@ -22,7 +22,8 @@ def wait():
         if event is None:
             return
         if not event.wait(seconds):
-            os.kill(os.getpid(), signal.SIGINT)
+            print("Timeout %.1f sec - sending SIGTERM" % seconds)
+            os.kill(os.getpid(), signal.SIGTERM)
 
 
 thread = threading.Thread(target=wait, name='timeout')
@@ -53,5 +54,7 @@ def timeout(value=60):
             event.set()
             return res
 
+        name = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
+        wrapped.__name__ = name
         return wrapped
     return timeout_impl

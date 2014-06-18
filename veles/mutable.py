@@ -73,6 +73,7 @@ class Bool(object):
     def __derive(name):
         def wrapped(self):
             return getattr(bool(self), name)()
+        wrapped.__name__ = name + '_derived'
         return wrapped
 
     __int__ = __derive("__int__")
@@ -93,6 +94,7 @@ class Bool(object):
             value.__influences.add(res)
             res.expr.append((value, getattr(Bool, method)))
             return res
+        wrapped.__name__ = method + '_binary_op'
         return wrapped
 
     @staticmethod

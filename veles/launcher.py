@@ -42,6 +42,8 @@ def threadsafe(fn):
     def wrapped(self, *args, **kwargs):
         with self._lock:
             return fn(self, *args, **kwargs)
+    name = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
+    wrapped.__name__ = name + '_threadsafe'
     return wrapped
 
 

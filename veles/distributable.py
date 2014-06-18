@@ -116,6 +116,8 @@ class Distributable(Pickleable):
             with self._data_lock_:
                 return fn(*args, **kwargs)
 
+        name = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
+        wrapped.__name__ = name + '_threadsafe'
         return wrapped
 
     def __init__(self, **kwargs):

@@ -462,6 +462,8 @@ class Unit(Distributable):
                 self.debug("%s took %.6f sec", fn.__name__, delta)
             return res
 
+        name = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
+        wrapped.__name__ = name + '_measure_time'
         return wrapped
 
     def _track_call(self, fn, name):
@@ -470,6 +472,8 @@ class Unit(Distributable):
             setattr(self, name, True)
             return res
 
+        fnname = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
+        wrapped.__name__ = fnname + '_track_call'
         return wrapped
 
     def _check_attrs(self, fn, attrs):
@@ -481,6 +485,8 @@ class Unit(Distributable):
                                          "linked" % (attr, repr(self)))
             return fn(*args, **kwargs)
 
+        name = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
+        wrapped.__name__ = name + '_check_attrs'
         return wrapped
 
 

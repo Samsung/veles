@@ -803,4 +803,6 @@ def daemonize(fn):
                 return fn(*args, **fwdkwargs)
         else:
             return fn(*args, **fwdkwargs)
+    name = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
+    wrapped.__name__ = name + '_daemonize'
     return wrapped

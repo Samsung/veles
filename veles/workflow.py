@@ -272,6 +272,8 @@ class Workflow(Unit):
             if self.is_slave:
                 self._run_time_ += time.time() - t
             return res
+        name = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
+        wrapped.__name__ = name + '_run_timed'
         return wrapped
 
     def method_timed(fn):
@@ -284,6 +286,8 @@ class Workflow(Unit):
             mt += time.time() - t
             self._method_time_[fn.__name__] = mt
             return res
+        name = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
+        wrapped.__name__ = name + '_method_timed'
         return wrapped
 
     @run_timed

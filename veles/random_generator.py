@@ -29,6 +29,8 @@ class RandomGenerator(object):
             with RandomGenerator._lock:
                 res = fn(*args, **kwargs)
             return res
+        name = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
+        wrapped.__name__ = name + '_threadsafe'
         return wrapped
 
     def __init__(self, key):
