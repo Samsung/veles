@@ -147,7 +147,7 @@ class WebStatus(logger.Logger):
 
     def __init__(self):
         super(WebStatus, self).__init__()
-        self.exiting = False
+        self.running = threading.Event()
         self.masters = {}
         self.cmd_queue_in = mp.Queue()
         self.cmd_queue_out = mp.Queue()
@@ -159,15 +159,17 @@ class WebStatus(logger.Logger):
     def run(self):
         self.cmd_thread.start()
         self.process.start()
+        self.running.set()
         self.process.join()
 
     def stop(self):
-        self.exiting = True
+        self.running.clear()
         self.cmd_queue_out.put("exit")
         self.cmd_thread.join()
 
     def cmd_loop(self):
-        while not self.exiting:
+        self.running.wait()
+        while self.running.is_set():
             cmd = self.cmd_queue_in.get()
             if not cmd:
                 break

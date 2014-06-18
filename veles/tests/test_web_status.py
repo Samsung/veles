@@ -6,11 +6,12 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import logging
-import time
+import threading
 import unittest
 
 from veles.config import root
 from veles.web_status import WebStatus
+from veles.tests import timeout
 
 
 class Test(unittest.TestCase):
@@ -19,13 +20,20 @@ class Test(unittest.TestCase):
         logging.basicConfig(level=logging.INFO)
         root.common.web_status_log_file = "/tmp/veles_web_status_test.log"
         self.ws = WebStatus()
-        self.ws.run()
 
     def tearDown(self):
-        self.ws.stop()
+        pass
 
+    @timeout(2)
     def testStop(self):
-        time.sleep(0.5)
+        def stop():
+            self.ws.running.wait()
+            self.ws.stop()
+
+        stopper = threading.Thread(target=stop)
+        stopper.start()
+        self.ws.run()
+        stopper.join()
 
 
 if __name__ == "__main__":
