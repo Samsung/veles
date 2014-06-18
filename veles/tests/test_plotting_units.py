@@ -20,7 +20,7 @@ import unittest
 import pickle
 
 from veles.plotting_units import AccumulatingPlotter, MatrixPlotter, \
-    ImagePlotter
+    ImagePlotter, ImmediatePlotter, Histogram
 
 
 class Test(unittest.TestCase):
@@ -30,7 +30,7 @@ class Test(unittest.TestCase):
     def show_figure(self, figure):
         pass
 
-    def run_plotter(self, plotter):
+    def run_plotter(self, plotter, save_on_disk=True):
         plotter.stripped_pickle = True
         plotter = pickle.loads(pickle.dumps(plotter))
         plotter.cm = cm
@@ -42,6 +42,9 @@ class Test(unittest.TestCase):
         fio = io.BytesIO()
         pp.savefig(fio, format="png")
         fio.seek(0)
+        if save_on_disk:
+            tmp_file_name = "/tmp/%s.png" % plotter.__class__.__name__
+            pp.savefig(tmp_file_name)
         return plotter, fio
 
     def compare_images(self, plotter, fio):
@@ -93,6 +96,20 @@ class Test(unittest.TestCase):
         self.compare_images(*self.run_plotter(img))
         matplotlib.pyplot.switch_backend('cairo')
 
+    def testImmediatePlotter(self):
+        ip = ImmediatePlotter(self, name="Plot")
+        ip.inputs.append([numpy.zeros(20) + 0.5])
+        ip.inputs.append([numpy.arange(0, 1, 0.05)])
+        ip.input_fields.extend([0, 0])
+        self.compare_images(*self.run_plotter(ip))
+
+    def testHistogram(self):
+        h = Histogram(self, name="Histogram Test")
+        h.x = numpy.arange(0, 1.1, 0.1)
+        h.y = numpy.zeros(11)
+        for i in numpy.arange(-1, 1.2, 0.2):
+            h.y[int(numpy.round((i + 1) / 0.2))] = i * i
+        self.compare_images(*self.run_plotter(h))
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'Test.testMatrixPlotter']

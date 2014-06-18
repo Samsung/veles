@@ -435,6 +435,9 @@ class ImmediatePlotter(Plotter):
         input_styles: pyplot line styles for corresponding input.
         ylim: bounds of the plot y-axis.
     """
+
+    DEFAULT_STYLES = ["k-", "g-", "b-"]
+
     def __init__(self, workflow, **kwargs):
         kwargs["name"] = kwargs.get("name")
         super(ImmediatePlotter, self).__init__(workflow, **kwargs)
@@ -461,7 +464,8 @@ class ImmediatePlotter(Plotter):
             else:
                 value = self.inputs[i].__dict__[input_field]
 
-            ax.plot(value, self.input_styles[i])
+            ax.plot(value, self.input_styles[i] if i < len(self.input_styles)
+                    else ImmediatePlotter.DEFAULT_STYLES[i])
 
         self.show_figure(figure)
         figure.canvas.draw()
@@ -479,8 +483,7 @@ class Histogram(Plotter):
         super(Histogram, self).__init__(workflow, **kwargs)
         self.gl_min = 0
         self.gl_max = 1
-        self.x = []
-        self.y = []
+        self.demand("x", "y")
         self.pp = None
         self.show_figure = self.nothing
 
