@@ -7,6 +7,7 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 
 import os
 import signal
+from six import print_
 import sys
 import threading
 
@@ -22,7 +23,8 @@ def wait():
         if event is None:
             return
         if not event.wait(seconds):
-            print("Timeout %.1f sec - sending SIGTERM" % seconds)
+            print_("Timeout %.1f sec - sending SIGTERM" % seconds,
+                   file=sys.stderr)
             os.kill(os.getpid(), signal.SIGTERM)
 
 
