@@ -372,7 +372,7 @@ class Workflow(Unit):
         try:
             self.run()
         except:
-            self.exception("Failed to run the workflow")
+            self.exception("Failed to do the job")
             self.stop()
 
     run_timed = staticmethod(run_timed)

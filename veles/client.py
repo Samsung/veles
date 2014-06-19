@@ -164,11 +164,9 @@ class VelesProtocol(StringLineReceiver):
             self.state.refuse_job()
             self.factory.host.launcher.stop()
             return
-        threads.deferToThreadPool(reactor,
-                                  self.factory.host.workflow.thread_pool,
-                                  self.factory.host.workflow.do_job,
-                                  job, self._last_update, self.job_finished)
         self.state.obtain_job()
+        self.factory.host.workflow.do_job(job, self._last_update,
+                                          self.job_finished)
 
     def job_finished(self, update):
         if self.state.current == "BUSY":
