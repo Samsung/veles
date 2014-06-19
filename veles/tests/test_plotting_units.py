@@ -38,9 +38,9 @@ class Test(unittest.TestCase):
         plotter.patches = patches
         plotter.pp = pp
         plotter.show_figure = self.show_figure
-        plotter.redraw()
+        fig = plotter.redraw()
         fio = io.BytesIO()
-        pp.savefig(fio, format="png")
+        fig.savefig(fio, format="png")
         fio.seek(0)
         if save_on_disk:
             tmp_file_name = "/tmp/%s.png" % plotter.__class__.__name__
