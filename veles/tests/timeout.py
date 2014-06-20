@@ -52,8 +52,10 @@ def timeout(value=60):
             global thread_args
             thread_args = (event, value)
             new_event.set()
-            res = fn(*args, **kwargs)
-            event.set()
+            try:
+                res = fn(*args, **kwargs)
+            finally:
+                event.set()
             return res
 
         name = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
