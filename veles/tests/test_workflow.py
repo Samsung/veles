@@ -91,6 +91,30 @@ class Test(unittest.TestCase):
             raises = True
         self.assertTrue(raises)
 
+    def testUnits(self):
+        wf = Workflow(DummyLauncher())
+        self.add_units(wf)
+        units = wf.units
+        self.assertTrue(isinstance(units, list))
+        self.assertEqual(7, len(units))
+        self.assertEqual("Start", units[0].name)
+        self.assertEqual("End", units[1].name)
+        self.assertEqual("unit1", units[2].name)
+        self.assertEqual("unit1", units[3].name)
+        self.assertEqual("unit1", units[4].name)
+        self.assertEqual("unit2", units[5].name)
+        self.assertEqual("aaa", units[6].name)
+        units = wf.units_in_dependency_order
+        self.assertTrue(isinstance(units, list))
+        self.assertEqual(7, len(units))
+        self.assertEqual("Start", units[0].name)
+        self.assertEqual("unit1", units[1].name)
+        self.assertEqual("unit1", units[2].name)
+        self.assertEqual("unit1", units[3].name)
+        self.assertEqual("unit2", units[4].name)
+        self.assertEqual("aaa", units[5].name)
+        self.assertEqual("End", units[6].name)
+
     def testGraph(self):
         wf = Workflow(DummyLauncher())
         self.add_units(wf)

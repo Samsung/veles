@@ -265,7 +265,7 @@ class Unit(Distributable):
     def initialize_dependent(self):
         """Invokes initialize() on dependent units on the same thread.
         """
-        for unit in self.dependecy_list():
+        for unit in self.dependent_list():
             unit.initialize()
 
     def run_dependent(self):
@@ -279,7 +279,7 @@ class Unit(Distributable):
             else:
                 self.thread_pool.callInThread(dst._check_gate_and_run, self)
 
-    def dependecy_list(self):
+    def dependent_list(self):
         units = [self]
         walk = []
         visited = {self}

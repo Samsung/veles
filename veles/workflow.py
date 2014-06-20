@@ -200,7 +200,11 @@ class Workflow(Unit):
     @property
     def units(self):
         units = getattr(self, "_units", {})
-        return list(chain(units.values()))
+        return list(chain(*units.values()))
+
+    @property
+    def units_in_dependency_order(self):
+        return self.start_point.dependent_list()
 
     def initialize(self, **kwargs):
         fin_text = "all units are initialized"
@@ -212,7 +216,7 @@ class Workflow(Unit):
                                         ' ' * maxlen])
         self.info("Initializing units in %s...", self.name)
         progress.start()
-        for unit in self.start_point.dependecy_list():
+        for unit in self.units_in_dependency_order:
             progress.widgets[-1] = unit.name + ' ' * (maxlen - len(unit.name))
             if not self.is_standalone:
                 unit.verify_interface(IDistributable)
