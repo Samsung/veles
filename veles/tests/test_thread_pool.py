@@ -33,6 +33,32 @@ class TestThreadPool(unittest.TestCase):
         with data_lock:
             n_jobs[0] -= 1
 
+    def test_pause_resume(self):
+        pool = thread_pool.ThreadPool(minthreads=1, maxthreads=1)
+
+        flag = [False]
+        event = threading.Event()
+
+        def set_flag():
+            flag[0] = True
+            event.set()
+
+        pool.callInThread(set_flag)
+        event.wait()
+        self.assertTrue(flag[0])
+        event.clear()
+        flag[0] = False
+        pool.pause()
+        thread = threading.Thread(target=pool.callInThread, args=(set_flag,))
+        thread.start()
+        time.sleep(0.01)
+        self.assertFalse(flag[0])
+        pool.resume()
+        thread.join()
+        event.wait()
+        self.assertTrue(flag[0])
+        pool.shutdown()
+
     def test_32_threads(self):
         logging.info("Will test ThreadPool with 32 max threads.")
         n_jobs = [0]
@@ -43,7 +69,7 @@ class TestThreadPool(unittest.TestCase):
         for _ in range(n):
             with data_lock:
                 n_jobs[0] += 1
-            pool.request(self._job, (n_jobs, data_lock))
+            pool.callInThread(self._job, n_jobs, data_lock)
         pool.shutdown(execute_remaining=True)
         self.assertEqual(
             n_jobs[0], 0, "ThreadPool::shutdown(execute_remaining=True)"
@@ -60,7 +86,7 @@ class TestThreadPool(unittest.TestCase):
         for _ in range(n):
             with data_lock:
                 n_jobs[0] += 1
-            pool.request(self._job, (n_jobs, data_lock))
+            pool.callInThread(self._job, n_jobs, data_lock)
         pool.shutdown(execute_remaining=True)
         self.assertEqual(
             n_jobs[0], 0, "ThreadPool::shutdown(execute_remaining=True)"
@@ -73,12 +99,13 @@ class TestThreadPool(unittest.TestCase):
         data_lock = threading.Lock()
         pool = thread_pool.ThreadPool(minthreads=0, maxthreads=32,
                                       queue_size=32)
+        pool.silent = True
         n = 10
         t0 = time.time()
         for _ in range(n):
             with data_lock:
                 n_jobs[0] += 1
-            pool.request(self._job, (n_jobs, data_lock))
+            pool.callInThread(self._job, n_jobs, data_lock)
         t1 = time.time()
         pool.shutdown(execute_remaining=False, force=True, timeout=0)
         t2 = time.time()
@@ -99,7 +126,7 @@ class TestThreadPool(unittest.TestCase):
         for _ in range(n):
             with data_lock:
                 n_jobs[0] += 1
-            pool.request(self._job, (n_jobs, data_lock))
+            pool.callInThread(self._job, n_jobs, data_lock)
         pool.shutdown(execute_remaining=True)
         self.assertEqual(
             n_jobs[0], 0, "ThreadPool::shutdown(execute_remaining=True)"
