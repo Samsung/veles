@@ -147,7 +147,7 @@ class Bool(object):
             es.append((expr[0],
                        types.FunctionType(func_code, globals(), expr[1])))
         self.on_true = None
-        self.on_false = False
+        self.on_false = None
         self.__influences = {self}
 
     def touch(self):
