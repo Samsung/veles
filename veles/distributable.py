@@ -105,7 +105,7 @@ class Distributable(Pickleable):
     DEADLOCK_TIME = 4
 
     def _data_threadsafe(self, fn, name):
-        def wrapped(*args, **kwargs):
+        def wrapped_data_threadsafe(*args, **kwargs):
             if six.PY3:
                 # Deadlock checks are possible on Python 3 only
                 if not self._data_lock_.acquire(
@@ -116,9 +116,10 @@ class Distributable(Pickleable):
             with self._data_lock_:
                 return fn(*args, **kwargs)
 
-        name = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
-        wrapped.__name__ = name + '_threadsafe'
-        return wrapped
+        name = getattr(fn, '__name__',
+                       getattr(fn, 'func', wrapped_data_threadsafe).__name__)
+        wrapped_data_threadsafe.__name__ = name + '_threadsafe'
+        return wrapped_data_threadsafe
 
     def __init__(self, **kwargs):
         self._generate_data_for_slave_threadsafe = \

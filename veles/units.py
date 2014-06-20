@@ -451,7 +451,7 @@ class Unit(Distributable):
         self.run_dependent()
 
     def _measure_time(self, fn, storage):
-        def wrapped(*args, **kwargs):
+        def wrapped_measure_time(*args, **kwargs):
             sp = time.time()
             res = fn(*args, **kwargs)
             fp = time.time()
@@ -462,22 +462,24 @@ class Unit(Distributable):
                 self.debug("%s took %.6f sec", fn.__name__, delta)
             return res
 
-        name = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
-        wrapped.__name__ = name + '_measure_time'
-        return wrapped
+        name = getattr(fn, '__name__',
+                       getattr(fn, 'func', wrapped_measure_time).__name__)
+        wrapped_measure_time.__name__ = name + '_measure_time'
+        return wrapped_measure_time
 
     def _track_call(self, fn, name):
-        def wrapped(*args, **kwargs):
+        def wrapped_track_call(*args, **kwargs):
             res = fn(*args, **kwargs)
             setattr(self, name, True)
             return res
 
-        fnname = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
-        wrapped.__name__ = fnname + '_track_call'
-        return wrapped
+        fnname = getattr(fn, '__name__',
+                         getattr(fn, 'func', wrapped_track_call).__name__)
+        wrapped_track_call.__name__ = fnname + '_track_call'
+        return wrapped_track_call
 
     def _check_attrs(self, fn, attrs):
-        def wrapped(*args, **kwargs):
+        def wrapped_check_attrs(*args, **kwargs):
             for attr in attrs:
                 val = getattr(self, attr, None)
                 if val is None:
@@ -485,9 +487,10 @@ class Unit(Distributable):
                                          "linked" % (attr, repr(self)))
             return fn(*args, **kwargs)
 
-        name = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
-        wrapped.__name__ = name + '_check_attrs'
-        return wrapped
+        name = getattr(fn, '__name__',
+                       getattr(fn, 'func', wrapped_check_attrs).__name__)
+        wrapped_check_attrs.__name__ = name + '_check_attrs'
+        return wrapped_check_attrs
 
 
 @implementer(IUnit, IDistributable)
