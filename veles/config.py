@@ -52,7 +52,7 @@ class Config(object):
     def __repr__(self):
         return str(self.__dict__)
 
-    def print(self, indent=1, width=80):
+    def print_config(self, indent=1, width=80):
         print('-' * width)
         print("Current configuration:")
 

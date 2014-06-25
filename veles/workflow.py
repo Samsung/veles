@@ -151,13 +151,13 @@ class Workflow(Unit):
 
             def __next__(self):
                 if self._unit_iter is None:
-                    self._unit_iter = self._name_iter.__next__().__iter__()
+                    self._unit_iter = iter(next(self._name_iter))
                 unit = None
                 while unit is None:
                     try:
-                        unit = self._unit_iter.__next__()
+                        unit = next(self._unit_iter)
                     except StopIteration:
-                        self._unit_iter = self._name_iter.__next__().__iter__()
+                        self._unit_iter = iter(next(self._name_iter))
                 return unit
 
             def next(self):
