@@ -362,7 +362,7 @@ class Main(Logger):
         wm = self._load_model(fname_workflow, args.snapshot)
         self._apply_config(fname_config, args.config_list)
         if args.dump_config:
-            root.print()
+            root.print_config()
         if not args.dry_run:
             self._run_workflow(wm)
             self.info("End of job")

@@ -17,3 +17,4 @@ cffi>=0.8.2
 glymur>=0.5.10
 lockfile>=0.9.1
 python-snappy>=0.5
+futures>=2.1.6
