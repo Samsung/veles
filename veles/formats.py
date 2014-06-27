@@ -237,6 +237,26 @@ class Vector(Pickleable):
                                            "call reset() beforehand.")
         self._mem = value
 
+    @property
+    def size(self):
+        return self.mem.size
+
+    @property
+    def shape(self):
+        return self.mem.shape
+
+    @property
+    def sample_size(self):
+        return self.size // self.shape[0]
+
+    @property
+    def matrix(self):
+        return reshape(self.mem, (self.shape[0], self.sample_size))
+
+    @property
+    def plain(self):
+        return ravel(self.mem)
+
     def init_unpickled(self):
         super(Vector, self).init_unpickled()
         self.devmem = None
@@ -291,17 +311,6 @@ class Vector(Pickleable):
         """To enable [] operator.
         """
         self._mem[key] = value
-
-    def _converted_dtype(self, dtype):
-        if dtype == numpy.float32:
-            return numpy.float64
-        if dtype == numpy.float64:
-            return numpy.float32
-        if dtype == numpy.complex64:
-            return numpy.complex128
-        if dtype == numpy.complex128:
-            return numpy.complex64
-        return None
 
     def _initialize(self, device):
         if self._mem is None or self.devmem is not None:
