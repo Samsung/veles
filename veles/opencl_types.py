@@ -11,13 +11,9 @@ import veles.error as error
 
 # : CL type defines
 cl_defines = {"float":      {"dtype": "float",
-                             "c_dtype": "float",
-                             "sizeof_dtype": "4",
-                             "sizeof_c_dtype": "4"},
+                             "sizeof_dtype": "4"},
               "double":     {"dtype": "double",
-                             "c_dtype": "double",
-                             "sizeof_dtype": "8",
-                             "sizeof_c_dtype": "8"}}
+                             "sizeof_dtype": "8"}}
 
 
 # : Supported types as OpenCL => numpy dictionary.
