@@ -166,6 +166,8 @@ class OpenCLUnit(Unit):
         elif type(dtype) != str:
             dtype = opencl_types.numpy_dtype_to_opencl(dtype)
         my_defines.update(opencl_types.cl_defines[dtype])
+        if "PRECISION_TYPE" not in my_defines:
+            my_defines["PRECISION_TYPE"] = root.common.precision_type
 
         for k, v in sorted(my_defines.items()):
             lines.insert(0, "#define %s %s" % (k, v))

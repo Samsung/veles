@@ -10,8 +10,6 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 import os
 import pprint
 
-import veles.opencl_types as opencl_types
-
 
 class Config(object):
     """Config service class.
@@ -80,32 +78,34 @@ def get(value, default_value=None):
     return value
 
 
-root.common.update = {"graphics_multicast_address": "239.192.1.1",
-                      "matplotlib_backend": "Qt4Agg",
-                      "matplotlib_webagg_port": 8081,
-                      "mongodb_logging_address": "smaug:27017",
-                      "plotters_disabled": False,
-                      "precision_type": "double",
-                      "test_dataset_root": "/data/veles",
-                      "test_known_device": False,
-                      "test_unknown_device": True,
-                      "unit_test": False,
-                      "veles_dir":
-                      os.path.dirname(os.path.dirname(__file__)),
-                      "veles_user_dir":
-                      os.path.join(os.environ.get("HOME", "./"), "velesuser"),
-                      "web_status_host": "smaug",
-                      "web_status_log_file":
-                      "/var/log/veles/web_status.log",
-                      "web_status_notification_interval": 1,
-                      "web_status_port": 8090,
-                      "web_status_update": "update",
-                      "web_status_pidfile": "/var/run/veles/web_status.pid",
-                      "ThreadPool": {
-                          "minthreads": 2,
-                          "maxthreads": 2,
-                          }
-                      }
+root.common.update = {
+    "graphics_multicast_address": "239.192.1.1",
+    "matplotlib_backend": "Qt4Agg",
+    "matplotlib_webagg_port": 8081,
+    "mongodb_logging_address": "smaug:27017",
+    "plotters_disabled": False,
+    "precision_type": "double",  # float or double
+    "precision_level": 1,  # 0 - use simple summation
+                           # 1 - use Kahan summation (9% slower)
+                           # 2 - use multipartials summation (90% slower)
+    "test_dataset_root": "/data/veles",
+    "test_known_device": False,
+    "test_unknown_device": True,
+    "unit_test": False,
+    "veles_dir": os.path.dirname(os.path.dirname(__file__)),
+    "veles_user_dir": os.path.join(os.environ.get("HOME", "./"), "velesuser"),
+    "web_status_host": "smaug",
+    "web_status_log_file":
+    "/var/log/veles/web_status.log",
+    "web_status_notification_interval": 1,
+    "web_status_port": 8090,
+    "web_status_update": "update",
+    "web_status_pidfile": "/var/run/veles/web_status.pid",
+    "ThreadPool": {
+        "minthreads": 2,
+        "maxthreads": 2,
+    }
+}
 
 root.common.cache_dir = os.path.join(root.common.veles_user_dir, "cache")
 
@@ -122,7 +122,6 @@ except OSError:
     pass
 
 root.common.device_dir = os.path.join(root.common.veles_dir, "devices")
-root.common.dtype = opencl_types.dtype_map[root.common.precision_type]
 root.common.ocl_dirs = (os.environ.get("VELES_OPENCL_DIRS", "").split(":") +
                         [os.path.join(root.common.veles_dir, "ocl")])
 root.common.opencl_dir = os.path.join(root.common.veles_dir, "veles")

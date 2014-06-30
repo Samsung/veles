@@ -5,6 +5,7 @@
 #ifndef _DEFINES_
 #define _DEFINES_
 
+
 /// @brief Pragmas for features.
 #if (sizeof_dtype == 8) && (__OPENCL_VERSION__ < 120)
 #pragma OPENCL EXTENSION cl_khr_fp64: enable
@@ -13,97 +14,6 @@
 
 /// @brief Minimum of the two values.
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
-
-
-/// Definitions for complex numbers
-#if sizeof_c_dtype == sizeof_dtype * 2
-
-#define I ((c_dtype)(0, 1))
-#define c_re(a) ((a).x)
-#define c_from_re(x) ((c_dtype)((x), 0))
-
-inline c_dtype c_mul(c_dtype a, c_dtype b) {
-  return (c_dtype)(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
-}
-
-inline c_dtype c_div(c_dtype a, c_dtype b) {
-  dtype d = b.x * b.x + b.y * b.y;
-  return (c_dtype)((a.x * b.x + a.y * b.y) / d, (a.y * b.x - a.x * b.y) / d);
-}
-
-inline c_dtype c_exp(c_dtype a) {
-  dtype d = exp(a.x);
-  return (c_dtype)(cos(a.y) * d, sin(a.y) * d);
-}
-
-inline c_dtype c_tanh(c_dtype a) {
-  dtype s = sign(a.x);
-  c_dtype z = (c_dtype)(a.x * s, a.y);
-  c_dtype ze = c_exp(z * (dtype)-2.0);
-  z = c_div((c_dtype)(1, 0) - ze, (c_dtype)(1, 0) + ze);
-  z.x *= s;
-  return z;
-}
-
-inline dtype c_norm2(c_dtype a) {
-  return a.x * a.x + a.y * a.y;
-}
-
-inline dtype c_dist2(c_dtype a, c_dtype b) {
-  return c_norm2(a - b);
-}
-
-inline dtype c_norm(c_dtype a) {
-  return length(a);
-}
-
-inline c_dtype c_relu(c_dtype a) {
-  // FIXME(a.kazantsev): add proper implementation.
-  return (c_dtype)(a.x > 15 ? a.x : log(exp(a.x) + 1), a.y);
-}
-
-inline c_dtype c_log_act(c_dtype a) {
-  // FIXME(a.kazantsev): add proper implementation.
-  return (c_dtype)(log(a.x + sqrt(a.x * a.x + 1)), a.y);
-}
-
-inline c_dtype c_log_back(c_dtype a) {
-  // FIXME(a.kazantsev): add proper implementation.
-  return (c_dtype)(rsqrt(a.x * a.x + 1), a.y);
-}
-
-inline c_dtype c_sin(c_dtype z) {
-  c_dtype iz = c_mul(I, z);
-  return (dtype)0.5 * c_mul(I, c_exp(-iz) - c_exp(iz));
-}
-
-inline c_dtype c_cos(c_dtype z) {
-  c_dtype iz = c_mul(I, z);
-  return (dtype)0.5 * (c_exp(-iz) + c_exp(iz));
-}
-
-#elif sizeof_c_dtype == sizeof_dtype
-
-#define c_re(a) (a)
-#define c_from_re(re) ((dtype)(re))
-#define c_mul(a, b) ((a) * (b))
-#define c_div(a, b) ((a) / (b))
-#define c_exp(a) exp(a)
-#define c_tanh(a) tanh(a)
-#define c_norm2(a) ((a) * (a))
-#define c_dist2(a, b) (((a) - (b)) * ((a) - (b)))
-#define c_norm(a) fabs(a)
-#define c_relu(a) ((a) > 15 ? (a) : log(exp(a) + 1))
-#define c_log_act(a) log(a + sqrt(a * a + 1))
-#define c_log_back(a) rsqrt(a * a + 1)
-#define c_sin(a) sin(a)
-#define c_cos(a) cos(a)
-
-#else
-
-#error Unsupported number type.
-
-#endif
 
 
 #ifdef USE_ATOMICS
@@ -146,34 +56,6 @@ inline double atom_add_double(__global double *addr, double vle) {
 #endif
 
 
-/// @brief atom_add for float2.
-inline float2 atom_add_float2(__global float2 *addr, float2 vle) {
-  __global float *a = (__global float*)addr;
-  return (float2)(atom_add_float(a, vle.x), atom_add_float(a + 1, vle.y));
-}
-
-
-/// @brief atom_add for double2.
-#if sizeof_dtype == 8
-inline double2 atom_add_double2(__global double2 *addr, double2 vle) {
-  __global double *a = (__global double*)addr;
-  return (double2)(atom_add_double(a, vle.x), atom_add_double(a + 1, vle.y));
-}
-#endif
-
-
-#if sizeof_c_dtype == sizeof_dtype * 2
-
-#if sizeof_dtype == 4
-#define ATOM_ADD(addr, vle) atom_add_float2(addr, vle)
-#elif sizeof_dtype == 8
-#define ATOM_ADD(addr, vle) atom_add_double2(addr, vle)
-#else
-#error Unsupported number type.
-#endif
-
-#elif sizeof_c_dtype == sizeof_dtype
-
 #if sizeof_dtype == 4
 #define ATOM_ADD(addr, vle) atom_add_float(addr, vle)
 #elif sizeof_dtype == 8
@@ -182,19 +64,14 @@ inline double2 atom_add_double2(__global double2 *addr, double2 vle) {
 #error Unsupported number type.
 #endif
 
-#else
 
-#error Unsupported number type.
-
-#endif
-
-#endif
+#endif  // USE_ATOMICS
 
 
 /// @brief Sets all elements of array to zero.
 __kernel
-void array_clear(__global c_dtype /*OUT*/ *arr) {
-  arr[get_global_id(0)] = c_from_re(0);
+void array_clear(__global dtype *arr) {
+  arr[get_global_id(0)] = 0;
 }
 
 #endif  // _DEFINES_

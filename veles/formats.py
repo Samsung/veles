@@ -25,8 +25,6 @@ def roundup(num, align):
 def max_type(num):
     """Returns array converted to supported type with maximum precision.
     """
-    if num.dtype in [numpy.complex64, numpy.complex128]:
-        return num.astype(numpy.complex128)
     return num.astype(numpy.float64)
 
 
@@ -77,34 +75,17 @@ def interleave(a):
     return b
 
 
-def real_normalize(a):
-    """Normalizes real array to [-1, 1] in-place.
-    """
-    x_min, x_max = a.min(), a.max()
-    a -= x_min
-    if x_max > x_min:
-        a *= 2. / (x_max - x_min)
-        a -= 1.
-
-
-def complex_normalize(a):
-    """Normalizes complex array to unit-circle in-place.
-    """
-    a -= numpy.average(a)
-    m = numpy.sqrt((a.real * a.real + a.imag * a.imag).max())
-    if m:
-        a /= m
-
-
 def normalize(a):
-    if a.dtype in (numpy.complex64, numpy.complex128):
-        return complex_normalize(a)
-    return real_normalize(a)
+    """Normalizes array to [-1, 1] in-place.
+    """
+    a -= a.min()
+    mx = a.max()
+    if mx:
+        a /= mx * 0.5
+        a -= 1.0
 
 
 def normalize_mean_disp(a):
-    if a.dtype in (numpy.complex64, numpy.complex128):
-        return complex_normalize(a)
     mean = numpy.mean(a)
     mi = numpy.min(a)
     mx = numpy.max(a)
@@ -115,8 +96,6 @@ def normalize_mean_disp(a):
 
 
 def normalize_exp(a):
-    if a.dtype in (numpy.complex64, numpy.complex128):
-        raise NotImplementedError()
     a -= a.max()
     numpy.exp(a, a)
     smm = a.sum()
@@ -124,7 +103,7 @@ def normalize_exp(a):
 
 
 def normalize_pointwise(a):
-    """Normalizes dataset pointwise.
+    """Normalizes dataset pointwise to [-1, 1].
     """
     IMul = numpy.zeros_like(a[0])
     IAdd = numpy.zeros_like(a[0])

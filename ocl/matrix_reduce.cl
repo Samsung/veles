@@ -18,12 +18,12 @@
 ///          size_t LocalSize[2] = {REDUCE_SIZE}
 ///
 ///          The result will be in (sum + AS[0]), output offset will be in bx, write it in if (tx == 0) { ... }
-  __local c_dtype AS[REDUCE_SIZE];
+  __local dtype AS[REDUCE_SIZE];
 
   int bx = get_group_id(0); // from 0 to number of resulting output elements
   int tx = get_local_id(0); // from 0 to BLOCK_SIZE - 1
 
-  c_dtype sum = c_from_re(0);
+  dtype sum = 0;
 
   #ifdef A_COL
   int offs = bx + tx * A_WIDTH;
@@ -39,8 +39,9 @@
   }
   // Sum the remaining part
   #if (ARRAY_SIZE % REDUCE_SIZE) != 0
-  if (tx < ARRAY_SIZE % REDUCE_SIZE)
+  if (tx < ARRAY_SIZE % REDUCE_SIZE) {
     sum += A[offs];
+  }
   #endif
 
   AS[tx] = sum;
@@ -48,10 +49,10 @@
   barrier(CLK_LOCAL_MEM_FENCE);
 
   // Final summation
-  sum = c_from_re(0);
+  sum = 0;
   int n = MIN(ARRAY_SIZE, REDUCE_SIZE);
   while (n > 1) {
-    sum += (n & 1) ? AS[n - 1] : c_from_re(0);
+    sum += (n & 1) ? AS[n - 1] : 0;
     n >>= 1;
     if (tx < n) {
       AS[tx] += AS[n + tx];

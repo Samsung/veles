@@ -90,6 +90,12 @@ class Device(Pickleable):
                           self.device_info.version)
         self.info(log_configs + str(table))
 
+    @property
+    def max_block_size(self):
+        sz = int(numpy.sqrt(self.queue_.device.max_work_group_size))
+        sh = self.queue_.device.max_work_item_sizes
+        return min(sz, sh[0], sh[1])
+
     def init_unpickled(self):
         super(Device, self).init_unpickled()
         self.queue_ = None

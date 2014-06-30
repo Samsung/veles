@@ -92,15 +92,8 @@ class RandomGenerator(object):
         """
         self.save_state()
         arr = formats.ravel(arr)
-        if arr.dtype in (numpy.complex64, numpy.complex128):
-            # Fill the circle in case of complex numbers.
-            r = numpy.random.rand(arr.size) * (vle_max - vle_min)
-            a = numpy.random.rand(arr.size) * numpy.pi * 2.0
-            arr.real[:] = r * numpy.cos(a)
-            arr.imag[:] = r * numpy.sin(a)
-        else:
-            arr[:] = (numpy.random.rand(arr.size) * (vle_max - vle_min) +
-                      vle_min)[:]
+        arr[:] = (numpy.random.rand(arr.size) * (vle_max - vle_min) +
+                  vle_min)[:]
         self.restore_state()
 
     @threadsafe
@@ -113,7 +106,7 @@ class RandomGenerator(object):
         #    mean:
         #    stddev:
         #    min_val, max_val (optional): clipping values of output data.
-    """
+        """
         self.save_state()
         arr = formats.ravel(arr)
         arr[:] = numpy.random.normal(loc=mean, scale=stddev, size=arr.size)[:]
