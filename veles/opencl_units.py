@@ -166,8 +166,14 @@ class OpenCLUnit(Unit):
         elif type(dtype) != str:
             dtype = opencl_types.numpy_dtype_to_opencl(dtype)
         my_defines.update(opencl_types.cl_defines[dtype])
-        if "PRECISION_TYPE" not in my_defines:
-            my_defines["PRECISION_TYPE"] = root.common.precision_type
+        if "PRECISION_LEVEL" not in my_defines:
+            my_defines["PRECISION_LEVEL"] = root.common.precision_level
+        if "BLOCK_SIZE" not in my_defines:
+            my_defines["BLOCK_SIZE"] = self.device.device_info.BLOCK_SIZE[
+                dtype]
+        if "VECTOR_OPT" not in my_defines:
+            my_defines["VECTOR_OPT"] = self.device.device_info.vector_opt[
+                dtype]
 
         for k, v in sorted(my_defines.items()):
             lines.insert(0, "#define %s %s" % (k, v))

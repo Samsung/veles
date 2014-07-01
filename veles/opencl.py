@@ -60,6 +60,9 @@ class DeviceInfo(object):
         self.BLOCK_SIZE = {}
         for dtype in opencl_types.dtypes.keys():
             self.BLOCK_SIZE[dtype] = 8
+        self.vector_opt = {}
+        for dtype in opencl_types.dtypes.keys():
+            self.vector_opt[dtype] = 0
 
 
 class Device(Pickleable):
@@ -79,13 +82,15 @@ class Device(Pickleable):
         self._fill_device_info_performance_values()
         log_configs = "Selected the following OpenCL configurations:\n"
         table = prettytable.PrettyTable("device", " dtype", "rating",
-                                        "BLOCK_SIZE", "memalign", "version")
+                                        "BLOCK_SIZE", "vector_opt",
+                                        "memalign", "version")
         table.align["device"] = "l"
         table.align[" dtype"] = "l"
         for dtype in sorted(opencl_types.dtypes.keys()):
             table.add_row(self.device_info.desc, dtype,
                           "%.2f" % self.device_info.rating[dtype],
                           self.device_info.BLOCK_SIZE[dtype],
+                          self.device_info.vector_opt[dtype],
                           self.device_info.memalign,
                           self.device_info.version)
         self.info(log_configs + str(table))
@@ -188,8 +193,10 @@ class Device(Pickleable):
             device_info = device_infos[self.device_info.desc]
             self.device_info.rating.update(device_info.rating)
             self.device_info.BLOCK_SIZE.update(device_info.BLOCK_SIZE)
+            self.device_info.vector_opt.update(device_info.vector_opt)
             self.device_info.dt.update(device_info.dt)
             self.device_info.min_dt.update(device_info.min_dt)
+            """
             if (self.queue_.device.vendor.find("Intel") >= 0 and
                     self.queue_.device.type == cl.CL_DEVICE_TYPE_CPU):
                 sz = 16
@@ -197,6 +204,7 @@ class Device(Pickleable):
                              "because of the Intel CPU device", sz)
                 for k in self.device_info.BLOCK_SIZE:
                     self.device_info.BLOCK_SIZE[k] = sz
+            """
             return
         if not root.common.test_unknown_device:
             return
@@ -214,8 +222,9 @@ class Device(Pickleable):
     def _do_tests(self, device_infos):
         """Measure relative device performance.
         """
-        bs_max = get(root.common.opencl.benchmark.max_block_size, 32)
-        bs_min = get(root.common.opencl.benchmark.min_block_size, 3)
+        bs_max = get(root.common.opencl.benchmark.max_block_size,
+                     min(self.max_block_size, 32))
+        bs_min = get(root.common.opencl.benchmark.min_block_size, 7)
         if bs_min >= bs_max:
             raise ValueError("max_block_size must be greater than "
                              "min_block_size")
@@ -240,51 +249,53 @@ class Device(Pickleable):
         for dtype in self.device_info.dt.keys():
             self.device_info.dt[dtype] = 86400
         for BLOCK_SIZE in range(bs_max, bs_min, -1):
-            for dtype in sorted(opencl_types.dtypes.keys()):
-                try:
-                    self._prepare_test(BLOCK_SIZE, dtype, cc)
-                    key = ("%s_%d_%d_%d"
-                           % (dtype, self.AB_WIDTH,
-                              self.B_HEIGHT, self.A_HEIGHT))
-                    if not key in cc.keys():
-                        self.info("Numpy for dtype=%s" % (dtype))
-                        dt = self._do_cpu_test(cc, key)
-                        self.info("Done in %.3f seconds" % (dt))
-                        if dt < dt_numpy[dtype]:
-                            dt_numpy[dtype] = dt
-                        if dt_numpy[dtype] < min_dt[dtype]:
-                            min_dt[dtype] = dt_numpy[dtype]
-                    self.info(
-                        "Testing %s with BLOCK_SIZE = %d "
-                        "and dtype = %s" % (self.device_info.desc, BLOCK_SIZE,
-                                            dtype))
-                    dt = self._do_test(BLOCK_SIZE, dtype, 3)
-                    if dt < self.device_info.dt[dtype]:
-                        self.device_info.dt[dtype] = dt
-                        self.device_info.BLOCK_SIZE[dtype] = BLOCK_SIZE
-                    if dt < min_dt[dtype]:
-                        min_dt[dtype] = dt
-                    key = ("%s_%d_%d_%d" %
-                           ("double2" if dtype[-1] == "2" else "double",
-                            self.AB_WIDTH, self.B_HEIGHT, self.A_HEIGHT))
-                    c = cc[key].copy()
-                    c -= self.c.mem
-                    c = numpy.sqrt(numpy.square(numpy.real(c)) +
-                                   numpy.square(numpy.imag(c)))
-                    self.info(
-                        "Avg is %.3f seconds, MSE = %.6f, "
-                        "max_diff = %.6f" %
-                        (dt, numpy.sum(c) / c.size, c.max()))
+            vops = [0]
+            if BLOCK_SIZE % 2 == 0:
+                vops.append(1)
+            for vector_opt in vops:
+                for dtype in sorted(opencl_types.dtypes.keys()):
+                    try:
+                        self._prepare_test(BLOCK_SIZE, dtype, cc)
+                        key = ("%s_%d_%d_%d"
+                               % (dtype, self.AB_WIDTH,
+                                  self.B_HEIGHT, self.A_HEIGHT))
+                        if key not in cc.keys():
+                            self.info("Numpy for dtype=%s" % (dtype))
+                            dt = self._do_cpu_test(cc, key)
+                            self.info("Done in %.3f seconds" % (dt))
+                            if dt < dt_numpy[dtype]:
+                                dt_numpy[dtype] = dt
+                            if dt_numpy[dtype] < min_dt[dtype]:
+                                min_dt[dtype] = dt_numpy[dtype]
+                        self.info(
+                            "Testing %s with BLOCK_SIZE = %d VECTOR_OPT = %d "
+                            "and dtype = %s" %
+                            (self.device_info.desc, BLOCK_SIZE, vector_opt,
+                             dtype))
+                        dt = self._do_test(BLOCK_SIZE, vector_opt, dtype, 3)
+                        if dt < self.device_info.dt[dtype]:
+                            self.device_info.dt[dtype] = dt
+                            self.device_info.BLOCK_SIZE[dtype] = BLOCK_SIZE
+                            self.device_info.vector_opt[dtype] = vector_opt
+                        if dt < min_dt[dtype]:
+                            min_dt[dtype] = dt
+                        key = ("double_%d_%d_%d" %
+                               (self.AB_WIDTH, self.B_HEIGHT, self.A_HEIGHT))
+                        c = cc[key].copy()
+                        c -= self.c.mem
+                        numpy.fabs(c, c)
+                        self.info("Avg is %.3f seconds, MSE = %.6f, "
+                                  "max_diff = %.6f" %
+                                  (dt, numpy.sum(c) / c.size, c.max()))
+                    except RuntimeError:
+                        a, b, c = sys.exc_info()
+                        self.info(
+                            "Program compilation or run failed for "
+                            "BLOCK_SIZE = %d VECTOR_OPT = %d and dtype = %s "
+                            "(details in stderr)" %
+                            (BLOCK_SIZE, vector_opt, dtype))
+                        traceback.print_exception(a, b, c)
                     self._cleanup_after_test()
-                except RuntimeError:
-                    a, b, c = sys.exc_info()
-                    self.info(
-                        "Program compilation or run failed for "
-                        "BLOCK_SIZE = %d and dtype = %s "
-                        "(details in stderr)" % (BLOCK_SIZE, dtype))
-                    traceback.print_exception(a, b, c)
-                    self._cleanup_after_test()
-
         del cc
 
         for dtype in sorted(opencl_types.dtypes.keys()):
@@ -326,8 +337,7 @@ class Device(Pickleable):
             self.A_HEIGHT, self.B_HEIGHT))
         self.rnd_state = rnd.get().state
 
-        xdtype = ("complex" if dtype in (numpy.complex64, numpy.complex128)
-                  else "real")
+        xdtype = "double"
 
         self.a = formats.Vector()
         self.a.mem = numpy.zeros([self.A_HEIGHT, self.AB_WIDTH],
@@ -407,7 +417,7 @@ class Device(Pickleable):
         cc[key] = c
         return dt
 
-    def _do_test(self, BLOCK_SIZE, dtype, iters):
+    def _do_test(self, BLOCK_SIZE, vector_opt, dtype, iters):
         """Do test for specific context.
         """
 
@@ -437,7 +447,10 @@ class Device(Pickleable):
         obj.cl_sources_["forward.cl"] = {}
         defines = {
             "ACTIVATION_TANH": 1,
+            "INCLUDE_BIAS": 1,
+            "WEIGHTS_TRANSPOSED": 0,
             "BLOCK_SIZE": BLOCK_SIZE,
+            "VECTOR_OPT": vector_opt,
             "H": self.AB_WIDTH,
             "Y": self.B_HEIGHT,
             "BATCH": self.A_HEIGHT}
@@ -452,8 +465,8 @@ class Device(Pickleable):
 
         krn.set_arg(0, self.a.devmem)
         krn.set_arg(1, self.b.devmem)
-        krn.set_arg(2, self.c.devmem)
-        krn.set_arg(3, self.bias.devmem)
+        krn.set_arg(2, self.bias.devmem)
+        krn.set_arg(3, self.c.devmem)
 
         global_size = [formats.roundup(self.B_HEIGHT, BLOCK_SIZE),
                        formats.roundup(self.A_HEIGHT, BLOCK_SIZE)]
