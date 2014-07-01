@@ -47,6 +47,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         self.on_shutdowns = []
         self.silent = False
         self._shutting_down = False
+        self._shutting_down_lock_ = threading.Lock()
         self._not_paused = threading.Event()
         self._not_paused.set()
 
@@ -65,10 +66,11 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
 
     def callInThreadWithCallback(self, onResult, func, *args, **kw):
         self._not_paused.wait()
-        if self._shutting_down or not self.started:
-            return
-        threadpool.ThreadPool.callInThreadWithCallback(self, onResult, func,
-                                                       *args, **kw)
+        with self._shutting_down_lock_:
+            if self._shutting_down or not self.started:
+                return
+            threadpool.ThreadPool.callInThreadWithCallback(self, onResult,
+                                                           func, *args, **kw)
 
     def pause(self):
         self._not_paused.clear()
@@ -100,16 +102,17 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     def shutdown(self, execute_remaining=True, force=False, timeout=0.25):
         """Safely brings thread pool down.
         """
-        if self not in ThreadPool.pools or self._shutting_down:
-            return
-        self._shutting_down = True
+        with self._shutting_down_lock_:
+            if self not in ThreadPool.pools or self._shutting_down:
+                return
+            self._shutting_down = True
         self._not_paused.set()
         sdl = len(self.on_shutdowns)
         self.debug("Running shutdown-ers")
         for on_shutdown, ind in zip(self.on_shutdowns, range(sdl)):
             self.debug("%d/%d - %s", ind, sdl, str(on_shutdown))
             on_shutdown()
-        self.debug("Joining threads")
+        self.debug("Requesting threads to quit")
         del self.on_shutdowns[:]
         self.joined = True
         self.started = False
@@ -119,6 +122,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         while self.workers:
             self.q.put(threadpool.WorkerStop)
             self.workers -= 1
+        self.debug("Joining threads")
         for thread in threads:
             if not force:
                 thread.join()
