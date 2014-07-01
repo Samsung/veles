@@ -104,14 +104,14 @@ class OpenCLUnit(Unit):
             cache_file_name = os.path.join(root.common.cache_dir,
                                            cache_file_name)
         if self.cache and os.path.exists("%s.cache" % cache_file_name):
-            binaries = self._load_from_cache(cache_file_name, defines,
-                                             dtype)
+            binaries, my_defines = self._load_from_cache(
+                cache_file_name, defines, dtype)
             if binaries is not None:
                 self.program_ = self.device.queue_.context.create_program(
                     binaries, binary=True)
                 self.debug("Used %s.cache", cache_file_name)
-                return
-        source = self._generate_source(defines, dtype)
+                return my_defines
+        source, my_defines = self._generate_source(defines, dtype)
         self.program_ = self.device.queue_.context.create_program(
             source, root.common.ocl_dirs)
         if show_ocl_logs and len(self.program_.build_logs):
@@ -121,6 +121,7 @@ class OpenCLUnit(Unit):
                     continue
                 self.info("Non-empty OpenCL build log encountered: %s", s)
         self._save_to_cache(cache_file_name)
+        return my_defines
 
     def get_kernel(self, name):
         return self.program_.get_kernel(name)
@@ -181,7 +182,7 @@ class OpenCLUnit(Unit):
             lines.insert(0, "#define %s %s" % (k, v))
 
         source = "\n".join(lines)
-        return source
+        return (source, my_defines)
 
     def _search_include(self, file_name):
         if os.path.exists(file_name):
@@ -220,29 +221,30 @@ class OpenCLUnit(Unit):
         try:
             with tarfile.open("%s.cache" % cache_file_name, "r:gz") as tar:
                 cached_source = tar.extractfile("source.cl").read()
-                real_source = self._generate_source(defines, dtype).encode()
+                src, my_defines = self._generate_source(defines, dtype)
+                real_source = src.encode("utf-8")
                 if cached_source != real_source:
-                    return None
+                    return None, None
                 for dep in set(self._scan_include_dependencies()):
                     cached_source = tar.extractfile(
                         os.path.basename(dep)).read()
                     with open(dep, "rb") as fr:
                         real_source = fr.read()
                     if cached_source != real_source:
-                        return None
+                        return None, None
                 cache = pickle.loads(tar.extractfile("binaries.pickle").read())
                 if (self.device.queue_.device.name != cache["devices"][0][0] or
                     self.device.queue_.device.platform.name !=
                         cache["devices"][0][1]):
-                    return None
+                    return None, None
                 bins = cache["binaries"]
                 if not isinstance(bins, list) or len(bins) == 0 or \
                    not isinstance(bins[0], bytes):
                     self.warning("Cached binaries have an invalid format")
-                    return None
-                return cache["binaries"]
+                    return None, None
+                return cache["binaries"], my_defines
         except:
-            return None
+            return None, None
 
     def _save_to_cache(self, cache_file_name):
         if not cache_file_name:
