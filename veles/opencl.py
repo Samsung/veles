@@ -10,7 +10,6 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 import argparse
 import numpy
 import os
-import six
 from six.moves import cPickle as pickle
 import sys
 import time
@@ -26,7 +25,7 @@ from veles.units import TrivialUnit
 import veles.external.prettytable as prettytable
 
 
-PYVER = 3 if six.PY3 else 2
+PYVER = sys.version_info[0]
 
 
 class DeviceInfo(object):

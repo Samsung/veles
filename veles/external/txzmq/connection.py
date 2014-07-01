@@ -394,7 +394,7 @@ class ZmqConnection(object):
         self.socket.send(ZmqConnection.PICKLE_START + codec,
                          constants.NOBLOCK | constants.SNDMORE)
         pickle.dump(message, pickler, protocol=(4 if sys.version_info > (3, 4)
-                                                else 3 if six.PY3 else 2))
+                                                else sys.version_info[0]))
         self.socket.send(
             ZmqConnection.PICKLE_END,
             constants.NOBLOCK | (constants.SNDMORE if not last else 0))

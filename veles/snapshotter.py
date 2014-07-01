@@ -9,7 +9,6 @@ import bz2
 import gzip
 import lzma
 import os
-import six
 import sys
 import time
 from zope.interface import implementer
@@ -103,7 +102,7 @@ class Snapshotter(SnapshotterBase):
     def export(self):
         ext = ("." + self.compress) if self.compress else ""
         rel_file_name = "%s_%s.%d.pickle%s" % (
-            self.prefix, self.suffix, 3 if six.PY3 else 2, ext)
+            self.prefix, self.suffix, sys.version_info[0], ext)
         self.file_name = os.path.join(self.directory, rel_file_name)
         self.debug("Snapshotting...")
         with self._open_file() as fout:
@@ -111,7 +110,7 @@ class Snapshotter(SnapshotterBase):
         self.info("Snapshotted to %s" % self.file_name)
         file_name_link = os.path.join(
             self.directory, "%s_current.%d.pickle%s" % (
-                self.prefix, 3 if six.PY3 else 2, ext))
+                self.prefix, sys.version_info[0], ext))
         if os.path.exists(file_name_link):
             os.remove(file_name_link)
         os.symlink(rel_file_name, file_name_link)
