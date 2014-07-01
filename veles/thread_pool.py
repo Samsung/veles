@@ -128,7 +128,8 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                     if not self.silent:
                         self.warning("Stack trace of probably deadlocked #%d:",
                                      thread.ident)
-                        print_stack(sys._current_frames()[thread.ident])
+                        print_stack(sys._current_frames()[thread.ident],
+                                    file=sys.stdout)
                     self.force_thread_to_stop(thread)
                     if not self.silent:
                         self.warning(
@@ -204,7 +205,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         for tid, stack in sys._current_frames().items():
             print("-" * 80)
             print("Thread #%d:" % tid)
-            print_stack(stack)
+            print_stack(stack, file=sys.stdout)
 
     @staticmethod
     def debug_deadlocks():
