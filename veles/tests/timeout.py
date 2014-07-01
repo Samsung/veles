@@ -47,10 +47,16 @@ sys.exit = shutdown
 
 def timeout(value=60):
     def timeout_impl(fn):
+        def unknown():
+            pass
+
+        name = getattr(fn, '__name__', getattr(fn, 'func', unknown).__name__)
+
         def wrapped(*args, **kwargs):
             event = threading.Event()
             global thread_args
             thread_args = (event, value)
+            thread.name = 'timeout@%s' % name
             new_event.set()
             try:
                 res = fn(*args, **kwargs)
@@ -58,7 +64,6 @@ def timeout(value=60):
                 event.set()
             return res
 
-        name = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
         wrapped.__name__ = name
         return wrapped
     return timeout_impl
