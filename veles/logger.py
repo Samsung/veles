@@ -81,7 +81,7 @@ class Logger(object):
                                    logging.getLogger(self.__class__.__name__))
 
     @property
-    def log(self):
+    def logger(self):
         """Returns the logger associated with this object.
         """
         return self._logger_
@@ -109,22 +109,22 @@ class Logger(object):
         logging.getLogger().addHandler(handler)
 
     def debug(self, msg, *args, **kwargs):
-        self.log.debug(msg, *args, **kwargs)
+        self.logger.debug(msg, *args, **kwargs)
 
     def info(self, msg, *args, **kwargs):
-        self.log.info(msg, *args, **kwargs)
+        self.logger.info(msg, *args, **kwargs)
 
     def warning(self, msg, *args, **kwargs):
-        self.log.warning(msg, *args, **kwargs)
+        self.logger.warning(msg, *args, **kwargs)
 
     def error(self, msg, *args, **kwargs):
-        self.log.error(msg, *args, **kwargs)
+        self.logger.error(msg, *args, **kwargs)
 
     def exception(self, msg="Exception", *args, **kwargs):
-        self.log.exception(msg, *args, **kwargs)
+        self.logger.exception(msg, *args, **kwargs)
 
     def critical(self, msg, *args, **kwargs):
-        self.log.critical(msg, *args, **kwargs)
+        self.logger.critical(msg, *args, **kwargs)
 
 
 class MongoLogHandler(logging.Handler):
