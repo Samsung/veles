@@ -213,7 +213,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         if threading.active_count() > 1:
             if threading.active_count() == 2:
                 for thread in threading.enumerate():
-                    if thread.name == 'timeout':
+                    if thread.name.startswith('timeout'):
                         # veles.tests.timeout registers atexit
                         return
             logging.warning("There are currently more than 1 threads still "
