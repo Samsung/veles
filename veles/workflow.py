@@ -44,6 +44,8 @@ class Repeater(TrivialUnit):
 
 
 class UttermostPoint(TrivialUnit):
+    hide = True
+
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = kwargs.get("view_group", "SERVICE")
         super(UttermostPoint, self).__init__(workflow, **kwargs)
@@ -52,6 +54,8 @@ class UttermostPoint(TrivialUnit):
 class StartPoint(UttermostPoint):
     """Start point of a workflow execution.
     """
+    hide = True
+
     def __init__(self, workflow, **kwargs):
         kwargs["name"] = kwargs.get("name", "Start")
         super(StartPoint, self).__init__(workflow, **kwargs)
@@ -63,6 +67,7 @@ class EndPoint(UttermostPoint):
     Attributes:
         sem_: semaphore.
     """
+    hide = True
 
     def __init__(self, workflow, **kwargs):
         kwargs["name"] = kwargs.get("name", "End")
@@ -95,6 +100,8 @@ class Workflow(Unit):
         _sync: flag which makes Workflow.run() either blocking or non-blocking.
         _sync_event_: threading.Event enabling synchronous run().
     """
+    hide_all = True
+
     def __init__(self, workflow, **kwargs):
         self._plotters_are_enabled = kwargs.get(
             "disable_plotters", not root.common.plotters_disabled)

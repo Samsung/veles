@@ -7,6 +7,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
+import six
 import threading
 import time
 import uuid
@@ -44,6 +45,21 @@ class IUnit(Interface):
         """
 
 
+class UnitRegistry(type):
+    units = set()
+
+    def __init__(cls, name, bases, clsdict):
+        yours = set(cls.mro())
+        mine = set(Distributable.mro())
+        left = yours - mine
+        if len(left) > 1 and not name.endswith('Base') and \
+           not clsdict.get('hide', False) and \
+           not getattr(cls, 'hide_all', False):
+            UnitRegistry.units.add(cls)
+        super(UnitRegistry, cls).__init__(name, bases, clsdict)
+
+
+@six.add_metaclass(UnitRegistry)
 class Unit(Distributable):
     """General unit in data stream model.
 
@@ -62,6 +78,7 @@ class Unit(Distributable):
     _pool_ = None
     _pool_lock_ = threading.Lock()
     timers = {}
+    visible = True
 
     def __init__(self, workflow, **kwargs):
         self.name = kwargs.get("name")

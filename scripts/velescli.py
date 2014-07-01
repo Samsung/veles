@@ -183,10 +183,10 @@ class Main(Logger):
         self.load_called = False
         self.main_called = False
         try:
-            sys.path = [os.path.dirname(fname_workflow)] + sys.path
+            sys.path.insert(0, os.path.dirname(fname_workflow))
             module = __import__(
                 os.path.splitext(os.path.basename(fname_workflow))[0])
-            sys.path = sys.path[1:]
+            del sys.path[0]
         except FileNotFoundError:
             self.exception("Workflow does not exist: \"%s\"", fname_workflow)
             sys.exit(errno.ENOENT)

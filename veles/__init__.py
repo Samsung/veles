@@ -36,3 +36,36 @@ from veles.logger import Logger
 from veles.units import Unit
 from veles.opencl_units import OpenCLUnit, OpenCLWorkflow
 from veles.workflow import Workflow
+
+
+__units__ = None
+
+
+def registered_units():
+    global __units__
+    if not __units__ is None:
+        return __units__
+
+    import os
+    import sys
+
+    # Temporarily disable standard output since some modules spam during import
+    stdout = sys.stdout
+    with open(os.devnull, 'w') as null:
+        sys.stdout = null
+    for root, _, files in os.walk(os.path.dirname(__file__)):
+        if root.find('tests') >= 0:
+            continue
+        for file in files:
+            modname, ext = os.path.splitext(file)
+            if ext == '.py':
+                try:
+                    sys.path.insert(0, root)
+                    __import__(modname)
+                    del sys.path[0]
+                except:
+                    pass
+    sys.stdout = stdout
+    from veles.units import UnitRegistry
+    __units__ = UnitRegistry.units
+    return __units__

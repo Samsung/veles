@@ -48,6 +48,8 @@ class OpenCLUnit(Unit):
         cl_sources_: OpenCL source files: file => defines.
         cache: whether to cache the compiled OpenCL programs.
     """
+    hide = True
+
     def __init__(self, workflow, **kwargs):
         super(OpenCLUnit, self).__init__(workflow, **kwargs)
         self.verify_interface(IOpenCLUnit)
