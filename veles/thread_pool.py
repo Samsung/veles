@@ -202,22 +202,23 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             print("Threads' stacks printing is not implemented for this "
                   "Python interpreter")
             return
+        tmap = {thr.ident: thr.name for thr in threading.enumerate()}
         for tid, stack in sys._current_frames().items():
             print("-" * 80)
-            print("Thread #%d:" % tid)
+            print("Thread #%d (%s):" % (tid, tmap.get(tid, "<unknown>")))
             print_stack(stack, file=sys.stdout)
 
     @staticmethod
     def debug_deadlocks():
-        if threading.activeCount() > 1:
-            if threading.activeCount() == 2:
-                for thread in threading._active.values():
+        if threading.active_count() > 1:
+            if threading.active_count() == 2:
+                for thread in threading.enumerate():
                     if thread.name == 'timeout':
                         # veles.tests.timeout registers atexit
                         return
             logging.warning("There are currently more than 1 threads still "
                             "running. A deadlock is likely to happen.\n%s",
-                            str(threading._active)
+                            str(threading.enumerate())
                             if hasattr(threading, "_active")
                             else "<unable to list active threads>")
             ThreadPool._print_thread_stacks()
