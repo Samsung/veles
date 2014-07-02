@@ -10,12 +10,14 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 import argparse
 import numpy
 import os
+from six import add_metaclass
 from six.moves import cPickle as pickle
 import sys
 import time
 import traceback
 import opencl4py as cl
 
+from veles.cmdline import CommandLineArgumentsRegistry
 from veles.config import root, get
 from veles.distributable import Pickleable
 import veles.formats as formats
@@ -64,6 +66,7 @@ class DeviceInfo(object):
             self.vector_opt[dtype] = 0
 
 
+@add_metaclass(CommandLineArgumentsRegistry)
 class Device(Pickleable):
     """OpenCL device helper class.
 

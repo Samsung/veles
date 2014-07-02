@@ -22,6 +22,7 @@ from twisted.internet import reactor
 from veles.external.txzmq import ZmqConnection, ZmqEndpoint
 import zmq
 
+from veles.cmdline import CommandLineArgumentsRegistry
 from veles.config import root
 from veles.logger import Logger
 import veles.graphics_client as graphics_client
@@ -34,6 +35,7 @@ class ZmqPublisher(ZmqConnection):
         super(ZmqPublisher, self).send(b'graphics' + message)
 
 
+@six.add_metaclass(CommandLineArgumentsRegistry)
 class GraphicsServer(Logger):
     """
     Graphics server which uses ZeroMQ PUB socket to publish updates.

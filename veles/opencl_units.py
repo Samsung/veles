@@ -11,13 +11,13 @@ import numpy
 import opencl4py
 import os
 import re
+from six import BytesIO, add_metaclass, PY3
 from six.moves import cPickle as pickle
-from six import BytesIO
-from six import PY3
 import tarfile
 import time
 from zope.interface import implementer, Interface
 
+from veles.cmdline import UnitCommandLineArgumentsRegistry
 from veles.config import root
 import veles.formats as formats
 import veles.opencl_types as opencl_types
@@ -39,6 +39,7 @@ class IOpenCLUnit(Interface):
 
 
 @implementer(IUnit)
+@add_metaclass(UnitCommandLineArgumentsRegistry)
 class OpenCLUnit(Unit):
     """Unit that operates using OpenCL.
 

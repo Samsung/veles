@@ -15,7 +15,7 @@ import getpass
 import json
 import os
 import paramiko
-from six import BytesIO
+from six import BytesIO, add_metaclass
 import socket
 import sys
 import threading
@@ -28,6 +28,7 @@ from twisted.web.http_headers import Headers
 import uuid
 
 import veles.client as client
+from veles.cmdline import CommandLineArgumentsRegistry
 from veles.config import root
 import veles.graphics_server as graphics_server
 import veles.logger as logger
@@ -47,6 +48,7 @@ def threadsafe(fn):
     return wrapped
 
 
+@add_metaclass(CommandLineArgumentsRegistry)
 class Launcher(logger.Logger):
     """Workflow launcher.
 

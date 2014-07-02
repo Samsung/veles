@@ -52,12 +52,11 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 import veles
+from veles.cmdline import CommandLineArgumentsRegistry
 from veles.config import root
-from veles.graphics_server import GraphicsServer
 from veles.logger import Logger
 from veles.launcher import Launcher
 from veles.opencl import Device
-from veles.opencl_units import OpenCLUnit
 from veles.pickle2 import pickle, setup_pickle_debug
 import veles.random_generator as rnd
 
@@ -128,10 +127,8 @@ class Main(Logger):
         parser = argparse.ArgumentParser(
             description=Main.LOGO if not sphinx else "",
             formatter_class=argparse.RawDescriptionHelpFormatter)
-        parser = Launcher.init_parser(parser=parser)
-        parser = Device.init_parser(parser=parser)
-        parser = OpenCLUnit.init_parser(parser=parser)
-        parser = GraphicsServer.init_parser(parser)
+        for cls in CommandLineArgumentsRegistry.classes:
+            parser = cls.init_parser(parser=parser)
         parser.add_argument("--no-logo", default=False,
                             help="Do not print VELES version, copyright and "
                             "other information on startup.",
