@@ -124,9 +124,17 @@ class Main(Logger):
         """
         Creates the command line argument parser.
         """
+
+        class SortingRawDescriptionHelpFormatter(
+                argparse.RawDescriptionHelpFormatter):
+            def add_arguments(self, actions):
+                actions = sorted(actions, key=lambda x: x.dest)
+                super(SortingRawDescriptionHelpFormatter, self).add_arguments(
+                    actions)
+
         parser = argparse.ArgumentParser(
             description=Main.LOGO if not sphinx else "",
-            formatter_class=argparse.RawDescriptionHelpFormatter)
+            formatter_class=SortingRawDescriptionHelpFormatter)
         for cls in CommandLineArgumentsRegistry.classes:
             parser = cls.init_parser(parser=parser)
         parser.add_argument("--no-logo", default=False,
@@ -161,10 +169,11 @@ class Main(Logger):
                             help='path to the configuration file\
                             (write "-" to search in as <WORKFLOW>_config.py)')
         parser.add_argument('config_list',
-                            help="list of configuration overloads like: \n"
+                            help="configuration overrides separated by a "
+                            "whitespace, for example: \n"
                             "root.global_alpha=0.006\n"
                             "root.snapshot_prefix='test_pr'",
-                            nargs='*', metavar="configs...")
+                            nargs='*', metavar="key=value")
         try:
             class NoEscapeCompleter(argcomplete.CompletionFinder):
                 def quote_completions(self, completions, *args, **kwargs):
