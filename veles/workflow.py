@@ -52,7 +52,7 @@ class UttermostPoint(TrivialUnit):
 
 
 class StartPoint(UttermostPoint):
-    """Start point of a workflow execution.
+    """Workflow execution normally starts from this unit.
     """
     hide = True
 
@@ -62,10 +62,7 @@ class StartPoint(UttermostPoint):
 
 
 class EndPoint(UttermostPoint):
-    """End point with semaphore.
-
-    Attributes:
-        sem_: semaphore.
+    """Ends the pipeline execution, normally is the last unit in a workflow.
     """
     hide = True
 
@@ -96,9 +93,15 @@ class Workflow(Unit):
     Attributes:
         start_point: start point.
         end_point: end point.
-        _units: the list of units belonging to this workflow.
+        negotiates_on_connect: True if data must be sent and received during
+        the master-slave handshake; otherwise, False.
+        _units: the list of units belonging to this Workflow, in
+                semi-alphabetical order.
         _sync: flag which makes Workflow.run() either blocking or non-blocking.
         _sync_event_: threading.Event enabling synchronous run().
+        _run_time: the total time workflow has been running for.
+        _method_time: Workflow's method timings measured by method_timed
+                      decorator. Used mainly to profile master-slave.
     """
     hide_all = True
 
@@ -132,6 +135,8 @@ class Workflow(Unit):
             " with %d units" % len(self)
 
     def __getitem__(self, key):
+        """Returns the unit by index or by name.
+        """
         if isinstance(key, str):
             units = self._units[key]
             if len(units) == 0:
@@ -150,6 +155,8 @@ class Workflow(Unit):
         raise TypeError("Key must be either a string or an integer.")
 
     def __iter__(self):
+        """Returns the iterator for units belonging to this Workflow.
+        """
         class WorkflowIterator(object):
             def __init__(self, workflow):
                 super(WorkflowIterator, self).__init__()
@@ -173,6 +180,8 @@ class Workflow(Unit):
         return WorkflowIterator(self)
 
     def __len__(self):
+        """Returns the number of units belonging to this Workflow.
+        """
         return sum([len(units) for units in self._units.values()])
 
     @property
@@ -198,6 +207,9 @@ class Workflow(Unit):
 
     @property
     def plotters_are_enabled(self):
+        """There exists an ability to disable plotters in the particular
+        Workflow instance.
+        """
         return self._plotters_are_enabled
 
     @plotters_are_enabled.setter
@@ -214,6 +226,9 @@ class Workflow(Unit):
         return self.start_point.dependent_list()
 
     def initialize(self, **kwargs):
+        """Initializes all the units belonging to this Workflow, in dependency
+        order.
+        """
         fin_text = "all units are initialized"
         maxlen = max([len(u.name) for u in self] + [len(fin_text)])
         progress = ProgressBar(maxval=len(self),
@@ -237,7 +252,8 @@ class Workflow(Unit):
         progress.finish()
 
     def run(self):
-        """Starts executing the workflow. This function is asynchronous,
+        """Starts executing the workflow. This function is synchronous
+        if run_is_blocking, otherwise it returns immediately and the
         parent's on_workflow_finished() method will be called.
         """
         self._run_time_started_ = time.time()
@@ -250,6 +266,9 @@ class Workflow(Unit):
             raise RuntimeError("Workflow synchronization internal failure")
 
     def stop(self):
+        """Manually interrupts the execution, calling stop() on each bound
+        unit.
+        """
         self.on_workflow_finished(True)
 
     def on_workflow_finished(self, slave_force=False):
@@ -268,15 +287,25 @@ class Workflow(Unit):
             self._do_job_callback_(self.generate_data_for_master())
 
     def add_ref(self, unit):
+        """Adds a unit to this workflow. Usually, one does not call this method
+        directly, but rather during the construction of the unit itself. Each
+        unit requires an instance of Workflow in __init__ and add_ref is
+        called inside.
+        """
         if unit is self:
             raise ValueError("Attempted to add self to self")
         self._units[unit.name].append(unit)
 
     def del_ref(self, unit):
+        """Removes a unit from this workflow. This is needed for complete unit
+        deletion.
+        """
         if unit.name in self._units.keys():
             self._units[unit.name].remove(unit)
 
     def run_timed(fn):
+        """Decorator function to measure the overall run time.
+        """
         def wrapped(self, *args, **kwargs):
             t = time.time()
             res = fn(self, *args, **kwargs)
@@ -288,6 +317,8 @@ class Workflow(Unit):
         return wrapped
 
     def method_timed(fn):
+        """Decorator function to profile particular methods.
+        """
         def wrapped(self, *args, **kwargs):
             t = time.time()
             res = fn(self, *args, **kwargs)
@@ -375,6 +406,7 @@ class Workflow(Unit):
     def do_job(self, data, update, callback):
         """
         Executes this workflow on the given source data. Run by a slave.
+        Called by Launcher.
         """
         self.apply_data_from_master(data)
         if update is not None:
@@ -437,6 +469,11 @@ class Workflow(Unit):
         return 0
 
     def generate_graph(self, filename=None, write_on_disk=True):
+        """Produces a Graphviz PNG image of the unit control flow. Returns the
+        DOT graph description (string).
+        If write_on_disk is False, filename is ignored. If filename is None, a
+        temporary file name is taken.
+        """
         g = pydot.Dot(graph_name="Workflow",
                       graph_type="digraph",
                       bgcolor="transparent")
@@ -480,6 +517,9 @@ class Workflow(Unit):
                          "SERVICE": "lightgrey"}
 
     def print_stats(self, by_name=False, top_number=5):
+        """Outputs various time statistics gathered with run_timed and
+        method_timed.
+        """
         timers = {}
         key_unit_map = {}
         for unit in self:
@@ -524,6 +564,8 @@ class Workflow(Unit):
             self.info("Workflow methods run time:\n%s", str(table))
 
     def checksum(self):
+        """Returns the cached checksum of file where this workflow is defined.
+        """
         if self._checksum is None:
             sha1 = hashlib.sha1()
             model_name = sys.modules[self.__module__].__file__

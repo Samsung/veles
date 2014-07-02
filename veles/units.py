@@ -46,6 +46,15 @@ class IUnit(Interface):
 
 
 class UnitRegistry(type):
+    """Metaclass to record Unit descendants. Used for introspection and
+    analytical purposes.
+    Classes derived from Unit may contain 'hide' attribute which specifies
+    whether it should not appear in the list of registered units. Usually
+    hide = True is applied to base units which must not be used directly, only
+    subclassed. There is also a 'hide_all' attribute, do disable the
+    registration of the whole inheritance tree, so that all the children are
+    automatically hidden.
+    """
     units = set()
 
     def __init__(cls, name, bases, clsdict):
