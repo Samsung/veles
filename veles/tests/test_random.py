@@ -59,9 +59,7 @@ class TestRandom(unittest.TestCase):
                                            "test_random.cl"))
 
         krn = obj.get_kernel("random")
-        krn.set_arg(0, states.devmem)
-        krn.set_arg(1, output.devmem)
-        krn.set_arg(2, n_rounds)
+        krn.set_args(states.devmem, n_rounds, output.devmem)
 
         self.device.queue_.execute_kernel(krn, (states.mem.shape[0],),
                                           None, need_event=False)

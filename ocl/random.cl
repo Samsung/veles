@@ -10,8 +10,18 @@
 
 http://en.wikipedia.org/wiki/Xorshift
 
+Written in 2014 by Sebastiano Vigna (vigna@acm.org)
+
+To the extent possible under law, the author has dedicated all copyright
+and related and neighboring rights to this software to the public domain
+worldwide. This software is distributed without any warranty.
+
+See <http://creativecommons.org/publicdomain/zero/1.0/>.
+
 The following generator has 1024 bits of state, a maximal period of 2^1024 − 1, passes BigCrush,
 emit a sequence of 64-bit values that is equidistributed in the maximum possible dimension.
+
+This is xorshift1024* from http://xorshift.di.unimi.it.
 
 uint64_t s[ 16 ];
 int p;
@@ -27,8 +37,8 @@ uint64_t next(void) {
 */
 __kernel
 void random(__global ulong /* IN, OUT */    *states,
-            __global ulong     /* OUT */    *output,
-            const int           /* IN */    rounds) {
+            const int           /* IN */    rounds,
+            __global ulong     /* OUT */    *output) {
   int id = get_global_id(0) << 4;
   ulong s[16];
   #pragma unroll
