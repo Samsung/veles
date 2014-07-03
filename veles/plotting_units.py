@@ -62,7 +62,7 @@ class AccumulatingPlotter(Plotter):
         self.minimap_size = kwargs.get("minimap", 0.25)
         self.line_width = kwargs.get("line_width", 2.0)
         self.values = []
-        self.input_offs = 0
+        self.input_offset = 0
         self.pp = None
         self.show_figure = self.nothing
         self.demand("input", "input_field")
@@ -130,7 +130,7 @@ class AccumulatingPlotter(Plotter):
         else:
             value = self.input.__dict__[self.input_field]
         if type(value) == numpy.ndarray:
-            value = value[self.input_offs]
+            value = value[self.input_offset]
         self.values.append(float(value))
 
 
