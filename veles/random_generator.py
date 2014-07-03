@@ -160,6 +160,21 @@ class RandomGenerator(object):
         self.restore_state()
         return retval
 
+    @staticmethod
+    def xorshift128plus(states, index):
+        seed = states[index:index + 2]
+        s1 = seed[0]
+        s0 = seed[1]
+        seed[0] = s0
+        s1 ^= s1 << 23  # a
+        seed[1] = s1 ^ s0 ^ (s1 >> 17) ^ (s0 >> 26)
+        output = seed[1] + s0  # b, c
+        states[index:index + 2] = seed
+        return output
+
+    def __call__(self, *args):
+        return self.rand(*args)
+
     def save_state(self):
         if numpy.random.get_state is None:
             return
