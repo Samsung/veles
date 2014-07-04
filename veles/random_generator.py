@@ -160,18 +160,6 @@ class RandomGenerator(object):
         self.restore_state()
         return retval
 
-    @staticmethod
-    def xorshift128plus(states, index):
-        seed = states[index:index + 2]
-        s1 = seed[0]
-        s0 = seed[1]
-        seed[0] = s0
-        s1 ^= s1 << 23  # a
-        seed[1] = s1 ^ s0 ^ (s1 >> 17) ^ (s0 >> 26)
-        output = seed[1] + s0  # b, c
-        states[index:index + 2] = seed
-        return output
-
     def __call__(self, *args):
         return self.rand(*args)
 
@@ -190,6 +178,18 @@ class RandomGenerator(object):
             numpy.random.set_state(self._saved_state)
 
     threadsafe = staticmethod(threadsafe)
+
+
+def xorshift128plus(states, index):
+    seed = states[index:index + 2]
+    s1 = seed[0:1].copy()
+    s0 = seed[1:2].copy()
+    seed[0] = s0[0]
+    s1 ^= s1 << 23  # a
+    seed[1] = (s1 ^ s0 ^ (s1 >> 17) ^ (s0 >> 26))[0]
+    output = seed[1] + s0[0]  # b, c
+    states[index:index + 2] = seed
+    return output
 
 
 __generators__ = {}

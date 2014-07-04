@@ -1,3 +1,7 @@
+#ifndef LOG_CHUNK
+#define LOG_CHUNK 4
+#endif
+
 /*
 @brief Generates equidistributed random numbers.
 @param states Array of the random generators states.
@@ -36,25 +40,26 @@ uint64_t next(void) {
 }
 */
 __kernel
-void random(__global ulong /* IN, OUT */    *states,
-            const int           /* IN */    rounds,
-            __global ulong     /* OUT */    *output) {
-  int id = get_global_id(0) << 4;
+void random_xorshift1024star(__global ulong /* IN, OUT */    *states,
+                             const int           /* IN */    rounds,
+                             __global ulong     /* OUT */    *output) {
+  int id = get_global_id(0) << LOG_CHUNK;
   ulong s[16];
   #pragma unroll
   for (int i = 0; i < 16; i++) {
     s[i] = states[id + i];
   }
 
-  for (int round = 0, offs = id * rounds; round < rounds; round++, offs += 16) {
+  for (int round = 0, offs = id * rounds; round < rounds;
+       round++, offs += (1 << LOG_CHUNK)) {
     #pragma unroll
-    for (int i = 0, p = 0; i < 16; i++) {
-      ulong s0 = s[ p ];
-      ulong s1 = s[ p = ( p + 1 ) & 15 ];
+    for (int i = 0, p = 0; i < (1 << LOG_CHUNK); i++) {
+      ulong s0 = s[p];
+      ulong s1 = s[p = (p + 1) & 15];
       s1 ^= s1 << 31; // a
       s1 ^= s1 >> 11; // b
       s0 ^= s0 >> 30; // c
-      output[offs + i] = ( s[ p ] = s0 ^ s1 ) * 1181783497276652981;
+      output[offs + i] = (s[p] = s0 ^ s1) * 1181783497276652981;
     }
   }
 
@@ -107,3 +112,14 @@ uint64_t next(void) {
     state = seed; \
   } while (0)
 
+__kernel
+void random_xorshift128plus(__global ulong2 /* IN, OUT */   *states,
+                            __global ulong     /* OUT */    *output) {
+  int id = get_global_id(0) << LOG_CHUNK;
+  #pragma unroll
+  for (int i = id; i < id + (1 << LOG_CHUNK); i++) {
+    ulong random;
+    xorshift128plus(states[i], random);
+    output[i] = random;
+  }
+}

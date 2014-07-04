@@ -30,9 +30,10 @@ class TrivialOpenCLUnit(OpenCLUnit):
         pass
 
 
-class TestRandom(unittest.TestCase):
+class TestRandom1024(unittest.TestCase):
     def setUp(self):
         self.device = opencl.Device()
+        self.chunk = 4
         # rnd.get().seed(numpy.fromfile("%s/veles/znicz/samples/seed" %
         #                                (root.common.veles_dir),
         #                                dtype=numpy.int32, count=1024))
@@ -54,11 +55,11 @@ class TestRandom(unittest.TestCase):
 
         obj = TrivialOpenCLUnit(DummyWorkflow())
         obj.initialize(device=self.device)
-        obj.cl_sources_["random.cl"] = {}
+        obj.cl_sources_["random.cl"] = {'LOG_CHUNK': self.chunk}
         obj.build_program({}, os.path.join(root.common.cache_dir,
                                            "test_random.cl"))
 
-        krn = obj.get_kernel("random")
+        krn = obj.get_kernel("random_xorshift1024star")
         krn.set_args(states.devmem, n_rounds, output.devmem)
 
         self.device.queue_.execute_kernel(krn, (states.mem.shape[0],),
@@ -108,7 +109,59 @@ class TestRandom(unittest.TestCase):
         self.assertEqual(numpy.count_nonzero(v_gpu - v_cpu), 0)
 
 
+class TestRandom128(unittest.TestCase):
+    def setUp(self):
+        self.device = opencl.Device()
+        self.chunk = 4
+
+    def tearDown(self):
+        del self.device
+
+    def _gpu(self):
+        states = formats.Vector()
+        output = formats.Vector()
+        states.mem = self.states.copy()
+        output.mem = numpy.zeros(states.mem.size // 2, dtype=numpy.uint64)
+        states.initialize(self.device)
+        output.initialize(self.device)
+
+        obj = TrivialOpenCLUnit(DummyWorkflow())
+        obj.initialize(device=self.device)
+        obj.cl_sources_["random.cl"] = {'LOG_CHUNK': self.chunk}
+        obj.build_program({}, os.path.join(root.common.cache_dir,
+                                           "test_random.cl"))
+        obj.assign_kernel("random_xorshift128plus")
+        obj.set_args(states, output)
+        obj.execute_kernel((output.mem.size >> self.chunk,), None,
+                           need_event=False)
+
+        output.map_read()
+        logging.debug("opencl output:")
+        logging.debug(output.mem)
+        return output.mem
+
+    def _cpu(self):
+        numpy.seterr(over='ignore')
+        states = self.states.copy()
+        output = numpy.zeros(states.size // 2, dtype=numpy.uint64)
+        for i in range(0, states.size, 2):
+            output[i // 2] = rnd.xorshift128plus(states, i)
+        numpy.seterr(over='warn')
+        logging.debug("cpu output:")
+        logging.debug(output)
+        return output
+
+    def test(self):
+        # 4 here is not related to self.chunk
+        self.states = rnd.get().randint(
+            0, numpy.iinfo(numpy.uint32).max, 1024 * 4) \
+            .astype(numpy.uint32).view(numpy.uint64)
+        v_gpu = self._gpu()
+        v_cpu = self._cpu()
+        self.assertEqual(numpy.count_nonzero(v_gpu - v_cpu), 0)
+
+
 if __name__ == "__main__":
-    # logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
     # import sys;sys.argv = ['', 'Test.testName']
     unittest.main()
