@@ -225,6 +225,10 @@ class Vector(Pickleable):
         return self.mem.shape
 
     @property
+    def dtype(self):
+        return self.mem.dtype
+
+    @property
     def sample_size(self):
         return self.size // self.shape[0]
 
