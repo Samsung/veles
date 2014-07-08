@@ -13,7 +13,7 @@ from zope.interface import implementer
 
 from veles.config import root
 import veles.error as error
-from veles.formats import Vector
+from veles.formats import Vector, assert_addr
 from veles.opencl_types import numpy_dtype_to_opencl
 from veles.opencl_units import OpenCLUnit, IOpenCLUnit
 
@@ -65,7 +65,20 @@ class MeanDispNormalizer(OpenCLUnit):
 
         if self.output.mem is None or self.output.size != self.input.size:
             self.output.reset()
-            self.output.mem = numpy.zeros(self.input.shape, dtype=dtype)
+            sh = self.input.shape
+            if root.common.unit_test:  # for overflow test
+                sh = list(sh)
+                sh[0] <<= 1
+                self.output.mem = numpy.zeros(sh, dtype=dtype)
+                self.output.initialize(device)
+                self.output.map_write()
+                self.output.vv = self.output.mem
+                sh[0] >>= 1
+                self.output.mem = self.output.vv[:sh[0]]
+                assert_addr(self.output.mem, self.output.vv)
+                self.output.vv[sh[0]:] = numpy.nan
+            else:
+                self.output.mem = numpy.zeros(sh, dtype=dtype)
 
         self.input.initialize(device)
         self.mean.initialize(device)

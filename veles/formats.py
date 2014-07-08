@@ -240,6 +240,12 @@ class Vector(Pickleable):
     def plain(self):
         return ravel(self.mem)
 
+    def min(self, *args, **kwargs):
+        return self.mem.min(*args, **kwargs)
+
+    def max(self, *args, **kwargs):
+        return self.mem.max(*args, **kwargs)
+
     def init_unpickled(self):
         super(Vector, self).init_unpickled()
         self.devmem = None

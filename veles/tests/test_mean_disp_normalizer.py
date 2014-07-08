@@ -22,6 +22,8 @@ from veles.tests.dummy_workflow import DummyWorkflow
 
 class TestMeanDispNormalizer(unittest.TestCase):
     def setUp(self):
+        root.common.unit_test = True
+        root.common.plotters_disabled = True
         self.device = opencl.Device()
         dtype = opencl_types.dtypes[root.common.precision_type]
         self.mean = numpy.zeros([256, 256, 4], dtype=dtype)
@@ -52,6 +54,10 @@ class TestMeanDispNormalizer(unittest.TestCase):
         unit.run()
         unit.output.map_read()
         self.assertEqual(unit.output.dtype, self.rdisp.dtype)
+        if device is not None:
+            vv = unit.output.vv[unit.output.shape[0]:]
+            nz = numpy.count_nonzero(numpy.isnan(vv))
+            self.assertEqual(nz, vv.size, "Overflow occured")
         return unit.output.mem.copy()
 
 
