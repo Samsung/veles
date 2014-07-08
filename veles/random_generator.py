@@ -12,10 +12,11 @@ import os
 import threading
 
 from veles.config import root
+from veles.distributable import Pickleable
 import veles.formats as formats
 
 
-class RandomGenerator(object):
+class RandomGenerator(Pickleable):
     """Random generator with exact reproducibility property.
 
     Attributes:
@@ -34,6 +35,7 @@ class RandomGenerator(object):
         return wrapped
 
     def __init__(self, key):
+        super(RandomGenerator, self).__init__()
         self._key = key
         self._saved_state = None
         self.restore_state()
