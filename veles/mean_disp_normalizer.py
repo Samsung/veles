@@ -119,3 +119,9 @@ class MeanDispNormalizer(OpenCLUnit):
         self.output.matrix[:] = (
             self.input.matrix.astype(dtype)[:] -
             self.mean.plain.astype(dtype)) * self.rdisp.plain
+
+    def generate_data_for_slave(self):
+        pass
+
+    def apply_data_from_slave(self):
+        pass
