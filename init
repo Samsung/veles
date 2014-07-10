@@ -3,20 +3,26 @@
 if [ ! -e "veles/znicz/.project" -o ! -e libSoundFeatureExtraction/.project ]; then
 	user=$(git remote -v | grep -oE '//[^@]+' -m1 | cut -c3-)
     sed -i "/$user/b; s/ssh:\/\//ssh:\/\/$user@/g" .gitmodules
-    git submodule update --init
-    git checkout .gitmodules
-    echo '[filter "package"]
-        clean = /bin/sh package.sh clean
-        smudge = /bin/sh package.sh smudge' >> .git/config
-    echo '[filter "package"]
-        clean = /bin/sh package.sh clean
-        smudge = /bin/sh package.sh smudge' >> .git/modules/Znicz/config
-    rm veles/__init__.py
-    git checkout veles/__init__.py
-    cd veles/znicz
-    rm __init__.py
-    git checkout __init__.py
-    cd ../..
+    while ! git submodule update --init; do
+        echo 'Failed to checkout submodules, retrying...'
+    done
 else
     git submodule update
 fi
+if ! grep -q package .git/config; then
+    echo '[filter "package"]
+        clean = /bin/sh package.sh clean
+        smudge = /bin/sh package.sh smudge' >> .git/config
+fi
+if ! grep -q package .git/modules/Znicz/config; then
+    echo '[filter "package"]
+        clean = /bin/sh package.sh clean
+        smudge = /bin/sh package.sh smudge' >> .git/modules/Znicz/config
+fi
+git checkout .gitmodules
+rm -f veles/__init__.py
+git checkout veles/__init__.py
+cd veles/znicz
+rm -f __init__.py
+git checkout __init__.py
+cd ../..
