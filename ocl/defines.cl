@@ -69,9 +69,7 @@ inline double atom_add_double(__global double *addr, double vle) {
 
 
 /// @brief Sets all elements of array to zero.
-__kernel
-void array_clear(__global dtype *arr) {
-  arr[get_global_id(0)] = 0;
-}
+#define KERNEL_CLEAR(kernel_name, data_type) __kernel void kernel_name(__global data_type *arr) { arr[get_global_id(0)] = 0; }
+
 
 #endif  // _DEFINES_
