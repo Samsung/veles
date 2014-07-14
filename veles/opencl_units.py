@@ -76,12 +76,18 @@ class OpenCLUnit(Unit):
 
     def initialize(self, device, **kwargs):
         self.device = device
+        if not (self.device is None or self.device.exists or self._force_cpu):
+            self.critical("No OpenCL device exist and --cpu option was not "
+                          "specified")
+            raise ValueError()
+        if self._force_cpu:
+            self.device = None
 
     def run(self):
-        if self.device and not self._force_cpu:
-            self.ocl_run()
-        else:
+        if self.device is None or self._force_cpu:
             self.cpu_run()
+        else:
+            self.ocl_run()
 
     @staticmethod
     def init_parser(parser=None):

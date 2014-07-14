@@ -80,7 +80,8 @@ class Device(Pickleable):
         super(Device, self).__init__()
         if os.getenv("CUDA_CACHE_DISABLE") is None:
             os.putenv("CUDA_CACHE_DISABLE", "1")
-        self._get_some_device()
+        if not self._get_some_device():
+            return
         self._fill_device_info_performance_values()
         log_configs = "Selected the following OpenCL configurations:\n"
         table = prettytable.PrettyTable("device", " dtype", "rating",
@@ -102,6 +103,10 @@ class Device(Pickleable):
         sz = int(numpy.sqrt(self.queue_.device.max_work_group_size))
         sh = self.queue_.device.max_work_item_sizes
         return min(sz, sh[0], sh[1])
+
+    @property
+    def exists(self):
+        return not self.queue_ is None
 
     def init_unpickled(self):
         super(Device, self).init_unpickled()
@@ -147,10 +152,17 @@ class Device(Pickleable):
 
     def _get_some_device(self, **kwargs):
         """Gets some device from the available OpenCL devices.
+        Returns True if any device was selected, otherwise, False.
         """
         parser = Device.init_parser(**kwargs)
         args, _ = parser.parse_known_args()
-        platforms = cl.Platforms()
+        try:
+            platforms = cl.Platforms()
+        except cl.CLRuntimeError:
+            platforms = None
+        if platforms is None or len(platforms.platforms) == 0:
+            self.warning("No OpenCL devices was found")
+            return False
         if args.device == "":
             context = platforms.create_some_context()
         else:
@@ -166,6 +178,7 @@ class Device(Pickleable):
             desc=desc, memsize=device.memsize,
             memalign=device.memalign, version=device.version)
         self.queue_ = context.create_queue(device)
+        return True
 
     def _fill_device_info_performance_values(self):
         device_infos = {}
