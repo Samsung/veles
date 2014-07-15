@@ -7,6 +7,7 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
 
 
+import gc
 import logging
 import numpy
 import unittest
@@ -22,6 +23,7 @@ from veles.tests.dummy_workflow import DummyWorkflow
 
 class TestMeanDispNormalizer(unittest.TestCase):
     def setUp(self):
+        gc.collect()
         root.common.unit_test = True
         root.common.plotters_disabled = True
         self.device = opencl.Device()
