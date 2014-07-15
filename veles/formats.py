@@ -330,8 +330,12 @@ class Vector(Pickleable):
                 self.device.device_info.version < 1.1999):
             # 'cause available only starting with 1.2
             flags = cl.CL_MAP_WRITE
-        ev, self.map_arr_ = self.device.queue_.map_buffer(self.devmem, flags,
-                                                          self._mem.nbytes)
+        try:
+            ev, self.map_arr_ = self.device.queue_.map_buffer(
+                self.devmem, flags, self._mem.nbytes)
+        except cl.CLRuntimeError:
+            self.error("Failed to allocate %d OpenCL bytes", self._mem.nbytes)
+            raise
         if (int(cl.ffi.cast("size_t", self.map_arr_)) !=
                 self._mem.__array_interface__["data"][0]):
             raise error.OpenCLError("map_buffer returned different pointer")
