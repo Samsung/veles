@@ -301,7 +301,9 @@ class Mock(object):
 
 MOCK_MODULES = ['pygtk', 'gtk', 'gobject', "numpy", "numpy.random", "cv2", 
                 "scipy", "scipy.signal", "scipy.io", "scipy.misc",
+                "scipy.interpolate",
                 "scipy.ndimage", "freetype", "matplotlib", "matplotlib.pyplot",
-                "matplotlib.cm", "matplotlib.patches", "matplotlib.lines"]
+                "matplotlib.cm", "matplotlib.patches", "matplotlib.lines",
+                "caffe"]
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = Mock()
