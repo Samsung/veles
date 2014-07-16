@@ -25,6 +25,7 @@ from zmq import zmq_version_info
 ZMQ3 = zmq_version_info()[0] >= 3
 
 from .manager import ZmqContextManager
+from .sharedio import SharedIO
 
 
 class ZmqEndpointType(object):
@@ -84,6 +85,9 @@ class ZmqConnection(object):
     :var queue: output message queue
     :vartype queue: deque
     """
+
+    class IOOverflow(Exception):
+        pass
 
     socketType = None
     allowLoopbackMulticast = False
@@ -221,7 +225,10 @@ class ZmqConnection(object):
                 continue
             if part == ZmqConnection.PICKLE_END:
                 unpickler.active = False
-                self.recv_parts.append(unpickler.object)
+                obj = unpickler.object
+                if isinstance(obj, SharedIO):
+                    obj = pickle.load(obj)
+                self.recv_parts.append(obj)
             elif not unpickler.active:
                 self.recv_parts.append(part)
             else:
@@ -343,28 +350,39 @@ class ZmqConnection(object):
         :param pickles_compression: the compression to apply to pickled
         objects. Supported values are None or "", "gzip", "snappy" and "xz".
         :type pickles_compression: str
+        :param io: a SharedIO object where to put pickles into instead of the
+        socket. Can be None.
         """
         if self.shutted_down:
             return
         pickles_compression = kwargs.get("pickles_compression", "snappy")
+        pickles_size = 0
+        io = kwargs.get("io")
+        io_overflow = False
 
         def send_part(msg, last):
             flag = constants.SNDMORE if not last else 0
             if isinstance(msg, bytes):
                 self.socket.send(msg, constants.NOBLOCK | flag)
-            elif isinstance(msg, str):
+                return 0
+            if isinstance(msg, str):
                 raise ValueError("All strings must be encoded into bytes")
-            else:
-                self._send_pickled(msg, last, pickles_compression)
+            return self._send_pickled(msg, last, pickles_compression,
+                                      io if not io_overflow else None)
 
-        for m in message[:-1]:
-            send_part(m, False)
-        send_part(message[-1], True)
+        for i, m in enumerate(message):
+            try:
+                pickles_size += send_part(m, i == len(message) - 1)
+            except ZmqConnection.IOOverflow:
+                io_overflow = True
 
         if self.read_scheduled is None:
             self.read_scheduled = reactor.callLater(0, self.doRead)
+        if io_overflow:
+            raise ZmqConnection.IOOverflow()
+        return pickles_size
 
-    def _send_pickled(self, message, last, compression):
+    def _send_pickled(self, message, last, compression, io):
         if self.shutted_down:
             return
 
@@ -372,6 +390,7 @@ class ZmqConnection(object):
             def __init__(self, socket, codec):
                 self._socket = socket
                 self._codec = codec if six.PY3 else ord(codec)
+                self.size = 0
 
             def write(self, data):
                 codec = self._codec
@@ -385,19 +404,51 @@ class ZmqConnection(object):
                     chunk = lzma.compress(data)
                 else:
                     raise RuntimeError("Unknown compression type")
+                self.size += len(chunk)
                 self._socket.send(chunk, constants.NOBLOCK | constants.SNDMORE)
 
         codec = ZmqConnection.CODECS.get(compression)
         if codec is None:
             raise ValueError("Unknown compression type: %s" % compression)
-        pickler = Pickler(self.socket, codec[0])
-        self.socket.send(ZmqConnection.PICKLE_START + codec,
-                         constants.NOBLOCK | constants.SNDMORE)
-        pickle.dump(message, pickler, protocol=(4 if sys.version_info > (3, 4)
-                                                else sys.version_info[0]))
-        self.socket.send(
-            ZmqConnection.PICKLE_END,
-            constants.NOBLOCK | (constants.SNDMORE if not last else 0))
+
+        def send_pickle_beg_marker(codec):
+            self.socket.send(ZmqConnection.PICKLE_START + codec,
+                             constants.NOBLOCK | constants.SNDMORE)
+
+        def dump(file):
+            pickle.dump(message, file,
+                        protocol=(4 if sys.version_info > (3, 4)
+                                  else sys.version_info[0]))
+
+        def send_pickle_end_marker():
+            self.socket.send(
+                ZmqConnection.PICKLE_END,
+                constants.NOBLOCK | (constants.SNDMORE if not last else 0))
+
+        def send_to_socket():
+            send_pickle_beg_marker(codec)
+            pickler = Pickler(self.socket, codec[0])
+            dump(pickler)
+            send_pickle_end_marker()
+            return pickler.size
+
+        if io is None:
+            return send_to_socket()
+        else:
+            try:
+                initial_pos = io.tell()
+                dump(io)
+                new_pos = io.tell()
+                send_pickle_beg_marker(b'\x00')
+                io.seek(initial_pos)
+                self.socket.send(pickle.dumps(io),
+                                 constants.NOBLOCK | constants.SNDMORE)
+                io.seek(new_pos)
+                send_pickle_end_marker()
+                return new_pos - initial_pos
+            except ValueError:
+                send_to_socket()
+                raise ZmqConnection.IOOverflow()
 
     def messageReceived(self, message):
         """

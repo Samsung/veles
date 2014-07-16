@@ -11,7 +11,7 @@ import six
 import time
 from twisted.internet import reactor, threads
 from twisted.internet.protocol import ReconnectingClientFactory
-from veles.external.txzmq import ZmqConnection, ZmqEndpoint
+from veles.external.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
 import zmq
 
 from veles.network_common import NetworkAgent, StringLineReceiver
@@ -29,10 +29,25 @@ class ZmqDealer(ZmqConnection):
         lambda self, message: self.host.disconnect(message)
     }
 
-    def __init__(self, nid, host, *endpoints):
-        super(ZmqDealer, self).__init__(endpoints)
+    RESERVE_SHMEM_SIZE = 0.05
+
+    def __init__(self, nid, host, endpoint):
+        super(ZmqDealer, self).__init__((endpoint,))
         self.id = nid.encode('charmap')
         self.host = host
+        self.is_ipc = endpoint.address.startswith('ipc://')
+        self.shmem = None
+        self.pickles_compression = "snappy" if not self.is_ipc else None
+
+    @property
+    def pickles_compression(self):
+        return self._pickles_compression
+
+    @pickles_compression.setter
+    def pickles_compression(self, value):
+        if not value in (None, "", "gzip", "snappy", "xz"):
+            raise ValueError()
+        self._pickles_compression = value
 
     def messageReceived(self, message):
         command = message[0]
@@ -43,7 +58,23 @@ class ZmqDealer(ZmqConnection):
         receiver(self, *message[1:])
 
     def request(self, command, message=b''):
-        self.send(self.id, command.encode('charmap'), message)
+        if not self.shmem is None:
+            self.shmem.seek(0)
+        try:
+            pickles_size = self.send(
+                self.id, command.encode('charmap'), message,
+                io=self.shmem,
+                pickles_compression=self.pickles_compression)
+            io_overflow = False
+        except ZmqConnection.IOOverflow:
+            self.shmem = None
+            io_overflow = True
+            return
+        if self.is_ipc and command == 'update':
+            if io_overflow or self.shmem is None:
+                self.shmem = SharedIO(
+                    "veles-" + self.id.decode('charmap'),
+                    int(pickles_size * (1.0 + ZmqDealer.RESERVE_SHMEM_SIZE)))
 
 
 class VelesProtocol(StringLineReceiver):
