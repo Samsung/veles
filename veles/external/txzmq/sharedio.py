@@ -6,7 +6,7 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 
 
 from mmap import mmap
-from posix_ipc import SharedMemory, O_CREAT, unlink_shared_memory
+from posix_ipc import SharedMemory, O_CREAT, ExistentialError
 
 
 class SharedIO(object):
@@ -16,13 +16,14 @@ class SharedIO(object):
     """
 
     def __init__(self, name, size):
-        self.shfd = SharedMemory(name, flags=O_CREAT, mode=0o666, size=size)
-        self.file = mmap(self.fd, size)
-        for name in ("read", "write", "tell", "close"):
-            def method(self, *args, **kwargs):
-                getattr(self.file, name)(*args, **kwargs)
-            method.__name__ = name
-            setattr(self, name, method)
+        self.shmem = SharedMemory(name, flags=O_CREAT, mode=0o666, size=size)
+        self.file = mmap(self.shmem.fd, size)
+        for name in ("read", "write", "tell", "close", "seek"):
+            setattr(self, name, getattr(self.file, name))
 
     def __del__(self):
-        unlink_shared_memory(self.shfd)
+        self.shmem.close_fd()
+        try:
+            self.shmem.unlink()
+        except ExistentialError:
+            pass
