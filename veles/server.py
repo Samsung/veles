@@ -16,7 +16,7 @@ import uuid
 import zmq
 
 import veles.external.fysom as fysom
-from veles.external.txzmq import ZmqConnection, ZmqEndpoint
+from veles.external.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
 from veles.network_common import NetworkAgent, StringLineReceiver
 
 
@@ -29,12 +29,15 @@ class ZmqRouter(ZmqConnection):
         b'update':
         lambda protocol, payload: protocol.updateReceived(payload)
     }
+    RESERVE_SHMEM_SIZE = 0.05
 
     def __init__(self, host, *endpoints, **kwargs):
         super(ZmqRouter, self).__init__(endpoints)
         ignore_unknown_commands = kwargs.get("ignore_unknown_commands", False)
         self.host = host
         self.routing = {b'job': {}, b'update': {}}
+        self.shmem = {}
+        self.use_shmem = kwargs.get('use_shared_memory', True)
         self._command = None
         self.ignore_unknown_commands = ignore_unknown_commands
 
@@ -78,7 +81,25 @@ class ZmqRouter(ZmqConnection):
         self.node_id, self._command, self._protocol = self.parseHeader(header)
 
     def reply(self, node_id, channel, message):
-        self.send(self.routing[channel].pop(node_id), channel, message)
+        if self.use_shmem:
+            is_ipc = self.host.nodes[node_id]['endpoint'].startswith("ipc://")
+            io_overflow = False
+            shmem = self.shmem.get(node_id)
+            if not shmem is None and channel == b"job":
+                self.shmem[node_id].seek(0)
+        try:
+            pickles_size = self.send(
+                self.routing[channel].pop(node_id), channel, message,
+                io=shmem, pickles_compression="snappy" if not is_ipc else None)
+        except ZmqConnection.IOOverflow:
+            self.shmem[node_id] = None
+            io_overflow = True
+            return
+        if self.use_shmem and is_ipc and channel == b"job":
+            if io_overflow or self.shmem.get(node_id) is None:
+                self.shmem[node_id] = SharedIO(
+                    "veles-job-" + node_id,
+                    int(pickles_size * (1.0 + ZmqRouter.RESERVE_SHMEM_SIZE)))
 
 
 SlaveDescription = namedtuple("SlaveDescription",
@@ -167,6 +188,7 @@ class VelesProtocol(StringLineReceiver):
         self._id = None
         self._not_a_slave = False
         self._balance = 0
+        self._endpoint = None
         self.state = fysom.Fysom(VelesProtocol.FSM_DESCRIPTION, self)
         self._responders = {"WAIT": self._respondInWAIT,
                             "WORK": self._respondInWORK}
@@ -185,6 +207,10 @@ class VelesProtocol(StringLineReceiver):
     @property
     def address(self):
         return "%s:%d" % (self.addr.host, self.addr.port)
+
+    @property
+    def zmq_endpoint(self):
+        return self._endpoint
 
     @property
     def not_a_slave(self):
@@ -322,8 +348,9 @@ class VelesProtocol(StringLineReceiver):
                 return
             data = self.host.workflow.generate_initial_data_for_slave(
                 make_slave_desc(self.nodes[self.id]))
-            retmsg = {'endpoint': self.host.endpoint(mid, pid, self.hip),
-                      'data': data}
+            endpoint = self.host.choose_endpoint(mid, pid, self.hip)
+            self.nodes[self.id]['endpoint'] = self._endpoint = endpoint
+            retmsg = {'endpoint': endpoint, 'data': data}
             if not msgid:
                 retmsg['id'] = self.id
             self.sendLine(retmsg)
@@ -442,7 +469,7 @@ class Server(NetworkAgent):
         self.info("ZeroMQ endpoints: %s",
                   ' '.join(sorted(self.zmq_endpoints.values())))
 
-    def endpoint(self, mid, pid, hip):
+    def choose_endpoint(self, mid, pid, hip):
         if self.mid == mid:
             if self.pid == pid:
                 return self.zmq_endpoints["inproc"]

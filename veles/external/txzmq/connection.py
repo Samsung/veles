@@ -123,6 +123,7 @@ class ZmqConnection(object):
         self.recv_parts = []
         self.read_scheduled = None
         self.shutted_down = False
+        self.pickles_compression = "snappy"
 
         self.fd = self.socket.get(constants.FD)
         self.socket.set(constants.LINGER, self.factory.lingerPeriod)
@@ -195,6 +196,16 @@ class ZmqConnection(object):
             number.
         """
         return self.fd
+
+    @property
+    def pickles_compression(self):
+        return self._pickles_compression
+
+    @pickles_compression.setter
+    def pickles_compression(self, value):
+        if not value in (None, "", "gzip", "snappy", "xz"):
+            raise ValueError()
+        self._pickles_compression = value
 
     def connectionLost(self, reason):
         """

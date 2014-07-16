@@ -39,16 +39,6 @@ class ZmqDealer(ZmqConnection):
         self.shmem = None
         self.pickles_compression = "snappy" if not self.is_ipc else None
 
-    @property
-    def pickles_compression(self):
-        return self._pickles_compression
-
-    @pickles_compression.setter
-    def pickles_compression(self, value):
-        if not value in (None, "", "gzip", "snappy", "xz"):
-            raise ValueError()
-        self._pickles_compression = value
-
     def messageReceived(self, message):
         command = message[0]
         receiver = ZmqDealer.RECEIVERS.get(command)
@@ -58,7 +48,7 @@ class ZmqDealer(ZmqConnection):
         receiver(self, *message[1:])
 
     def request(self, command, message=b''):
-        if not self.shmem is None:
+        if not self.shmem is None and command == 'update':
             self.shmem.seek(0)
         try:
             pickles_size = self.send(
@@ -73,7 +63,7 @@ class ZmqDealer(ZmqConnection):
         if self.is_ipc and command == 'update':
             if io_overflow or self.shmem is None:
                 self.shmem = SharedIO(
-                    "veles-" + self.id.decode('charmap'),
+                    "veles-update-" + self.id.decode('charmap'),
                     int(pickles_size * (1.0 + ZmqDealer.RESERVE_SHMEM_SIZE)))
 
 

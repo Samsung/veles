@@ -33,7 +33,7 @@ if version_info.major == 3 and version_info.minor == 4 and \
          "see issue #21435). It is recommended to upgrade to 3.4.1.")
 
 from veles.logger import Logger
-from veles.units import Unit
+from veles.units import Unit, IUnit
 from veles.opencl_units import OpenCLUnit, OpenCLWorkflow
 from veles.workflow import Workflow
 
