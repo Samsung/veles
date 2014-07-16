@@ -15,15 +15,57 @@ class SharedIO(object):
     for IPC.
     """
 
+    CACHE = {}
+
     def __init__(self, name, size):
+        self.shmem = None
         self.shmem = SharedMemory(name, flags=O_CREAT, mode=0o666, size=size)
         self.file = mmap(self.shmem.fd, size)
-        for name in ("read", "write", "tell", "close", "seek"):
-            setattr(self, name, getattr(self.file, name))
+        self.__init_file_methods()
+        self.__shmem_refs = [1]
 
     def __del__(self):
-        self.shmem.close_fd()
-        try:
-            self.shmem.unlink()
-        except ExistentialError:
-            pass
+        if self.shmem is None:
+            return
+        self.__shmem_refs[0] -= 1
+        if self.__shmem_refs[0] == 0:
+            self.shmem.close_fd()
+            try:
+                self.shmem.unlink()
+            except ExistentialError:
+                pass
+
+    def __getstate__(self):
+        return {"name": self.name,
+                "size": self.size,
+                "pos": self.tell()}
+
+    def __setstate__(self, state):
+        name = state["name"]
+        cached = SharedIO.CACHE.get(name)
+        if not cached is None:
+            self.shmem = cached.shmem
+            self.file = cached.file
+            self.__shmem_refs = cached.__shmem_refs
+            self.__shmem_refs[0] += 1
+            self.__init_file_methods()
+        else:
+            self.__init__(name, state["size"])
+            SharedIO.CACHE[name] = self
+        self.seek(state["pos"])
+
+    @property
+    def name(self):
+        return self.shmem.name
+
+    @property
+    def size(self):
+        return self.shmem.size
+
+    @property
+    def refs(self):
+        return self.__shmem_refs[0]
+
+    def __init_file_methods(self):
+        for name in ("read", "readline", "write", "tell", "close", "seek"):
+            setattr(self, name, getattr(self.file, name))
