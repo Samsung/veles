@@ -441,7 +441,7 @@ class Launcher(logger.Logger):
         slave_args = " ".join(filtered_argv)
         self.debug("Slave args: %s", slave_args)
         total_slaves = 0
-        max_slaves = self.args.max_nodes or len(self.slaves)
+        max_slaves = self.args.max_nodes or 1000
         for node in self.slaves:
             host, devs = node.split('/')
             marray = devs.split('x')
