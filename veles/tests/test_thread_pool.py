@@ -29,6 +29,8 @@ class TestThreadPool(unittest.TestCase):
             raise
 
     def _job(self, n_jobs, data_lock):
+        with data_lock:
+            pass
         time.sleep(numpy.random.rand() + 0.1)
         with data_lock:
             n_jobs[0] -= 1
@@ -59,53 +61,39 @@ class TestThreadPool(unittest.TestCase):
         self.assertTrue(flag[0])
         pool.shutdown()
 
-    def test_32_threads(self):
-        logging.info("Will test ThreadPool with 32 max threads.")
-        n_jobs = [0]
+    def _do(self, threads_min, threads_max):
+        logging.info("Will test ThreadPool with %d max threads.", threads_max)
         data_lock = threading.Lock()
-        pool = thread_pool.ThreadPool(minthreads=32, maxthreads=32,
-                                      queue_size=32)
+        pool = thread_pool.ThreadPool(minthreads=threads_min,
+                                      maxthreads=threads_max,
+                                      queue_size=threads_max)
         n = 100
+        n_jobs = [n]
         for _ in range(n):
-            with data_lock:
-                n_jobs[0] += 1
             pool.callInThread(self._job, n_jobs, data_lock)
         pool.shutdown(execute_remaining=True)
-        self.assertEqual(
-            n_jobs[0], 0, "ThreadPool::shutdown(execute_remaining=True)"
-            "is not working as expected.")
+        self.assertEqual(n_jobs[0], 0, "ThreadPool::shutdown(execute_remaining"
+                         "=True) is not working as expected.")
         self.assert_exit()
 
+    def test_32_threads(self):
+        self._do(32, 32)
+
     def test_320_threads(self):
-        logging.info("Will test ThreadPool with 320 max threads.")
-        n_jobs = [0]
-        data_lock = threading.Lock()
-        pool = thread_pool.ThreadPool(minthreads=32, maxthreads=320,
-                                      queue_size=320)
-        n = 100
-        for _ in range(n):
-            with data_lock:
-                n_jobs[0] += 1
-            pool.callInThread(self._job, n_jobs, data_lock)
-        pool.shutdown(execute_remaining=True)
-        self.assertEqual(
-            n_jobs[0], 0, "ThreadPool::shutdown(execute_remaining=True)"
-            "is not working as expected.")
-        self.assert_exit()
+        self._do(32, 320)
 
     def test_0_threads(self):
         logging.info("Will test ThreadPool with minthreads=0.")
-        n_jobs = [0]
         data_lock = threading.Lock()
         pool = thread_pool.ThreadPool(minthreads=0, maxthreads=32,
                                       queue_size=32)
         pool.silent = True
         n = 10
+        n_jobs = [n]
         t0 = time.time()
-        for _ in range(n):
-            with data_lock:
-                n_jobs[0] += 1
-            pool.callInThread(self._job, n_jobs, data_lock)
+        with data_lock:
+            for _ in range(n):
+                pool.callInThread(self._job, n_jobs, data_lock)
         t1 = time.time()
         pool.shutdown(execute_remaining=False, force=True, timeout=0)
         t2 = time.time()
