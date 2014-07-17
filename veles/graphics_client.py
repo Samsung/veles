@@ -11,11 +11,9 @@ import errno
 import gc
 import logging
 import os
-import platform
 import signal
 import snappy
 import socket
-import subprocess
 import sys
 import threading
 import tornado.ioloop as ioloop
