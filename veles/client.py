@@ -202,6 +202,7 @@ class VelesProtocol(StringLineReceiver):
     def update_result_received(self, result):
         if result is False:
             self.factory.host.warning("Last update was rejected")
+        self.factory.host.debug("Update was confirmed")
         if not self.async:
             self.request_job()
 

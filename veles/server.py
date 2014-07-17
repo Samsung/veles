@@ -6,7 +6,6 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 from collections import namedtuple
-from copy import copy
 import json
 import six
 import socket
@@ -266,6 +265,8 @@ class VelesProtocol(StringLineReceiver):
         if data is not None:
             if not data:
                 # Try again later
+                self.host.debug("%s: data is not ready", self.id)
+                self._balance -= 1
                 self.factory._job_requests.append(self)
                 return
             self.state.obtain_job()
@@ -280,9 +281,10 @@ class VelesProtocol(StringLineReceiver):
             self.host.workflow.apply_data_from_slave, data,
             make_slave_desc(self.nodes[self.id]))
         upd.addCallback(self.updateFinished)
-        for i, jr in enumerate(copy(self.factory._job_requests)):
-            del self.factory._job_requests[i]
-            jr._requestJob()
+        requests = self.factory._job_requests
+        self.factory._job_requests = []
+        for requester in requests:
+            requester._requestJob()
 
     def updateFinished(self, result):
         if not self.state.current in ('WORK', 'GETTING_JOB'):
@@ -419,6 +421,8 @@ class VelesProtocol(StringLineReceiver):
 
     def _requestJob(self):
         if self._balance > 1:
+            self.host.debug("%s: job balance %d, postponed", self.id,
+                            self._balance)
             return
         self._balance += 1
         job = threads.deferToThreadPool(
