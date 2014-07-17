@@ -118,7 +118,7 @@ class Test(unittest.TestCase):
     def testGraph(self):
         wf = Workflow(DummyLauncher())
         self.add_units(wf)
-        dot = wf.generate_graph(write_on_disk=False)
+        dot, _ = wf.generate_graph(write_on_disk=False)
         ids = []
         for unit in wf:
             ids.append(hex(id(unit)))

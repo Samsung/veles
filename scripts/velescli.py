@@ -152,7 +152,11 @@ class Main(Logger):
                             help="print the resulting workflow configuration",
                             action='store_true')
         parser.add_argument("--dry-run", default=False,
-                            help="do not run the loaded model",
+                            help="do not initialize and run the loaded model",
+                            action='store_true')
+        parser.add_argument("--visualize", default=False,
+                            help="initialize, but do not run the loaded "
+                            "model, show workflow graph and plots",
                             action='store_true')
         parser.add_argument('workflow',
                             help='path to the Python script with workflow')
@@ -314,13 +318,44 @@ class Main(Logger):
         self.device = None if self.launcher.is_master else Device()
         try:
             self.workflow.initialize(device=self.device, **kwargs)
-            self.debug("Workflow initialization has been completed."
-                       "Running the launcher.")
-            self.launcher.run()
+        except:
+            self.exception("Failed to initialize the workflow")
+            sys.exit(Main.EXIT_FAILURE)
+        self.debug("Workflow initialization has been completed")
+        try:
+            if not self._visualization_mode:
+                self.debug("Running the launcher")
+                self.launcher.run()
+            else:
+                self._visualize_workflow()
         except:
             self.exception("Failed to run the workflow")
             self.launcher.stop()
             sys.exit(Main.EXIT_FAILURE)
+
+    def _visualize_workflow(self):
+        _, file_name = self.workflow.generate_graph()
+        from veles.portable import show_file
+        show_file(file_name)
+
+        import signal
+        self.launcher.graphics_client.send_signal(signal.SIGUSR2)
+        from twisted.internet import reactor
+        reactor.callWhenRunning(self._run_workflow_plotters)
+        reactor.callWhenRunning(print, "Press Ctrl-C when you are done...")
+        reactor.run()
+
+    def _run_workflow_plotters(self):
+        from veles.plotter import Plotter
+        for unit in self.workflow:
+            if isinstance(unit, Plotter):
+                unit.run()
+        # Second loop is needed to finish with PDF
+        for unit in self.workflow:
+            if isinstance(unit, Plotter):
+                unit.last_run_time = 0
+                unit.run()
+                break
 
     def _print_logo(self, args):
         if not args.no_logo:
@@ -343,6 +378,7 @@ class Main(Logger):
             fname_config = "%s_config%s" % os.path.splitext(args.workflow)
         fname_config = os.path.abspath(fname_config)
         fname_workflow = os.path.abspath(args.workflow)
+        self._visualization_mode = args.visualize
 
         self._print_logo(args)
         Logger.setup(level=Main.LOG_LEVEL_MAP[args.verbose])
@@ -364,4 +400,5 @@ class Main(Logger):
 
 
 if __name__ == "__main__":
-    sys.exit(Main().run())
+    retcode = Main().run()
+    sys.exit(retcode)

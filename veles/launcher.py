@@ -352,7 +352,7 @@ class Launcher(logger.Logger):
         reactor.addSystemEventTrigger('after', 'shutdown', self._print_stats)
         self._start_time = time.time()
         if not self.is_slave:
-            self.workflow_graph = self.workflow.generate_graph(
+            self.workflow_graph, _ = self.workflow.generate_graph(
                 filename=self.args.workflow_graph,
                 write_on_disk=bool(self.args.workflow_graph))
         if self.reports_web_status:

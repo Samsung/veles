@@ -55,13 +55,21 @@ class Plotter(Unit, TriviallyDistributable):
                     state[an] = av.mem
         return state
 
+    @property
+    def last_run_time(self):
+        return self._last_run_
+
+    @last_run_time.setter
+    def last_run_time(self, value):
+        self._last_run_ = value
+
     def initialize(self, **kwargs):
-        self.last_run_ = time.time()
+        self._last_run_ = 0
 
     def run(self):
         if self.workflow.plotters_are_enabled and \
-           (time.time() - self.last_run_) > self.redraw_threshold:
-            self.last_run_ = time.time()
+           (time.time() - self._last_run_) > self.redraw_threshold:
+            self._last_run_ = time.time()
             self.stripped_pickle = True
             GraphicsServer().enqueue(self)
             self.stripped_pickle = False

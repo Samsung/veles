@@ -502,12 +502,15 @@ class Workflow(Unit):
                     boilerplate.add(link)
         if write_on_disk:
             if not filename:
-                (_, filename) = tempfile.mkstemp(".png", "workflow_")
-            self.info("Saving the workflow graph to %s", filename)
+                (_, filename) = tempfile.mkstemp(
+                    ".png", "workflow_",
+                    dir=os.path.join(root.common.cache_dir, "plots"))
+            self.debug("Saving the workflow graph to %s", filename)
             g.write(filename, format='png')
+            self.info("Saved the workflow graph to %s", filename)
         desc = g.to_string().strip()
         self.debug("Graphviz workflow scheme:\n" + desc[:-1])
-        return desc
+        return desc, filename
 
     unit_group_colors = {"PLOTTER": "gold",
                          "WORKER": "greenyellow",

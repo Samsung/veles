@@ -51,11 +51,11 @@ class GraphicsClient(Logger):
     ui_update_interval = 0.01
     gc_limit = 10
 
-    def __init__(self, back, *endpoints, **kwargs):
+    def __init__(self, backend, *endpoints, **kwargs):
         super(GraphicsClient, self).__init__()
         webagg_fifo = kwargs.get("webagg_fifo")
-        self.back = back
-        if self.back == "WebAgg":
+        self.backend = backend
+        if self.backend == "WebAgg":
             self._webagg_port = 0
         zmq_endpoints = []
         for ep in endpoints:
@@ -91,7 +91,8 @@ class GraphicsClient(Logger):
                 return
             self._started = True
             import matplotlib
-            matplotlib.use(self.back)
+            if self.backend:
+                matplotlib.use(self.backend)
             import matplotlib.cm as cm
             import matplotlib.lines as lines
             import matplotlib.patches as patches
@@ -208,7 +209,7 @@ class GraphicsClient(Logger):
                 self.exception("Plotter %s is not fully implemented, skipped",
                                plotter.name)
                 return
-            if self._pdf_trigger:
+            if self._pdf_trigger or self.backend == "pdf":
                 reactor.callFromThread(self._save_pdf, plotter)
             else:
                 reactor.callFromThread(plotter.redraw)
@@ -248,19 +249,18 @@ class GraphicsClient(Logger):
         with self._pdf_lock:
             figure = plotter.redraw()
             if plotter.id in self._pdf_units_served:
+                from veles.portable import show_file
+
                 self._pdf_trigger = False
                 self._pdf_pages.close()
                 self._pdf_pages = None
                 self._pdf_units_served.clear()
                 self._pdf_unit_chains.clear()
-                self.info("Finished writing PDF %s" % self._pdf_file_name)
-                system = platform.system()
-                if system == "Windows":
-                    os.startfile(self._pdf_file_name)
-                elif system == "Linux":
-                    subprocess.Popen(["xdg-open", self._pdf_file_name])
+                self.info("Finished writing PDF %s", self._pdf_file_name)
+                show_file(self._pdf_file_name)
                 self._pdf_file_name = None
-                return
+                if self.backend != "pdf":
+                    return
             if self._pdf_pages is None:
                 now = datetime.datetime.now()
                 out_dir = os.path.join(root.common.cache_dir, "plots")
@@ -270,7 +270,7 @@ class GraphicsClient(Logger):
                     pass
                 self._pdf_file_name = os.path.join(
                     root.common.cache_dir, "plots/veles_%s.pdf" %
-                    (now.strftime('%Y_%m_%d_%H_%M_%S')))
+                    (now.strftime('%Y-%m-%d_%H:%M:%S')))
                 self.debug("Saving figures to %s...", self._pdf_file_name)
                 import matplotlib.backends.backend_pdf as backend_pdf
                 self._pdf_pages = backend_pdf.PdfPages(self._pdf_file_name)
@@ -290,6 +290,7 @@ class GraphicsClient(Logger):
             reactor.stop()
 
     def _sigusr2_handler(self, sign, frame):
+        self.info("Activated PDF mode...")
         self._pdf_trigger = True
 
 
