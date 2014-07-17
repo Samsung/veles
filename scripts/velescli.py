@@ -38,12 +38,9 @@ except:
     pass
 import argparse
 import atexit
-import bz2
 from email.utils import formatdate
 import errno
-import gzip
 import logging
-import lzma
 import numpy
 import os
 import resource
@@ -57,8 +54,9 @@ from veles.config import root
 from veles.logger import Logger
 from veles.launcher import Launcher
 from veles.opencl import Device
-from veles.pickle2 import pickle, setup_pickle_debug
+from veles.pickle2 import setup_pickle_debug
 import veles.random_generator as rnd
+from veles.snapshotter import Snapshotter
 
 if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
     FileNotFoundError = IOError  # pylint: disable=W0622
@@ -111,13 +109,6 @@ class Main(Logger):
 
     LOG_LEVEL_MAP = {"debug": logging.DEBUG, "info": logging.INFO,
                      "warning": logging.WARNING, "error": logging.ERROR}
-
-    CODECS = {
-        ".pickle": lambda name: open(name, "rb"),
-        ".gz": lambda name: gzip.GzipFile(name, "rb"),
-        ".bz2": lambda name: bz2.BZ2File(name, "rb"),
-        ".xz": lambda name: lzma.LZMAFile(name, "rb")
-    }
 
     @staticmethod
     def init_parser(sphinx=False):
@@ -287,16 +278,13 @@ class Main(Logger):
                 sys.exit(Main.EXIT_FAILURE)
 
     def _load_workflow(self, fname_snapshot):
-        fname_snapshot = fname_snapshot.strip()
-        if os.path.exists(fname_snapshot):
-            _, ext = os.path.splitext(fname_snapshot)
-            codec = Main.CODECS[ext]
-            with codec(fname_snapshot) as fin:
-                return pickle.load(fin)
-        if fname_snapshot != "":
-            self.warning("Workflow snapshot %s does not exist",
-                         fname_snapshot)
-        return None
+        try:
+            return Snapshotter.import_(fname_snapshot)
+        except FileNotFoundError:
+            if fname_snapshot.strip() != "":
+                self.warning("Workflow snapshot %s does not exist",
+                             fname_snapshot)
+            return None
 
     def _load(self, Workflow, **kwargs):
         self.debug("load() was called from run(), workflow class is %s",

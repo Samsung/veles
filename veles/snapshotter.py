@@ -91,12 +91,19 @@ class Snapshotter(SnapshotterBase):
         time_interval - take no more than one snapshot within this time window
     """
 
-    CODECS = {
+    WRITE_CODECS = {
         None: lambda n, l: open(n, "wb"),
         "": lambda n, l: open(n, "wb"),
         "gz": lambda n, l: gzip.GzipFile(n, "wb", compresslevel=l),
         "bz2": lambda n, l: bz2.BZ2File(n, "wb", compresslevel=l),
         "xz": lambda n, l: lzma.LZMAFile(n, "wb", preset=l)
+    }
+
+    READ_CODECS = {
+        ".pickle": lambda name: open(name, "rb"),
+        ".gz": lambda name: gzip.GzipFile(name, "rb"),
+        ".bz2": lambda name: bz2.BZ2File(name, "rb"),
+        ".xz": lambda name: lzma.LZMAFile(name, "rb")
     }
 
     def export(self):
@@ -116,5 +123,15 @@ class Snapshotter(SnapshotterBase):
         os.symlink(rel_file_name, file_name_link)
 
     def _open_file(self):
-        return Snapshotter.CODECS[self.compress](self.file_name,
-                                                 self.compress_level)
+        return Snapshotter.WRITE_CODECS[self.compress](self.file_name,
+                                                       self.compress_level)
+
+    @staticmethod
+    def import_(file_name):
+        file_name = file_name.strip()
+        if not os.path.exists(file_name):
+            raise FileNotFoundError(file_name)
+        _, ext = os.path.splitext(file_name)
+        codec = Snapshotter.READ_CODECS[ext]
+        with codec(file_name) as fin:
+            return pickle.load(fin)
