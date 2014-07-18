@@ -43,7 +43,7 @@ __units__ = None
 
 def registered_units():
     global __units__
-    if not __units__ is None:
+    if __units__ is not None:
         return __units__
 
     import os

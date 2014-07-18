@@ -106,7 +106,7 @@ class Device(Pickleable):
 
     @property
     def exists(self):
-        return not self.queue_ is None
+        return self.queue_ is not None
 
     def init_unpickled(self):
         super(Device, self).init_unpickled()
