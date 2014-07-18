@@ -17,11 +17,10 @@ import tarfile
 import time
 from zope.interface import implementer, Interface
 
-from veles.cmdline import UnitCommandLineArgumentsRegistry
 from veles.config import root
 import veles.formats as formats
 import veles.opencl_types as opencl_types
-from veles.units import Unit, IUnit
+from veles.units import Unit, IUnit, UnitCommandLineArgumentsRegistry
 from veles.workflow import Workflow
 
 

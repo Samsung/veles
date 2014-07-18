@@ -14,6 +14,7 @@ import uuid
 from zope.interface import Interface, implementer
 from zope.interface.verify import verifyObject
 
+from veles.cmdline import CommandLineArgumentsRegistry
 from veles.config import root, get
 from veles.distributable import Distributable, TriviallyDistributable, \
     IDistributable
@@ -66,6 +67,15 @@ class UnitRegistry(type):
            not getattr(cls, 'hide_all', False):
             UnitRegistry.units.add(cls)
         super(UnitRegistry, cls).__init__(name, bases, clsdict)
+
+
+class UnitCommandLineArgumentsRegistry(UnitRegistry,
+                                       CommandLineArgumentsRegistry):
+    """
+    Enables the usage of CommandLineArgumentsRegistry with classes derived from
+    Unit.
+    """
+    pass
 
 
 @six.add_metaclass(UnitRegistry)

@@ -5,9 +5,6 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 """
 
 
-from veles.units import UnitRegistry
-
-
 class CommandLineArgumentsRegistry(type):
     """
     Metaclass to accumulate command line options from scattered classes for
@@ -26,12 +23,3 @@ class CommandLineArgumentsRegistry(type):
                             "class has CommandLineArgumentsRegistry metaclass")
         CommandLineArgumentsRegistry.classes.append(cls)
         super(CommandLineArgumentsRegistry, cls).__init__(name, bases, clsdict)
-
-
-class UnitCommandLineArgumentsRegistry(UnitRegistry,
-                                       CommandLineArgumentsRegistry):
-    """
-    Enables the usage of CommandLineArgumentsRegistry with classes derived from
-    Unit.
-    """
-    pass
