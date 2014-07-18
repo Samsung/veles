@@ -26,12 +26,6 @@ import re
 import subprocess
 import tempfile
 import copy
-try:
-    import dot_parser
-except Exception:
-    pass
-    # print("Couldn't import dot_parser, loading of dot files will not be possible.")
-
 
 
 GRAPH_ATTRIBUTES = set(['Damping', 'K', 'URL', 'aspect', 'bb', 'bgcolor',
@@ -208,8 +202,9 @@ def graph_from_dot_data(data):
     be parsed and a Dot class will be returned, 
     representing the graph.
     """
+    from .dot_parser import parse_dot_data
 
-    return dot_parser.parse_dot_data(data)
+    return parse_dot_data(data)
 
 
 def graph_from_dot_file(path):
@@ -220,9 +215,8 @@ def graph_from_dot_file(path):
     representing the graph.
     """
 
-    fd = open(path, 'rb')
-    data = fd.read()
-    fd.close()
+    with open(path, 'r') as fd:
+        data = fd.read()
 
     return graph_from_dot_data(data)
 
@@ -1921,13 +1915,14 @@ class Dot(Graph):
                 raise InvocationException(
                     'GraphViz\'s executables not found')
 
-        if not prog in self.progs:
+        exe = prog.split()[0]
+        if not exe in self.progs:
             raise InvocationException(
-                'GraphViz\'s executable "%s" not found' % prog)
+                'GraphViz\'s executable "%s" not found' % exe)
 
-        if not os.path.exists(self.progs[prog]) or not os.path.isfile(self.progs[prog]):
+        if not os.path.exists(self.progs[exe]) or not os.path.isfile(self.progs[exe]):
             raise InvocationException(
-                'GraphViz\'s executable "%s" is not a file or doesn\'t exist' % self.progs[prog])
+                'GraphViz\'s executable "%s" is not a file or doesn\'t exist' % self.progs[exe])
 
 
         tmp_fd, tmp_name = tempfile.mkstemp()
@@ -1950,9 +1945,8 @@ class Dot(Graph):
             f = open(os.path.join(tmp_dir, os.path.basename(img)), 'wb')
             f.write(f_data)
             f.close()
-
         p = subprocess.Popen(
-            (self.progs[prog], '-T' + format, tmp_name),
+            (self.progs[exe], '-T' + format, tmp_name) + tuple(prog.split()[1:]),
             cwd=tmp_dir,
             stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 

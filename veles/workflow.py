@@ -22,6 +22,7 @@ from zope.interface import implementer
 
 from veles.config import root
 from veles.distributable import IDistributable
+from veles.mutable import LinkableAttribute
 from veles.units import Unit, TrivialUnit, IUnit
 from veles.external.prettytable import PrettyTable
 from veles.external.progressbar import ProgressBar, Percentage, Bar
@@ -474,7 +475,8 @@ class Workflow(Unit):
         """
         return 0
 
-    def generate_graph(self, filename=None, write_on_disk=True):
+    def generate_graph(self, filename=None, write_on_disk=True,
+                       with_data_links=False, background="transparent"):
         """Produces a Graphviz PNG image of the unit control flow. Returns the
         DOT graph description (string).
         If write_on_disk is False, filename is ignored. If filename is None, a
@@ -482,7 +484,7 @@ class Workflow(Unit):
         """
         g = pydot.Dot(graph_name="Workflow",
                       graph_type="digraph",
-                      bgcolor="transparent")
+                      bgcolor=background)
         g.set_prog("circo")
         visited_units = set()
         boilerplate = set([self.start_point])
@@ -506,6 +508,50 @@ class Workflow(Unit):
                 g.add_edge(pydot.Edge(hex(id(unit)), hex(id(link))))
                 if link not in visited_units and link not in boilerplate:
                     boilerplate.add(link)
+        if with_data_links:
+            # Add data links
+            # Circo does not allow to ignore certain edges, so we need to save
+            # the intermediate result
+            (_, dotfile) = tempfile.mkstemp(".dot", "workflow_")
+            g.write(dotfile, format='dot')
+            g = pydot.graph_from_dot_file(dotfile)
+            os.remove(dotfile)
+            # Neato without changing the layout
+            g.set_prog("neato -n")
+
+            attrs = defaultdict(list)
+            refs = []
+            from veles.opencl import Device
+            for unit in self:
+                for key, val in unit.__dict__.items():
+                    if key.startswith('__') and hasattr(unit, key[2:]) and \
+                       LinkableAttribute.__is_reference__(val):
+                        refs.append((unit, key[2:]) + val)
+                    if not val is None and not Unit.is_immutable(val) and \
+                       not isinstance(val, Device) and \
+                       not isinstance(val, Workflow) and key != '_logger_':
+                        if key[0] == '_' and hasattr(unit, key[1:]):
+                            key = key[1:]
+                        attrs[id(val)].append((unit, key))
+            for ref in refs:
+                g.add_edge(pydot.Edge(
+                    hex(id(ref[0])), hex(id(ref[2])), constraint="false",
+                    label=('"%s"' % ref[1]) if ref[1] == ref[3]
+                    else '"%s -> %s"' % (ref[1], ref[3]),
+                    fontcolor='gray', fontsize="8.0", color='gray'))
+            for vals in attrs.values():
+                if len(vals) > 1:
+                    for val1 in vals:
+                        for val2 in vals:
+                            if val1[0] == val2[0]:
+                                continue
+                            label = ('"%s"' % val1[1]) if val1[1] == val2[1] \
+                                else '"%s:%s"' % (val1[1], val2[1])
+                            g.add_edge(pydot.Edge(
+                                hex(id(val1[0])), hex(id(val2[0])), weight=0,
+                                label=label, dir="both", color='gray',
+                                fontcolor='gray', fontsize="8.0",
+                                constraint="false"))
         if write_on_disk:
             if not filename:
                 (_, filename) = tempfile.mkstemp(
@@ -515,7 +561,7 @@ class Workflow(Unit):
             g.write(filename, format='png')
             self.info("Saved the workflow graph to %s", filename)
         desc = g.to_string().strip()
-        self.debug("Graphviz workflow scheme:\n" + desc[:-1])
+        self.debug("Graphviz workflow scheme:\n%s", desc)
         return desc, filename
 
     unit_group_colors = {"PLOTTER": "gold",

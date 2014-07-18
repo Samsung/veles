@@ -458,11 +458,15 @@ class Unit(Distributable):
                                                              iface.__name__))
         verifyObject(iface, self)
 
+    @staticmethod
+    def is_immutable(value):
+        return (isinstance(value, tuple) or isinstance(value, int) or
+                isinstance(value, float) or isinstance(value, complex) or
+                isinstance(value, bool) or isinstance(value, str))
+
     def _link_attr(self, other, mine, yours, two_way):
         attr = getattr(other, yours)
-        if (isinstance(attr, tuple) or isinstance(attr, int) or
-                isinstance(attr, float) or isinstance(attr, complex) or
-                isinstance(attr, bool) or isinstance(attr, str)):
+        if Unit.is_immutable(attr):
             LinkableAttribute(self, mine, (other, yours), two_way=two_way)
         else:
             setattr(self, mine, attr)

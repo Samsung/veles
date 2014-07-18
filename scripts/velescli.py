@@ -153,12 +153,17 @@ class Main(Logger):
                             help="print the resulting workflow configuration",
                             action='store_true')
         parser.add_argument("--dry-run", default=False,
-                            help="do not initialize and run the loaded model",
+                            help="load, but not initialize and run the loaded "
+                            "model", action='store_true')
+        parser.add_argument("--skip-run", default=False,
+                            help="import the model and configs and exit",
                             action='store_true')
         parser.add_argument("--visualize", default=False,
                             help="initialize, but do not run the loaded "
                             "model, show workflow graph and plots",
                             action='store_true')
+        parser.add_argument("--workflow-graph", type=str, default="",
+                            help="Save workflow graph to this file.")
         parser.add_argument('workflow',
                             help='path to the Python script with workflow')
         parser.add_argument('config', default="-",
@@ -234,7 +239,7 @@ class Main(Logger):
     def _run_workflow(self, module):
         self.debug("Calling %s.run()...", module.__name__)
         module.run(self._load, self._main)
-        if not self.main_called:
+        if not self.main_called and not self._dry_run:
             self.warning("main() was not called by run() in %s",
                          module.__file__)
 
@@ -311,9 +316,16 @@ class Main(Logger):
         if ThreadPool.manhole:
             from veles.external import manhole
             manhole.WORKFLOW = self.workflow
+        if self._workflow_graph:
+            self.workflow.generate_graph(filename=self._workflow_graph,
+                                         with_data_links=True,
+                                         background='white')
         return self.workflow, snapshot
 
     def _main(self, **kwargs):
+        if self._dry_run:
+            self.launcher.stop()
+            return
         self.debug("main() was called from run()")
         if not self.load_called:
             self.critical("Call load() first in run()")
@@ -387,6 +399,8 @@ class Main(Logger):
         fname_config = os.path.abspath(fname_config)
         fname_workflow = os.path.abspath(args.workflow)
         self._visualization_mode = args.visualize
+        self._workflow_graph = args.workflow_graph
+        self._dry_run = args.dry_run
 
         self._print_logo(args)
         Logger.setup(level=Main.LOG_LEVEL_MAP[args.verbose])
@@ -401,7 +415,7 @@ class Main(Logger):
         self._apply_config(fname_config, args.config_list)
         if args.dump_config:
             root.print_config()
-        if not args.dry_run:
+        if not args.skip_run:
             self._run_workflow(wm)
             self.info("End of job")
         return Main.EXIT_SUCCESS

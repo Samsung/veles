@@ -177,9 +177,6 @@ class Launcher(logger.Logger):
         parser.add_argument("-i", "--log-id", type=str,
                             default=kwargs.get("log_id", ""),
                             help="Log identifier (used my Mongo logger).")
-        parser.add_argument("--workflow-graph", type=str,
-                            default=kwargs.get("workflow_graph", ""),
-                            help="Save workflow graph to this file.")
         parser.add_argument("--yarn-nodes", type=str, default=None,
                             help="Discover the nodes from this YARN "
                             "ResourceManager's address.")
@@ -353,8 +350,7 @@ class Launcher(logger.Logger):
         self._start_time = time.time()
         if not self.is_slave:
             self.workflow_graph, _ = self.workflow.generate_graph(
-                filename=self.args.workflow_graph,
-                write_on_disk=bool(self.args.workflow_graph))
+                filename=None, write_on_disk=False)
         if self.reports_web_status:
             self.start_time = time.time()
             self._notify_update_last_time = self.start_time

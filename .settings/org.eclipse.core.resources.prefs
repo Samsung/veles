@@ -8,6 +8,7 @@ encoding//veles/daemon/__init__.py=utf-8
 encoding//veles/external/daemon/__init__.py=utf-8
 encoding//veles/external/daemon/daemon.py=utf-8
 encoding//veles/external/daemon/version/__init__.py=utf-8
+encoding//veles/external/dot_parser.py=latin1
 encoding//veles/external/freetype/__init__.py=utf-8
 encoding//veles/external/freetype/ft_enums/__init__.py=utf-8
 encoding//veles/external/freetype/ft_enums/ft_glyph_bbox_modes.py=utf-8
