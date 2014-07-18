@@ -231,14 +231,16 @@ class Workflow(Unit):
         """
         fin_text = "all units are initialized"
         maxlen = max([len(u.name) for u in self] + [len(fin_text)])
-        progress = ProgressBar(maxval=len(self),
+        units_number = len(self)
+        progress = ProgressBar(maxval=units_number,
                                term_width=min(80,
                                               len(self) + 8 + maxlen),
                                widgets=[Percentage(), ' ', Bar(), ' ',
                                         ' ' * maxlen])
         self.info("Initializing units in %s...", self.name)
         progress.start()
-        for unit in self.units_in_dependency_order:
+        units_in_dependency_order = self.units_in_dependency_order
+        for unit in units_in_dependency_order:
             progress.widgets[-1] = unit.name + ' ' * (maxlen - len(unit.name))
             if not self.is_standalone:
                 unit.verify_interface(IDistributable)
@@ -250,6 +252,10 @@ class Workflow(Unit):
             progress.inc()
         progress.widgets[-1] = fin_text + ' ' * (maxlen - len(fin_text))
         progress.finish()
+        if len(units_in_dependency_order) < units_number:
+            self.warning("Not all units were initialized (%d left): %s",
+                         units_number - len(units_in_dependency_order),
+                         str(set(self) - set(units_in_dependency_order)))
 
     def run(self):
         """Starts executing the workflow. This function is synchronous

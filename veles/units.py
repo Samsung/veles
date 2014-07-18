@@ -305,7 +305,7 @@ class Unit(Distributable):
             else:
                 self.thread_pool.callInThread(dst._check_gate_and_run, self)
 
-    def dependent_list(self):
+    def dependent_list(self, with_open_gate=False):
         units = [self]
         walk = []
         visited = {self}
@@ -314,7 +314,8 @@ class Unit(Distributable):
         # flatten the dependency tree by doing breadth first search
         while len(walk) > 0:
             node, parent = walk.pop(0)
-            if node in visited or not node.open_gate(parent):
+            if node in visited or (with_open_gate and
+                                   not node.open_gate(parent)):
                 continue
             units.append(node)
             visited.add(node)
