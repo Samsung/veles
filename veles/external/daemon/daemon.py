@@ -316,6 +316,7 @@ class DaemonContext(object):
             process.
 
             """
+
         if self.is_open:
             return
 
@@ -350,7 +351,12 @@ class DaemonContext(object):
         if self.pidfile is not None:
             if isinstance(self.pidfile, str):
                 self.pidfile = lockfile.FileLock(self.pidfile)
-            self.pidfile.__enter__()
+            # Temporarily make os.link create symbolic links, since
+            # LinkLockFile creates useless hard links by default
+            backup = os.link
+            os.link = os.symlink
+            self.pidfile.acquire()
+            os.link = backup
 
         self._is_open = True
 
