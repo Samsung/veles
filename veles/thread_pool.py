@@ -24,6 +24,14 @@ from veles.cmdline import CommandLineArgumentsRegistry
 sysexit_initial = None
 
 
+class classproperty(object):
+    def __init__(self, getter):
+        self.getter = getter
+
+    def __get__(self, instance, owner):
+        return self.getter(owner)
+
+
 @add_metaclass(CommandLineArgumentsRegistry)
 class ThreadPool(threadpool.ThreadPool, logger.Logger):
     """
@@ -81,14 +89,13 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                             action='store_true')
         return parser
 
-    @property
-    @staticmethod
-    def manhole():
-        if ThreadPool._manhole is None:
-            parser = ThreadPool.init_parser()
+    @classproperty
+    def manhole(cls):
+        if cls._manhole is None:
+            parser = cls.init_parser()
             args, _ = parser.parse_known_args()
-            ThreadPool._manhole = args.manhole
-        return ThreadPool._manhole
+            cls._manhole = args.manhole
+        return cls._manhole
 
     def callInThreadWithCallback(self, onResult, func, *args, **kw):
         self._not_paused.wait()
