@@ -11,6 +11,7 @@ import argparse
 import logging
 import multiprocessing as mp
 import os
+from six import print_
 import socket
 import sys
 import threading
@@ -21,12 +22,13 @@ import tornado.web as web
 import uuid
 
 from veles.config import root
+from veles.error import AlreadyExistsError
 import veles.external.daemon as daemon
 import veles.logger as logger
 
-
 if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
     PermissionError = IOError  # pylint: disable=W0622
+    BrokenPipeError = OSError  # pylint: disable=W0622
 
 
 debug_mode = False
@@ -221,14 +223,30 @@ if __name__ == "__main__":
     debug_mode = args.debug
     if not debug_mode:
         pidfile = root.common.web_status_pidfile
-        if not os.access(os.path.dirname(pidfile), os.W_OK):
+        full_pidfile = pidfile + ".lock"
+        if not os.access(os.path.dirname(full_pidfile), os.W_OK):
             raise PermissionError(pidfile)
-        print("Daemonizing, PID will be in ", pidfile + ".lock")
-        with daemon.DaemonContext(pidfile=pidfile):
-            print("Daemonized")
+        if os.path.exists(full_pidfile):
+            real_pidfile = os.readlink(full_pidfile)
+            pid = int(real_pidfile.split('.')[-1])
+            try:
+                os.kill(pid, 0)
+            except OSError:
+                os.remove(real_pidfile)
+                os.remove(full_pidfile)
+                print_("Detected a stale lock file %s" % real_pidfile,
+                       file=sys.stderr)
+            else:
+                raise AlreadyExistsError(full_pidfile)
+        print("Daemonizing, PID will be referenced by ", full_pidfile)
+        try:
+            sys.stdout.flush()
+        except BrokenPipeError:
+            pass
+        with daemon.DaemonContext(pidfile=pidfile, stderr=sys.stderr):
+            log_file = root.common.web_status_log_file
             logger.Logger.setup(level=logging.INFO)
-            logger.Logger.redirect_all_logging_to_file(
-                root.common.web_status_log_file, backups=9)
+            logger.Logger.redirect_all_logging_to_file(log_file, backups=9)
             main()
     else:
         logger.Logger.setup(level=logging.DEBUG)

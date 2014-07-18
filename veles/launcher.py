@@ -402,12 +402,14 @@ class Launcher(logger.Logger):
             self.info("Launching the web status server")
             self._launch_remote_progs(
                 root.common.web_status_host,
-                "PYTHONPATH=%s %s" %
+                "PYTHONPATH=%s %s 2>>%s" %
                 (os.path.dirname(
                     os.path.abspath(
                         os.path.join(root.common.veles_dir, "veles"))),
                  os.path.abspath(os.path.join(root.common.veles_dir,
-                                              "veles/web_status.py"))))
+                                              "veles/web_status.py")),
+                 "%s.stderr%s" %
+                 os.path.splitext(root.common.web_status_log_file)))
         else:
             self.info("Discovered an already running web status server")
 
