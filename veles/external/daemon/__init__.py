@@ -39,7 +39,7 @@
 
 
 from . import version
-from .daemon import DaemonContext, daemonize
+from .daemon import DaemonContext, daemonize, redirect_stream
 
 _version = version.version
 _copyright = version.copyright

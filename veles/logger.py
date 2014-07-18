@@ -12,6 +12,7 @@ from pymongo import MongoClient
 import re
 import sys
 
+from veles.external.daemon import redirect_stream
 from veles.external.progressbar import ProgressBar
 
 
@@ -98,7 +99,10 @@ class Logger(object):
         logging.info("Saving logs to %s", file_name)
         if not sys.stdout.isatty():
             logging.getLogger().handlers[0] = handler
-            sys.stderr = open("%s.stderr%s" % os.path.splitext(file_name), 'w')
+            sys.stderr.flush()
+            stderr = open("%s.stderr%s" % os.path.splitext(file_name), 'a')
+            redirect_stream(sys.stderr, stderr)
+            sys.stderr = stderr
         logging.getLogger().addFilter(handler)
         logging.info("Continuing to log in %s", file_name)
 
