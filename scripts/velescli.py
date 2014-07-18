@@ -57,6 +57,7 @@ from veles.opencl import Device
 from veles.pickle2 import setup_pickle_debug
 import veles.random_generator as rnd
 from veles.snapshotter import Snapshotter
+from veles.thread_pool import ThreadPool
 
 if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
     FileNotFoundError = IOError  # pylint: disable=W0622
@@ -307,6 +308,9 @@ class Main(Logger):
         except:
             self.exception("Failed to create the workflow")
             sys.exit(Main.EXIT_FAILURE)
+        if ThreadPool.manhole:
+            from veles.external import manhole
+            manhole.WORKFLOW = self.workflow
         return self.workflow, snapshot
 
     def _main(self, **kwargs):

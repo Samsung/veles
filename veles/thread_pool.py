@@ -4,12 +4,13 @@ Created on Jan 21, 2014
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
+import argparse
 import copy
 import logging
 import signal
 import six
-from six.moves import queue
-from six.moves import zip
+from six.moves import queue, zip
+from six import add_metaclass
 import sys
 import threading
 from traceback import print_stack
@@ -17,11 +18,13 @@ import types
 from twisted.python import threadpool
 
 import veles.logger as logger
+from veles.cmdline import CommandLineArgumentsRegistry
 
 
 sysexit_initial = None
 
 
+@add_metaclass(CommandLineArgumentsRegistry)
 class ThreadPool(threadpool.ThreadPool, logger.Logger):
     """
     Pool of threads.
@@ -29,6 +32,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
 
     sigint_initial = None
     pools = []
+    _manhole = None
 
     def __init__(self, minthreads=2, maxthreads=1024, queue_size=2048,
                  name=None):
@@ -57,12 +61,34 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             sys.exit = ThreadPool.exit
             ThreadPool.sigint_initial = \
                 signal.signal(signal.SIGINT, ThreadPool.sigint_handler)
-            signal.signal(signal.SIGUSR1, ThreadPool.sigusr1_handler)
+            if not ThreadPool.manhole:
+                signal.signal(signal.SIGUSR1, ThreadPool.sigusr1_handler)
+            else:
+                from veles.external import manhole
+                manhole.install(patch_fork=False)
         ThreadPool.pools.append(self)
 
     def __del__(self):
         if not self.joined:
             self.shutdown(False, True)
+
+    @staticmethod
+    def init_parser(**kwargs):
+        parser = kwargs.get("parser", argparse.ArgumentParser())
+        parser.add_argument("--manhole", default=False,
+                            help="run an embedded interactive shell "
+                            "accessible though a UNIX socket",
+                            action='store_true')
+        return parser
+
+    @property
+    @staticmethod
+    def manhole():
+        if ThreadPool._manhole is None:
+            parser = ThreadPool.init_parser()
+            args, _ = parser.parse_known_args()
+            ThreadPool._manhole = args.manhole
+        return ThreadPool._manhole
 
     def callInThreadWithCallback(self, onResult, func, *args, **kw):
         self._not_paused.wait()
@@ -74,9 +100,13 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
 
     def pause(self):
         self._not_paused.clear()
+        self.info("ThreadPool with %d threads has been suspended",
+                  len(self.threads))
 
     def resume(self):
         self._not_paused.set()
+        self.info("ThreadPool with %d threads has been resumed",
+                  len(self.threads))
 
     @property
     def paused(self):
@@ -147,6 +177,8 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         if not len(ThreadPool.pools):
             global sysexit_initial
             sys.exit = sysexit_initial
+            # if ThreadPool.manhole:
+            #    manhole.
         self.debug("%s was shutted down", repr(self))
         self._shutting_down = False
 
@@ -198,10 +230,10 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         Private method - handler for SIGUSR1.
         """
         print("SIGUSR1 was received, dumping current frames...")
-        ThreadPool._print_thread_stacks()
+        ThreadPool.print_thread_stacks()
 
     @staticmethod
-    def _print_thread_stacks():
+    def print_thread_stacks():
         if not hasattr(sys, "_current_frames"):
             print("Threads' stacks printing is not implemented for this "
                   "Python interpreter")
@@ -225,4 +257,4 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                             str(threading.enumerate())
                             if hasattr(threading, "_active")
                             else "<unable to list active threads>")
-            ThreadPool._print_thread_stacks()
+            ThreadPool.print_thread_stacks()

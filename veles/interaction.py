@@ -35,6 +35,21 @@ class Shell(Unit, TriviallyDistributable):
                                             banner1=Shell.BANNER1,
                                             banner2=Shell.BANNER2)
 
+    def interact(self, extra_locals=None):
+        workflow = self.workflow  # pylint: disable=W0612
+        units = self.workflow.units  # pylint: disable=W0612
+        exec('\n'.join("%s = extra_locals['%s']" % (k, k)
+                       for k in extra_locals or {}))
+        self.shell_()
+
+    @staticmethod
+    def fix_netcat_colors():
+        from IPython.core import prompts
+        for scheme in (prompts.PColLinux, prompts.PColLightBG):
+            colors = scheme.colors
+            for key, val in colors.items():
+                colors[key] = val.replace('\x01', '').replace('\x02', '')
+
     def run(self):
         key = ''
         i, _, _ = select.select([sys.stdin], [], [], 0)
@@ -43,6 +58,4 @@ class Shell(Unit, TriviallyDistributable):
                 key = sys.stdin.readline()[0]
                 break
         if key == 'i':
-            workflow = self.workflow  # pylint: disable=W0612
-            units = self.workflow.units  # pylint: disable=W0612
-            self.shell_()
+            self.interact()
