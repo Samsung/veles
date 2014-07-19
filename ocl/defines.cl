@@ -21,18 +21,15 @@
 
 /// @brief atom_add for float.
 inline float atom_add_float(__global float *addr, float vle) {
-  float sum = *addr;
-  float oldsum;
+  int sum = *(__global int*)addr;
+  int oldsum;
   do {
     oldsum = sum;
-    sum += vle;
-    int v = *(int*)&oldsum;
-    int w = *(int*)&sum;
-    int u = atomic_cmpxchg((__global volatile int *)addr, v, w);
-    sum = *(float*)&u;
+    float new_sum = *(float*)&sum + vle;
+    sum = atomic_cmpxchg((__global volatile int *)addr, oldsum, *(int*)&new_sum);
   }
   while (sum != oldsum);
-  return sum;
+  return *(float*)&sum;
 }
 
 
@@ -40,18 +37,15 @@ inline float atom_add_float(__global float *addr, float vle) {
 #if sizeof_dtype == 8
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics: enable
 inline double atom_add_double(__global double *addr, double vle) {
-  double sum = *addr;
-  double oldsum;
+  long sum = *(__global long*)addr;
+  long oldsum;
   do {
     oldsum = sum;
-    sum += vle;
-    long v = *(long*)&oldsum;
-    long w = *(long*)&sum;
-    long u = atom_cmpxchg((__global volatile long *)addr, v, w);
-    sum = *(double*)&u;
+    double new_sum = *(double*)&sum + vle;
+    sum = atom_cmpxchg((__global volatile long *)addr, oldsum, *(long*)&new_sum);
   }
   while (sum != oldsum);
-  return sum;
+  return *(double*)&sum;
 }
 #endif
 
