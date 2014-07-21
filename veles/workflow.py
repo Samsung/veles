@@ -500,7 +500,7 @@ class Workflow(Unit):
             node.set("shape", "rect")
             node.add_style("rounded")
             node.add_style("filled")
-            color = Workflow.unit_group_colors.get(unit.view_group, "white")
+            color = Workflow.UNIT_GROUP_COLORS.get(unit.view_group, "white")
             node.set("fillcolor", color)
             node.set("gradientangle", "90")
             g.add_node(node)
@@ -529,7 +529,7 @@ class Workflow(Unit):
                         refs.append((unit, key[2:]) + val)
                     if not val is None and not Unit.is_immutable(val) and \
                        not isinstance(val, Device) and \
-                       not isinstance(val, Workflow) and key != '_logger_':
+                       not key in Workflow.HIDDEN_UNIT_ATTRS:
                         if key[0] == '_' and hasattr(unit, key[1:]):
                             key = key[1:]
                         attrs[id(val)].append((unit, key))
@@ -564,12 +564,14 @@ class Workflow(Unit):
         self.debug("Graphviz workflow scheme:\n%s", desc)
         return desc, filename
 
-    unit_group_colors = {"PLOTTER": "gold",
+    UNIT_GROUP_COLORS = {"PLOTTER": "gold",
                          "WORKER": "greenyellow",
                          "LOADER": "cyan",
                          "TRAINER": "coral",
                          "EVALUATOR": "plum",
                          "SERVICE": "lightgrey"}
+
+    HIDDEN_UNIT_ATTRS = {"_logger_", "_workflow"}
 
     def print_stats(self, by_name=False, top_number=5):
         """Outputs various time statistics gathered with run_timed and

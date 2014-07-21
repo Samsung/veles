@@ -166,6 +166,9 @@ class Main(Logger):
                             action='store_true')
         parser.add_argument("--workflow-graph", type=str, default="",
                             help="Save workflow graph to this file.")
+        parser.add_argument("--dump-unit-attributes", default=False,
+                            help="write unit __dict__-s after initialization",
+                            action='store_true')
         parser.add_argument('workflow',
                             help='path to the Python script with workflow')
         parser.add_argument('config', default="-",
@@ -341,6 +344,8 @@ class Main(Logger):
             sys.exit(Main.EXIT_FAILURE)
         self.debug("Workflow initialization has been completed")
         try:
+            if self._dump_attrs:
+                self._dump_unit_attributes()
             if self._visualization_mode or self._dry_run > 2:
                 self.debug("Running the launcher")
                 self.launcher.run()
@@ -351,6 +356,22 @@ class Main(Logger):
             self.exception("Failed to run the workflow")
             self.launcher.stop()
             sys.exit(Main.EXIT_FAILURE)
+
+    def _dump_unit_attributes(self):
+        import veles.external.prettytable as prettytable
+        from veles import Workflow
+        self.debug("Dumping unit attributes of %s...", str(self.workflow))
+        table = prettytable.PrettyTable("#", "unit", "attr", "value")
+        table.align["#"] = "r"
+        table.align["unit"] = "l"
+        table.align["attr"] = "l"
+        table.align["value"] = "l"
+        table.max_width["value"] = 100
+        for i, u in enumerate(self.workflow.units_in_dependency_order):
+            for k, v in sorted(u.__dict__.items()):
+                if not k in Workflow.HIDDEN_UNIT_ATTRS:
+                    table.add_row(i, u.__class__.__name__, k, repr(v))
+        print(table)
 
     def _visualize_workflow(self):
         _, file_name = self.workflow.generate_graph(with_data_links=True,
@@ -405,6 +426,7 @@ class Main(Logger):
         self._visualization_mode = args.visualize
         self._workflow_graph = args.workflow_graph
         self._dry_run = Main.DRY_RUN_CHOICES.index(args.dry_run)
+        self._dump_attrs = args.dump_unit_attributes
 
         self._print_logo(args)
         Logger.setup(level=Main.LOG_LEVEL_MAP[args.verbose])
