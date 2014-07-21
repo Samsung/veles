@@ -111,6 +111,8 @@ class Main(Logger):
     LOG_LEVEL_MAP = {"debug": logging.DEBUG, "info": logging.INFO,
                      "warning": logging.WARNING, "error": logging.ERROR}
 
+    DRY_RUN_CHOICES = ["load", "init", "exec", "no"]
+
     @staticmethod
     def init_parser(sphinx=False):
         """
@@ -152,12 +154,12 @@ class Main(Logger):
         parser.add_argument("--dump-config", default=False,
                             help="print the resulting workflow configuration",
                             action='store_true')
-        parser.add_argument("--dry-run", default=False,
-                            help="load, but not initialize and run the loaded "
-                            "model", action='store_true')
-        parser.add_argument("--skip-run", default=False,
-                            help="import the model and configs and exit",
-                            action='store_true')
+        parser.add_argument("--dry-run", default="no",
+                            choices=Main.DRY_RUN_CHOICES,
+                            help="no: normal work; load: stop before loading/"
+                            "creating the workflow; init: stop before workflow"
+                            " initialization; exec: stop before workflow "
+                            "execution.")
         parser.add_argument("--visualize", default=False,
                             help="initialize, but do not run the loaded "
                             "model, show workflow graph and plots",
@@ -239,7 +241,7 @@ class Main(Logger):
     def _run_workflow(self, module):
         self.debug("Calling %s.run()...", module.__name__)
         module.run(self._load, self._main)
-        if not self.main_called and not self._dry_run:
+        if not self.main_called and self._dry_run > 2:
             self.warning("main() was not called by run() in %s",
                          module.__file__)
 
@@ -323,7 +325,7 @@ class Main(Logger):
         return self.workflow, snapshot
 
     def _main(self, **kwargs):
-        if self._dry_run:
+        if self._dry_run < 2:
             self.launcher.stop()
             return
         self.debug("main() was called from run()")
@@ -339,10 +341,11 @@ class Main(Logger):
             sys.exit(Main.EXIT_FAILURE)
         self.debug("Workflow initialization has been completed")
         try:
-            if not self._visualization_mode:
+            if self._visualization_mode or self._dry_run > 2:
                 self.debug("Running the launcher")
                 self.launcher.run()
-            else:
+            elif self._visualization_mode:
+                self.debug("Visualizing the workflow...")
                 self._visualize_workflow()
         except:
             self.exception("Failed to run the workflow")
@@ -350,7 +353,8 @@ class Main(Logger):
             sys.exit(Main.EXIT_FAILURE)
 
     def _visualize_workflow(self):
-        _, file_name = self.workflow.generate_graph()
+        _, file_name = self.workflow.generate_graph(with_data_links=True,
+                                                    background='white')
         from veles.portable import show_file
         show_file(file_name)
 
@@ -400,7 +404,7 @@ class Main(Logger):
         fname_workflow = os.path.abspath(args.workflow)
         self._visualization_mode = args.visualize
         self._workflow_graph = args.workflow_graph
-        self._dry_run = args.dry_run
+        self._dry_run = Main.DRY_RUN_CHOICES.index(args.dry_run)
 
         self._print_logo(args)
         Logger.setup(level=Main.LOG_LEVEL_MAP[args.verbose])
@@ -415,7 +419,7 @@ class Main(Logger):
         self._apply_config(fname_config, args.config_list)
         if args.dump_config:
             root.print_config()
-        if not args.skip_run:
+        if self._dry_run > 0:
             self._run_workflow(wm)
             self.info("End of job")
         return Main.EXIT_SUCCESS
