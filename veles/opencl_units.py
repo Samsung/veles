@@ -36,6 +36,10 @@ class IOpenCLUnit(Interface):
         """Run on GPU/any OpenCL capable device.
         """
 
+    def initialize(device, **kwargs):
+        """initialize() with "device" obligatory argument.
+        """
+
 
 @implementer(IUnit)
 @add_metaclass(UnitCommandLineArgumentsRegistry)

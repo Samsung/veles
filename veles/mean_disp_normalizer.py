@@ -16,10 +16,11 @@ import veles.error as error
 from veles.formats import Vector, assert_addr
 from veles.opencl_types import numpy_dtype_to_opencl
 from veles.opencl_units import OpenCLUnit, IOpenCLUnit
+from veles.distributable import IDistributable, TriviallyDistributable
 
 
-@implementer(IOpenCLUnit)
-class MeanDispNormalizer(OpenCLUnit):
+@implementer(IOpenCLUnit, IDistributable)
+class MeanDispNormalizer(OpenCLUnit, TriviallyDistributable):
     """Normalizes multichannel byte images according to
     dataset mean and dispersion.
 
@@ -119,9 +120,3 @@ class MeanDispNormalizer(OpenCLUnit):
         self.output.matrix[:] = (
             self.input.matrix.astype(dtype)[:] -
             self.mean.plain.astype(dtype)) * self.rdisp.plain
-
-    def generate_data_for_slave(self):
-        pass
-
-    def apply_data_from_slave(self):
-        pass

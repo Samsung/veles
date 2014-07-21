@@ -29,11 +29,6 @@ class IPlotter(Interface):
         Should be implemented by the class providing this interface.
         """
 
-    def show_figure(figure):
-        """figure.show() non-blocking wrapper. Added automatically, must not be
-        implemented.
-        """
-
 
 @implementer(IUnit)
 class Plotter(Unit, TriviallyDistributable):

@@ -12,7 +12,7 @@ import threading
 import time
 import uuid
 from zope.interface import Interface, implementer
-from zope.interface.verify import verifyObject
+from zope.interface.verify import verifyObject, verifyClass
 
 from veles.cmdline import CommandLineArgumentsRegistry
 from veles.config import root, get
@@ -21,6 +21,7 @@ from veles.distributable import Distributable, TriviallyDistributable, \
 import veles.error as error
 from veles.mutable import Bool, LinkableAttribute
 import veles.thread_pool as thread_pool
+import veles.zope_verify_fix  # pylint: disable=W0611
 
 
 class IUnit(Interface):
@@ -456,7 +457,18 @@ class Unit(Distributable):
             raise NotImplementedError(
                 "Unit %s does not implement %s interface" % (repr(self),
                                                              iface.__name__))
-        verifyObject(iface, self)
+        try:
+            verifyObject(iface, self)
+        except:
+            self.error("%s does not pass verifyObject(%s)", str(self),
+                       str(iface))
+            raise
+        try:
+            verifyClass(iface, self.__class__)
+        except:
+            self.error("%s does not pass verifyClass(%s)",
+                       str(self.__class__), str(iface))
+            raise
 
     @staticmethod
     def is_immutable(value):
