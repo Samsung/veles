@@ -6,13 +6,16 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 from __future__ import division
+from collections import defaultdict
 import numpy
+import time
 from zope.interface import implementer
 
 import veles.error as error
 import veles.formats as formats
 from veles.mutable import Bool
 from veles.plotter import Plotter, IPlotter
+from veles.distributable import IDistributable
 
 
 @implementer(IPlotter)
@@ -732,3 +735,68 @@ class TableMaxMin(Plotter):
                 self.values[0, i] = "None"
                 self.values[1, i] = "None"
         super(TableMaxMin, self).run()
+
+
+@implementer(IPlotter, IDistributable)
+class SlaveStats(Plotter):
+    """
+    Draws slave iteration timings.
+    """
+    def __init__(self, workflow, **kwargs):
+        name = kwargs.get("name", "Slave Iteration Timings")
+        kwargs["name"] = name
+        super(SlaveStats, self).__init__(workflow, **kwargs)
+        self._slave_timings = defaultdict(list)
+        self._last_update_times_ = {}
+        self.period = kwargs.get('period', 100)
+        self._slaves = {}
+        self.update_interval = kwargs.get('update_interval', 1.0)
+
+    def redraw(self):
+        if len(self._slaves) == 0:
+            return None
+        fig = self.pp.figure(self.name)
+        fig.clf()
+        axes = fig.add_subplot(111)
+        for sid, timings in self._slave_timings.items():
+            slave = self._slaves[sid]
+            axes.plot(timings[-self.period:],
+                      label="%s (%s:%d)" % (sid, slave.host, slave.pid))
+        axes.set_ylim(bottom=0)
+        axes.legend()
+        self.show_figure(fig)
+        fig.canvas.draw()
+        return fig
+
+    def generate_data_for_master(self):
+        return {}
+
+    def generate_data_for_slave(self, slave):
+        return None
+
+    def apply_data_from_master(self, data):
+        pass
+
+    def apply_data_from_slave(self, data, slave):
+        if slave is None:
+            return
+        now = time.time()
+        delta = now - self._last_update_times_[slave.id] \
+            if slave.id in self._last_update_times_ else None
+        self._last_update_times_[slave.id] = now
+        if delta is None:
+            self._slaves[slave.id] = slave
+            return
+        self._slave_timings[slave.id].append(delta)
+        if len(self._slave_timings) > 2 * self.period:
+            self._slave_timings[slave.id] = self._slave_timings[-self.period:]
+        if now - self._last_run_ > self.update_interval:
+            self.run()
+
+    def drop_slave(self, slave):
+        if slave.id in self._slaves:
+            del self._slaves[slave.id]
+        if slave.id in self._last_update_times_:
+            del self._last_update_times_[slave.id]
+        if slave.id in self._slave_timings:
+            del self._slave_timings[slave.id]
