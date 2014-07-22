@@ -137,22 +137,22 @@ class Main(Logger):
                             action='store_true')
         parser.add_argument("-v", "--verbose", type=str, default="info",
                             choices=Main.LOG_LEVEL_MAP.keys(),
-                            help="set logging verbosity level")
+                            help="Set the logging verbosity level.")
         parser.add_argument("--debug", type=str, default="",
-                            help="set DEBUG logging level for these classes "
-                                 "(separated by commas)")
+                            help="Set DEBUG logging level for these classes "
+                                 "(separated by comma)")
         parser.add_argument("--debug-pickle", default=False,
-                            help="turn on pickle diagnostics",
+                            help="Turn on pickle diagnostics.",
                             action='store_true')
         parser.add_argument("-r", "--random-seed", type=str,
                             default="/dev/urandom:16",
-                            help="set random seed, e.g. "
+                            help="Set the random generator seed, e.g. "
                                  "veles/samples/seed:1024,:1024 or "
                                  "/dev/urandom:16:uint32")
         parser.add_argument('-w', '--snapshot', default="",
                             help='workflow snapshot')
         parser.add_argument("--dump-config", default=False,
-                            help="print the resulting workflow configuration",
+                            help="Print the resulting workflow configuration",
                             action='store_true')
         parser.add_argument("--dry-run", default="no",
                             choices=Main.DRY_RUN_CHOICES,
@@ -165,17 +165,17 @@ class Main(Logger):
                             "model, show workflow graph and plots",
                             action='store_true')
         parser.add_argument("--workflow-graph", type=str, default="",
-                            help="Save workflow graph to this file.")
+                            help="Save workflow graph to file.")
         parser.add_argument("--dump-unit-attributes", default=False,
-                            help="write unit __dict__-s after initialization",
-                            action='store_true')
+                            help="Print unit __dict__-s after workflow "
+                            "initialization", action='store_true')
         parser.add_argument('workflow',
-                            help='path to the Python script with workflow')
+                            help='Path to the Python script with workflow.')
         parser.add_argument('config', default="-",
-                            help='path to the configuration file\
-                            (write "-" to search in as <WORKFLOW>_config.py)')
+                            help='Path to the configuration file\
+                            (write "-" to search in as <WORKFLOW>_config.py).')
         parser.add_argument('config_list',
-                            help="configuration overrides separated by a "
+                            help="Configuration overrides separated by a "
                             "whitespace, for example: \n"
                             "root.global_alpha=0.006\n"
                             "root.snapshot_prefix='test_pr'",

@@ -84,8 +84,8 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     def init_parser(**kwargs):
         parser = kwargs.get("parser", argparse.ArgumentParser())
         parser.add_argument("--manhole", default=False,
-                            help="run an embedded interactive shell "
-                            "accessible though a UNIX socket",
+                            help="run the embedded interactive shell "
+                            "accessible through a UNIX socket",
                             action='store_true')
         return parser
 
