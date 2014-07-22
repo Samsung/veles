@@ -119,6 +119,7 @@ class Workflow(Unit):
         self.end_point = EndPoint(self)
         self.negotiates_on_connect = True
         self._checksum = None
+        self._history = []
 
     def init_unpickled(self):
         super(Workflow, self).init_unpickled()
@@ -226,6 +227,10 @@ class Workflow(Unit):
     @property
     def units_in_dependency_order(self):
         return self.start_point.dependent_list()
+
+    @property
+    def history(self):
+        return self._history
 
     def initialize(self, **kwargs):
         """Initializes all the units belonging to this Workflow, in dependency
@@ -375,6 +380,7 @@ class Workflow(Unit):
             # Try again later
             return False
         self.debug("Generating a job for slave %s", slave.id)
+        self._record_history("generate", slave.id)
         for unit in self:
             if not unit.negotiates_on_connect:
                 try:
@@ -412,6 +418,7 @@ class Workflow(Unit):
             raise ValueError("data must be a list")
         sid = slave.id if slave is not None else "self"
         self.debug("Applying the update from slave %s", sid)
+        self._record_history("apply", sid)
         for i in range(len(self)):
             unit = self[i]
             if data[i] is not None and not unit.negotiates_on_connect:
@@ -639,6 +646,17 @@ class Workflow(Unit):
                 table.add_row("Σ", int(time_all * 100 / self._run_time_),
                               datetime.timedelta(seconds=time_all))
             self.info("Workflow methods run time:\n%s", table)
+
+    def print_history(self):
+        table = PrettyTable("operation", "time", "slave")
+        table.align["operation"] = "r"
+        for row in self.history:
+            table.add_row(*row)
+        print(table)
+
+    def _record_history(self, op, sid):
+        self._history.append((
+            op, datetime.datetime.fromtimestamp(time.time()), sid))
 
     def checksum(self):
         """Returns the cached checksum of file where this workflow is defined.
