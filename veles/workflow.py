@@ -257,7 +257,7 @@ class Workflow(Unit):
         if len(units_in_dependency_order) < units_number:
             self.warning("Not all units were initialized (%d left): %s",
                          units_number - len(units_in_dependency_order),
-                         str(set(self) - set(units_in_dependency_order)))
+                         set(self) - set(units_in_dependency_order))
 
     def run(self):
         """Starts executing the workflow. This function is synchronous
@@ -347,7 +347,12 @@ class Workflow(Unit):
         self.debug("Generating the update for master...")
         for unit in self:
             if not unit.negotiates_on_connect:
-                data.append(unit.generate_data_for_master())
+                try:
+                    data.append(unit.generate_data_for_master())
+                except:
+                    self.error("Unit %s failed to generate data for master",
+                               unit)
+                    raise
             else:
                 data.append(None)
         self.debug("Done with generating the update for master")
@@ -372,7 +377,12 @@ class Workflow(Unit):
         self.debug("Generating a job for slave %s", slave.id)
         for unit in self:
             if not unit.negotiates_on_connect:
-                data.append(unit.generate_data_for_slave(slave))
+                try:
+                    data.append(unit.generate_data_for_slave(slave))
+                except:
+                    self.error("Unit %s failed to generate data for slave",
+                               unit)
+                    raise
             else:
                 data.append(None)
         self.debug("Done with generating a job for slave %s", slave.id)
@@ -387,7 +397,12 @@ class Workflow(Unit):
         for i in range(len(data)):
             unit = self[i]
             if data[i] is not None and not unit.negotiates_on_connect:
-                unit.apply_data_from_master(data[i])
+                try:
+                    unit.apply_data_from_master(data[i])
+                except:
+                    self.error("Unit %s failed to apply data from master",
+                               unit)
+                    raise
         self.debug("Done with applying the job from master")
 
     @run_timed
@@ -400,7 +415,11 @@ class Workflow(Unit):
         for i in range(len(self)):
             unit = self[i]
             if data[i] is not None and not unit.negotiates_on_connect:
-                unit.apply_data_from_slave(data[i], slave)
+                try:
+                    unit.apply_data_from_slave(data[i], slave)
+                except:
+                    self.error("Unit %s failed to apply data from slave", unit)
+                    raise
         self.debug("Done with applying the update from slave %s", sid)
         return True
 
@@ -603,12 +622,12 @@ class Workflow(Unit):
                               stats[i - 1][0])
             table.add_row("Σ", int(top_time * 100 / time_all),
                           datetime.timedelta(seconds=top_time), "Top 5")
-            self.info("Unit run time statistics top:\n%s", str(table))
+            self.info("Unit run time statistics top:\n%s", table)
             table = PrettyTable("units", "real", "η,%")
             table.add_row(datetime.timedelta(seconds=time_all),
                           datetime.timedelta(seconds=self._run_time_),
                           int(time_all * 100 / self._run_time_))
-            self.info("Total run time:\n%s", str(table))
+            self.info("Total run time:\n%s", table)
             table = PrettyTable("method", "%", "time")
             table.align["method"] = "l"
             time_all = 0
@@ -619,7 +638,7 @@ class Workflow(Unit):
             if self.is_slave:
                 table.add_row("Σ", int(time_all * 100 / self._run_time_),
                               datetime.timedelta(seconds=time_all))
-            self.info("Workflow methods run time:\n%s", str(table))
+            self.info("Workflow methods run time:\n%s", table)
 
     def checksum(self):
         """Returns the cached checksum of file where this workflow is defined.

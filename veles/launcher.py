@@ -392,9 +392,9 @@ class Launcher(logger.Logger):
     def _print_stats(self):
         self.workflow.print_stats()
         if self._start_time is not None:
-            self.info("Time elapsed: %s",
-                      str(datetime.timedelta(
-                          seconds=(time.time() - self._start_time))))
+            self.info(
+                "Time elapsed: %s", datetime.timedelta(
+                    seconds=(time.time() - self._start_time)))
 
     def _launch_status(self):
         if not self.reports_web_status:
@@ -499,7 +499,7 @@ class Launcher(logger.Logger):
         self._webagg_port = port
 
     def _on_notify_status_error(self, error):
-        self.warning("Failed to upload the status: %s", str(error))
+        self.warning("Failed to upload the status: %s", error)
         reactor.callLater(self._notify_update_interval, self._notify_status)
 
     def _notify_status(self, response=None):
@@ -547,9 +547,9 @@ class Launcher(logger.Logger):
         self.debug("Requesting GET %s", address)
         getPage(address.encode('ascii')).addCallbacks(
             callback=self._parse_yarn_nodes_json,
-            errback=lambda error: self.warning("Failed to get the nodes list "
-                                               "from YARN ResourceManager: %s",
-                                               str(error)))
+            errback=lambda error: self.warning(
+                "Failed to get the nodes list from YARN ResourceManager: %s",
+                error))
 
     def _parse_yarn_nodes_json(self, response):
         rstr = response.decode()
