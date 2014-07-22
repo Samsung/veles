@@ -7,6 +7,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 from __future__ import division
 from collections import defaultdict
+from datetime import datetime
 import numpy
 import time
 from zope.interface import implementer
@@ -758,10 +759,24 @@ class SlaveStats(Plotter):
         fig = self.pp.figure(self.name)
         fig.clf()
         axes = fig.add_subplot(111)
+        minmax = []
         for sid, timings in self._slave_timings.items():
+            minmax.append((timings[0][1], sid, False))
+            minmax.append((timings[-1][1], sid, True))
+        minmax.sort(key=lambda p: p[0], reverse=True)
+        sid_white_list = set()
+        for p in minmax:
+            if not p[2]:
+                break
+            sid_white_list.add(p[1])
+        for sid in sorted(sid_white_list):
+            timings = self._slave_timings[sid]
             slave = self._slaves[sid]
-            axes.plot(timings[-self.period:],
-                      label="%s (%s:%d)" % (sid, slave.host, slave.pid))
+            y, x = ([t[i] for t in timings[-self.period:]] for i in (0, 1))
+            axes.plot(x, y, label="%s (%s:%d)" % (sid, slave.host, slave.pid))
+        for sid in sorted(set(self._slave_timings.keys()) - sid_white_list):
+            slave = self._slaves[sid]
+            axes.plot(None, label="%s (%s:%d)" % (sid, slave.host, slave.pid))
         axes.set_ylim(bottom=0)
         axes.legend()
         self.show_figure(fig)
@@ -787,9 +802,11 @@ class SlaveStats(Plotter):
         if delta is None:
             self._slaves[slave.id] = slave
             return
-        self._slave_timings[slave.id].append(delta)
-        if len(self._slave_timings) > 2 * self.period:
-            self._slave_timings[slave.id] = self._slave_timings[-self.period:]
+        self._slave_timings[slave.id].append((delta,
+                                              datetime.fromtimestamp(now)))
+        if len(self._slave_timings[slave.id]) > 2 * self.period:
+            self._slave_timings[slave.id] = \
+                self._slave_timings[slave.id][-self.period:]
         if now - self._last_run_ > self.update_interval:
             self.run()
 
