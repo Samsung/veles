@@ -34,6 +34,10 @@ class classproperty(object):
         return self.getter(owner)
 
 
+def errback(failure):
+    reactor.callFromThread(failure.raiseException)
+
+
 @add_metaclass(CommandLineArgumentsRegistry)
 class ThreadPool(threadpool.ThreadPool, logger.Logger):
     """
@@ -112,7 +116,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         if original is not None:
             return original(success, result)
         if not success:
-            reactor.callFromThread(result.raiseException)
+            errback(result)
 
     def pause(self):
         self._not_paused.clear()

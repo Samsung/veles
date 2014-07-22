@@ -15,10 +15,7 @@ from veles.external.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
 import zmq
 
 from veles.network_common import NetworkAgent, StringLineReceiver
-
-
-def errback(failure):
-    reactor.callFromThread(failure.raiseException)
+from veles.thread_pool import errback
 
 
 class ZmqDealer(ZmqConnection):

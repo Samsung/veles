@@ -17,6 +17,7 @@ import zmq
 import veles.external.fysom as fysom
 from veles.external.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
 from veles.network_common import NetworkAgent, StringLineReceiver
+from veles.thread_pool import errback
 
 
 class ZmqRouter(ZmqConnection):
@@ -114,10 +115,6 @@ def make_slave_desc(info):
         if f not in SlaveDescription._fields:
             del args[f]
     return SlaveDescription(**args)
-
-
-def errback(failure):
-    reactor.callFromThread(failure.raiseException)
 
 
 class VelesProtocol(StringLineReceiver):
