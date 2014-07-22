@@ -183,7 +183,8 @@ class Workflow(Unit):
     def __len__(self):
         """Returns the number of units belonging to this Workflow.
         """
-        return sum([len(units) for units in self._units.values()])
+        return sum([len(units) for units in self._units.values()]) \
+            if hasattr(self, "_units") else 0
 
     @property
     def is_running(self):

@@ -111,6 +111,7 @@ class Launcher(logger.Logger):
         self._initialized = False
         self._running = False
         self._start_time = None
+        self.graphics_client = None
         self._notify_update_interval = kwargs.get(
             "status_update_interval",
             root.common.web_status_notification_interval)
@@ -298,9 +299,15 @@ class Launcher(logger.Logger):
                         workflow.thread_pool, self.matplotlib_backend,
                         self._set_webagg_port, self.args.no_graphics_client)
             if self.is_master:
-                self._agent = server.Server(self.args.listen_address, workflow)
-                # Launch the nodes described in the configuration file/string
-                self._launch_nodes()
+                try:
+                    self._agent = server.Server(self.args.listen_address,
+                                                workflow)
+                    # Launch the nodes described in the command line or config
+                    self._launch_nodes()
+                except:
+                    self._stop_graphics()
+                    raise
+
         self._initialized = True
 
     def del_ref(self, workflow):
@@ -366,8 +373,11 @@ class Launcher(logger.Logger):
         self._initialized = False
         self._running = False
         # Wait for the own graphics client to terminate normally
-        if (self.workflow.plotters_are_enabled and
-                self.graphics_client is not None):
+        self._stop_graphics()
+        self.workflow.thread_pool.shutdown()
+
+    def _stop_graphics(self):
+        if self.graphics_client is not None:
             attempt = 0
             while self.graphics_client.poll() is None and attempt < 10:
                 self.graphics_server.shutdown()
@@ -378,7 +388,6 @@ class Launcher(logger.Logger):
                 self.info("Graphics client has been terminated")
             else:
                 self.info("Graphics client returned normally")
-        self.workflow.thread_pool.shutdown()
 
     def _print_stats(self):
         self.workflow.print_stats()

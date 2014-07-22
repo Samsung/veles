@@ -307,6 +307,10 @@ class Main(Logger):
         self.load_called = True
         try:
             self.launcher = Launcher()
+        except:
+            self.exception("Failed to create the launcher")
+            sys.exit(Main.EXIT_FAILURE)
+        try:
             self.workflow = self._load_workflow(self.snapshot_file_name)
             snapshot = self.workflow is not None
             if not snapshot:
