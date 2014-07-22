@@ -20,7 +20,7 @@ import socket
 import sys
 import threading
 import time
-from twisted.internet import reactor, threads
+from twisted.internet import reactor
 from twisted.web.html import escape
 from twisted.web.client import (Agent, HTTPConnectionPool, FileBodyProducer,
                                 getPage)
@@ -102,6 +102,7 @@ class Launcher(logger.Logger):
                 self.args.log_mongo = root.common.mongodb_logging_address
             logger.Logger.duplicate_all_logging_to_mongo(self.args.log_mongo,
                                                          self._log_id)
+        self._monkey_patch_twisted_failure()
         self.info("My PID is %d", os.getpid())
         self.info("My log ID is %s", self.log_id)
         self._lock = threading.Lock()
@@ -120,6 +121,21 @@ class Launcher(logger.Logger):
 
     def __getstate__(self):
         return {}
+
+    def _monkey_patch_twisted_failure(self):
+        from twisted.python.failure import Failure
+        original_raise = Failure.raiseException
+        launcher = self
+
+        def raiseException(self):
+            try:
+                original_raise(self)
+            except:
+                launcher.exception("Error inside Twisted reactor:")
+                launcher.stop()
+
+        if original_raise != raiseException:
+            Failure.raiseException = raiseException
 
     @staticmethod
     def init_parser(**kwargs):
@@ -363,8 +379,7 @@ class Launcher(logger.Logger):
             self._notify_update_last_time = self.start_time
             self._notify_status()
         if not self.is_slave:
-            threads.deferToThreadPool(reactor, self.workflow.thread_pool,
-                                      self.workflow.run)
+            self.workflow.thread_pool.callInThread(self.workflow.run)
 
     @threadsafe
     def _on_stop(self):

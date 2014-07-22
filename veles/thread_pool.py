@@ -6,6 +6,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 import argparse
 import copy
+import functools
 import logging
 import signal
 import six
@@ -15,6 +16,7 @@ import sys
 import threading
 from traceback import print_stack
 import types
+from twisted.internet import reactor
 from twisted.python import threadpool
 
 import veles.logger as logger
@@ -102,8 +104,15 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         with self._shutting_down_lock_:
             if self._shutting_down or not self.started:
                 return
-            threadpool.ThreadPool.callInThreadWithCallback(self, onResult,
-                                                           func, *args, **kw)
+            threadpool.ThreadPool.callInThreadWithCallback(
+                self, functools.partial(self._on_result, onResult),
+                func, *args, **kw)
+
+    def _on_result(self, original, success, result):
+        if original is not None:
+            return original(success, result)
+        if not success:
+            reactor.callFromThread(result.raiseException)
 
     def pause(self):
         self._not_paused.clear()

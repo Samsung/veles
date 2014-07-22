@@ -17,6 +17,10 @@ import zmq
 from veles.network_common import NetworkAgent, StringLineReceiver
 
 
+def errback(failure):
+    reactor.callFromThread(failure.raiseException)
+
+
 class ZmqDealer(ZmqConnection):
     socketType = zmq.DEALER
 
@@ -174,7 +178,7 @@ class VelesProtocol(StringLineReceiver):
                 threads.deferToThreadPool(
                     reactor, self.factory.host.workflow.thread_pool,
                     self.factory.host.workflow.apply_initial_data_from_master,
-                    data)
+                    data).addErrback(errback)
             self.request_job()
             return
         self.disconnect("Invalid state %s", self.state.current)
@@ -186,8 +190,12 @@ class VelesProtocol(StringLineReceiver):
             self.factory.host.launcher.stop()
             return
         self.state.obtain_job()
-        self.factory.host.workflow.do_job(job, self._last_update,
-                                          self.job_finished)
+        try:
+            self.factory.host.workflow.do_job(job, self._last_update,
+                                              self.job_finished)
+        except:
+            from twisted.python.failure import Failure
+            errback(Failure())
 
     def job_finished(self, update):
         if self.state.current == "BUSY":

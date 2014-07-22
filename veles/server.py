@@ -116,6 +116,10 @@ def make_slave_desc(info):
     return SlaveDescription(**args)
 
 
+def errback(failure):
+    reactor.callFromThread(failure.raiseException)
+
+
 class VelesProtocol(StringLineReceiver):
     """A communication controller from server to client.
 
@@ -233,7 +237,8 @@ class VelesProtocol(StringLineReceiver):
             threads.deferToThreadPool(
                 reactor, self.host.workflow.thread_pool,
                 self.host.workflow.drop_slave,
-                make_slave_desc(self.nodes[self.id]))
+                make_slave_desc(self.nodes[self.id])).addErrback(
+                errback)
             if self.id in self.factory.protocols:
                 del self.factory.protocols[self.id]
 
@@ -281,6 +286,7 @@ class VelesProtocol(StringLineReceiver):
             self.host.workflow.apply_data_from_slave, data,
             make_slave_desc(self.nodes[self.id]))
         upd.addCallback(self.updateFinished)
+        upd.addErrback(errback)
         requests = self.factory._job_requests
         self.factory._job_requests = []
         for requester in requests:
@@ -361,7 +367,8 @@ class VelesProtocol(StringLineReceiver):
             threads.deferToThreadPool(
                 reactor, self.host.workflow.thread_pool,
                 self.host.workflow.apply_initial_data_from_slave,
-                data, make_slave_desc(self.nodes[self.id]))
+                data, make_slave_desc(self.nodes[self.id])).addErrback(
+                errback)
             self.nodes[self.id]['data'] = [d for d in data if d is not None]
         self.state.identify()
 
@@ -430,6 +437,7 @@ class VelesProtocol(StringLineReceiver):
             self.host.workflow.generate_data_for_slave,
             make_slave_desc(self.nodes[self.id]))
         job.addCallback(self.jobRequestFinished)
+        job.addErrback(errback)
 
 
 class VelesProtocolFactory(ServerFactory):
