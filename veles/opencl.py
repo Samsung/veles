@@ -78,10 +78,29 @@ class Device(Pickleable):
     """
     def __init__(self):
         super(Device, self).__init__()
+
+        # Workaround for NVIDIA
+        # (fixes incorrect behaviour with OpenCL binaries)
         if os.getenv("CUDA_CACHE_DISABLE") is None:
             os.putenv("CUDA_CACHE_DISABLE", "1")
-        if not self._get_some_device():
+
+        # Workaround for AMD
+        # (fixes segmentation fault when acessed over ssh with X and
+        #  no X is running or when accessing locally and integrated
+        #  video device is used instead of AMD one)
+        d = os.getenv("DISPLAY")
+        if d is not None and d != os.getenv("COMPUTE"):
+            os.unsetenv("DISPLAY")
+
+        # Get the device
+        res = self._get_some_device()
+
+        # Restore DISPLAY to enable drawing
+        if d is not None:
+            os.putenv("DISPLAY", d)
+        if not res:
             return
+
         self._fill_device_info_performance_values()
         log_configs = "Selected the following OpenCL configurations:\n"
         table = prettytable.PrettyTable("device", " dtype", "rating",
