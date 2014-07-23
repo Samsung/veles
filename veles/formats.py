@@ -308,9 +308,9 @@ class Vector(Pickleable):
             self.device = device
         if self.device is None:
             return
-        self._mem = cl.realign_array(self._mem,
-                                     self.device.device_info.memalign,
-                                     numpy)
+        self._mem = cl.realign_array(
+            self._mem, 4096 if self.device.device_info.memalign <= 4096
+            else self.device.device_info.memalign, numpy)
         self.devmem = self.device.queue_.context.create_buffer(
             cl.CL_MEM_READ_WRITE | cl.CL_MEM_USE_HOST_PTR, ravel(self._mem))
 
