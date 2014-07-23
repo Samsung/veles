@@ -33,6 +33,7 @@ from veles.config import root
 import veles.graphics_server as graphics_server
 import veles.logger as logger
 import veles.server as server
+from veles.error import MasterSlaveCommunicationError
 
 
 if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
@@ -183,6 +184,9 @@ class Launcher(logger.Logger):
                             default=kwargs.get("async", False),
                             help="Activate asynchronous master-slave protocol "
                             "on slaves.", action='store_true')
+        parser.add_argument("--validate-history",
+                            default=False, help="Check the apply/generate "
+                            "history on master.", action='store_true')
         parser.add_argument("-f", "--log-file", type=str,
                             default=kwargs.get("log_file", ""),
                             help="The file name where logs will be copied.")
@@ -390,6 +394,11 @@ class Launcher(logger.Logger):
         # Wait for the own graphics client to terminate normally
         self._stop_graphics()
         self.workflow.thread_pool.shutdown()
+        if self.args.validate_history:
+            try:
+                self.workflow.validate_history()
+            except MasterSlaveCommunicationError as e:
+                self.error("Workflow history validation was failed: %s", e)
 
     def _stop_graphics(self):
         if self.graphics_client is not None:

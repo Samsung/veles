@@ -654,6 +654,9 @@ class Workflow(Unit):
             table.add_row(*row)
         print(table)
 
+    def validate_history(self):
+        pass
+
     def _record_history(self, op, sid):
         self._history.append((
             op, datetime.datetime.fromtimestamp(time.time()), sid))
