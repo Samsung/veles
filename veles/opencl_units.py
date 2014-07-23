@@ -67,6 +67,7 @@ class OpenCLUnit(Unit):
         parser = OpenCLUnit.init_parser()
         args, _ = parser.parse_known_args()
         self._force_cpu = args.cpu
+        self._sync = args.sync_ocl
         self._kernel_ = None
 
     @property
@@ -91,12 +92,18 @@ class OpenCLUnit(Unit):
             self.cpu_run()
         else:
             self.ocl_run()
+            if self._sync:
+                self.device.queue_.finish()
 
     @staticmethod
     def init_parser(parser=None):
         parser = parser or argparse.ArgumentParser()
         parser.add_argument("--cpu", default=False, action="store_true",
                             help="Force OpenCL units to run on CPU.")
+        parser.add_argument("--sync-ocl", default=False, action="store_true",
+                            help="Force OpenCL units to run synchronously. "
+                            "This option is useful for measuring the actual "
+                            "unit run times.")
         return parser
 
     def build_program(self, defines=None, cache_file_name=None, dtype=None,
