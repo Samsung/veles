@@ -308,7 +308,7 @@ class OpenCLBenchmark(OpenCLUnit):
 
     def __init__(self, workflow, **kwargs):
         super(OpenCLBenchmark, self).__init__(workflow, **kwargs)
-        self.block_size = 30
+        self.block_size = 16  # TODO(a.kazantsev): get from device.
         self.size = 3000
         self.cl_sources_ = {"benchmark.cl": {
             'BLOCK_SIZE': self.block_size,
