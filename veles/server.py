@@ -102,19 +102,20 @@ class ZmqRouter(ZmqConnection):
                     int(pickles_size * (1.0 + ZmqRouter.RESERVE_SHMEM_SIZE)))
 
 
-SlaveDescription = namedtuple("SlaveDescription",
-                              ['id', 'mid', 'pid', 'power', 'host', 'state'])
+class SlaveDescription(namedtuple(
+        "SlaveDescriptionTuple",
+        ['id', 'mid', 'pid', 'power', 'host', 'state'])):
 
-
-def make_slave_desc(info):
-    args = dict(info)
-    for f in SlaveDescription._fields:
-        if f not in args:
-            args[f] = None
-    for f in info:
-        if f not in SlaveDescription._fields:
-            del args[f]
-    return SlaveDescription(**args)
+    @staticmethod
+    def make(info):
+        args = dict(info)
+        for f in SlaveDescription._fields:
+            if f not in args:
+                args[f] = None
+        for f in info:
+            if f not in SlaveDescription._fields:
+                del args[f]
+        return SlaveDescription(**args)
 
 
 class VelesProtocol(StringLineReceiver):
@@ -234,7 +235,7 @@ class VelesProtocol(StringLineReceiver):
             threads.deferToThreadPool(
                 reactor, self.host.workflow.thread_pool,
                 self.host.workflow.drop_slave,
-                make_slave_desc(self.nodes[self.id])).addErrback(
+                SlaveDescription.make(self.nodes[self.id])).addErrback(
                 errback)
             if self.id in self.factory.protocols:
                 del self.factory.protocols[self.id]
@@ -281,7 +282,7 @@ class VelesProtocol(StringLineReceiver):
         upd = threads.deferToThreadPool(
             reactor, self.host.workflow.thread_pool,
             self.host.workflow.apply_data_from_slave, data,
-            make_slave_desc(self.nodes[self.id]))
+            SlaveDescription.make(self.nodes[self.id]))
         upd.addCallback(self.updateFinished)
         upd.addErrback(errback)
         requests = self.factory._job_requests
@@ -290,6 +291,7 @@ class VelesProtocol(StringLineReceiver):
             requester._requestJob()
 
     def updateFinished(self, result):
+        self.host.debug('%s: update was finished', self.id)
         if not self.state.current in ('WORK', 'GETTING_JOB'):
             self.host.warning("Update was finished in an invalid state %s",
                               self.state.current)
@@ -352,7 +354,7 @@ class VelesProtocol(StringLineReceiver):
                 self.host.error(str(e))
                 return
             data = self.host.workflow.generate_initial_data_for_slave(
-                make_slave_desc(self.nodes[self.id]))
+                SlaveDescription.make(self.nodes[self.id]))
             endpoint = self.host.choose_endpoint(mid, pid, self.hip)
             self.nodes[self.id]['endpoint'] = self._endpoint = endpoint
             retmsg = {'endpoint': endpoint, 'data': data}
@@ -364,7 +366,7 @@ class VelesProtocol(StringLineReceiver):
             threads.deferToThreadPool(
                 reactor, self.host.workflow.thread_pool,
                 self.host.workflow.apply_initial_data_from_slave,
-                data, make_slave_desc(self.nodes[self.id])).addErrback(
+                data, SlaveDescription.make(self.nodes[self.id])).addErrback(
                 errback)
             self.nodes[self.id]['data'] = [d for d in data if d is not None]
         self.state.identify()
@@ -432,7 +434,7 @@ class VelesProtocol(StringLineReceiver):
         job = threads.deferToThreadPool(
             reactor, self.host.workflow.thread_pool,
             self.host.workflow.generate_data_for_slave,
-            make_slave_desc(self.nodes[self.id]))
+            SlaveDescription.make(self.nodes[self.id]))
         job.addCallback(self.jobRequestFinished)
         job.addErrback(errback)
 
