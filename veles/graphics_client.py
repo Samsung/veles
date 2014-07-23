@@ -222,7 +222,7 @@ class GraphicsClient(Logger):
             with self.condition:
                 self.condition.notify()
 
-    def shutdown(self, urgent=False):
+    def shutdown(self):
         with self._lock:
             if not self._started or self._shutted_down:
                 return
@@ -236,10 +236,7 @@ class GraphicsClient(Logger):
                 self.root.ExitMainLoop()
             elif self.pp.get_backend() == "WebAgg":
                 ioloop.IOLoop.instance().stop()
-            if not urgent:
-                reactor.stop()
-            else:
-                reactor.crash()
+            reactor.stop()
             # Not strictly necessary, but prevents from DoS
             self.zmq_connection.shutdown()
 
@@ -280,12 +277,11 @@ class GraphicsClient(Logger):
                 self._pdf_pages.savefig(figure)
 
     def _sigint_handler(self, sign, frame):
-        self.shutdown(True)
+        self.shutdown()
         try:
             self._sigint_initial(sign, frame)
         except KeyboardInterrupt:
             self.critical("KeyboardInterrupt")
-            reactor.stop()
 
     def _sigusr2_handler(self, sign, frame):
         self.info("Activated PDF mode...")
