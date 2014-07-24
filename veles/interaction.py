@@ -51,6 +51,8 @@ class Shell(Unit, TriviallyDistributable):
                 colors[key] = val.replace('\x01', '').replace('\x02', '')
 
     def run(self):
+        if not sys.stdout.isatty():
+            return
         key = ''
         i, _, _ = select.select([sys.stdin], [], [], 0)
         for s in i:
