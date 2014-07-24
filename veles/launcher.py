@@ -450,8 +450,8 @@ class Launcher(logger.Logger):
         filtered_argv = []
         skip = False
         ignored_args = {"-l", "--listen-address", "-n", "--nodes", "-p",
-                        "--matplotlib-backend", "-b", "--background", "-s",
-                        "--stealth", "-d", "--device", "-f", "--log-file"}
+                        "--matplotlib-backend", "-b", "--background",
+                        "-s", "--stealth", "-d", "--device"}
         for i in range(1, len(sys.argv)):
             if sys.argv[i] in ignored_args:
                 skip = True
