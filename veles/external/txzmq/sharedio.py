@@ -42,16 +42,18 @@ class SharedIO(object):
 
     def __setstate__(self, state):
         name = state["name"]
-        cached = SharedIO.CACHE.get(name)
+        size = state["size"]
+        cached = SharedIO.CACHE.get("%s:%d" % (name, size))
         if not cached is None:
+            assert cached.size == size
             self.shmem = cached.shmem
             self.file = cached.file
             self.__shmem_refs = cached.__shmem_refs
             self.__shmem_refs[0] += 1
             self.__init_file_methods()
         else:
-            self.__init__(name, state["size"])
-            SharedIO.CACHE[name] = self
+            self.__init__(name, size)
+            SharedIO.CACHE["%s:%d" % (name, size)] = self
         self.seek(state["pos"])
 
     @property

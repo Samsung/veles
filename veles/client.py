@@ -56,16 +56,13 @@ class ZmqDealer(ZmqConnection):
                 self.id, command.encode('charmap'), message,
                 io=self.shmem,
                 pickles_compression=self.pickles_compression)
-            io_overflow = False
         except ZmqConnection.IOOverflow:
             self.shmem = None
-            io_overflow = True
             return
-        if self.is_ipc and command == 'update':
-            if io_overflow or self.shmem is None:
-                self.shmem = SharedIO(
-                    "veles-update-" + self.id.decode('charmap'),
-                    int(pickles_size * (1.0 + ZmqDealer.RESERVE_SHMEM_SIZE)))
+        if self.is_ipc and command == 'update' and self.shmem is None:
+            self.shmem = SharedIO(
+                "veles-update-" + self.id.decode('charmap'),
+                int(pickles_size * (1.0 + ZmqDealer.RESERVE_SHMEM_SIZE)))
 
 
 class VelesProtocol(StringLineReceiver):
