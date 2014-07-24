@@ -514,7 +514,7 @@ class Launcher(logger.Logger):
                 self.debug("Launching %s", prog)
                 pc.exec_command("cd '%s' && %s" % (cwd, prog))
         except:
-            self.exception("Failed to launch '%s' on %s", prog, host)
+            self.exception("Failed to launch '%s' on %s", progs, host)
         finally:
             pc.close()
 
