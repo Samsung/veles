@@ -92,6 +92,10 @@ class Device(Pickleable):
         if d is not None and d != os.getenv("COMPUTE"):
             os.unsetenv("DISPLAY")
 
+        # Set 64-bit mode for AMD OpenCL by default
+        if os.getenv("GPU_FORCE_64BIT_PTR") is None:
+            os.putenv("GPU_FORCE_64BIT_PTR", "1")
+
         # Get the device
         res = self._get_some_device()
 

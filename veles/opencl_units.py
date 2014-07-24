@@ -194,6 +194,9 @@ class OpenCLUnit(Unit):
         if "VECTOR_OPT" not in my_defines:
             my_defines["VECTOR_OPT"] = self.device.device_info.vector_opt[
                 dtype]
+        if "GPU_FORCE_64BIT_PTR" not in my_defines:
+            my_defines["GPU_FORCE_64BIT_PTR"] = os.getenv(
+                "GPU_FORCE_64BIT_PTR", 0)
 
         for k, v in sorted(my_defines.items()):
             lines.insert(0, "#define %s %s" % (k, v))
