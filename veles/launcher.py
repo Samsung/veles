@@ -450,8 +450,8 @@ class Launcher(logger.Logger):
         filtered_argv = []
         skip = False
         ignored_args = {"-l", "--listen-address", "-n", "--nodes", "-p",
-                        "--matplotlib-backend", "-b", "--background",
-                        "-s", "--stealth", "-d", "--device"}
+                        "--matplotlib-backend", "-b", "--background", "-s",
+                        "--stealth", "-d", "--device", "-f", "--log-file"}
         for i in range(1, len(sys.argv)):
             if sys.argv[i] in ignored_args:
                 skip = True
@@ -473,6 +473,9 @@ class Launcher(logger.Logger):
         self.debug("Slave args: %s", slave_args)
         total_slaves = 0
         max_slaves = self.args.max_nodes or 1000
+        cmdline = "%s %s -d %d:%d"
+        if self.args.log_file:
+            cmdline += " &>> " + self.args.log_file
         for node in self.slaves:
             host, devs = node.split('/')
             marray = devs.split('x')
@@ -488,9 +491,8 @@ class Launcher(logger.Logger):
             progs = []
             for _ in range(multiplier):
                 for d in range(ocldevmin, ocldevmax + 1):
-                    progs.append("%s %s -d %d:%d" %
-                                 (os.path.abspath(sys.argv[0]),
-                                  slave_args, oclpnum, d))
+                    progs.append(cmdline % (os.path.abspath(sys.argv[0]),
+                                            slave_args, oclpnum, d))
             if total_slaves + len(progs) > max_slaves:
                 progs = progs[:max_slaves - total_slaves]
             total_slaves += len(progs)
@@ -511,6 +513,7 @@ class Launcher(logger.Logger):
                 self.exception("Failed to connect to %s", host)
                 return
             for prog in progs:
+                prog = prog.replace(r'"', r'\"').replace(r"'", r"\'")
                 self.debug("Launching %s", prog)
                 pc.exec_command("cd '%s' && %s" % (cwd, prog))
         except:
