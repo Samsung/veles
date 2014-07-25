@@ -92,7 +92,7 @@ class SnapshotterBase(Unit):
     def _slave_ended(self, slave):
         del self.slaves[slave.id]
         if (not len(self.slaves) and not bool(self.gate_skip)
-            and not bool(self.gate_block)):
+                and not bool(self.gate_block)):
             self.run()
 
     def drop_slave(self, slave):

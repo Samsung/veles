@@ -17,7 +17,6 @@ from veles.formats import Vector, assert_addr
 from veles.distributable import IDistributable, TriviallyDistributable
 from veles.opencl_types import numpy_dtype_to_opencl
 from veles.opencl_units import OpenCLUnit, IOpenCLUnit
-from veles.distributable import IDistributable, TriviallyDistributable
 
 
 @implementer(IOpenCLUnit, IDistributable)
