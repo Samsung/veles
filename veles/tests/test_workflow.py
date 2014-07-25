@@ -6,10 +6,15 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 
 
 import unittest
+from zope.interface.verify import verifyObject
 
 from veles import Workflow
+from veles.distributable import IDistributable
 from veles.units import TrivialUnit
 from veles.tests import DummyLauncher
+from veles.workflow import StartPoint
+from veles.tests import DummyWorkflow
+from veles.pickle2 import pickle
 
 
 class Test(unittest.TestCase):
@@ -162,6 +167,12 @@ class Test(unittest.TestCase):
                  '}') % tuple(ids)
         self.maxDiff = None
         self.assertEqual(valid, dot)
+
+    def testStartPoint(self):
+        sp = StartPoint(DummyWorkflow())
+        verifyObject(IDistributable, sp)
+        sp = pickle.loads(pickle.dumps(sp))
+        verifyObject(IDistributable, sp)
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'Test.testItarator']

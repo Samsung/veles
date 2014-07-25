@@ -122,6 +122,10 @@ class Unit(Distributable):
         self.workflow = workflow
         self.add_method_to_storage("initialize")
         self.add_method_to_storage("run")
+        if hasattr(self, "generate_data_for_master"):
+            self.add_method_to_storage("generate_data_for_master")
+        if hasattr(self, "apply_data_from_master"):
+            self.add_method_to_storage("apply_data_from_master")
 
     def init_unpickled(self):
         def wrap_to_measure_time(name):
