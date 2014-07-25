@@ -5,15 +5,17 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
-import veles.external.fysom as fysom
+from copy import copy
 import json
 import six
 import time
 from twisted.internet import reactor, threads
 from twisted.internet.protocol import ReconnectingClientFactory
-from veles.external.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
+from twisted.python.failure import Failure
 import zmq
 
+import veles.external.fysom as fysom
+from veles.external.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
 from veles.network_common import NetworkAgent, StringLineReceiver
 from veles.thread_pool import errback
 
@@ -46,7 +48,10 @@ class ZmqDealer(ZmqConnection):
         if receiver is None:
             raise RuntimeError("Received an unknown command %s" %
                                str(command))
-        receiver(self, *message[1:])
+        try:
+            receiver(self, *message[1:])
+        except:
+            errback(Failure())
 
     def request(self, command, message=b''):
         if not self.shmem is None and command == 'update':
@@ -85,10 +90,11 @@ class VelesProtocol(StringLineReceiver):
             {'name': 'disconnect', 'src': '*', 'dst': 'ERROR'},
             {'name': 'reconnect', 'src': '*', 'dst': 'INIT'},
             {'name': 'request_id', 'src': ['INIT', 'WAIT'], 'dst': 'WAIT'},
-            {'name': 'request_job', 'src': ['WAIT', 'GETTING_JOB'],
+            {'name': 'request_job', 'src': ['WAIT', 'POSTPONED'],
                                     'dst': 'GETTING_JOB'},
             {'name': 'obtain_job', 'src': 'GETTING_JOB', 'dst': 'BUSY'},
             {'name': 'refuse_job', 'src': 'GETTING_JOB', 'dst': 'END'},
+            {'name': 'postpone_job', 'src': 'GETTING_JOB', 'dst': 'POSTPONED'},
             {'name': 'complete_job', 'src': 'BUSY', 'dst': 'WAIT'},
         ],
         'callbacks': {
@@ -158,6 +164,7 @@ class VelesProtocol(StringLineReceiver):
                 self.request_id()
                 return
             self.factory.id = cid
+            self.factory.host.info("My ID is %s", cid)
             endpoint = msg.get("endpoint")
             if not endpoint:
                 self.factory.host.error("No endpoint was received")
@@ -181,31 +188,46 @@ class VelesProtocol(StringLineReceiver):
         if not job:
             self.factory.host.info("Job was refused")
             self.state.refuse_job()
+        elif job == b"NEED_UPDATE":
+            self.factory.host.debug("Master returned NEED_UPDATE, will repeat "
+                                    "the job request in "
+                                    "update_result_received()")
+            self.state.postpone_job()
+        else:
+            self.state.obtain_job()
+        update = self._last_update
+        if self.async and update is not None:
+            self.request_update()
+        if job == b"NEED_UPDATE":
+            return
+        if not job and not self.async:
             self.factory.host.launcher.stop()
             return
-        self.state.obtain_job()
         try:
-            self.factory.host.workflow.do_job(job, self._last_update,
-                                              self.job_finished)
+            self.factory.host.workflow.do_job(job, update, self.job_finished)
         except:
-            from twisted.python.failure import Failure
             errback(Failure())
 
     def job_finished(self, update):
-        if self.state.current == "BUSY":
-            self._last_update = update
-            self.state.complete_job()
-            if self.async:
-                self.request_job()
-            self.zmq_connection.request("update", update or b'')
-            return
-        self.factory.host.error("Invalid state %s", self.state.current)
+        if self.state.current != "BUSY":
+            self.factory.host.error("Invalid state %s", self.state.current)
+        self._last_update = update
+        self.state.complete_job()
+        if self.async:
+            self.request_job()
+        else:
+            self.request_update()
 
     def update_result_received(self, result):
-        if result is False:
+        if result == b'0':
             self.factory.host.warning("Last update was rejected")
-        self.factory.host.debug("Update was confirmed")
-        if not self.async:
+        else:
+            assert result == b'1'
+            self.factory.host.debug("Update was confirmed")
+        if self.state.current == "END":
+            self.factory.host.launcher.stop()
+            return
+        if not self.async or self.state.current == "POSTPONED":
             self.request_job()
 
     def sendLine(self, line):
@@ -234,6 +256,14 @@ class VelesProtocol(StringLineReceiver):
     def request_job(self):
         self.state.request_job()
         self.zmq_connection.request("job")
+
+    def request_update(self):
+        self.factory.host.debug("Sending the update...")
+        update, self._last_update = self._last_update, None
+        if self.async:
+            # we have to copy the update since it may be overwritten in do_job
+            update = copy(update)
+        self.zmq_connection.request("update", update or b'')
 
     def disconnect(self, msg, *args, **kwargs):
         self.factory.host.error(msg, *args, **kwargs)

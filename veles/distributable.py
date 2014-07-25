@@ -124,9 +124,9 @@ class Distributable(Pickleable):
 
     def __init__(self, **kwargs):
         self._generate_data_for_slave_threadsafe = \
-            kwargs.get("generate_data_for_slave_threadsafe", True)
+            kwargs.get("generate_data_for_slave_threadsafe", False)
         self._apply_data_from_slave_threadsafe = \
-            kwargs.get("apply_data_from_slave_threadsafe", True)
+            kwargs.get("apply_data_from_slave_threadsafe", False)
         super(Distributable, self).__init__(**kwargs)
         self.negotiates_on_connect = False
         self.add_method_to_storage("generate_data_for_slave")

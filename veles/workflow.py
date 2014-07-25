@@ -112,7 +112,7 @@ class Workflow(Unit):
         self._sync = kwargs.get("sync", True)
         super(Workflow, self).__init__(workflow,
                                        generate_data_for_slave_threadsafe=True,
-                                       apply_data_from_slave_threadsafe=False,
+                                       apply_data_from_slave_threadsafe=True,
                                        **kwargs)
         self._units = MultiMap()
         self.start_point = StartPoint(self)

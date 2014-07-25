@@ -11,6 +11,7 @@ import six
 import socket
 from twisted.internet import reactor, threads
 from twisted.internet.protocol import ServerFactory
+from twisted.python.failure import Failure
 import uuid
 import zmq
 
@@ -78,7 +79,11 @@ class ZmqRouter(ZmqConnection):
         self._command = None
 
     def messageHeaderReceived(self, header):
-        self.node_id, self._command, self._protocol = self.parseHeader(header)
+        try:
+            self.node_id, self._command, self._protocol = \
+                self.parseHeader(header)
+        except:
+            errback(Failure())
 
     def reply(self, node_id, channel, message):
         if self.use_shmem:
@@ -143,6 +148,9 @@ class VelesProtocol(StringLineReceiver):
     def onJobObtained(self, e):
         self.nodes[self.id]["state"] = "Working"
 
+    def onJobPostponed(self, e):
+        self.nodes[self.id]["state"] = "Waiting"
+
     def setWaiting(self, e):
         self.nodes[self.id]["state"] = "Waiting"
 
@@ -159,6 +167,7 @@ class VelesProtocol(StringLineReceiver):
             {'name': 'request_job', 'src': 'WORK', 'dst': 'GETTING_JOB'},
             {'name': 'obtain_job', 'src': 'GETTING_JOB', 'dst': 'WORK'},
             {'name': 'refuse_job', 'src': 'GETTING_JOB', 'dst': 'WORK'},
+            {'name': 'postpone_job', 'src': 'GETTING_JOB', 'dst': 'WORK'},
             {'name': 'drop', 'src': '*', 'dst': 'INIT'},
         ],
         'callbacks': {
@@ -166,6 +175,7 @@ class VelesProtocol(StringLineReceiver):
             'onconnect': onConnected,
             'onidentify': onIdentified,
             'onobtain_job': onJobObtained,
+            'onpostpone_job': onJobPostponed,
             'onreceive_update': setWaiting,
             'onWORK': setWaiting,
             'ondrop': onDropped
@@ -268,9 +278,17 @@ class VelesProtocol(StringLineReceiver):
         if data is not None:
             if not data:
                 # Try again later
-                self.host.debug("%s: data is not ready", self.id)
+                self.host.debug("%s: job is not ready", self.id)
                 self._balance -= 1
-                self.factory._job_requests.append(self)
+                if self._balance > 0:
+                    # async mode - avoid deadlock
+                    self.state.postpone_job()
+                    self.host.zmq_connection.reply(self.id, b'job',
+                                                   b'NEED_UPDATE')
+                else:
+                    self.host.debug("%s: appending to the sync point job "
+                                    "requests list", self.id)
+                    self.factory._job_requests.append(self)
                 return
             self.state.obtain_job()
             self.host.zmq_connection.reply(self.id, b'job', data)
@@ -279,30 +297,32 @@ class VelesProtocol(StringLineReceiver):
             self.host.zmq_connection.reply(self.id, b'job', False)
 
     def updateReceived(self, data):
+        self.host.debug("%s: update was received", self.id)
         upd = threads.deferToThreadPool(
             reactor, self.host.workflow.thread_pool,
             self.host.workflow.apply_data_from_slave, data,
             SlaveDescription.make(self.nodes[self.id]))
         upd.addCallback(self.updateFinished)
         upd.addErrback(errback)
-        requests = self.factory._job_requests
-        self.factory._job_requests = []
-        for requester in requests:
-            requester._requestJob()
 
     def updateFinished(self, result):
-        self.host.debug('%s: update was finished', self.id)
         if not self.state.current in ('WORK', 'GETTING_JOB'):
             self.host.warning("Update was finished in an invalid state %s",
                               self.state.current)
             return
         if result:
-            self.host.zmq_connection.reply(self.id, b'update', True)
+            self.host.zmq_connection.reply(self.id, b'update', b'1')
         else:
-            self.host.zmq_connection.reply(self.id, b'update', False)
+            self.host.zmq_connection.reply(self.id, b'update', b'0')
         self._balance -= 1
-        if self._balance == 1:
+        self.host.debug("%s: update was finished, balance is %d now", self.id,
+                        self._balance)
+        if self.state.current == 'GETTING_JOB':
             self._requestJob()
+            return
+        while len(self.factory._job_requests) > 0:
+            requester = self.factory._job_requests.pop()
+            requester._requestJob()
 
     def sendLine(self, line):
         if six.PY3:
@@ -427,10 +447,12 @@ class VelesProtocol(StringLineReceiver):
 
     def _requestJob(self):
         if self._balance > 1:
-            self.host.debug("%s: job balance %d, postponed", self.id,
-                            self._balance)
+            self.host.debug("%s: job balance %d, will give the job after "
+                            "applying the update", self.id, self._balance)
             return
         self._balance += 1
+        self.host.debug("%s: generating the job, balance %d",
+                        self.id, self._balance)
         job = threads.deferToThreadPool(
             reactor, self.host.workflow.thread_pool,
             self.host.workflow.generate_data_for_slave,
