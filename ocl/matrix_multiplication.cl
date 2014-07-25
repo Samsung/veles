@@ -73,8 +73,7 @@
 #ifndef VECTOR_OPT
 #define VECTOR_OPT 0
 #endif
-// TODO(a.kazantsev): implement vectorization for other block sizes.
-#if (VECTOR_OPT <= 0) || ((BLOCK_SIZE % 4 != 0) && (BLOCK_SIZE % 2 != 0))
+#if (VECTOR_OPT <= 0) || (BLOCK_SIZE % 4 != 0)
 #define BLOCK_SUM_VECTORIZED 0
 #else
 #ifndef MULTIPLY
@@ -168,16 +167,11 @@
 #if BLOCK_SUM_VECTORIZED == 0
   int as_start = ty * BLOCK_SIZE;
   int bs_start = tx * BLOCK_SIZE;
-#else
-#if BLOCK_SIZE % 4 == 0
+#elif BLOCK_SIZE % 4 == 0
   int as_start = ty * (BLOCK_SIZE / 4);
   int bs_start = tx * (BLOCK_SIZE / 4);
-#elif BLOCK_SIZE % 2 == 0
-  int as_start = ty * (BLOCK_SIZE / 2);
-  int bs_start = tx * (BLOCK_SIZE / 2);
 #else
   #error "Control should not reach this point"
-#endif
 #endif
 
 #if PRECISION_LEVEL == 0
@@ -206,15 +200,39 @@
 
     #if BLOCK_SUM_VECTORIZED == 0
       // Plain sumation
+      __local dtype *_AS = &AS[as_start];
+      __local dtype *_BS = &BS[bs_start];
+      #ifdef MULTIPLY
       dtype block_sum = 0;
       #pragma unroll
       for (int k = 0; k < BLOCK_SIZE; k++) {
-        #ifndef MULTIPLY
-          block_sum += AS[as_start + k] * BS[bs_start + k];
-        #else
-          block_sum += MULTIPLY(AS[as_start + k], BS[bs_start + k]);
-        #endif
+        block_sum += MULTIPLY(_AS[k], _BS[k]);
       }
+      #elif BLOCK_SIZE == 16
+      // Manually use mad for AMD
+      dtype block_sum = mad(_AS[15], _BS[15],
+                        mad(_AS[14], _BS[14],
+                        mad(_AS[13], _BS[13],
+                        mad(_AS[12], _BS[12],
+                        mad(_AS[11], _BS[11],
+                        mad(_AS[10], _BS[10],
+                        mad(_AS[9], _BS[9],
+                        mad(_AS[8], _BS[8],
+                        mad(_AS[7], _BS[7],
+                        mad(_AS[6], _BS[6],
+                        mad(_AS[5], _BS[5],
+                        mad(_AS[4], _BS[4],
+                        mad(_AS[3], _BS[3],
+                        mad(_AS[2], _BS[2],
+                        mad(_AS[1], _BS[1],
+                        _AS[0] * _BS[0])))))))))))))));
+      #else
+      dtype block_sum = 0;
+      #pragma unroll
+      for (int k = 0; k < BLOCK_SIZE; k++) {
+        block_sum += _AS[k] * _BS[k];
+      }
+      #endif
     #else
       // Vector summation
       dtype block_sum = 0;
@@ -222,11 +240,6 @@
         #pragma unroll
         for (int k = 0; k < BLOCK_SIZE / 4; k++) {
           block_sum += dot(vload4(as_start + k, AS), vload4(bs_start + k, BS));
-        }
-      #elif BLOCK_SIZE % 2 == 0
-        #pragma unroll
-        for (int k = 0; k < BLOCK_SIZE / 2; k++) {
-          block_sum += dot(vload2(as_start + k, AS), vload2(bs_start + k, BS));
         }
       #else
         #error "Control should not reach this point"

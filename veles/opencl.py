@@ -288,7 +288,7 @@ class Device(Pickleable):
             self.device_info.dt[dtype] = 86400
         for BLOCK_SIZE in range(bs_max, bs_min, -1):
             vops = [0]
-            if BLOCK_SIZE % 2 == 0:
+            if BLOCK_SIZE % 4 == 0:
                 vops.append(1)
             for vector_opt in vops:
                 for dtype in sorted(opencl_types.dtypes.keys()):
