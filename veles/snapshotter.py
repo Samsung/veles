@@ -13,7 +13,7 @@ import sys
 import time
 from zope.interface import implementer
 
-from veles.distributable import TriviallyDistributable
+from veles.distributable import IDistributable
 from veles.pickle2 import pickle
 from veles.units import Unit, IUnit
 
@@ -22,8 +22,8 @@ if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
     FileNotFoundError = IOError  # pylint: disable=W0622
 
 
-@implementer(IUnit)
-class SnapshotterBase(Unit, TriviallyDistributable):
+@implementer(IUnit, IDistributable)
+class SnapshotterBase(Unit):
     """Base class for various data exporting units.
 
     Defines:
@@ -54,6 +54,10 @@ class SnapshotterBase(Unit, TriviallyDistributable):
         self.file_name = ""
         self.suffix = None
 
+    def init_unpickled(self):
+        super(SnapshotterBase, self).init_unpickled()
+        self.slaves = {}
+
     def initialize(self, **kwargs):
         self.time = time.time()
 
@@ -72,6 +76,27 @@ class SnapshotterBase(Unit, TriviallyDistributable):
         """This method should be overridden in inherited classes.
         """
         pass
+
+    def generate_data_for_slave(self, slave):
+        self.slaves[slave.id] = 1
+
+    def generate_data_for_master(self):
+        return True
+
+    def apply_data_from_master(self, data):
+        pass
+
+    def apply_data_from_slave(self, data, slave):
+        self._slave_ended(slave)
+
+    def _slave_ended(self, slave):
+        del self.slaves[slave.id]
+        if (not len(self.slaves) and not bool(self.gate_skip)
+            and not bool(self.gate_block)):
+            self.run()
+
+    def drop_slave(self, slave):
+        self._slave_ended(slave)
 
 
 class Snapshotter(SnapshotterBase):
