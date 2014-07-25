@@ -65,7 +65,7 @@ class ProgressBar(object):
     different widgets of any type in any order. You can even write your own
     widgets! However, since there are already a good number of widgets you
     should probably play around with them before moving on to create your own
-    
+
 
     The term_width parameter represents the current terminal width. If the
     parameter is set to an integer then the progress bar will use that,
@@ -98,7 +98,7 @@ class ProgressBar(object):
     _DEFAULT_WIDGETS = [Percentage(), ' ', Bar()]
 
     def __init__(self, maxval=None, widgets=None, term_width=None, poll=1,
-                 left_justify=True, fd=sys.stderr, log_level=logging.INFO):
+                 left_justify=True, fd=sys.stdout, log_level=logging.INFO):
         """Initializes a progress bar with sane defaults."""
 
         # Don't share a reference with any other progress bars
@@ -119,7 +119,8 @@ class ProgressBar(object):
             self._handle_resize()
             signal.signal(signal.SIGWINCH, self._handle_resize)
             self.signal_set = True
-        except (SystemExit, KeyboardInterrupt): raise
+        except (SystemExit, KeyboardInterrupt):
+            raise
         except:
             self.term_width = self._env_size()
         if term_width is not None and (self.term_width is None
@@ -138,7 +139,6 @@ class ProgressBar(object):
         self.start_time = None
         self.update_interval = 1
         self.next_update = 0
-
 
     def __call__(self, iterable):
         """Use a ProgressBar to iterate through an iterable."""

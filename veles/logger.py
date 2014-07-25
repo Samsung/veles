@@ -69,7 +69,7 @@ class Logger(object):
 
     @staticmethod
     def setup(level):
-        logging.basicConfig(level=level)
+        logging.basicConfig(level=level, stream=sys.stdout)
         ProgressBar().logger.level = level
         if sys.stdout.isatty():
             root = logging.getLogger()
