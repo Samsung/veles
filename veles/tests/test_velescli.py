@@ -12,7 +12,7 @@ import tempfile
 import unittest
 
 from veles.tests.velescli import Main
-import veles.random_generator as rnd
+import veles.random as rnd
 
 
 class Test(unittest.TestCase):

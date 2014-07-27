@@ -17,7 +17,7 @@ from veles.config import root
 import veles.formats as formats
 import veles.opencl as opencl
 from veles.opencl_units import OpenCLUnit, IOpenCLUnit
-import veles.random_generator as rnd
+import veles.random as rnd
 from veles.tests.dummy_workflow import DummyWorkflow
 
 

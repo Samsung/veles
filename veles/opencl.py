@@ -22,7 +22,7 @@ from veles.config import root, get
 from veles.distributable import Pickleable
 import veles.formats as formats
 import veles.opencl_types as opencl_types
-import veles.random_generator as rnd
+import veles.random as rnd
 from veles.units import TrivialUnit
 import veles.external.prettytable as prettytable
 
