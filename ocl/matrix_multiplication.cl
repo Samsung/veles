@@ -209,22 +209,22 @@
         block_sum += MULTIPLY(_AS[k], _BS[k]);
       }
       #elif BLOCK_SIZE == 16
-      // Manually use mad for AMD
-      dtype block_sum = mad(_AS[15], _BS[15],
-                        mad(_AS[14], _BS[14],
-                        mad(_AS[13], _BS[13],
-                        mad(_AS[12], _BS[12],
-                        mad(_AS[11], _BS[11],
-                        mad(_AS[10], _BS[10],
-                        mad(_AS[9], _BS[9],
-                        mad(_AS[8], _BS[8],
-                        mad(_AS[7], _BS[7],
-                        mad(_AS[6], _BS[6],
-                        mad(_AS[5], _BS[5],
-                        mad(_AS[4], _BS[4],
-                        mad(_AS[3], _BS[3],
-                        mad(_AS[2], _BS[2],
-                        mad(_AS[1], _BS[1],
+      // Manually use fma for AMD
+      dtype block_sum = fma(_AS[15], _BS[15],
+                        fma(_AS[14], _BS[14],
+                        fma(_AS[13], _BS[13],
+                        fma(_AS[12], _BS[12],
+                        fma(_AS[11], _BS[11],
+                        fma(_AS[10], _BS[10],
+                        fma(_AS[9], _BS[9],
+                        fma(_AS[8], _BS[8],
+                        fma(_AS[7], _BS[7],
+                        fma(_AS[6], _BS[6],
+                        fma(_AS[5], _BS[5],
+                        fma(_AS[4], _BS[4],
+                        fma(_AS[3], _BS[3],
+                        fma(_AS[2], _BS[2],
+                        fma(_AS[1], _BS[1],
                         _AS[0] * _BS[0])))))))))))))));
       #else
       dtype block_sum = 0;
