@@ -235,6 +235,8 @@ class VelesProtocol(StringLineReceiver):
         if self.not_a_slave:
             return
         self.state.drop()
+        if self in self.factory.job_requests:
+            del self.factory.job_requests[self]
         if not self.host.workflow.is_running:
             if self.id in self.nodes:
                 del self.nodes[self.id]
@@ -288,7 +290,7 @@ class VelesProtocol(StringLineReceiver):
                 else:
                     self.host.debug("%s: appending to the sync point job "
                                     "requests list", self.id)
-                    self.factory._job_requests.append(self)
+                    self.factory.job_requests.add(self)
                 return
             self.state.obtain_job()
             self.host.zmq_connection.reply(self.id, b'job', data)
@@ -320,8 +322,8 @@ class VelesProtocol(StringLineReceiver):
         if self.state.current == 'GETTING_JOB':
             self._requestJob()
             return
-        while len(self.factory._job_requests) > 0:
-            requester = self.factory._job_requests.pop()
+        while len(self.factory.job_requests) > 0:
+            requester = self.factory.job_requests.pop()
             requester._requestJob()
 
     def sendLine(self, line):
@@ -467,7 +469,7 @@ class VelesProtocolFactory(ServerFactory):
             super(VelesProtocolFactory, self).__init__()
         self.host = host
         self.protocols = {}
-        self._job_requests = []
+        self.job_requests = set()
 
     def buildProtocol(self, addr):
         return VelesProtocol(addr, self)
