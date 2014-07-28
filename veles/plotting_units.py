@@ -761,18 +761,22 @@ class SlaveStats(Plotter):
         axes = fig.add_subplot(111)
         minmax = []
         for sid, timings in self._slave_timings.items():
-            minmax.append((timings[0][1], sid, False))
+            minmax.append((timings[max(0, len(timings) - self.period)][1],
+                           sid, False))
             minmax.append((timings[-1][1], sid, True))
         minmax.sort(key=lambda p: p[0], reverse=True)
         sid_white_list = set()
+        start_time = None
         for p in minmax:
             if not p[2]:
+                start_time = p[0]
                 break
             sid_white_list.add(p[1])
         for sid in sorted(sid_white_list):
             timings = self._slave_timings[sid]
             slave = self._slaves[sid]
-            y, x = ([t[i] for t in timings[-self.period:]] for i in (0, 1))
+            y, x = ([t[i] for t in timings[-self.period:]
+                     if t[1] >= start_time] for i in (0, 1))
             axes.plot(x, y, label="%s (%s:%d)" % (sid, slave.host, slave.pid))
         for sid in sorted(set(self._slave_timings.keys()) - sid_white_list):
             slave = self._slaves[sid]
