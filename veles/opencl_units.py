@@ -7,6 +7,7 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 
 import argparse
 from copy import copy
+from lockfile import locked
 import numpy
 import opencl4py
 import os
@@ -106,6 +107,7 @@ class OpenCLUnit(Unit):
                             "unit run times.")
         return parser
 
+    @locked(root.common.cache_dir + "/veles.lock")
     def build_program(self, defines=None, cache_file_name=None, dtype=None,
                       show_ocl_logs=True):
         """Builds the OpenCL program.
