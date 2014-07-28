@@ -248,6 +248,9 @@ class Workflow(Unit):
         progress.start()
         units_in_dependency_order = self.units_in_dependency_order
         for unit in units_in_dependency_order:
+            # Early abort in case of KeyboardInterrupt
+            if self.thread_pool.joined:
+                break
             progress.widgets[-1] = unit.name + ' ' * (maxlen - len(unit.name))
             if not self.is_standalone:
                 unit.verify_interface(IDistributable)
