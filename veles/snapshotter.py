@@ -96,7 +96,8 @@ class SnapshotterBase(Unit):
             self.run()
 
     def drop_slave(self, slave):
-        self._slave_ended(slave)
+        if slave.id in self.slaves:
+            self._slave_ended(slave)
 
 
 class Snapshotter(SnapshotterBase):
