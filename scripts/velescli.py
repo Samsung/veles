@@ -55,7 +55,7 @@ from veles.logger import Logger
 from veles.launcher import Launcher
 from veles.opencl import Device
 from veles.pickle2 import setup_pickle_debug
-import veles.random as rnd
+import veles.prng as rnd
 from veles.snapshotter import Snapshotter
 from veles.thread_pool import ThreadPool
 

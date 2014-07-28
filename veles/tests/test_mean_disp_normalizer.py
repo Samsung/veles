@@ -16,7 +16,7 @@ from veles.config import root
 from veles.formats import Vector
 import veles.opencl as opencl
 import veles.opencl_types as opencl_types
-import veles.random as rnd
+import veles.prng as rnd
 from veles.mean_disp_normalizer import MeanDispNormalizer
 from veles.tests.dummy_workflow import DummyWorkflow
 
