@@ -5,15 +5,20 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
+import argparse
 from copy import copy
 import json
+import numpy
 import six
+from six import add_metaclass
 import time
 from twisted.internet import reactor, threads
 from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.python.failure import Failure
 import zmq
 
+from veles.cmdline import CommandLineArgumentsRegistry
+import veles.error as error
 import veles.external.fysom as fysom
 from veles.external.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
 from veles.network_common import NetworkAgent, StringLineReceiver
@@ -102,7 +107,7 @@ class VelesProtocol(StringLineReceiver):
         }
     }
 
-    def __init__(self, addr, factory, async=False):
+    def __init__(self, addr, factory, async=False, death_probability=0.0):
         """
         Initializes the protocol.
 
@@ -116,6 +121,7 @@ class VelesProtocol(StringLineReceiver):
         self.id = 'None'
         self._last_update = None
         self.async = async
+        self.death_probability = death_probability
         if not factory.state:
             factory.state = fysom.Fysom(VelesProtocol.FSM_DESCRIPTION, self)
         self.state = factory.state
@@ -153,9 +159,9 @@ class VelesProtocol(StringLineReceiver):
             self.factory.host.error("Could not parse the received line, "
                                     "dropping it")
             return
-        error = msg.get("error")
-        if error:
-            self.disconnect("Server returned error: '%s'", error)
+        err = msg.get("error")
+        if err:
+            self.disconnect("Server returned error: '%s'", err)
             return
         if self.state.current == "WAIT":
             cid = msg.get("id")
@@ -204,6 +210,9 @@ class VelesProtocol(StringLineReceiver):
             self.factory.host.launcher.stop()
             return
         try:
+            if numpy.random.random() < self.death_probability:
+                raise error.Bug("This slave has randomly crashed (death "
+                                "probability was %f)" % self.death_probability)
             self.factory.host.workflow.do_job(job, update, self.job_finished)
         except:
             errback(Failure())
@@ -275,13 +284,14 @@ class VelesProtocolFactory(ReconnectingClientFactory):
     RECONNECTION_INTERVAL = 1
     RECONNECTION_ATTEMPTS = 60
 
-    def __init__(self, host, async):
+    def __init__(self, host, async, death_probability):
         if six.PY3:
             super(VelesProtocolFactory, self).__init__()
         self.host = host
         self.id = None
         self.state = None
         self._async = async
+        self._death_probability = death_probability
         self.disconnect_time = None
 
     def startedConnecting(self, connector):
@@ -289,7 +299,7 @@ class VelesProtocolFactory(ReconnectingClientFactory):
                        self.host.address, self.host.port)
 
     def buildProtocol(self, addr):
-        return VelesProtocol(addr, self, self._async)
+        return VelesProtocol(addr, self, self._async, self._death_probability)
 
     def clientConnectionLost(self, connector, reason):
         if not self.state or self.state.current not in ['ERROR', 'END']:
@@ -319,18 +329,37 @@ class VelesProtocolFactory(ReconnectingClientFactory):
         self.clientConnectionLost(connector, reason)
 
 
+@add_metaclass(CommandLineArgumentsRegistry)
 class Client(NetworkAgent):
     """
     UDT/TCP client operating on a single socket.
     """
 
-    def __init__(self, configuration, workflow, async):
+    def __init__(self, configuration, workflow):
         super(Client, self).__init__(configuration)
         self.workflow = workflow
         self.launcher = workflow.workflow
-        self.factory = VelesProtocolFactory(self, async)
+        parser = Client.init_parser()
+        args, _ = parser.parse_known_args()
+        self.factory = VelesProtocolFactory(self, args.async,
+                                            args.death_probability)
         self._initial_data = None
         reactor.connectTCP(self.address, self.port, self.factory, timeout=300)
+
+    @staticmethod
+    def init_parser(**kwargs):
+        """
+        Initializes an instance of argparse.ArgumentParser.
+        """
+        parser = kwargs.get("parser", argparse.ArgumentParser())
+        parser.add_argument("--async",
+                            default=kwargs.get("async", False),
+                            help="Activate asynchronous master-slave protocol "
+                            "on slaves.", action='store_true')
+        parser.add_argument("--death-probability", type=float, default=0.0,
+                            help="Each slave will die with the probability "
+                            "specified by this value.")
+        return parser
 
     @property
     def initial_data(self):

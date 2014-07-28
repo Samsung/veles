@@ -180,10 +180,6 @@ class Launcher(logger.Logger):
                                  "host/OpenCLPlatformNumber:OpenCLDevice(s)xN,"
                                   "examples: host/0:0, host/1:0-2, "
                                   "host/0:2-3x3.")
-        parser.add_argument("--async",
-                            default=kwargs.get("async", False),
-                            help="Activate asynchronous master-slave protocol "
-                            "on slaves.", action='store_true')
         parser.add_argument("--validate-history",
                             default=False, help="Check the apply/generate "
                             "history on master.", action='store_true')
@@ -303,8 +299,7 @@ class Launcher(logger.Logger):
         # Ensure reactor stops in some rare cases when it does not normally
         self.workflow.thread_pool.register_on_shutdown(shutdown)
         if self.is_slave:
-            self._agent = client.Client(self.args.master_address, workflow,
-                                        async=self.args.async)
+            self._agent = client.Client(self.args.master_address, workflow)
         else:
             if self.reports_web_status:
                 timeout = self._notify_update_interval / 2

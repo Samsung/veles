@@ -78,7 +78,7 @@ class Test(unittest.TestCase):
         self.master = TestWorkflow()
         self.slave = TestWorkflow()
         self.server = server.Server("127.0.0.1:5050", self.master)
-        self.client = client.Client("127.0.0.1:5050", self.slave, async=False)
+        self.client = client.Client("127.0.0.1:5050", self.slave)
         self.stopper = threading.Thread(target=self.stop)
         self.stopper.start()
 
