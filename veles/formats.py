@@ -221,6 +221,10 @@ class Vector(Pickleable):
         return self.mem.size
 
     @property
+    def nbytes(self):
+        return self.mem.nbytes
+
+    @property
     def shape(self):
         return self.mem.shape
 
