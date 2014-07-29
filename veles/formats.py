@@ -337,8 +337,9 @@ class Vector(Pickleable):
         try:
             ev, self.map_arr_ = self.device.queue_.map_buffer(
                 self.devmem, flags, self._mem.nbytes)
-        except cl.CLRuntimeError:
-            self.error("Failed to allocate %d OpenCL bytes", self._mem.nbytes)
+        except cl.CLRuntimeError as err:
+            self.error("Failed to map %d OpenCL bytes, code: %d: %s",
+                       self._mem.nbytes, err.code, str(err))
             raise
         if (int(cl.ffi.cast("size_t", self.map_arr_)) !=
                 self._mem.__array_interface__["data"][0]):
