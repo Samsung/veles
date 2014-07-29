@@ -94,7 +94,14 @@ class Launcher(logger.Logger):
             self.info("Daemonized")
             self._daemon_context.open()
         if self.args.log_file != "":
-            logger.Logger.redirect_all_logging_to_file(self.args.log_file)
+            log_file = self.args.log_file
+            if self.args.log_file_pid:
+                log_base_name = os.path.splitext(os.path.basename(log_file))
+                log_file = os.path.join(
+                    os.path.dirname(log_file),
+                    "%s.%d%s" % (log_base_name[0], os.getpid(),
+                                 log_base_name[1]))
+            logger.Logger.redirect_all_logging_to_file(log_file)
 
         self._id = str(uuid.uuid4())
         self._log_id = self.args.log_id or self.id
@@ -186,6 +193,9 @@ class Launcher(logger.Logger):
         parser.add_argument("-f", "--log-file", type=str,
                             default=kwargs.get("log_file", ""),
                             help="The file name where logs will be copied.")
+        parser.add_argument("--log-file-pid", default=False,
+                            action='store_true',
+                            help="Insert process ID into the log file name.")
         parser.add_argument("-g", "--log-mongo", type=str, nargs='?',
                             const="",
                             default=kwargs.get("log_mongo", "no"),
