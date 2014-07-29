@@ -129,8 +129,11 @@ class Distributable(Pickleable):
             kwargs.get("apply_data_from_slave_threadsafe", False)
         super(Distributable, self).__init__(**kwargs)
         self.negotiates_on_connect = False
-        self.add_method_to_storage("generate_data_for_slave")
-        self.add_method_to_storage("apply_data_from_slave")
+        if self._generate_data_for_slave_threadsafe:
+            self.add_method_to_storage("generate_data_for_slave")
+        if self._apply_data_from_slave_threadsafe:
+            self.add_method_to_storage("apply_data_from_slave")
+            self.add_method_to_storage("drop_slave")
 
     def init_unpickled(self):
         super(Distributable, self).init_unpickled()

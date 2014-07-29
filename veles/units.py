@@ -126,6 +126,10 @@ class Unit(Distributable):
             self.add_method_to_storage("generate_data_for_master")
         if hasattr(self, "apply_data_from_master"):
             self.add_method_to_storage("apply_data_from_master")
+        if hasattr(self, "generate_data_for_slave"):
+            self.add_method_to_storage("generate_data_for_slave")
+        if hasattr(self, "apply_data_from_slave"):
+            self.add_method_to_storage("apply_data_from_slave")
 
     def init_unpickled(self):
         def wrap_to_measure_time(name):
