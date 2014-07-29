@@ -318,6 +318,8 @@ class Main(Logger):
             else:
                 self.info("Loaded the workflow pickle from %s",
                           self.snapshot_file_name)
+                if self._visualization_mode:
+                    self.workflow.plotters_are_enabled = True
                 self.workflow.workflow = self.launcher
         except:
             self.exception("Failed to create the workflow")
@@ -350,7 +352,7 @@ class Main(Logger):
         try:
             if self._dump_attrs:
                 self._dump_unit_attributes()
-            if self._visualization_mode or self._dry_run > 2:
+            if self._dry_run > 2:
                 self.debug("Running the launcher")
                 self.launcher.run()
             elif self._visualization_mode:
