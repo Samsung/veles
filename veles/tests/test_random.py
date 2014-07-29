@@ -75,14 +75,14 @@ class TestRandom1024(unittest.TestCase):
         states = self.states.copy()
         output = numpy.zeros(self.n_states * 16 * self.n_rounds,
                              dtype=numpy.uint64)
-        offs = 0
         for i in range(self.n_states):
+            offs = i
             s = states[i]
             self.p = 0
             for _ in range(self.n_rounds):
                 for _ in range(16):
                     output[offs] = self._next_rand(s)
-                    offs += 1
+                    offs += self.n_states
         logging.debug("cpu output:")
         logging.debug(output)
         return output

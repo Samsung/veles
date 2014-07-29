@@ -6,8 +6,8 @@
 @brief Generates equidistributed random numbers.
 @param states Array of the random generators states.
 @param output Equidistributed random numbers, result is written as follows:
-              random1(state1)..randomN(state1)
-              random1(stateK)..randomN(stateK).
+              random1(state1)..random1(stateK)
+              randomN(state1)..randomN(stateK), i.e. interleaved for better OpenCL performance.
 @param rounds Number of rounds for generation,
               each round generates 128 bytes for each random state.
 @details global_size is the number of states, and algorithm is described in Wikipedia:
@@ -43,29 +43,29 @@ __kernel
 void random_xorshift1024star(__global ulong /* IN, OUT */    *states,
                              const int           /* IN */    rounds,
                              __global ulong     /* OUT */    *output) {
-  int id = get_global_id(0) << LOG_CHUNK;
+  int id = get_global_id(0);
+  int n_states = get_global_size(0);
   ulong s[16];
   #pragma unroll
   for (int i = 0; i < 16; i++) {
-    s[i] = states[id + i];
+    s[i] = states[(id << 4) + i];
   }
 
-  for (int round = 0, offs = id * rounds; round < rounds;
-       round++, offs += (1 << LOG_CHUNK)) {
+  for (int round = 0, offs = id; round < rounds; round++) {
     #pragma unroll
-    for (int i = 0, p = 0; i < (1 << LOG_CHUNK); i++) {
+    for (int i = 0, p = 0; i < (1 << LOG_CHUNK); i++, offs += n_states) {
       ulong s0 = s[p];
       ulong s1 = s[p = (p + 1) & 15];
       s1 ^= s1 << 31; // a
       s1 ^= s1 >> 11; // b
       s0 ^= s0 >> 30; // c
-      output[offs + i] = (s[p] = s0 ^ s1) * 1181783497276652981;
+      output[offs] = (s[p] = s0 ^ s1) * 1181783497276652981;
     }
   }
 
   #pragma unroll
   for (int i = 0; i < 16; i++) {
-    states[id + i] = s[i];
+    states[(id << 4) + i] = s[i];
   }
 }
 
