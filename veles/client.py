@@ -220,6 +220,7 @@ class VelesProtocol(StringLineReceiver):
     def job_finished(self, update):
         if self.state.current != "BUSY":
             self.factory.host.error("Invalid state %s", self.state.current)
+            return
         self._last_update = update
         self.state.complete_job()
         if self.async:
