@@ -239,6 +239,8 @@ class Workflow(Unit):
         fin_text = "all units are initialized"
         maxlen = max([len(u.name) for u in self] + [len(fin_text)])
         units_number = len(self)
+        if not self.is_standalone:
+            self.verify_interface(IDistributable)
         progress = ProgressBar(maxval=units_number,
                                term_width=min(80,
                                               len(self) + 8 + maxlen),
