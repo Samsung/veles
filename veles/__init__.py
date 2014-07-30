@@ -12,7 +12,7 @@ from warnings import warn
 
 
 __project__ = "Veles Machine Learning Platform"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __license__ = "Samsung Proprietary License"
 __copyright__ = "© 2013 Samsung Electronics Co., Ltd."
 __authors__ = ["Gennady Kuznetsov", "Vadim Markovtsev", "Alexey Kazantsev",
