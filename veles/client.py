@@ -46,6 +46,8 @@ class ZmqDealer(ZmqConnection):
         self.is_ipc = endpoint.address.startswith('ipc://')
         self.shmem = None
         self.pickles_compression = "snappy" if not self.is_ipc else None
+        self._request_timings = {}
+        self._receive_timing = (0.0, 0)
 
     def messageReceived(self, message):
         command = message[0]
@@ -57,15 +59,43 @@ class ZmqDealer(ZmqConnection):
             receiver(self, *message[1:])
         except:
             errback(Failure())
+        finally:
+            self._receive_timing = (
+                self._receive_timing[0] + self.last_read_time,
+                self._receive_timing[1] + 1)
+
+    @property
+    def request_timings(self):
+        return {key: val[0] / (val[1] or 1)
+                for key, val in self._request_timings.items()}
+
+    @property
+    def receive_timing(self):
+        return self._receive_timing[0] / (self._receive_timing[1] or 1)
+
+    @property
+    def total_receive_time(self):
+        return self._receive_timing[0]
+
+    @property
+    def total_request_time(self):
+        return sum((val[0] for val in self._request_timings.values()))
 
     def request(self, command, message=b''):
         if not self.shmem is None and command == 'update':
             self.shmem.seek(0)
         try:
+            checkpt = time.time()
             pickles_size = self.send(
                 self.id, command.encode('charmap'), message,
                 io=self.shmem,
                 pickles_compression=self.pickles_compression)
+            delta = time.time() - checkpt
+            if command not in self._request_timings:
+                self._request_timings[command] = (0.0, 0)
+            self._request_timings[command] = (
+                self._request_timings[command][0] + delta,
+                self._request_timings[command][1] + 1)
         except ZmqConnection.IOOverflow:
             self.shmem = None
             return
@@ -118,6 +148,7 @@ class VelesProtocol(StringLineReceiver):
         super(VelesProtocol, self).__init__()
         self.addr = addr
         self.factory = factory
+        self.factory.host.protocol = self
         self.id = 'None'
         self._last_update = None
         self.async = async

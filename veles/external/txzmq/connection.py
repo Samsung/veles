@@ -8,6 +8,7 @@ import six
 from six.moves import cPickle as pickle
 import os
 import snappy
+import time
 import lzma
 
 from zmq import constants, error
@@ -26,6 +27,8 @@ ZMQ3 = zmq_version_info()[0] >= 3
 
 from .manager import ZmqContextManager
 from .sharedio import SharedIO
+
+from veles.logger import Logger
 
 
 class ZmqEndpointType(object):
@@ -57,7 +60,7 @@ class ZmqEndpoint(namedtuple('ZmqEndpoint', ['type', 'address'])):
 
 
 @implementer(IReadDescriptor, IFileDescriptor)
-class ZmqConnection(object):
+class ZmqConnection(Logger):
     """
     Connection through ZeroMQ, wraps up ZeroMQ socket.
 
@@ -115,6 +118,7 @@ class ZmqConnection(object):
             how it works
         :type identity: str
         """
+        super(ZmqConnection, self).__init__()
         self.factory = ZmqContextManager()
         self.endpoints = []
         self.identity = identity
@@ -124,6 +128,7 @@ class ZmqConnection(object):
         self.read_scheduled = None
         self.shutted_down = False
         self.pickles_compression = "snappy"
+        self._last_read_time = 0.0
 
         self.fd = self.socket.get(constants.FD)
         self.socket.set(constants.LINGER, self.factory.lingerPeriod)
@@ -324,6 +329,7 @@ class ZmqConnection(object):
             if (events & constants.POLLIN) != constants.POLLIN:
                 return
 
+            timestamp = time.time()
             try:
                 message = self._readMultipart(unpickler)
             except error.ZMQError as e:
@@ -331,8 +337,13 @@ class ZmqConnection(object):
                     continue
 
                 raise e
-
+            finally:
+                self._last_read_time = time.time() - timestamp
             log.callWithLogger(self, self.messageReceived, message)
+
+    @property
+    def last_read_time(self):
+        return self._last_read_time
 
     def logPrefix(self):
         """
@@ -482,8 +493,10 @@ class ZmqConnection(object):
         rnd_vals = []
         for endpoint in endpoints:
             if endpoint.type == ZmqEndpointType.connect:
+                self.debug("Connecting to %s...", endpoint)
                 self.socket.connect(endpoint.address)
             elif endpoint.type == ZmqEndpointType.bind:
+                self.debug("Binding to %s...", endpoint)
                 if endpoint.address.startswith("rndtcp://") or \
                    endpoint.address.startswith("rndepgm://"):
                     endpos = endpoint.address.find("://") + 3
