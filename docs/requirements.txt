@@ -1,3 +1,4 @@
 sphinx>=1.2.2
 sphinx-argparse>=0.1.9
 sphinxcontrib-napoleon>=0.2.7
+jinja2>=2.7.2
