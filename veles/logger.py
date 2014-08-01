@@ -5,6 +5,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
+import codecs
 from copy import copy
 import logging.handlers
 import os
@@ -69,8 +70,14 @@ class Logger(object):
 
     @staticmethod
     def setup(level):
+        # Ensure UTF-8 on stdout and stderr; in some crazy environments,
+        # they use 'ascii' encoding by default.
+        sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+        sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
+        # Set basic log level
         logging.basicConfig(level=level, stream=sys.stdout)
         ProgressBar().logger.level = level
+        # Turn on colors in case of an interactive tty
         if sys.stdout.isatty():
             root = logging.getLogger()
             handler = root.handlers[0]
