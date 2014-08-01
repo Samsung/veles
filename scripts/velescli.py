@@ -315,9 +315,10 @@ class Main(Logger):
             snapshot = self.workflow is not None
             if not snapshot:
                 self.workflow = Workflow(self.launcher, **kwargs)
+                self.info("Created %s", self.workflow)
             else:
-                self.info("Loaded the workflow pickle from %s",
-                          self.snapshot_file_name)
+                self.info("Loaded the workflow pickle from %s: %s",
+                          self.snapshot_file_name, self.workflow)
                 if self._visualization_mode:
                     self.workflow.plotters_are_enabled = True
                 self.workflow.workflow = self.launcher
