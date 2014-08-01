@@ -72,8 +72,8 @@ class Logger(object):
     def setup(level):
         # Ensure UTF-8 on stdout and stderr; in some crazy environments,
         # they use 'ascii' encoding by default.
-        sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
-        sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
+        sys.stdout = codecs.getwriter("utf-8")(sys.stdout.buffer)
+        sys.stderr = codecs.getwriter("utf-8")(sys.stderr.buffer)
         # Set basic log level
         logging.basicConfig(level=level, stream=sys.stdout)
         ProgressBar().logger.level = level
@@ -98,7 +98,8 @@ class Logger(object):
     def redirect_all_logging_to_file(file_name, max_bytes=1024 * 1024,
                                      backups=1):
         handler = logging.handlers.RotatingFileHandler(
-            filename=file_name, maxBytes=max_bytes, backupCount=backups
+            filename=file_name, maxBytes=max_bytes, backupCount=backups,
+            encoding="utf-8"
         )
         formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: "
                                       "%(message)s", "%Y-%m-%d %H:%M:%S")
@@ -107,7 +108,8 @@ class Logger(object):
         if not sys.stdout.isatty():
             logging.getLogger().handlers[0] = handler
             sys.stderr.flush()
-            stderr = open("%s.stderr%s" % os.path.splitext(file_name), 'a')
+            stderr = open("%s.stderr%s" % os.path.splitext(file_name), 'a',
+                          encoding="utf-8")
             redirect_stream(sys.stderr, stderr)
             sys.stderr = stderr
         logging.getLogger().addFilter(handler)
