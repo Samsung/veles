@@ -29,7 +29,6 @@ def wait():
 
 
 thread = threading.Thread(target=wait, name='timeout')
-thread.start()
 sysexit = sys.exit
 
 
@@ -46,6 +45,9 @@ sys.exit = shutdown
 
 
 def timeout(value=60):
+    if not thread.is_alive():
+        thread.start()
+
     def timeout_impl(fn):
         def unknown():
             pass
