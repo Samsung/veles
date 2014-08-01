@@ -142,8 +142,8 @@ class VelesProtocol(StringLineReceiver):
         self.host.info("Accepted %s", self.address)
 
     def onIdentified(self, e):
-        self.host.info("New node %s joined (%s)",
-                       self.id, str(self.nodes[self.id]))
+        self.host.info("New node %s joined from %s (%s)",
+                       self.id, self.address, str(self.nodes[self.id]))
 
     def onJobObtained(self, e):
         self.nodes[self.id]["state"] = "Working"
