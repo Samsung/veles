@@ -7,9 +7,11 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 from collections import namedtuple
 import json
+import numpy
 import six
 import socket
-from twisted.internet import reactor, threads
+import time
+from twisted.internet import reactor, threads, task
 from twisted.internet.protocol import ServerFactory
 from twisted.python.failure import Failure
 import uuid
@@ -203,6 +205,11 @@ class VelesProtocol(StringLineReceiver):
         self.state = fysom.Fysom(VelesProtocol.FSM_DESCRIPTION, self)
         self._responders = {"WAIT": self._respondInWAIT,
                             "WORK": self._respondInWORK}
+        self._jobs_processed = []
+        self._last_job_submit_time = 0
+        self._dropper_on_timeout = None
+        self._job_timeout = 60  # secs
+        self._drop_on_timeout = False
 
     @property
     def id(self):
@@ -235,8 +242,12 @@ class VelesProtocol(StringLineReceiver):
         if self.not_a_slave:
             return
         self.state.drop()
-        if self in self.factory.job_requests:
-            del self.factory.job_requests[self]
+        if self._dropper_on_timeout is not None:
+            self._dropper_on_timeout.cancel()
+        try:
+            self.factory.job_requests.remove(self)
+        except KeyError:
+            pass
         if not self.host.workflow.is_running:
             if self.id in self.nodes:
                 del self.nodes[self.id]
@@ -244,13 +255,14 @@ class VelesProtocol(StringLineReceiver):
             if len(self.nodes) == 0:
                 self.host.launcher.stop()
         elif self.id in self.nodes:
-            threads.deferToThreadPool(
+            d = threads.deferToThreadPool(
                 reactor, self.host.workflow.thread_pool,
                 self.host.workflow.drop_slave,
                 SlaveDescription.make(self.nodes[self.id])).addErrback(
                 errback)
             if self.id in self.factory.protocols:
                 del self.factory.protocols[self.id]
+            d.addCallback(self._retryJobRequests)
 
     def lineReceived(self, line):
         self.host.debug("%s lineReceived:  %s", self.id, line)
@@ -272,7 +284,12 @@ class VelesProtocol(StringLineReceiver):
 
     def jobRequestReceived(self):
         self.state.request_job()
-        self._requestJob()
+        if self.id in self.factory.blacklist:
+            self.host.warning("%s: found in the blacklist, refusing the job",
+                              self.id)
+            self._refuseJob()
+        else:
+            self._requestJob()
 
     def jobRequestFinished(self, data):
         if self.state.current != "GETTING_JOB":
@@ -291,12 +308,20 @@ class VelesProtocol(StringLineReceiver):
                     self.host.debug("%s: appending to the sync point job "
                                     "requests list", self.id)
                     self.factory.job_requests.add(self)
+                    hanged_slaves = []
+                    for proto in self.factory.protocols.values():
+                        if len(proto._jobs_processed) == 0:
+                            hanged_slaves.append(proto)
+                    self.host.warning("Detected hanged nodes: %s",
+                                      [s.id for s in hanged_slaves])
+                    for slave in hanged_slaves:
+                        self.factory.blacklist.add(slave.id)
+                        slave.transport.loseConnection()
                 return
             self.state.obtain_job()
             self.host.zmq_connection.reply(self.id, b'job', data)
         else:
-            self.state.refuse_job()
-            self.host.zmq_connection.reply(self.id, b'job', False)
+            self._refuseJob()
 
     def updateReceived(self, data):
         self.host.debug("%s: update was received", self.id)
@@ -306,6 +331,9 @@ class VelesProtocol(StringLineReceiver):
             SlaveDescription.make(self.nodes[self.id]))
         upd.addCallback(self.updateFinished)
         upd.addErrback(errback)
+        now = time.time()
+        self._jobs_processed.append(now - self._last_job_submit_time)
+        self._last_job_submit_time = now
 
     def updateFinished(self, result):
         if not self.state.current in ('WORK', 'GETTING_JOB'):
@@ -322,15 +350,18 @@ class VelesProtocol(StringLineReceiver):
         if self.state.current == 'GETTING_JOB':
             self._requestJob()
             return
-        while len(self.factory.job_requests) > 0:
-            requester = self.factory.job_requests.pop()
-            requester._requestJob()
+        self._retryJobRequests()
 
     def sendLine(self, line):
         if six.PY3:
             super(VelesProtocol, self).sendLine(json.dumps(line))
         else:
             StringLineReceiver.sendLine(self, json.dumps(line))
+
+    def _retryJobRequests(self, _=None):
+        while len(self.factory.job_requests) > 0:
+            requester = self.factory.job_requests.pop()
+            requester._requestJob()
 
     def _checkQuery(self, msg):
         """Respond to possible informational requests.
@@ -360,7 +391,7 @@ class VelesProtocol(StringLineReceiver):
             return
         must_reply = False
         msgid = msg.get("id")
-        if not msgid:
+        if msgid is None:
             self.id = str(uuid.uuid4())
             must_reply = True
         else:
@@ -369,6 +400,8 @@ class VelesProtocol(StringLineReceiver):
                 self.host.warning("Did not recognize the received ID %s",
                                   self.id)
                 must_reply = True
+            else:
+                self.sendLine({'reconnect': "ok"})
         if must_reply:
             try:
                 _, mid, pid = self._extractClientInformation(msg)
@@ -455,12 +488,39 @@ class VelesProtocol(StringLineReceiver):
         self._balance += 1
         self.host.debug("%s: generating the job, balance %d",
                         self.id, self._balance)
+        if self._last_job_submit_time == 0:
+            self._last_job_submit_time = time.time()
         job = threads.deferToThreadPool(
             reactor, self.host.workflow.thread_pool,
             self.host.workflow.generate_data_for_slave,
             SlaveDescription.make(self.nodes[self.id]))
         job.addCallback(self.jobRequestFinished)
         job.addErrback(errback)
+        self._scheduleDropOnTimeout()
+
+    def _refuseJob(self):
+        self.state.refuse_job()
+        self.host.zmq_connection.reply(self.id, b'job', False)
+
+    def _scheduleDropOnTimeout(self):
+        if not self._drop_on_timeout or len(self._jobs_processed) < 3:
+            return
+        mean = numpy.mean(self._jobs_processed)
+        stddev = numpy.std(self._jobs_processed)
+        timeout = max(mean + stddev * 3, self._job_timeout)
+        if self._dropper_on_timeout is not None:
+            self._dropper_on_timeout.cancel()
+        self._dropper_on_timeout = task.deferLater(
+            reactor, timeout, self._dropOnTimeout, timeout)
+        self._dropper_on_timeout.addErrback(lambda _: None)
+
+    def _dropOnTimeout(self, timeout):
+        self.host.error("%s: timeout (%.3f seconds) was exceeded. "
+                        "Dropping this slave.", self.id, timeout)
+        self.transport.loseConnection()
+        self.factory.blacklist.add(self.id)
+        # TODO(v.markovtsev): inform Launcher to start a new node, if current
+        # was started via ssh
 
 
 class VelesProtocolFactory(ServerFactory):
@@ -470,6 +530,7 @@ class VelesProtocolFactory(ServerFactory):
         self.host = host
         self.protocols = {}
         self.job_requests = set()
+        self.blacklist = set()
 
     def buildProtocol(self, addr):
         return VelesProtocol(addr, self)
@@ -503,6 +564,11 @@ class Server(NetworkAgent):
                               "tcp": "tcp://*:%d" % self.zmq_tcp_port}
         self.info("ZeroMQ endpoints: %s",
                   ' '.join(sorted(self.zmq_endpoints.values())))
+
+    def __repr__(self):
+        return "veles.Server with %d nodes and %d protocols on %s:%d" % (
+            len(self.nodes), len(self.factory.protocols), self.address,
+            self.port)
 
     def choose_endpoint(self, mid, pid, hip):
         if self.mid == mid:

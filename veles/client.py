@@ -13,6 +13,7 @@ import six
 from six import add_metaclass
 import time
 from twisted.internet import reactor, threads
+from twisted.internet.defer import CancelledError
 from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.python.failure import Failure
 import zmq
@@ -125,6 +126,7 @@ class VelesProtocol(StringLineReceiver):
             {'name': 'disconnect', 'src': '*', 'dst': 'ERROR'},
             {'name': 'reconnect', 'src': '*', 'dst': 'INIT'},
             {'name': 'request_id', 'src': ['INIT', 'WAIT'], 'dst': 'WAIT'},
+            {'name': 'send_id', 'src': 'INIT', 'dst': 'WAIT'},
             {'name': 'request_job', 'src': ['WAIT', 'POSTPONED'],
                                     'dst': 'GETTING_JOB'},
             {'name': 'obtain_job', 'src': 'GETTING_JOB', 'dst': 'BUSY'},
@@ -149,13 +151,13 @@ class VelesProtocol(StringLineReceiver):
         self.addr = addr
         self.factory = factory
         self.factory.host.protocol = self
-        self.id = 'None'
         self._last_update = None
         self.async = async
         self.death_probability = death_probability
-        if not factory.state:
+        if factory.state is None:
             factory.state = fysom.Fysom(VelesProtocol.FSM_DESCRIPTION, self)
         self.state = factory.state
+        self._current_deferred = None
 
     @property
     def async(self):
@@ -166,25 +168,21 @@ class VelesProtocol(StringLineReceiver):
         self._async = value
 
     def connectionMade(self):
-        self.factory.host.info("Connected")
+        self.factory.host.info("Connected in %s state", self.state.current)
         self.factory.disconnect_time = None
-        if self.state.current == "INIT" or self.state.current == "WAIT":
+        if self.factory.id is None:
             self.request_id()
             return
-        if self.state.current == "GETTING_JOB":
-            self.send_id()
-            self.request_job()
-            return
-        if self.state.current == "BUSY":
-            self.send_id()
-            self.state.obtain_job()
-            return
+        self.send_id()
+        self.state.send_id()
 
     def connectionLost(self, reason):
         self.factory.host.debug("Connection was lost")
+        if self._current_deferred is not None:
+            self._current_deferred.cancel()
 
     def lineReceived(self, line):
-        self.factory.host.debug("lineReceived %s:  %s", self.id, line)
+        self.factory.host.debug("lineReceived %s:  %s", self.factory.id, line)
         msg = json.loads(line.decode("utf-8"))
         if not isinstance(msg, dict):
             self.factory.host.error("Could not parse the received line, "
@@ -195,28 +193,35 @@ class VelesProtocol(StringLineReceiver):
             self.disconnect("Server returned error: '%s'", err)
             return
         if self.state.current == "WAIT":
+            if msg.get("reconnect") == "ok":
+                if self.factory.id is None:
+                    self.factory.host.error("Server returned a successful "
+                                            "reconnection, but my ID is None")
+                    self.request_id()
+                    return
+                self.request_job()
+                return
             cid = msg.get("id")
-            if not cid:
+            if cid is None:
                 self.factory.host.error("No ID was received in WAIT state")
                 self.request_id()
                 return
             self.factory.id = cid
             self.factory.host.info("My ID is %s", cid)
             endpoint = msg.get("endpoint")
-            if not endpoint:
+            if endpoint is None:
                 self.factory.host.error("No endpoint was received")
                 self.request_id()
                 return
-            self.zmq_connection = ZmqDealer(
+            self.factory.zmq_connection = ZmqDealer(
                 cid, self, ZmqEndpoint("connect", endpoint))
             self.factory.host.info("Connected to ZeroMQ endpoint %s",
                                    endpoint)
             data = msg.get('data')
             if data is not None:
-                threads.deferToThreadPool(
-                    reactor, self.factory.host.workflow.thread_pool,
+                self._set_deferred(
                     self.factory.host.workflow.apply_initial_data_from_master,
-                    data).addErrback(errback)
+                    data)
             self.request_job()
             return
         self.disconnect("Invalid state %s", self.state.current)
@@ -244,9 +249,24 @@ class VelesProtocol(StringLineReceiver):
             if numpy.random.random() < self.death_probability:
                 raise error.Bug("This slave has randomly crashed (death "
                                 "probability was %f)" % self.death_probability)
-            self.factory.host.workflow.do_job(job, update, self.job_finished)
+            # workflow.do_job may hang, so launch it in the thread pool
+            self._set_deferred(self.factory.host.workflow.do_job, job, update,
+                               self.job_finished)
         except:
             errback(Failure())
+
+    def _set_deferred(self, f, *args, **kwargs):
+        self._current_deferred = threads.deferToThreadPool(
+            reactor, self.factory.host.workflow.thread_pool,
+            f, *args, **kwargs)
+
+        def cancellable_errback(err):
+            if err.type == CancelledError:
+                return
+            errback(err)
+
+        self._current_deferred.addErrback(cancellable_errback)
+        return self._current_deferred
 
     def job_finished(self, update):
         if self.state.current != "BUSY":
@@ -296,7 +316,7 @@ class VelesProtocol(StringLineReceiver):
 
     def request_job(self):
         self.state.request_job()
-        self.zmq_connection.request("job")
+        self.factory.zmq_connection.request("job")
 
     def request_update(self):
         self.factory.host.debug("Sending the update...")
@@ -304,7 +324,7 @@ class VelesProtocol(StringLineReceiver):
         if self.async:
             # we have to copy the update since it may be overwritten in do_job
             update = copy(update)
-        self.zmq_connection.request("update", update or b'')
+        self.factory.zmq_connection.request("update", update or b'')
 
     def disconnect(self, msg, *args, **kwargs):
         self.factory.host.error(msg, *args, **kwargs)
@@ -325,6 +345,7 @@ class VelesProtocolFactory(ReconnectingClientFactory):
         self._async = async
         self._death_probability = death_probability
         self.disconnect_time = None
+        self.zmq_connection = None
 
     def startedConnecting(self, connector):
         self.host.info('Connecting to %s:%s...',
@@ -334,12 +355,12 @@ class VelesProtocolFactory(ReconnectingClientFactory):
         return VelesProtocol(addr, self, self._async, self._death_probability)
 
     def clientConnectionLost(self, connector, reason):
-        if not self.state or self.state.current not in ['ERROR', 'END']:
+        if self.state is None or self.state.current not in ['ERROR', 'END']:
             lost_state = "<None>"
-            if self.state:
+            if self.state is not None:
                 lost_state = self.state.current
                 self.state.reconnect()
-            if not self.disconnect_time:
+            if self.disconnect_time is None:
                 self.disconnect_time = time.time()
             if ((time.time() - self.disconnect_time) //
                     VelesProtocolFactory.RECONNECTION_INTERVAL >
