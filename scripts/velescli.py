@@ -40,6 +40,7 @@ import argparse
 import atexit
 from email.utils import formatdate
 import errno
+import gc
 import logging
 import numpy
 import os
@@ -168,7 +169,11 @@ class Main(Logger):
                             help="Save workflow graph to file.")
         parser.add_argument("--dump-unit-attributes", default=False,
                             help="Print unit __dict__-s after workflow "
-                            "initialization", action='store_true')
+                            "initialization, excluding large numpy arrays.",
+                            action='store_true')
+        parser.add_argument("--dump-all-unit-attributes", default=False,
+                            help="Print all unit attributes, including large "
+                            "numpy arrays.", action='store_true')
         parser.add_argument('workflow',
                             help='Path to the Python script with workflow.')
         parser.add_argument('config', default="-",
@@ -356,7 +361,8 @@ class Main(Logger):
         self.debug("Workflow initialization has been completed")
         try:
             if self._dump_attrs:
-                self._dump_unit_attributes()
+                self._dump_unit_attributes(self._dump_all_attrs)
+            gc.collect()
             if self._dry_run > 2:
                 self.debug("Running the launcher")
                 self.launcher.run()
@@ -368,7 +374,7 @@ class Main(Logger):
             self.launcher.stop()
             sys.exit(Main.EXIT_FAILURE)
 
-    def _dump_unit_attributes(self):
+    def _dump_unit_attributes(self, arrays=True):
         import veles.external.prettytable as prettytable
         from veles import Workflow
         self.debug("Dumping unit attributes of %s...", str(self.workflow))
@@ -381,7 +387,13 @@ class Main(Logger):
         for i, u in enumerate(self.workflow.units_in_dependency_order):
             for k, v in sorted(u.__dict__.items()):
                 if not k in Workflow.HIDDEN_UNIT_ATTRS:
-                    table.add_row(i, u.__class__.__name__, k, repr(v))
+                    if not arrays and hasattr(v, "__len__") and len(v) > 32 \
+                       and not isinstance(v, str) and not isinstance(v, bytes):
+                        strv = "object of class %s of length %d" % (
+                            repr(v.__class__.__name__), len(v))
+                    else:
+                        strv = repr(v)
+                    table.add_row(i, u.__class__.__name__, k, strv)
         print(table)
 
     def _visualize_workflow(self):
@@ -438,6 +450,7 @@ class Main(Logger):
         self._workflow_graph = args.workflow_graph
         self._dry_run = Main.DRY_RUN_CHOICES.index(args.dry_run)
         self._dump_attrs = args.dump_unit_attributes
+        self._dump_all_attrs = args.dump_all_unit_attributes
 
         self._print_logo(args)
         Logger.setup(level=Main.LOG_LEVEL_MAP[args.verbose])

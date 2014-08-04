@@ -290,7 +290,7 @@ class Vector(Pickleable):
     def __len__(self):
         """To enable [] operator.
         """
-        return self._mem.size
+        return self._mem.size if self._mem is not None else 0
 
     def __del__(self):
         self.reset()
