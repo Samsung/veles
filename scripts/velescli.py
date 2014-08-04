@@ -343,7 +343,11 @@ class Main(Logger):
             self.critical("Call load() first in run()")
             raise RuntimeError()
         self.main_called = True
-        self.device = None if self.launcher.is_master else Device()
+        try:
+            self.device = None if self.launcher.is_master else Device()
+        except:
+            self.error("Failed to create the OpenCL device.")
+            raise
         try:
             self.workflow.initialize(device=self.device, **kwargs)
         except:
