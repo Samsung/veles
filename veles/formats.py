@@ -356,7 +356,8 @@ class Vector(Pickleable):
                 "OpenCL device queue is None but Vector devmem was not "
                 "explicitly unmapped.")
         else:
-            self.device.queue_.unmap_buffer(self.devmem, self.map_arr_).wait()
+            self.device.queue_.unmap_buffer(self.devmem, self.map_arr_,
+                                            need_event=False)
         self.map_arr_ = None
         self.map_flags = 0
 
