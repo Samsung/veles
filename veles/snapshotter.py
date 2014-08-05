@@ -14,7 +14,7 @@ import time
 from zope.interface import implementer
 
 from veles.distributable import IDistributable
-from veles.pickle2 import pickle
+from veles.pickle2 import pickle, best_protocol
 from veles.units import Unit, IUnit
 
 
@@ -135,15 +135,15 @@ class Snapshotter(SnapshotterBase):
     def export(self):
         ext = ("." + self.compress) if self.compress else ""
         rel_file_name = "%s_%s.%d.pickle%s" % (
-            self.prefix, self.suffix, sys.version_info[0], ext)
+            self.prefix, self.suffix, best_protocol, ext)
         self.file_name = os.path.join(self.directory, rel_file_name)
         self.debug("Snapshotting...")
         with self._open_file() as fout:
-            pickle.dump(self.workflow, fout)
+            pickle.dump(self.workflow, fout, protocol=best_protocol)
         self.info("Snapshotted to %s" % self.file_name)
         file_name_link = os.path.join(
             self.directory, "%s_current.%d.pickle%s" % (
-                self.prefix, sys.version_info[0], ext))
+                self.prefix, best_protocol, ext))
         if os.path.exists(file_name_link):
             os.remove(file_name_link)
         os.symlink(rel_file_name, file_name_link)

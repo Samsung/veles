@@ -7,8 +7,12 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 
 import six
 from six.moves import cPickle as pickle
+import sys
 from pickle import PicklingError, UnpicklingError
 import warnings
+
+
+best_protocol = 4 if sys.version_info > (3, 4) else sys.version_info[0]
 
 
 def setup_pickle_debug():
