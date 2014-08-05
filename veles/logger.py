@@ -72,8 +72,9 @@ class Logger(object):
     def setup(level):
         # Ensure UTF-8 on stdout and stderr; in some crazy environments,
         # they use 'ascii' encoding by default.
-        sys.stdout = codecs.getwriter("utf-8")(sys.stdout.buffer)
-        sys.stderr = codecs.getwriter("utf-8")(sys.stderr.buffer)
+        sys.stdout, sys.stderr = (codecs.getwriter("utf-8")(s.buffer)
+                                  for s in (sys.stdout, sys.stderr))
+        sys.stdout.encoding = sys.stderr.encoding = "utf-8"
         # Set basic log level
         logging.basicConfig(level=level, stream=sys.stdout)
         ProgressBar().logger.level = level
