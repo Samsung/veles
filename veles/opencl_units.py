@@ -365,10 +365,13 @@ class OpenCLWorkflow(Workflow):
 
     def __init__(self, workflow, **kwargs):
         super(OpenCLWorkflow, self).__init__(workflow, **kwargs)
+        self._last_power_measurement_time = 0
+        self._power_measure_time_interval = kwargs.get(
+            'power_measure_time_interval', 60)
 
     def init_unpickled(self):
         super(OpenCLWorkflow, self).init_unpickled()
-        self._power_ = None
+        self._power_ = 0
         self.device = None
 
     @property
@@ -377,7 +380,10 @@ class OpenCLWorkflow(Workflow):
         Estimates this slave's computing power for initial perfect balancing.
         Run by a slave.
         """
-        if not self._power_:
+        now = time.time()
+        if (now - self._last_power_measurement_time >
+                self._power_measure_time_interval):
+            self._last_power_measurement_time = now
             bench = OpenCLBenchmark(self)
             bench.initialize(device=self.device)
             self._power_ = bench.estimate()
