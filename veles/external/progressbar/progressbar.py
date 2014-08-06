@@ -171,6 +171,10 @@ class ProgressBar(object):
             self.finish()
             raise
 
+    def __repr__(self):
+        return "ProgressBar at %d%% (%d out of %d)" % (
+            self.percent, self.currval, self.maxval)
+
 
     # Create an alias so that Python 2.x won't complain about not being
     # an iterator.
