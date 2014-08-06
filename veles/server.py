@@ -283,6 +283,10 @@ class VelesProtocol(StringLineReceiver):
                             "current state %s" % self.state.current)
 
     def jobRequestReceived(self):
+        if self.id in self.factory.paused_nodes:
+            self.host.info("%s: paused", self.id)
+            self.factory.paused_nodes[self.id] = True
+            return
         self.state.request_job()
         if self.id in self.factory.blacklist:
             self.host.warning("%s: found in the blacklist, refusing the job",
@@ -531,6 +535,7 @@ class VelesProtocolFactory(ServerFactory):
         self.protocols = {}
         self.job_requests = set()
         self.blacklist = set()
+        self.paused_nodes = {}
 
     def buildProtocol(self, addr):
         return VelesProtocol(addr, self)
@@ -578,6 +583,19 @@ class Server(NetworkAgent):
                 return self.zmq_endpoints["ipc"]
         else:
             return self.zmq_endpoints["tcp"].replace("*", hip)
+
+    def pause(self, slave_id):
+        self.factory.paused_nodes[slave_id] = False
+
+    def resume(self, slave_id):
+        try:
+            paused = self.factory.paused_nodes[slave_id]
+            del self.factory.paused_nodes[slave_id]
+            self.info("%s: resumed", slave_id)
+            if paused:
+                self.protocols[slave_id].jobRequestReceived()
+        except KeyError:
+            self.warning("Slave %s was not paused, so not resumed", slave_id)
 
     def initialize(self):
         pass
