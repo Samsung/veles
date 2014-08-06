@@ -203,8 +203,8 @@ class VelesProtocol(StringLineReceiver):
         self._balance = 0
         self._endpoint = None
         self.state = fysom.Fysom(VelesProtocol.FSM_DESCRIPTION, self)
-        self._responders = {"WAIT": self._respondInWAIT,
-                            "WORK": self._respondInWORK}
+        self._responders = {"handshake": self._handshake,
+                            "change_power": self._changePower}
         self._jobs_processed = []
         self._last_job_submit_time = 0
         self._dropper_on_timeout = None
@@ -275,12 +275,12 @@ class VelesProtocol(StringLineReceiver):
             return
         if self.not_a_slave:
             self._sendError("You must reconnect as a slave to send commands")
-        responder = self._responders.get(self.state.current)
+        cmd = msg.get('cmd')
+        responder = self._responders.get(cmd)
         if responder is not None:
             responder(msg, line)
         else:
-            self._sendError("You sent me something which is not allowed in my "
-                            "current state %s" % self.state.current)
+            self._sendError("No responder exists for command %s", cmd)
 
     def jobRequestReceived(self):
         if self.id in self.factory.paused_nodes:
@@ -384,7 +384,12 @@ class VelesProtocol(StringLineReceiver):
         else:
             responder()
 
-    def _respondInWAIT(self, msg, line):
+    def _handshake(self, msg, line):
+        if self.state.current != 'WAIT':
+            self.host.error("Invalid state for a handshake command: %s",
+                            self.state.current)
+            self._sendError("Invalid state")
+            return
         mysha = self.host.workflow.checksum()
         your_sha = msg.get("checksum")
         if not your_sha:
@@ -431,17 +436,14 @@ class VelesProtocol(StringLineReceiver):
             self.nodes[self.id]['data'] = [d for d in data if d is not None]
         self.state.identify()
 
-    def _respondInWORK(self, msg, line):
-        cmd = msg.get("cmd")
-        if not cmd:
-            self.host.error("%s Client sent something which is not a command: "
-                            "%s. Sending back the error message",
-                            self.id, line)
-            self._sendError("No command found")
-            return
-        self.host.error("%s Unsupported %s command. Sending back the error "
-                        "message", self.id, cmd)
-        self._sendError("Unsupported command")
+    def _changePower(self, msg, line):
+        try:
+            power = msg['power']
+            self.nodes[self.id]['power'] = power
+            self.host.info("%s: power changed to %.2f", self.id, power)
+        except KeyError:
+            self.host.error("%s: no 'power' key in the message")
+        return
 
     def _extractClientInformation(self, msg):
         power = msg.get("power")
