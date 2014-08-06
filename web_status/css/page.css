@@ -214,3 +214,10 @@ td.power {
 .table {
   overflow: scroll;
 }
+.progress {
+  margin-bottom: 0px;
+}
+.progress-overflow {
+  background-color: #F5F5F5;
+  color: #000000;
+}

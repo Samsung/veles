@@ -206,6 +206,13 @@ function activateListItem(item_id) {
   details += '</tr>\n';
   details += '</thead>\n';
   details += '<tbody>\n';
+  var max_power = 1;
+  workflow.slaves.forEach(function(slave_pair) {
+    var power = slave_pair.value.power;
+    if (max_power < power) {
+      max_power = power;
+    }
+  })
   workflow.slaves.forEach(function(slave_pair) {
     var slave = slave_pair.value;
     details += '<tr class="';
@@ -230,7 +237,36 @@ function activateListItem(item_id) {
     details += slave.host;
     details += '</a></div></td>\n';
     details += '<td class="power">';
+    details += '<div class="progress"><div class="progress-bar ';
+    var pwr = slave.power / max_power;
+    if (pwr >= 0.7) {
+      details += 'progress-bar-success';
+    } else if (pwr >= 0.4) {
+      details += 'progress-bar-warning';
+    } else {
+      details += 'progress-bar-danger';
+    }
+    details += '" role="progressbar" aria-valuenow="';
     details += slave.power.toFixed(0);
+    details += '" aria-valuemin="0" aria-valuemax="';
+    details += max_power.toFixed(0);
+    details += '" style="width: ';
+    var spp = slave.power * 100 / max_power;
+    details += spp.toFixed(0);
+    details += '%;">';
+    if (pwr >= 0.5) {
+      details += slave.power.toFixed(0);
+    }
+    details += '</div>';
+    if (pwr < 0.5) {
+        details += '<div class="progress-bar progress-overflow" ';
+        details += 'role="progressbar" style="width: ';
+        details += (100 - spp).toFixed(0);
+        details += '%;">'
+        details += slave.power.toFixed(0);
+        details += '</div>';
+    }
+    details += '</div>';
     details += '</td>\n';
     details += '<td class="center-cell">';
     details += slave.state;
