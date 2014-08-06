@@ -316,8 +316,9 @@ class VelesProtocol(StringLineReceiver):
                     for proto in self.factory.protocols.values():
                         if len(proto._jobs_processed) == 0:
                             hanged_slaves.append(proto)
-                    self.host.warning("Detected hanged nodes: %s",
-                                      [s.id for s in hanged_slaves])
+                    if len(hanged_slaves) > 0:
+                        self.host.warning("Detected hanged nodes: %s",
+                                          [s.id for s in hanged_slaves])
                     for slave in hanged_slaves:
                         self.factory.blacklist.add(slave.id)
                         slave.transport.loseConnection()
