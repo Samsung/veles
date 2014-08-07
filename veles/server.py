@@ -5,6 +5,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
+import argparse
 from collections import namedtuple
 import json
 import numpy
@@ -17,6 +18,7 @@ from twisted.python.failure import Failure
 import uuid
 import zmq
 
+from veles.cmdline import CommandLineArgumentsRegistry
 import veles.external.fysom as fysom
 from veles.external.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
 from veles.network_common import NetworkAgent, StringLineReceiver
@@ -146,12 +148,10 @@ class VelesProtocol(StringLineReceiver):
     def onIdentified(self, e):
         self.host.info("New node %s joined from %s (%s)",
                        self.id, self.address, str(self.nodes[self.id]))
+        self.setWaiting(e)
 
     def onJobObtained(self, e):
         self.nodes[self.id]["state"] = "Working"
-
-    def onJobPostponed(self, e):
-        self.nodes[self.id]["state"] = "Waiting"
 
     def setWaiting(self, e):
         self.nodes[self.id]["state"] = "Waiting"
@@ -177,9 +177,9 @@ class VelesProtocol(StringLineReceiver):
             'onconnect': onConnected,
             'onidentify': onIdentified,
             'onobtain_job': onJobObtained,
-            'onpostpone_job': onJobPostponed,
-            'onreceive_update': setWaiting,
-            'onWORK': setWaiting,
+            'onpostpone_job': setWaiting,
+            'onrequest_job': setWaiting,
+            'onrefuse_job': setWaiting,
             'ondrop': onDropped
         }
     }
@@ -208,8 +208,8 @@ class VelesProtocol(StringLineReceiver):
         self._jobs_processed = []
         self._last_job_submit_time = 0
         self._dropper_on_timeout = None
-        self._job_timeout = 60  # secs
-        self._drop_on_timeout = False
+        self._job_timeout = factory.job_timeout
+        self._drop_on_timeout = (self._job_timeout > 0)
 
     @property
     def id(self):
@@ -233,6 +233,10 @@ class VelesProtocol(StringLineReceiver):
     @property
     def not_a_slave(self):
         return self._not_a_slave
+
+    @property
+    def jobs_processed(self):
+        return self._jobs_processed
 
     def connectionMade(self):
         self.hip = self.transport.getHost().host
@@ -314,7 +318,7 @@ class VelesProtocol(StringLineReceiver):
                     self.factory.job_requests.add(self)
                     hanged_slaves = []
                     for proto in self.factory.protocols.values():
-                        if len(proto._jobs_processed) == 0:
+                        if len(proto.jobs_processed) == 0:
                             hanged_slaves.append(proto)
                     if len(hanged_slaves) > 0:
                         self.host.warning("Detected hanged nodes: %s",
@@ -337,7 +341,8 @@ class VelesProtocol(StringLineReceiver):
         upd.addCallback(self.updateFinished)
         upd.addErrback(errback)
         now = time.time()
-        self._jobs_processed.append(now - self._last_job_submit_time)
+        self.jobs_processed.append(now - self._last_job_submit_time)
+        self.nodes[self.id]['jobs'] = len(self.jobs_processed)
         self._last_job_submit_time = now
 
     def updateFinished(self, result):
@@ -465,7 +470,7 @@ class VelesProtocol(StringLineReceiver):
                             "it's process id, sending back the error "
                             "message")
         self.nodes[self.id] = {'power': power, 'mid': mid, 'pid': pid,
-                               'id': self.id}
+                               'id': self.id, 'jobs': 0}
         reactor.callLater(0, self._resolveAddr, self.addr)
         return power, mid, pid
 
@@ -510,10 +515,10 @@ class VelesProtocol(StringLineReceiver):
         self.host.zmq_connection.reply(self.id, b'job', False)
 
     def _scheduleDropOnTimeout(self):
-        if not self._drop_on_timeout or len(self._jobs_processed) < 3:
+        if not self._drop_on_timeout or len(self.jobs_processed) < 3:
             return
-        mean = numpy.mean(self._jobs_processed)
-        stddev = numpy.std(self._jobs_processed)
+        mean = numpy.mean(self.jobs_processed)
+        stddev = numpy.std(self.jobs_processed)
         timeout = max(mean + stddev * 3, self._job_timeout)
         if self._dropper_on_timeout is not None:
             self._dropper_on_timeout.cancel()
@@ -539,18 +544,23 @@ class VelesProtocolFactory(ServerFactory):
         self.job_requests = set()
         self.blacklist = set()
         self.paused_nodes = {}
+        self.job_timeout = host.job_timeout
 
     def buildProtocol(self, addr):
         return VelesProtocol(addr, self)
 
 
+@six.add_metaclass(CommandLineArgumentsRegistry)
 class Server(NetworkAgent):
     """
     UDT/TCP server operating on a single socket
     """
 
-    def __init__(self, configuration, workflow):
+    def __init__(self, configuration, workflow, **kwargs):
         super(Server, self).__init__(configuration)
+        parser = Server.init_parser(**kwargs)
+        self.args, _ = parser.parse_known_args()
+        self.job_timeout = self.args.job_timeout * 60
         self.nodes = {}
         self.workflow = workflow
         self.launcher = workflow.workflow
@@ -577,6 +587,18 @@ class Server(NetworkAgent):
         return "veles.Server with %d nodes and %d protocols on %s:%d" % (
             len(self.nodes), len(self.factory.protocols), self.address,
             self.port)
+
+    @staticmethod
+    def init_parser(**kwargs):
+        """
+        Initializes an instance of argparse.ArgumentParser.
+        """
+        parser = kwargs.get("parser", argparse.ArgumentParser())
+        parser.add_argument("--job-timeout", type=int,
+                            default=kwargs.get("job_timeout", 2),
+                            help="Slaves which remain in WORK state longer "
+                            "than this time (in mins) will be dropped.")
+        return parser
 
     def choose_endpoint(self, mid, pid, hip):
         if self.mid == mid:
