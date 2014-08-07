@@ -346,7 +346,8 @@ class OpenCLBenchmark(OpenCLUnit):
         """
         Launches and waits for the benchmark to finish.
         """
-        self.debug("Running...")
+        self.debug("Running %d repetitions of size %d on %s...",
+                   self.repeats, self.size, self.dtype)
         global_size = [formats.roundup(self.size, self.block_size),
                        formats.roundup(self.size, self.block_size)]
         local_size = [self.block_size, self.block_size]
