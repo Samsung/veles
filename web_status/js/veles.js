@@ -213,30 +213,50 @@ function activateListItem(item_id) {
   details += '</thead>\n';
   details += '<tbody>\n';
   var max_power = 1;
-  workflow.slaves.forEach(function(slave_pair) {
-    var power = slave_pair.value.power;
-    if (max_power < power) {
-      max_power = power;
-    }
-  });
+  var mean_jobs = 0;
   var online_slaves = 0;
   workflow.slaves.forEach(function(slave_pair) {
     var slave = slave_pair.value;
+    var power = slave.power;
+    if (max_power < power) {
+      max_power = power;
+    }
+    if (slave.state != 'Offline') {
+      mean_jobs += slave_pair.value.jobs;
+      online_slaves++;
+    }
+  });
+  mean_jobs /= online_slaves;
+  var jobs_stddev = 0;
+  if (online_slaves > 1) {
+    workflow.slaves.forEach(function(slave_pair) {
+      var slave = slave_pair.value;
+      var delta = slave.jobs - mean_jobs;
+      jobs_stddev += delta * delta;
+    });
+    jobs_stddev = Math.sqrt(jobs_stddev / (online_slaves - 1));
+  }
+  workflow.slaves.forEach(function(slave_pair) {
+    var slave = slave_pair.value;
     details += '<tr class="';
+    var line_style = "";
     switch (slave.state) {
       case "Working":
-        details += "success";
+        line_style = "success";
         break;
       case "Waiting":
-        details += "warning";
+        line_style = "warning";
         break;
       case "Offline":
-        details += "danger";
+        line_style = "danger";
         break;
       default:
         break;
     }
-    details += '">\n';
+    if (slave.jobs < mean_jobs - jobs_stddev * 2 && line_style == "success") {
+      line_style = "warning";
+    }
+    details += line_style + '">\n';
     details += '<td><div class="slave-id graceful-overflow">';
     details += slave_pair.key;
     details += '</div></td>\n';
@@ -283,8 +303,7 @@ function activateListItem(item_id) {
     details += slave.state;
     details += '</td>\n';
     details += '<td class="center-cell">\n';
-    if (slave.state != 'Offline') {
-      online_slaves++;
+    if (slave.state != 'Offline') {      
       details += '<a href="#"><span class="glyphicon glyphicon-pause"></span></a>\n';
       details += '<a href="#"><span class="glyphicon glyphicon-remove"></span></a>\n';
       details += '<a href="#"><span class="glyphicon glyphicon-info-sign"></span></a>\n';
