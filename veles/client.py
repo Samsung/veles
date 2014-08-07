@@ -159,7 +159,7 @@ class VelesProtocol(StringLineReceiver):
         self.state = factory.state
         self._current_deferred = None
         self._power_upload_time = 0
-        self._power_upload_threshold = 30
+        self._power_upload_threshold = 60
 
     @property
     def async(self):
@@ -251,6 +251,12 @@ class VelesProtocol(StringLineReceiver):
             if numpy.random.random() < self.death_probability:
                 raise error.Bug("This slave has randomly crashed (death "
                                 "probability was %f)" % self.death_probability)
+            now = time.time()
+            if now - self._power_upload_time > self._power_upload_threshold:
+                self._power_upload_time = now
+                self.sendLine({
+                    'cmd': 'change_power',
+                    'power': self.factory.host.workflow.computing_power})
             # workflow.do_job may hang, so launch it in the thread pool
             self._set_deferred(self.factory.host.workflow.do_job, job, update,
                                self.job_finished)
@@ -328,12 +334,6 @@ class VelesProtocol(StringLineReceiver):
             # we have to copy the update since it may be overwritten in do_job
             update = copy(update)
         self.factory.zmq_connection.request("update", update or b'')
-        now = time.time()
-        if now - self._power_upload_time > self._power_upload_threshold:
-            self._power_upload_time = now
-            self.sendLine({
-                'cmd': 'change_power',
-                'power': self.factory.host.workflow.computing_power})
 
     def disconnect(self, msg, *args, **kwargs):
         self.factory.host.error(msg, *args, **kwargs)

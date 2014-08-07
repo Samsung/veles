@@ -310,12 +310,14 @@ class OpenCLBenchmark(OpenCLUnit):
 
     def __init__(self, workflow, **kwargs):
         super(OpenCLBenchmark, self).__init__(workflow, **kwargs)
-        self.block_size = 16  # TODO(a.kazantsev): get from device.
-        self.size = 3000
-        self.cl_sources_ = {"benchmark.cl": {
-            'BLOCK_SIZE': self.block_size,
-            'SIZE': self.size
-        }}
+        self.dtype = kwargs.get('dtype')
+        if self.dtype is None:
+            try:
+                self.dtype = root.common.precision_type
+            except:
+                self.dtype = "double"
+        self.size = kwargs.get("size", 1000)
+        self.repeats = kwargs.get("repeats", 8)
         self.input_A_ = formats.Vector()
         self.input_B_ = formats.Vector()
         self.output_C_ = formats.Vector()
@@ -328,6 +330,11 @@ class OpenCLBenchmark(OpenCLUnit):
         """Compiles the benchmarking kernel.
         """
         super(OpenCLBenchmark, self).initialize(device=device, **kwargs)
+        self.block_size = self.device.device_info.BLOCK_SIZE[self.dtype]
+        self.cl_sources_ = {"benchmark.cl": {
+            'BLOCK_SIZE': self.block_size,
+            'SIZE': self.size
+        }}
         self.build_program()
         self.assign_kernel("benchmark")
         self.input_A_.initialize(self.device)
@@ -343,9 +350,12 @@ class OpenCLBenchmark(OpenCLUnit):
         global_size = [formats.roundup(self.size, self.block_size),
                        formats.roundup(self.size, self.block_size)]
         local_size = [self.block_size, self.block_size]
+        self.device.queue_.flush()
         tstart = time.time()
-        self.execute_kernel(global_size, local_size)
+        for _ in range(self.repeats):
+            self.execute_kernel(global_size, local_size)
         self.output_C_.map_read()
+        self.device.queue_.flush()
         tfinish = time.time()
         delta = tfinish - tstart
         res = 1000 / delta
@@ -366,7 +376,7 @@ class OpenCLWorkflow(Workflow):
     def __init__(self, workflow, **kwargs):
         super(OpenCLWorkflow, self).__init__(workflow, **kwargs)
         self._power_measure_time_interval = kwargs.get(
-            'power_measure_time_interval', 60)
+            'power_measure_time_interval', 120)
 
     def init_unpickled(self):
         super(OpenCLWorkflow, self).init_unpickled()
@@ -374,7 +384,7 @@ class OpenCLWorkflow(Workflow):
         self._last_power_measurement_time = 0
         self.device = None
         # FIXME(v.markovtsev): remove the line below when Lubov's code is sync
-        self._power_measure_time_interval = 60
+        self._power_measure_time_interval = 120
 
     @property
     def computing_power(self):
