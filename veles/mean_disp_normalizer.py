@@ -32,6 +32,7 @@ class MeanDispNormalizer(OpenCLUnit, TriviallyDistributable):
         output: normalized float images of the same dtype as rdisp.
     """
     def __init__(self, workflow, **kwargs):
+        kwargs["view_group"] = kwargs.get("view_group", "WORKER")
         super(MeanDispNormalizer, self).__init__(workflow, **kwargs)
         self.input = None
         self.mean = None
