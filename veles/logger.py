@@ -78,7 +78,7 @@ class Logger(object):
         # Set basic log level
         logging.basicConfig(level=level, stream=sys.stdout)
         ProgressBar().logger.level = level
-        # Turn on colors in case of an interactive tty
+        # Turn on colors in case of an interactive out tty
         if sys.stdout.isatty():
             root = logging.getLogger()
             handler = root.handlers[0]
@@ -106,7 +106,7 @@ class Logger(object):
                                       "%(message)s", "%Y-%m-%d %H:%M:%S")
         handler.setFormatter(formatter)
         logging.info("Saving logs to %s", file_name)
-        if not sys.stdout.isatty():
+        if not sys.stdin.isatty():
             logging.getLogger().handlers[0] = handler
             sys.stderr.flush()
             stderr = open("%s.stderr%s" % os.path.splitext(file_name), 'a',
