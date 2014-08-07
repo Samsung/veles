@@ -284,7 +284,7 @@ class VelesProtocol(StringLineReceiver):
         if responder is not None:
             responder(msg, line)
         else:
-            self._sendError("No responder exists for command %s", cmd)
+            self._sendError("No responder exists for command %s" % cmd)
 
     def jobRequestReceived(self):
         if self.id in self.factory.paused_nodes:
