@@ -365,14 +365,16 @@ class OpenCLWorkflow(Workflow):
 
     def __init__(self, workflow, **kwargs):
         super(OpenCLWorkflow, self).__init__(workflow, **kwargs)
-        self._last_power_measurement_time = 0
         self._power_measure_time_interval = kwargs.get(
             'power_measure_time_interval', 60)
 
     def init_unpickled(self):
         super(OpenCLWorkflow, self).init_unpickled()
         self._power_ = 0
+        self._last_power_measurement_time = 0
         self.device = None
+        # FIXME(v.markovtsev): remove the line below when Lubov's code is sync
+        self._power_measure_time_interval = 60
 
     @property
     def computing_power(self):
