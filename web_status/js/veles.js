@@ -97,7 +97,13 @@ function updateUI() {
           items += workflow.master;
           items += '</strong></a><br/>\n';
           items += '<span class="badge pull-right">';
-          items += Object.keys(workflow.slaves).length;
+          var online_slaves = 0;
+          for (var slave in workflow.slaves) {
+            if (workflow.slaves[slave].state != 'Offline') {
+              online_slaves++;
+            }
+          }
+          items += online_slaves;
           items += '</span>\n';
           items += 'Slaves: ';
           slaves = Object.keys(workflow.slaves).map(function(key) {
@@ -212,7 +218,8 @@ function activateListItem(item_id) {
     if (max_power < power) {
       max_power = power;
     }
-  })
+  });
+  var online_slaves = 0;
   workflow.slaves.forEach(function(slave_pair) {
     var slave = slave_pair.value;
     details += '<tr class="';
@@ -235,7 +242,11 @@ function activateListItem(item_id) {
     details += '</div></td>\n';
     details += '<td><div class="slave-host graceful-overflow"><a href="#">';
     details += slave.host;
-    details += '</a></div></td>\n';
+    details += '</a>';
+    if (slave.host == workflow.master) {
+      details += ' <span class="glyphicon glyphicon-flag"></span>';
+    }
+    details += '</div></td>\n';
     details += '<td class="power">';
     details += '<div class="progress"><div class="progress-bar ';
     var pwr = slave.power / max_power;
@@ -272,10 +283,11 @@ function activateListItem(item_id) {
     details += slave.state;
     details += '</td>\n';
     details += '<td class="center-cell">\n';
-    if (slave.status != 'Offline') {
-      details += '<i class="glyphicon glyphicon-pause"><a class="slave-action" ';
-      details += 'href="#">pause</a></i>, <i class="glyphicon glyphicon-remove">';
-      details += '<a class="slave-action" href="#">remove</a></i>\n';
+    if (slave.state != 'Offline') {
+      online_slaves++;
+      details += '<a href="#"><span class="glyphicon glyphicon-pause"></span></a>\n';
+      details += '<a href="#"><span class="glyphicon glyphicon-remove"></span></a>\n';
+      details += '<a href="#"><span class="glyphicon glyphicon-info-sign"></span></a>\n';
     }
     details += '</td>\n';
     details += '</tr>\n';
@@ -296,8 +308,10 @@ function activateListItem(item_id) {
     details += '</a></i> on <a href="#">';
     details += workflow.master;
     details += "</a> and has ";
-    details += Object.keys(workflow.slaves).length;
-    details += ' nodes.<br/>';
+    details += online_slaves;
+    details += ' nodes (';
+    details += Object.keys(workflow.slaves).length - online_slaves;
+    details += ' offline).<br/>';
     details += "Log ID: <strong>" + workflow.log_id + "</strong><br/>";
     details += 'ØMQ endpoints for custom plots:<br/><strong>';
     details += workflow.custom_plots;

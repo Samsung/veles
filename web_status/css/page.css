@@ -176,15 +176,11 @@ html, body {
 .list-group-item-text {
   font-size: small;
 }
-.slave-action {
-  vertical-align: text-top;
-  font-size: small;
-}
 table tr td:empty {
   width: 50px;
 }
 .slave-id {
-  width: 50px;
+  width: 60px;
 }
 .slave-host {
   width: 110px;
