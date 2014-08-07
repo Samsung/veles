@@ -316,8 +316,8 @@ class OpenCLBenchmark(OpenCLUnit):
                 self.dtype = root.common.precision_type
             except:
                 self.dtype = "double"
-        self.size = kwargs.get("size", 1000)
-        self.repeats = kwargs.get("repeats", 8)
+        self.size = kwargs.get("size", 1500)
+        self.repeats = kwargs.get("repeats", 10)
         self.input_A_ = formats.Vector()
         self.input_B_ = formats.Vector()
         self.output_C_ = formats.Vector()
@@ -350,12 +350,11 @@ class OpenCLBenchmark(OpenCLUnit):
         global_size = [formats.roundup(self.size, self.block_size),
                        formats.roundup(self.size, self.block_size)]
         local_size = [self.block_size, self.block_size]
-        self.device.queue_.flush()
+        self.device.queue_.finish()
         tstart = time.time()
         for _ in range(self.repeats):
             self.execute_kernel(global_size, local_size)
-        self.output_C_.map_read()
-        self.device.queue_.flush()
+        self.device.queue_.finish()
         tfinish = time.time()
         delta = tfinish - tstart
         res = 1000 / delta
