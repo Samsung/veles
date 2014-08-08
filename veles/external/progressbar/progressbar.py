@@ -319,4 +319,8 @@ class ProgressBar(object):
         if self.log_level >= self.logger.level:
             self.fd.write('\n')
         if self.signal_set:
-            signal.signal(signal.SIGWINCH, signal.SIG_DFL)
+            try:
+                signal.signal(signal.SIGWINCH, signal.SIG_DFL)
+            except ValueError as e:
+                sys.stderr.write("ProgressBar.finish() signal exception: "
+                                 "%s\n" % repr(e))
