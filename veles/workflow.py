@@ -86,6 +86,10 @@ class MultiMap(OrderedDict, defaultdict):
         defaultdict.__init__(self, default_factory)
 
 
+class NoMoreJobs(Exception):
+    pass
+
+
 @implementer(IUnit, IDistributable)
 class Workflow(Unit):
     """Base class for unit sets which are logically connected and belong to
@@ -289,7 +293,7 @@ class Workflow(Unit):
         """
         self.on_workflow_finished(True)
 
-    def on_workflow_finished(self, slave_force=False):
+    def on_workflow_finished(self, force_propagate=False):
         if not self.is_running:
             # Break an infinite loop if Workflow belongs to Workflow
             return
@@ -299,9 +303,9 @@ class Workflow(Unit):
         self._run_time_ += run_time
         self._method_time_["run"] += run_time
         self.is_running = False
-        if not self.is_slave or slave_force:
+        if self.is_standalone or force_propagate:
             self.workflow.on_workflow_finished()
-        else:
+        elif self.is_slave:
             self._do_job_callback_(self.generate_data_for_master())
 
     def add_ref(self, unit):
@@ -390,6 +394,9 @@ class Workflow(Unit):
             if not unit.negotiates_on_connect:
                 try:
                     data.append(unit.generate_data_for_slave(slave))
+                except NoMoreJobs:
+                    self.on_workflow_finished()
+                    return None
                 except:
                     self.error("Unit %s failed to generate data for slave",
                                unit)
