@@ -2,7 +2,7 @@ div, span, p, td {
 	font-family: Arial, sans-serif;
 }
 #content {
-	width: 1200px;
+	width: 80%;
 }
 #chart {
 	display: inline-block;
@@ -28,10 +28,6 @@ div, span, p, td {
 	position: relative;
 	display: inline-block;
 }
-#smoother {
-	margin: 0 0 10px 16px;
-	width: 100px;
-}
 .rickshaw_graph .detail {
 	left: -1000;
 }
@@ -39,8 +35,8 @@ div, span, p, td {
 	border: 1px solid #f0f0f0;
 }
 #side_panel {
-	padding: 0 20px 20px 0;
-	width: 240px;
+	padding: 0;
+	width: 120px;
 	display: inline-block;
 	vertical-align: top;
 }
@@ -91,11 +87,14 @@ h1 {
 section {
 	border: none;
 	border-top: 1px solid #eaeaea;
-	padding: 15px 0;
+	padding: 10px 0;
+}
+#renderer_section {
+    padding: 5px 0;
 }
 #smoother {
-	margin: 5px 0 0 10px;
-	width: 90%;
+	margin: 10% 0 0 10%;
+	width: 80%;
 }
 label.disabled {
 	opacity: 0.4;
@@ -104,16 +103,11 @@ label.disabled {
 	display: block;
 	margin: 0;
 }
-#renderer_form.toggler input[type=radio]:checked {
+#renderer_form.toggler input[type=radio]:checked + label {
 	outline: 2px solid steelblue;
 }
 #renderer_form.toggler input[type=radio] {
-	-moz-appearance: button;
-	background: white;
-	margin: 0 7px;
-	width: 39px;
-	height: 26px;
-	position: absolute;
+	display: none;
 }
 #renderer_form.toggler label {
 	display: inline-block;
@@ -125,14 +119,14 @@ label.disabled {
 	color: #808080;
 	background-repeat: no-repeat;
 	position: relative;
-	margin: 0 7px;
+	margin: 7px 7px;
 	cursor: pointer;
 }
 #interpolation_form,
 #offset_form {
-	vertical-align: top;
-	display: inline-block;
-	width: 45%;
+	/*vertical-align: top;*/
+	display: block;
+	width: 100%;
 }
 #interpolation_form label,
 #offset_form label {
