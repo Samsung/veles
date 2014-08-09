@@ -111,7 +111,10 @@ class Distributable(Pickleable):
                 # Deadlock checks are possible on Python 3 only
                 if not self._data_lock_.acquire(
                         timeout=Distributable.DEADLOCK_TIME):
-                    self.error("Deadlock in %s: %s", self.name, name)
+                    self.warning("Possible deadlock in %s: %s.\n"
+                                 "If this warning persists, consider changing "
+                                 "Distributable.DEADLOCK_TIME.",
+                                 self.name, name)
                 else:
                     self._data_lock_.release()
             with self._data_lock_:
