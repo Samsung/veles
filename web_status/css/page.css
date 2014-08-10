@@ -166,9 +166,6 @@ html, body {
 .active > div > .list-group-item-text > i > a {
   color: #ffffff;
 }
-.list-group-item-heading {
-  display: inline;
-}
 .view-plots {
   float: right;
   font-size: small;

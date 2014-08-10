@@ -20,6 +20,7 @@ var active_workflow_id = null;
 var detailed_workflow_id = null;
 var listed_workflows = null;
 var svg_cache = {};
+var jobs_per_minute = {};
 
 function updateUI() {
   if (updating) {
@@ -62,6 +63,22 @@ function updateUI() {
         var items = '';
         workflows.forEach(function(pair) {
           var workflow = pair.value;
+          slaves = Object.keys(workflow.slaves).map(function(key) {
+            return { "key": key, "value": workflow.slaves[key] };
+          });
+          slaves.sort(function(a, b) {
+            return a.value.host > b.value.host;
+          });
+          listed_workflows[pair.key].slaves = slaves;
+          var jobs = 0;
+          for (var slave in workflow.slaves) {
+            jobs += workflow.slaves[slave].value.jobs;
+          }
+          if (!(pair.key in jobs_per_minute)) {
+            jobs_per_minute[pair.key] = [];
+          }
+          jobs_per_minute[pair.key].push({"time": new Date().getTime() / 60000,
+                                          "jobs": jobs});
           if (typeof svg_cache[pair.key] === "undefined") {
             svg_cache[pair.key] =
               $(renderGraphviz(workflow.graph)).find("svg");
@@ -79,19 +96,19 @@ function updateUI() {
           items += '">\n';
           items += svg.wrap('<div>').parent().html();
           items += '<div class="media-body graceful-overflow">\n';
-          items += '<h4 class="list-group-item-heading"><a href="#" ';
-          items += 'onclick="activateListItem(\'';
-          items += pair.key;
-          items += '\')">';
-          items += workflow.name;
-          items += '</a></h4>\n';
           items += '<a class="view-plots" href="';
           items += workflow.plots;
           items += '" target="_blank">plots</a>';
           items += '<span class="view-plots">&nbsp;</span>\n';
           items += '<a class="view-plots" href=log_viewer.html?id="';
           items += workflow.log_id;
-          items += '"target="_blank">logs</a><br/>\n';
+          items += '"target="_blank">logs</a>\n';
+          items += '<h4 class="list-group-item-heading"><a href="#" ';
+          items += 'onclick="activateListItem(\'';
+          items += pair.key;
+          items += '\')">';
+          items += workflow.name;
+          items += '</a></h4>\n';
           items += '<span class="list-group-item-text">Master: ';
           items += '<a href="#"><strong>';
           items += workflow.master;
@@ -106,22 +123,29 @@ function updateUI() {
           items += online_slaves;
           items += '</span>\n';
           items += 'Slaves: ';
-          slaves = Object.keys(workflow.slaves).map(function(key) {
-            return { "key": key, "value": workflow.slaves[key] };
-          });
-          slaves.sort(function(a, b) {
-            return a.value.host > b.value.host;
-          });
-          listed_workflows[pair.key].slaves = slaves;
-          slaves.forEach(function(slave) {
-            items += '<a href="#"><strong>';
-            items += slave.value.host;
-            items += '</strong></a>, ';
-          });
-          if (slaves.length > 0) {
-            items = items.substring(0, items.length - 2);
+          var jpmp = jobs_per_minute[pair.key];
+          if (jobs_per_minute[pair.key].length >= 5) {
+            var latest = jpmp.slice(-1)[0];
+            var now = latest.time;
+            var then = now;
+            var offset = 2;
+            var jobs_diff = 0;
+            while (now - then <= 10 && offset <= jpmp.length) {
+              var measure = jpmp[jpmp.length - offset];
+              then = measure.time;
+              jobs_diff = measure.jobs;
+              offset++;
+            }            
+            jobs_diff = latest.jobs - jobs_diff;
+            if (now > then) {                
+              items += (jobs_diff / (now - then)).toFixed(0);
+            } else {
+              items += 'N/A';
+            }
+          } else {
+            items += 'N/A';
           }
-          items += '<br/>\n';
+          items += ' jpm<br/>\n';
           items += 'Time running: <strong>';
           items += workflow.time;
           items += '</strong><br/>\n';
