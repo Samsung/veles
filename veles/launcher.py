@@ -382,7 +382,7 @@ class Launcher(logger.Logger):
         self._start_time = time.time()
         if not self.is_slave:
             self.workflow_graph, _ = self.workflow.generate_graph(
-                filename=None, write_on_disk=False)
+                filename=None, write_on_disk=False, with_data_links=True)
         if self.reports_web_status:
             self.start_time = time.time()
             self._notify_update_last_time = self.start_time
