@@ -406,12 +406,8 @@ class Main(Logger):
         self.launcher.graphics_client.send_signal(signal.SIGUSR2)
         from twisted.internet import reactor
         reactor.callWhenRunning(self._run_workflow_plotters)
-        reactor.callWhenRunning(self._print_string,
-                                "Press Ctrl-C when you are done...")
+        reactor.callWhenRunning(print, "Press Ctrl-C when you are done...")
         reactor.run()
-
-    def _print_string(self, string):
-        print(string)
 
     def _run_workflow_plotters(self):
         from veles.plotter import Plotter
