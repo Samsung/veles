@@ -95,6 +95,11 @@ var random = new Rickshaw.Fixtures.RandomData(150);
 
 for (var i = 0; i < 150; i++) {
 	random.addData(seriesData);
+    if (i > 0) {
+        for (var s = 0; s < seriesData.length; s++) {
+            seriesData[s][i].y += seriesData[s][i - 1].y
+        }
+    }
 }
 
 var palette = new Rickshaw.Color.Palette( { scheme: 'classic9' } );
@@ -112,31 +117,31 @@ var graph = new Rickshaw.Graph( {
 		{
 			color: palette.color(),
 			data: seriesData[0],
-			name: 'Moscow'
+			name: 'kuznetsovu64'
 		}, {
 			color: palette.color(),
 			data: seriesData[1],
-			name: 'Shanghai'
+			name: 'markovtsevu64'
 		}, {
 			color: palette.color(),
 			data: seriesData[2],
-			name: 'Amsterdam'
+			name: 'lpodoynitsinau64'
 		}, {
 			color: palette.color(),
 			data: seriesData[3],
-			name: 'Paris'
+			name: 'kazantsevu64'
 		}, {
 			color: palette.color(),
 			data: seriesData[4],
-			name: 'Tokyo'
+			name: 'smaug 1'
 		}, {
 			color: palette.color(),
 			data: seriesData[5],
-			name: 'London'
+			name: 'smaug 2'
 		}, {
 			color: palette.color(),
 			data: seriesData[6],
-			name: 'New York'
+			name: 'golovizinu64'
 		}
 	]
 } );
@@ -226,6 +231,9 @@ var messages = [
 setInterval( function() {
 	random.removeData(seriesData);
 	random.addData(seriesData);
+    for (var s = 0; s < seriesData.length; s++) {
+        seriesData[s][seriesData[s].length - 1].y += seriesData[s].slice(-2)[0].y
+    }
 	graph.update();
 
 }, 3000 );
