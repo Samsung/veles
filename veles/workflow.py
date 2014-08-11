@@ -523,7 +523,9 @@ class Workflow(Unit):
         """
         g = pydot.Dot(graph_name="Workflow",
                       graph_type="digraph",
-                      bgcolor=background)
+                      bgcolor=background,
+                      mindist=0.5,
+                      overlap="false")
         g.set_prog("circo")
         visited_units = set()
         boilerplate = set([self.start_point])
@@ -534,7 +536,8 @@ class Workflow(Unit):
             unit_file_name = os.path.relpath(inspect.getfile(unit.__class__),
                                              root.common.veles_dir)
             node.set("label",
-                     '<<b>%s</b><br/><font point-size=\"8\">%s</font>>'
+                     '<<b><font point-size=\"18\">%s</font></b><br/>'
+                     '<font point-size=\"14\">%s</font>>'
                      % (unit.name, unit_file_name))
             node.set("shape", "rect")
             node.add_style("rounded")
@@ -542,6 +545,8 @@ class Workflow(Unit):
             color = Workflow.UNIT_GROUP_COLORS.get(unit.view_group, "white")
             node.set("fillcolor", color)
             node.set("gradientangle", "90")
+            if isinstance(unit, Repeater):
+                g.set("root", hex(id(unit)))
             g.add_node(node)
             for link in unit.links_to.keys():
                 g.add_edge(pydot.Edge(hex(id(unit)), hex(id(link))))
@@ -593,6 +598,11 @@ class Workflow(Unit):
                                 constraint="false"))
         if write_on_disk:
             if not filename:
+                try:
+                    os.mkdir(os.path.join(root.common.cache_dir, "plots"),
+                             mode=0o775)
+                except FileExistsError:
+                    pass
                 (_, filename) = tempfile.mkstemp(
                     ".png", "workflow_",
                     dir=os.path.join(root.common.cache_dir, "plots"))
