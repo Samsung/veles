@@ -29,6 +29,10 @@ from veles.external.progressbar import ProgressBar, Percentage, Bar
 import veles.external.pydot as pydot
 
 
+if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
+    FileExistsError = OSError  # pylint: disable=W0622
+
+
 class Repeater(TrivialUnit):
     """Completes a typical control flow cycle, usually joining the first unit
     with the last one.
@@ -525,7 +529,7 @@ class Workflow(Unit):
                       graph_type="digraph",
                       bgcolor=background,
                       mindist=0.5,
-                      overlap="false")
+                      overlap="false", outputorder="edgesfirst")
         g.set_prog("circo")
         visited_units = set()
         boilerplate = set([self.start_point])
@@ -549,7 +553,8 @@ class Workflow(Unit):
                 g.set("root", hex(id(unit)))
             g.add_node(node)
             for link in unit.links_to.keys():
-                g.add_edge(pydot.Edge(hex(id(unit)), hex(id(link))))
+                g.add_edge(pydot.Edge(hex(id(unit)), hex(id(link)),
+                                      penwidth=3))
                 if link not in visited_units and link not in boilerplate:
                     boilerplate.add(link)
         if with_data_links:
