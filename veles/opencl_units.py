@@ -320,11 +320,9 @@ class OpenCLBenchmark(OpenCLUnit):
         self.repeats = kwargs.get("repeats", 10)
         self.input_A_ = formats.Vector()
         self.input_B_ = formats.Vector()
-        self.output_C_ = formats.Vector()
         msize = [self.size, self.size]
         self.input_A_.mem = numpy.zeros(msize, dtype=numpy.double)
         self.input_B_.mem = numpy.zeros(msize, dtype=numpy.double)
-        self.output_C_.mem = numpy.zeros(msize, dtype=numpy.double)
 
     def initialize(self, device, **kwargs):
         """Compiles the benchmarking kernel.
@@ -339,8 +337,7 @@ class OpenCLBenchmark(OpenCLUnit):
         self.assign_kernel("benchmark")
         self.input_A_.initialize(self.device)
         self.input_B_.initialize(self.device)
-        self.output_C_.initialize(self.device)
-        self.set_args(self.input_A_, self.input_B_, self.output_C_)
+        self.set_args(self.input_A_, self.input_A_, self.input_B_)
 
     def estimate(self):
         """
