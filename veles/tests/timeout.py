@@ -10,6 +10,7 @@ import signal
 from six import print_
 import sys
 import threading
+from veles.thread_pool import ThreadPool
 
 
 new_event = threading.Event()
@@ -38,6 +39,10 @@ def shutdown(errcode=0):
     new_event.set()
     if thread.is_alive():
         thread.join()
+    if sysexit == ThreadPool.exit and sys.exit == shutdown:
+        print_("timeout sysexit <-> ThreadPool.exit recursion",
+               file=sys.stderr)
+        os._exit(errcode)
     sysexit(errcode)
 
 
