@@ -554,7 +554,8 @@ class Workflow(Unit):
             g.add_node(node)
             for link in unit.links_to.keys():
                 g.add_edge(pydot.Edge(hex(id(unit)), hex(id(link)),
-                                      penwidth=3))
+                                      penwidth=3,
+                                      weight=100))
                 if link not in visited_units and link not in boilerplate:
                     boilerplate.add(link)
         if with_data_links:
