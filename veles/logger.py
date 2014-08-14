@@ -22,6 +22,11 @@ class Logger(object):
     Provides logging facilities to derived classes.
     """
 
+    SET_UP = False
+
+    class LoggerHasBeenAlreadySetUp(Exception):
+        pass
+
     class ColorFormatter(logging.Formatter):
         GREEN_MARKERS = [' ok', 'finished', 'completed', 'ready', 'done',
                          'running', 'successful', 'saved']
@@ -70,6 +75,10 @@ class Logger(object):
 
     @staticmethod
     def setup(level):
+        if Logger.SET_UP:
+            raise Logger.LoggerHasBeenAlreadySetUp()
+        Logger.SET_UP = True
+
         # Ensure UTF-8 on stdout and stderr; in some crazy environments,
         # they use 'ascii' encoding by default.
         sys.stdout, sys.stderr = (codecs.getwriter("utf-8")(s.buffer)
