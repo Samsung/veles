@@ -1,0 +1,65 @@
+population parameters
+	chromosomes: 100
+
+selection parameters:
+	select_type: roulette
+		select_size: 75
+	select_type: random
+		select_size: 50
+	select_type: tournament
+		tournament_size: 50
+		select_size: 10
+	use: roulette
+	
+crossing parameters
+	cross_type: pointed
+		use: n
+		crossings: 20
+		points: 8
+		probability: 1.0
+	cross_type: uniform
+		use: y
+		crossings: 15
+		probability: 0.9
+	cross_type: arithmetic
+		use: y
+		crossings: 15
+		probability: 0.9
+	cross_type: geometric
+		use: y
+		crossings: 20
+		probability: 0.9
+		
+mutation parameters
+	mut_type: binary_point
+		use: n
+		chromosomes:20
+		points: 6
+		probability: 0.35
+	mut_type: gaussian
+		use: y
+		chromosomes: 35
+		points: 5
+		probability: 0.70
+	mut_type: uniform
+		use: y
+		chromosomes: 35
+		points: 5
+		probability: 0.70
+	mut_type: altering
+		use: n
+		chromosomes: 10
+		points: 
+		probability: 0.35
+	
+optimization parameters:
+	dimensions: 5
+	accuracy: 0.001
+	min_x: [0.000001,  20,   0, 0.0, 10 ]
+	max_x: [	 0.5, 300, 0.5, 1.0, 350]
+	code: float
+
+stopping parameters:
+	time: no
+	epoch: 100
+	median_best_diff: 0.001
