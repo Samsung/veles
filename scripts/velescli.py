@@ -38,6 +38,7 @@ except:
     pass
 import argparse
 import atexit
+import binascii
 from email.utils import formatdate
 import errno
 import gc
@@ -149,7 +150,7 @@ class Main(Logger):
                             default="/dev/urandom:16",
                             help="Set the random generator seed, e.g. "
                                  "veles/samples/seed:1024,:1024 or "
-                                 "/dev/urandom:16:uint32")
+                                 "/dev/urandom:16:uint32 or hex string")
         parser.add_argument('-w', '--snapshot', default="",
                             help='workflow snapshot')
         parser.add_argument("--dump-config", default=False,
@@ -256,6 +257,14 @@ class Main(Logger):
     def _seed_random(self, rndvals):
         rndvals_split = rndvals.split(',')
         for rndval, index in zip(rndvals_split, range(len(rndvals_split))):
+            try:
+                binvle = binascii.unhexlify(rndval)
+                rnd.get(index + 1).seed(
+                    numpy.frombuffer(binvle, dtype=numpy.uint8),
+                    dtype=numpy.uint8)
+                continue
+            except binascii.Error:
+                pass
             vals = rndval.split(':')
             fname = vals[0]
             if fname == "":
