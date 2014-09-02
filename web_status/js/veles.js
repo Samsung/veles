@@ -7,7 +7,7 @@
 function renderGraphviz(desc) {
   var result;
   try {
-    var raw_result = Viz(desc, "svg", "circo");
+    var raw_result = Viz(desc, "svg", "neato", ["-n"]);
     result = $.parseXML(raw_result);
   } catch(e) {
     result = e;
