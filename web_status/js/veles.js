@@ -116,7 +116,7 @@ function updateUI() {
           items += '<span class="badge pull-right">';
           var online_slaves = 0;
           for (var slave in workflow.slaves) {
-            if (workflow.slaves[slave].state != 'Offline') {
+            if (workflow.slaves[slave].value.state != 'Offline') {
               online_slaves++;
             }
           }
