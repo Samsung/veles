@@ -131,23 +131,42 @@ class Logger(object):
         logging.info("Saving logs to Mongo on %s", addr)
         logging.getLogger().addHandler(handler)
 
+    def change_log_message(self, msg):
+        return msg
+
+    def msg_changeable(fn):
+        def msg_changeable_wrapper(self, msg, *args, **kwargs):
+            msg = self.change_log_message(msg)
+            return fn(self, msg, *args, **kwargs)
+
+        msg_changeable_wrapper.__name__ = fn.__name__ + "_msg_changeable"
+        return msg_changeable_wrapper
+
+    @msg_changeable
     def debug(self, msg, *args, **kwargs):
         self.logger.debug(msg, *args, **kwargs)
 
+    @msg_changeable
     def info(self, msg, *args, **kwargs):
         self.logger.info(msg, *args, **kwargs)
 
+    @msg_changeable
     def warning(self, msg, *args, **kwargs):
         self.logger.warning(msg, *args, **kwargs)
 
+    @msg_changeable
     def error(self, msg, *args, **kwargs):
         self.logger.error(msg, *args, **kwargs)
 
+    @msg_changeable
     def exception(self, msg="Exception", *args, **kwargs):
         self.logger.exception(msg, *args, **kwargs)
 
+    @msg_changeable
     def critical(self, msg, *args, **kwargs):
         self.logger.critical(msg, *args, **kwargs)
+
+    msg_changeable = staticmethod(msg_changeable)
 
 
 class MongoLogHandler(logging.Handler):
