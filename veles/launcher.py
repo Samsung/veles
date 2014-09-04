@@ -420,6 +420,7 @@ class Launcher(logger.Logger):
 
     def _print_stats(self):
         self.workflow.print_stats()
+        self.agent.print_stats()
         if self._start_time is not None:
             self.info(
                 "Time elapsed: %s", datetime.timedelta(

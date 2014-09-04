@@ -7,6 +7,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 import argparse
 from copy import copy
+import datetime
 import json
 import numpy
 import six
@@ -21,6 +22,7 @@ import zmq
 from veles.cmdline import CommandLineArgumentsRegistry
 import veles.error as error
 import veles.external.fysom as fysom
+from veles.external.prettytable import PrettyTable
 from veles.external.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
 from veles.network_common import NetworkAgent, StringLineReceiver, IDLogger
 from veles.thread_pool import errback
@@ -378,6 +380,20 @@ class Client(NetworkAgent, ReconnectingClientFactory):
 
     def initialize(self):
         self._initial_data = self.workflow.generate_initial_data_for_master()
+
+    def print_stats(self):
+        table = PrettyTable("", "receive", "send")
+        table.align[""] = "r"
+        table.add_row(
+            "all",
+            datetime.timedelta(seconds=self.zmq_connection.total_receive_time),
+            datetime.timedelta(seconds=self.zmq_connection.total_request_time))
+        table.add_row(
+            "avg",
+            datetime.timedelta(seconds=self.zmq_connection.receive_timing),
+            datetime.timedelta(seconds=self.zmq_connection.request_timings[
+                "update"]))
+        self.info("Timings:\n%s", table)
 
     def startedConnecting(self, connector):
         self.info('Connecting to %s:%s...', self.address, self.port)

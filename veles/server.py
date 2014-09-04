@@ -622,3 +622,6 @@ class Server(NetworkAgent):
 
     def initialize(self):
         pass
+
+    def print_stats(self):
+        pass
