@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="img/veles.png" />
+    <title>VELES Command Line Frontend</title>
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/frontend.css" rel="stylesheet" type="text/css" />
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    </head>
+    <body>
+        <div id="arguments">
+            <!-- INSERT ARGUMENTS HERE-->
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Obligatory</span>
+                  <h3 class="panel-title">Mode</h3>                  
+                </div>
+                <div class="panel-body">   
+                    <div class="pull-right description">
+                      <p>Selects VELES operation mode. Standalone is the best choice for debugging workflows and relatively small tasks. Master mode runs VELES workflow server which accepts slaves. Slave mode is the headless VELES instance which requests jobs from a master and returns results.</p>
+                    </div>                 
+                    <div class="dropdown">
+                      <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown">
+                        Standalone
+                        <span class="caret"></span>
+                      </button>
+                      <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
+                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Standalone</a></li>
+                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Master</a></li>
+                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Slave</a></li>
+                      </ul>
+                    </div>                    
+                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Obligatory</span>
+                  <h3 class="panel-title">config_list</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Configuration overrides separated by a whitespace, for example: 
+root.global_alpha=0.006
+root.snapshot_prefix='test_pr'.</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">config_list</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Obligatory</span>
+                  <h3 class="panel-title">config</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Path to the configuration file                            (write "-" to search in as <WORKFLOW>_config.py)..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">config</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Obligatory</span>
+                  <h3 class="panel-title">workflow</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Path to the Python script with workflow..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">workflow</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">help</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>show this help message and exit.</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">help</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">manhole</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>run the embedded interactive shell accessible through a UNIX socket.</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">manhole</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">cpu</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Force OpenCL units to run on CPU..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">cpu</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">sync_ocl</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Force OpenCL units to run synchronously. This option is useful for measuring the actual unit run times..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">sync_ocl</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">async</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Activate asynchronous master-slave protocol on slaves..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">async</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">death_probability</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Each slave will die with the probability specified by this value..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">death_probability</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">graphics_pickle_debug</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Save plotter object trees during server send..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">graphics_pickle_debug</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">job_timeout</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Slaves which remain in WORK state longer than this time (in mins) will be dropped..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">job_timeout</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">master_address</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Workflow will be launched in client mode and connected to the master at the specified address..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">master_address</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">listen_address</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Workflow will be launched in server mode and will accept client connections at the specified address..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">listen_address</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">matplotlib_backend</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Matplotlib drawing backend..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">matplotlib_backend</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">no_graphics_client</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Do not launch the graphics client. Server will still be started unless matplotlib backend is an empty string..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">no_graphics_client</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">background</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Run in background as a daemon..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">background</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">stealth</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Do not report own status to the Web Status Server..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">stealth</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">nodes</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>The list of slaves to launch remotely separated by commas. Slave format is host/OpenCLPlatformNumber:OpenCLDevice(s)xN,examples: host/0:0, host/1:0-2, host/0:2-3x3..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">nodes</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">validate_history</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Check the apply/generate history on master..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">validate_history</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">log_file</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>The file name where logs will be copied..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">log_file</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">log_file_pid</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Insert process ID into the log file name..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">log_file_pid</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">log_mongo</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Mongo ZMQ endpoint where logs will be copied..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">log_mongo</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">log_id</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Log identifier (used my Mongo logger)..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">log_id</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">yarn_nodes</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Discover the nodes from this YARN ResourceManager's address..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">yarn_nodes</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">max_nodes</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Max number of slaves launched. 0 means unlimited number..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">max_nodes</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">device</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>OpenCL device to use..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">device</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">no_logo</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Do not print VELES version, copyright and other information on startup..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">no_logo</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">verbose</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Set the logging verbosity level..</p>
+                    </div>
+                    <div class="dropdown">
+                      <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown">
+                        debug
+                        <span class="caret"></span>
+                      </button>
+                      <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
+                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#">debug</a></li>
+                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#">warning</a></li>
+                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#">error</a></li>
+                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#">info</a></li>
+                      </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">debug</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Set DEBUG logging level for these classes (separated by comma).</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">debug</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">debug_pickle</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Turn on pickle diagnostics..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">debug_pickle</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">random_seed</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Set the random generator seed, e.g. veles/samples/seed:1024,:1024 or /dev/urandom:16:uint32 or hex string.</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">random_seed</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">snapshot</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>workflow snapshot.</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">snapshot</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">dump_config</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Print the resulting workflow configuration.</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">dump_config</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">dry_run</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>no: normal work; load: stop before loading/creating the workflow; init: stop before workflow initialization; exec: stop before workflow execution..</p>
+                    </div>
+                    <div class="dropdown">
+                      <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown">
+                        load
+                        <span class="caret"></span>
+                      </button>
+                      <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
+                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#">load</a></li>
+                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#">init</a></li>
+                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#">exec</a></li>
+                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#">no</a></li>
+                      </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">visualize</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>initialize, but do not run the loaded model, show workflow graph and plots.</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">visualize</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">workflow_graph</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Save workflow graph to file..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">workflow_graph</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">dump_unit_attributes</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Print unit __dict__-s after workflow initialization, excluding large numpy arrays..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">dump_unit_attributes</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+            <div class="panel panel-primary argument">
+                <div class="panel-heading">
+                  <span class="label label-danger argtype">Not obligatory</span>
+                  <h3 class="panel-title">dump_all_unit_attributes</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Print all unit attributes, including large numpy arrays..</p>
+                    </div>
+                    <div class="input-group">
+  <span class="input-group-addon">dump_all_unit_attributes</span>
+  <input type="text" class="form-control" placeholder="">
+</div>                </div>
+            </div>
+        </div>
+        <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+        <script src="js/jquery.min.js"></script>
+        <!-- Include all compiled plugins (below), or include individual files as needed -->
+        <script src="js/bootstrap.min.js"></script>
+    </body>
+</html>
