@@ -382,17 +382,22 @@ class Client(NetworkAgent, ReconnectingClientFactory):
         self._initial_data = self.workflow.generate_initial_data_for_master()
 
     def print_stats(self):
+        if self.zmq_connection is None:
+            return
         table = PrettyTable("", "receive", "send")
         table.align[""] = "r"
         table.add_row(
             "all",
             datetime.timedelta(seconds=self.zmq_connection.total_receive_time),
             datetime.timedelta(seconds=self.zmq_connection.total_request_time))
-        table.add_row(
-            "avg",
-            datetime.timedelta(seconds=self.zmq_connection.receive_timing),
-            datetime.timedelta(seconds=self.zmq_connection.request_timings[
-                "update"]))
+        try:
+            table.add_row(
+                "avg",
+                datetime.timedelta(seconds=self.zmq_connection.receive_timing),
+                datetime.timedelta(seconds=self.zmq_connection.request_timings[
+                    "update"]))
+        except KeyError:
+            pass
         self.info("Timings:\n%s", table)
 
     def startedConnecting(self, connector):

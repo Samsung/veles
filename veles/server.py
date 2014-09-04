@@ -21,11 +21,12 @@ import zmq
 from veles.cmdline import CommandLineArgumentsRegistry
 import veles.external.fysom as fysom
 from veles.external.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
-from veles.network_common import NetworkAgent, StringLineReceiver
+from veles.logger import Logger
+from veles.network_common import NetworkAgent, StringLineReceiver, IDLogger
 from veles.thread_pool import errback
 
 
-class ZmqRouter(ZmqConnection):
+class ZmqRouter(ZmqConnection, Logger):
     socketType = zmq.ROUTER
 
     COMMANDS = {
@@ -37,7 +38,7 @@ class ZmqRouter(ZmqConnection):
     RESERVE_SHMEM_SIZE = 0.05
 
     def __init__(self, host, *endpoints, **kwargs):
-        super(ZmqRouter, self).__init__(endpoints)
+        super(ZmqRouter, self).__init__(endpoints, logger=kwargs.get("logger"))
         ignore_unknown_commands = kwargs.get("ignore_unknown_commands", False)
         self.host = host
         self.routing = {b'job': {}, b'update': {}}
@@ -46,24 +47,26 @@ class ZmqRouter(ZmqConnection):
         self._command = None
         self.ignore_unknown_commands = ignore_unknown_commands
 
+    def change_log_message(self, msg):
+        return "zmq: " + msg
+
     def parseHeader(self, message):
         try:
             routing, node_id, command = message[0:3]
         except ValueError:
-            self.host.error("ZeroMQ sent an invalid message %s",
-                            str(message[0:3]))
+            self.error("ZeroMQ sent an invalid message %s", message[0:3])
             return
         node_id = node_id.decode('charmap')
         self.routing[command][node_id] = routing
-        protocol = self.host.factory.protocols.get(node_id)
+        protocol = self.host.protocols.get(node_id)
         if protocol is None:
-            self.host.error("ZeroMQ sent unknown node ID %s", node_id)
+            self.error("ZeroMQ sent unknown node ID %s", node_id)
             self.reply(node_id, b'error', b'Unknown node ID')
             return
         command = ZmqRouter.COMMANDS.get(command)
         if command is None and not self.ignore_unknown_commands:
-            self.host.error("Received an unknown command %s with node ID %s",
-                            str(message[2]), node_id)
+            self.error("Received an unknown command %s with node ID %s",
+                       message[2], node_id)
             self.reply(node_id, b'error', b'Unknown command')
             return
         return node_id, command, protocol
@@ -71,12 +74,12 @@ class ZmqRouter(ZmqConnection):
     def messageReceived(self, message):
         if self._command is None:
             self.messageHeaderReceived(message)
-        self.host.debug("Received ZeroMQ message %s", str(message[0:3]))
+        self.debug("Received ZeroMQ message %s", str(message[0:3]))
         try:
             payload = message[3]
         except IndexError:
-            self.host.error("ZeroMQ sent an invalid message %s with node ID "
-                            "%s", str(message), self.node_id)
+            self.error("ZeroMQ sent an invalid message %s with node ID %s",
+                       message, self.node_id)
             self.reply(self.node_id, b'error', b'Invalid message')
             return
         self._command(self._protocol, payload)
@@ -94,7 +97,7 @@ class ZmqRouter(ZmqConnection):
             is_ipc = self.host.nodes[node_id]['endpoint'].startswith("ipc://")
             io_overflow = False
             shmem = self.shmem.get(node_id)
-            if not shmem is None and channel == b"job":
+            if shmem is not None and channel == b"job":
                 self.shmem[node_id].seek(0)
         try:
             pickles_size = self.send(
@@ -127,7 +130,7 @@ class SlaveDescription(namedtuple(
         return SlaveDescription(**args)
 
 
-class VelesProtocol(StringLineReceiver):
+class VelesProtocol(StringLineReceiver, IDLogger):
     """A communication controller from server to client.
 
     Attributes:
@@ -139,15 +142,14 @@ class VelesProtocol(StringLineReceiver):
         """
         Logs the current state transition.
         """
-        self.host.debug("%s state: %s, %s -> %s",
-                        self.id, e.event, e.src, e.dst)
+        self.debug("state: %s, %s -> %s", e.event, e.src, e.dst)
 
     def onConnected(self, e):
-        self.host.info("Accepted %s", self.address)
+        self.info("Accepted %s", self.address)
 
     def onIdentified(self, e):
-        self.host.info("New node %s joined from %s (%s)",
-                       self.id, self.address, str(self.nodes[self.id]))
+        self.info("New node joined from %s (%s)",
+                  self.address, str(self.nodes[self.id]))
         self.setWaiting(e)
 
     def onJobObtained(self, e):
@@ -157,7 +159,7 @@ class VelesProtocol(StringLineReceiver):
         self.nodes[self.id]["state"] = "Waiting"
 
     def onDropped(self, e):
-        self.host.warning("Lost connection with %s", self.id or self.address)
+        self.warning("Lost connection with %s", self.address)
         if self.id in self.nodes:
             self.nodes[self.id]["state"] = "Offline"
 
@@ -184,19 +186,18 @@ class VelesProtocol(StringLineReceiver):
         }
     }
 
-    def __init__(self, addr, factory):
+    def __init__(self, addr, host):
         """
         Initializes the protocol.
 
         Parameters:
             addr    The address of the client (reported by Twisted).
             nodes   The clients which are known (dictionary, the key is ID).
-            factory An instance of producing VelesProtocolFactory.
+            host An instance of producing VelesProtocolFactory.
         """
-        super(VelesProtocol, self).__init__()
+        super(VelesProtocol, self).__init__(logger=host.logger)
         self.addr = addr
-        self.factory = factory
-        self.host = factory.host
+        self.host = host
         self.nodes = self.host.nodes
         self._id = None
         self._not_a_slave = False
@@ -208,7 +209,7 @@ class VelesProtocol(StringLineReceiver):
         self._jobs_processed = []
         self._last_job_submit_time = 0
         self._dropper_on_timeout = None
-        self._job_timeout = factory.job_timeout
+        self._job_timeout = host.job_timeout
         self._drop_on_timeout = (self._job_timeout > 0)
 
     @property
@@ -217,10 +218,12 @@ class VelesProtocol(StringLineReceiver):
 
     @id.setter
     def id(self, value):
+        if value is None:
+            return
         if self._id is not None:
-            del self.factory.protocols[self._id]
+            del self.host.protocols[self._id]
         self._id = value
-        self.factory.protocols[self._id] = self
+        self.host.protocols[self._id] = self
 
     @property
     def address(self):
@@ -249,13 +252,13 @@ class VelesProtocol(StringLineReceiver):
         if self._dropper_on_timeout is not None:
             self._dropper_on_timeout.cancel()
         try:
-            self.factory.job_requests.remove(self)
+            self.host.job_requests.remove(self)
         except KeyError:
             pass
         if not self.host.workflow.is_running:
             if self.id in self.nodes:
                 del self.nodes[self.id]
-            del self.factory.protocols[self.id]
+            del self.host.protocols[self.id]
             if len(self.nodes) == 0:
                 self.host.launcher.stop()
         elif self.id in self.nodes:
@@ -264,16 +267,15 @@ class VelesProtocol(StringLineReceiver):
                 self.host.workflow.drop_slave,
                 SlaveDescription.make(self.nodes[self.id])).addErrback(
                 errback)
-            if self.id in self.factory.protocols:
-                del self.factory.protocols[self.id]
+            if self.id in self.host.protocols:
+                del self.host.protocols[self.id]
             d.addCallback(self._retryJobRequests)
 
     def lineReceived(self, line):
-        self.host.debug("%s lineReceived:  %s", self.id, line)
+        self.debug("lineReceived:  %s", line)
         msg = json.loads(line.decode("utf-8"))
         if not isinstance(msg, dict):
-            self.host.error("%s Could not parse the received line, dropping "
-                            "it", self.id)
+            self.error("Could not parse the received line, dropping it")
             return
         if self._checkQuery(msg):
             return
@@ -287,14 +289,13 @@ class VelesProtocol(StringLineReceiver):
             self._sendError("No responder exists for command %s" % cmd)
 
     def jobRequestReceived(self):
-        if self.id in self.factory.paused_nodes:
-            self.host.info("%s: paused", self.id)
-            self.factory.paused_nodes[self.id] = True
+        if self.id in self.host.paused_nodes:
+            self.info("paused")
+            self.host.paused_nodes[self.id] = True
             return
         self.state.request_job()
-        if self.id in self.factory.blacklist:
-            self.host.warning("%s: found in the blacklist, refusing the job",
-                              self.id)
+        if self.id in self.host.blacklist:
+            self.warning("found in the blacklist, refusing the job")
             self._refuseJob()
         else:
             self._requestJob()
@@ -305,7 +306,7 @@ class VelesProtocol(StringLineReceiver):
         if data is not None:
             if not data:
                 # Try again later
-                self.host.debug("%s: job is not ready", self.id)
+                self.debug("job is not ready")
                 self._balance -= 1
                 if self._balance > 0:
                     # async mode - avoid deadlock
@@ -313,18 +314,17 @@ class VelesProtocol(StringLineReceiver):
                     self.host.zmq_connection.reply(self.id, b'job',
                                                    b'NEED_UPDATE')
                 else:
-                    self.host.debug("%s: appending to the sync point job "
-                                    "requests list", self.id)
-                    self.factory.job_requests.add(self)
+                    self.debug("appending to the sync point job requests list")
+                    self.host.job_requests.add(self)
                     hanged_slaves = []
-                    for proto in self.factory.protocols.values():
+                    for proto in self.host.protocols.values():
                         if len(proto.jobs_processed) == 0:
                             hanged_slaves.append(proto)
                     if len(hanged_slaves) > 0:
-                        self.host.warning("Detected hanged nodes: %s",
-                                          [s.id for s in hanged_slaves])
+                        self.warning("Detected hanged nodes: %s",
+                                     [s.id for s in hanged_slaves])
                     for slave in hanged_slaves:
-                        self.factory.blacklist.add(slave.id)
+                        self.host.blacklist.add(slave.id)
                         slave.transport.loseConnection()
                 return
             self.state.obtain_job()
@@ -333,7 +333,7 @@ class VelesProtocol(StringLineReceiver):
             self._refuseJob()
 
     def updateReceived(self, data):
-        self.host.debug("%s: update was received", self.id)
+        self.debug("update was received")
         upd = threads.deferToThreadPool(
             reactor, self.host.workflow.thread_pool,
             self.host.workflow.apply_data_from_slave, data,
@@ -346,17 +346,16 @@ class VelesProtocol(StringLineReceiver):
         self._last_job_submit_time = now
 
     def updateFinished(self, result):
-        if not self.state.current in ('WORK', 'GETTING_JOB'):
-            self.host.warning("Update was finished in an invalid state %s",
-                              self.state.current)
+        if self.state.current not in ('WORK', 'GETTING_JOB'):
+            self.warning("Update was finished in an invalid state %s",
+                         self.state.current)
             return
         if result:
             self.host.zmq_connection.reply(self.id, b'update', b'1')
         else:
             self.host.zmq_connection.reply(self.id, b'update', b'0')
         self._balance -= 1
-        self.host.debug("%s: update was finished, balance is %d now", self.id,
-                        self._balance)
+        self.debug("update was finished, balance is %d now", self._balance)
         if self.state.current == 'GETTING_JOB':
             self._requestJob()
             return
@@ -369,8 +368,8 @@ class VelesProtocol(StringLineReceiver):
             StringLineReceiver.sendLine(self, json.dumps(line))
 
     def _retryJobRequests(self, _=None):
-        while len(self.factory.job_requests) > 0:
-            requester = self.factory.job_requests.pop()
+        while len(self.host.job_requests) > 0:
+            requester = self.host.job_requests.pop()
             requester._requestJob()
 
     def _checkQuery(self, msg):
@@ -391,14 +390,14 @@ class VelesProtocol(StringLineReceiver):
 
     def _handshake(self, msg, line):
         if self.state.current != 'WAIT':
-            self.host.error("Invalid state for a handshake command: %s",
-                            self.state.current)
+            self.error("Invalid state for a handshake command: %s",
+                       self.state.current)
             self._sendError("Invalid state")
             return
         mysha = self.host.workflow.checksum()
         your_sha = msg.get("checksum")
         if not your_sha:
-            self.host.error("Did not receive the workflow checksum")
+            self.error("Did not receive the workflow checksum")
             self._sendError("Workflow checksum is missing")
             return
         if mysha != your_sha:
@@ -412,8 +411,7 @@ class VelesProtocol(StringLineReceiver):
         else:
             self.id = msgid
             if not self.nodes.get(self.id):
-                self.host.warning("Did not recognize the received ID %s",
-                                  self.id)
+                self.warning("Did not recognize the received ID %s")
                 must_reply = True
             else:
                 self.sendLine({'reconnect': "ok"})
@@ -421,7 +419,7 @@ class VelesProtocol(StringLineReceiver):
             try:
                 _, mid, pid = self._extractClientInformation(msg)
             except Exception as e:
-                self.host.error(str(e))
+                self.error(str(e))
                 return
             data = self.host.workflow.generate_initial_data_for_slave(
                 SlaveDescription.make(self.nodes[self.id]))
@@ -445,9 +443,9 @@ class VelesProtocol(StringLineReceiver):
         try:
             power = msg['power']
             self.nodes[self.id]['power'] = power
-            self.host.info("%s: power changed to %.2f", self.id, power)
+            self.info("power changed to %.2f", power)
         except KeyError:
-            self.host.error("%s: no 'power' key in the message")
+            self.error("no 'power' key in the message")
         return
 
     def _extractClientInformation(self, msg):
@@ -478,8 +476,7 @@ class VelesProtocol(StringLineReceiver):
         host, _, _ = socket.gethostbyaddr(addr.host)
         if host == "localhost":
             host = socket.gethostname()
-        self.host.debug("%s Address %s was resolved to %s", self.id,
-                        addr.host, host)
+        self.debug("address %s was resolved to %s", addr.host, host)
         self.nodes[self.id]['host'] = host
 
     def _sendError(self, err):
@@ -489,17 +486,16 @@ class VelesProtocol(StringLineReceiver):
         Parameters:
             err:    The error message.
         """
-        self.host.error(err)
+        self.error(err)
         self.sendLine({'error': err})
 
     def _requestJob(self):
         if self._balance > 1:
-            self.host.debug("%s: job balance %d, will give the job after "
-                            "applying the update", self.id, self._balance)
+            self.debug("job balance %d, will give the job after applying "
+                       "the update", self._balance)
             return
         self._balance += 1
-        self.host.debug("%s: generating the job, balance %d",
-                        self.id, self._balance)
+        self.debug("generating the job, balance %d", self._balance)
         if self._last_job_submit_time == 0:
             self._last_job_submit_time = time.time()
         job = threads.deferToThreadPool(
@@ -527,31 +523,16 @@ class VelesProtocol(StringLineReceiver):
         self._dropper_on_timeout.addErrback(lambda _: None)
 
     def _dropOnTimeout(self, timeout):
-        self.host.error("%s: timeout (%.3f seconds) was exceeded. "
-                        "Dropping this slave.", self.id, timeout)
+        self.error("timeout (%.3f seconds) was exceeded. Dropping this slave.",
+                   timeout)
         self.transport.loseConnection()
-        self.factory.blacklist.add(self.id)
+        self.host.blacklist.add(self.id)
         # TODO(v.markovtsev): inform Launcher to start a new node, if current
         # was started via ssh
 
 
-class VelesProtocolFactory(ServerFactory):
-    def __init__(self, host):
-        if six.PY3:
-            super(VelesProtocolFactory, self).__init__()
-        self.host = host
-        self.protocols = {}
-        self.job_requests = set()
-        self.blacklist = set()
-        self.paused_nodes = {}
-        self.job_timeout = host.job_timeout
-
-    def buildProtocol(self, addr):
-        return VelesProtocol(addr, self)
-
-
 @six.add_metaclass(CommandLineArgumentsRegistry)
-class Server(NetworkAgent):
+class Server(NetworkAgent, ServerFactory):
     """
     UDT/TCP server operating on a single socket
     """
@@ -562,15 +543,19 @@ class Server(NetworkAgent):
         self.args, _ = parser.parse_known_args()
         self.job_timeout = self.args.job_timeout * 60
         self.nodes = {}
-        self.factory = VelesProtocolFactory(self)
-        reactor.listenTCP(self.port, self.factory, interface=self.address)
+        self.protocols = {}
+        self.job_requests = set()
+        self.blacklist = set()
+        self.paused_nodes = {}
+        reactor.listenTCP(self.port, self, interface=self.address)
         self.info("Accepting new connections on %s:%d",
                   self.address, self.port)
         try:
             self.zmq_connection = ZmqRouter(
                 self, ZmqEndpoint("bind", "inproc://veles"),
                 ZmqEndpoint("bind", "rndipc://veles-ipc-:"),
-                ZmqEndpoint("bind", "rndtcp://*:1024:65535:1"))
+                ZmqEndpoint("bind", "rndtcp://*:1024:65535:1"),
+                logger=self.logger)
         except zmq.error.ZMQBindError:
             self.exception("Could not setup ZeroMQ socket")
             raise
@@ -583,8 +568,7 @@ class Server(NetworkAgent):
 
     def __repr__(self):
         return "veles.Server with %d nodes and %d protocols on %s:%d" % (
-            len(self.nodes), len(self.factory.protocols), self.address,
-            self.port)
+            len(self.nodes), len(self.protocols), self.address, self.port)
 
     @staticmethod
     def init_parser(**kwargs):
@@ -608,13 +592,13 @@ class Server(NetworkAgent):
             return self.zmq_endpoints["tcp"].replace("*", hip)
 
     def pause(self, slave_id):
-        self.factory.paused_nodes[slave_id] = False
+        self.paused_nodes[slave_id] = False
 
     def resume(self, slave_id):
         try:
-            paused = self.factory.paused_nodes[slave_id]
-            del self.factory.paused_nodes[slave_id]
-            self.info("%s: resumed", slave_id)
+            paused = self.paused_nodes[slave_id]
+            del self.paused_nodes[slave_id]
+            self.info("resumed")
             if paused:
                 self.protocols[slave_id].jobRequestReceived()
         except KeyError:
@@ -625,3 +609,6 @@ class Server(NetworkAgent):
 
     def print_stats(self):
         pass
+
+    def buildProtocol(self, addr):
+        return VelesProtocol(addr, self)

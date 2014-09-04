@@ -108,7 +108,7 @@ class ZmqConnection(Logger):
     CODECS = {None: b'\x00', "": b'\x00', "gzip": b'\x01', "snappy": b'\x02',
               "xz": b'\x03'}
 
-    def __init__(self, endpoints, identity=None):
+    def __init__(self, endpoints, identity=None, **kwargs):
         """
         Constructor.
 
