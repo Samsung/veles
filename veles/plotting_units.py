@@ -28,7 +28,10 @@ class AccumulatingPlotter(Plotter):
 
     Must be assigned before initialize():
         input
-        input_field
+        input_field *
+
+    * If input_field is not assigned, input is treated as a single floating
+    point value.
 
     Updates after run():
 
@@ -69,7 +72,8 @@ class AccumulatingPlotter(Plotter):
         self.input_offset = 0
         self.pp = None
         self.show_figure = self.nothing
-        self.demand("input", "input_field")
+        self.input_field = None
+        self.demand("input")
 
     def redraw(self):
         self.pp.ioff()
@@ -127,7 +131,10 @@ class AccumulatingPlotter(Plotter):
         super(AccumulatingPlotter, self).run()
 
     def _add_value(self):
-        if type(self.input_field) == int:
+        if self.input_field is None:
+            assert isinstance(self.input, float)
+            value = self.input
+        elif isinstance(self.input_field, int):
             if self.input_field < 0 or self.input_field >= len(self.input):
                 return
             value = self.input[self.input_field]
