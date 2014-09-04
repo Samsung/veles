@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python3 -O
 # encoding: utf-8
 '''
 This script extracts music features from audio files.

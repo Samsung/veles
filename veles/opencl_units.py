@@ -112,7 +112,7 @@ class OpenCLUnit(Unit):
                       show_ocl_logs=True):
         """Builds the OpenCL program.
 
-        program_ will be initialized to the resulting program object.
+        `program_` will be initialized to the resulting program object.
         """
         if cache_file_name is None:
             cache_file_name = self.name
