@@ -90,9 +90,12 @@ class SnapshotterBase(Unit):
         self._slave_ended(slave)
 
     def _slave_ended(self, slave):
+        if slave is None:
+            return
+        if slave.id not in self.slaves:
+            return
         del self.slaves[slave.id]
-        if (not len(self.slaves) and not bool(self.gate_skip)
-                and not bool(self.gate_block)):
+        if not (len(self.slaves) or self.gate_skip or self.gate_block):
             self.run()
 
     def drop_slave(self, slave):
