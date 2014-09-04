@@ -1,0 +1,25 @@
+body {
+  padding: 2em;
+}
+html, body {
+  height: 100%;
+}
+#arguments {
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+  width: 50%;
+  height: 100%;
+}
+.panel-heading {
+  padding-bottom: 5px;
+}
+.panel-title {
+  display: inline;
+}
+.argtype {
+  float: right;
+}
+.description {
+  width: 50%;
+}
