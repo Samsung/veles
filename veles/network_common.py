@@ -10,10 +10,10 @@ import six
 from twisted.protocols.basic import LineReceiver
 import uuid
 
-import veles.logger as logger
+from veles.logger import Logger
 
 
-class NetworkAgent(logger.Logger):
+class NetworkAgent(Logger):
     """
     Stores the address and the port number.
     """
@@ -21,7 +21,7 @@ class NetworkAgent(logger.Logger):
     CONFIG_ADDRESS = "address"
     CONFIG_PORT = "port"
 
-    def __init__(self, configuration):
+    def __init__(self, configuration, workflow):
         """
         Parses the configuration file and loads CONFIG_ADDRESS and CONFIG_PORT
         """
@@ -29,22 +29,14 @@ class NetworkAgent(logger.Logger):
         self._mid = None
         self._pid = None
         idx_semicolon = configuration.find(":")
-        if idx_semicolon == -1:  # assume configuration file
-            cf = open(configuration, "r")
-            txt = cf.read()
-            cf.close()
-            self.options = eval(txt)
-            if not isinstance(self.options, dict):
-                raise RuntimeError("Corrupted network configuration file %s." %
-                                   configuration)
-            self.address = self.options[NetworkAgent.CONFIG_ADDRESS]
-            self.port = self.options[NetworkAgent.CONFIG_PORT]
-        else:  # assume tcp
-            self.address = configuration[:idx_semicolon]
-            if not self.address:
-                self.address = "0.0.0.0"
-            self.port = int(configuration[idx_semicolon + 1:])
+        assert idx_semicolon >= 0
+        self.address = configuration[:idx_semicolon]
+        if not self.address:
+            self.address = "0.0.0.0"
+        self.port = int(configuration[idx_semicolon + 1:])
         self.debug("Network configuration: %s:%d", self.address, self.port)
+        self._workflow = workflow
+        self._launcher = workflow.workflow
 
     @property
     def pid(self):
@@ -58,6 +50,14 @@ class NetworkAgent(logger.Logger):
             with open("/var/lib/dbus/machine-id") as midfd:
                 self._mid = "%s-%x" % (midfd.read()[:-1], uuid.getnode())
         return self._mid
+
+    @property
+    def workflow(self):
+        return self._workflow
+
+    @property
+    def launcher(self):
+        return self._launcher
 
 
 class StringLineReceiver(LineReceiver, object):
@@ -74,3 +74,12 @@ class StringLineReceiver(LineReceiver, object):
                 LineReceiver.sendLine(self, line)
         else:
             raise RuntimeError("Only str and bytes are allowed.")
+
+
+class IDLogger(Logger):
+    def __init__(self, logger=None, log_id=None):
+        super(IDLogger, self).__init__(logger=logger)
+        self.id = log_id
+
+    def change_log_message(self, msg):
+        return "%s: %s" % (self.id or "<none>", msg)

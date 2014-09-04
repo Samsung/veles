@@ -557,13 +557,11 @@ class Server(NetworkAgent):
     """
 
     def __init__(self, configuration, workflow, **kwargs):
-        super(Server, self).__init__(configuration)
+        super(Server, self).__init__(configuration, workflow)
         parser = Server.init_parser(**kwargs)
         self.args, _ = parser.parse_known_args()
         self.job_timeout = self.args.job_timeout * 60
         self.nodes = {}
-        self.workflow = workflow
-        self.launcher = workflow.workflow
         self.factory = VelesProtocolFactory(self)
         reactor.listenTCP(self.port, self.factory, interface=self.address)
         self.info("Accepting new connections on %s:%d",

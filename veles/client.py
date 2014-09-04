@@ -22,7 +22,7 @@ from veles.cmdline import CommandLineArgumentsRegistry
 import veles.error as error
 import veles.external.fysom as fysom
 from veles.external.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
-from veles.network_common import NetworkAgent, StringLineReceiver
+from veles.network_common import NetworkAgent, StringLineReceiver, IDLogger
 from veles.thread_pool import errback
 
 
@@ -83,7 +83,7 @@ class ZmqDealer(ZmqConnection):
         return sum((val[0] for val in self._request_timings.values()))
 
     def request(self, command, message=b''):
-        if not self.shmem is None and command == 'update':
+        if self.shmem is not None and command == 'update':
             self.shmem.seek(0)
         try:
             checkpt = time.time()
@@ -106,7 +106,7 @@ class ZmqDealer(ZmqConnection):
                 int(pickles_size * (1.0 + ZmqDealer.RESERVE_SHMEM_SIZE)))
 
 
-class VelesProtocol(StringLineReceiver):
+class VelesProtocol(StringLineReceiver, IDLogger):
     """A communication controller from client to server.
 
     Attributes:
@@ -118,7 +118,7 @@ class VelesProtocol(StringLineReceiver):
         """
         Logs the current state transition.
         """
-        self.factory.host.debug("state: %s, %s -> %s", e.event, e.src, e.dst)
+        self.debug("state: %s, %s -> %s", e.event, e.src, e.dst)
 
     FSM_DESCRIPTION = {
         'initial': 'INIT',
@@ -139,7 +139,7 @@ class VelesProtocol(StringLineReceiver):
         }
     }
 
-    def __init__(self, addr, factory, async=False, death_probability=0.0):
+    def __init__(self, addr, host):
         """
         Initializes the protocol.
 
@@ -147,48 +147,34 @@ class VelesProtocol(StringLineReceiver):
             addr        The address of the server (reported by Twisted).
             factory     The factory which produced this protocol.
         """
-        super(VelesProtocol, self).__init__()
+        super(VelesProtocol, self).__init__(logger=host.logger)
         self.addr = addr
-        self.factory = factory
-        self.factory.host.protocol = self
+        self.host = host
         self._last_update = None
-        self.async = async
-        self.death_probability = death_probability
-        if factory.state is None:
-            factory.state = fysom.Fysom(VelesProtocol.FSM_DESCRIPTION, self)
-        self.state = factory.state
+        self.state = host.state
         self._current_deferred = None
         self._power_upload_time = 0
         self._power_upload_threshold = 60
 
-    @property
-    def async(self):
-        return self._async
-
-    @async.setter
-    def async(self, value):
-        self._async = value
-
     def connectionMade(self):
-        self.factory.host.info("Connected in %s state", self.state.current)
-        self.factory.disconnect_time = None
-        if self.factory.id is None:
+        self.info("Connected in %s state", self.state.current)
+        self.disconnect_time = None
+        if self.id is None:
             self.request_id()
             return
         self.send_id()
         self.state.send_id()
 
     def connectionLost(self, reason):
-        self.factory.host.debug("Connection was lost")
+        self.debug("Connection was lost")
         if self._current_deferred is not None:
             self._current_deferred.cancel()
 
     def lineReceived(self, line):
-        self.factory.host.debug("lineReceived %s:  %s", self.factory.id, line)
+        self.debug("lineReceived:  %s", line)
         msg = json.loads(line.decode("utf-8"))
         if not isinstance(msg, dict):
-            self.factory.host.error("Could not parse the received line, "
-                                    "dropping it")
+            self.error("Could not parse the received line, dropping it")
             return
         err = msg.get("error")
         if err:
@@ -196,33 +182,32 @@ class VelesProtocol(StringLineReceiver):
             return
         if self.state.current == "WAIT":
             if msg.get("reconnect") == "ok":
-                if self.factory.id is None:
-                    self.factory.host.error("Server returned a successful "
-                                            "reconnection, but my ID is None")
+                if self.id is None:
+                    self.error("Server returned a successful reconnection, "
+                               "but my ID is None")
                     self.request_id()
                     return
                 self.request_job()
                 return
             cid = msg.get("id")
             if cid is None:
-                self.factory.host.error("No ID was received in WAIT state")
+                self.error("No ID was received in WAIT state")
                 self.request_id()
                 return
-            self.factory.id = cid
-            self.factory.host.info("My ID is %s", cid)
+            self.id = cid
+            self.info("Received ID")
             endpoint = msg.get("endpoint")
             if endpoint is None:
-                self.factory.host.error("No endpoint was received")
+                self.error("No endpoint was received")
                 self.request_id()
                 return
-            self.factory.zmq_connection = ZmqDealer(
+            self.host.zmq_connection = self.zmq_connection = ZmqDealer(
                 cid, self, ZmqEndpoint("connect", endpoint))
-            self.factory.host.info("Connected to ZeroMQ endpoint %s",
-                                   endpoint)
+            self.info("Connected to ZeroMQ endpoint %s", endpoint)
             data = msg.get('data')
             if data is not None:
                 self._set_deferred(
-                    self.factory.host.workflow.apply_initial_data_from_master,
+                    self.host.workflow.apply_initial_data_from_master,
                     data)
             self.request_job()
             return
@@ -230,42 +215,42 @@ class VelesProtocol(StringLineReceiver):
 
     def job_received(self, job):
         if not job:
-            self.factory.host.info("Job was refused")
+            self.info("Job was refused")
             self.state.refuse_job()
         elif job == b"NEED_UPDATE":
-            self.factory.host.debug("Master returned NEED_UPDATE, will repeat "
-                                    "the job request in "
-                                    "update_result_received()")
+            self.debug("Master returned NEED_UPDATE, will repeat the job "
+                       "request in update_result_received()")
             self.state.postpone_job()
         else:
             self.state.obtain_job()
         update = self._last_update
-        if self.async and update is not None:
+        if self.host.async and update is not None:
             self.request_update()
         if job == b"NEED_UPDATE":
             return
-        if not job and not self.async:
-            self.factory.host.launcher.stop()
+        if not job and not self.host.async:
+            self.host.launcher.stop()
             return
         try:
-            if numpy.random.random() < self.death_probability:
+            if numpy.random.random() < self.host.death_probability:
                 raise error.Bug("This slave has randomly crashed (death "
-                                "probability was %f)" % self.death_probability)
+                                "probability was %f)" %
+                                self.host.death_probability)
             now = time.time()
             if now - self._power_upload_time > self._power_upload_threshold:
                 self._power_upload_time = now
                 self.sendLine({
                     'cmd': 'change_power',
-                    'power': self.factory.host.workflow.computing_power})
+                    'power': self.host.workflow.computing_power})
             # workflow.do_job may hang, so launch it in the thread pool
-            self._set_deferred(self.factory.host.workflow.do_job, job, update,
+            self._set_deferred(self.host.workflow.do_job, job, update,
                                self.job_finished)
         except:
             errback(Failure())
 
     def _set_deferred(self, f, *args, **kwargs):
         self._current_deferred = threads.deferToThreadPool(
-            reactor, self.factory.host.workflow.thread_pool,
+            reactor, self.host.workflow.thread_pool,
             f, *args, **kwargs)
 
         def cancellable_errback(err):
@@ -278,25 +263,25 @@ class VelesProtocol(StringLineReceiver):
 
     def job_finished(self, update):
         if self.state.current != "BUSY":
-            self.factory.host.error("Invalid state %s", self.state.current)
+            self.error("Invalid state %s", self.state.current)
             return
         self._last_update = update
         self.state.complete_job()
-        if self.async:
+        if self.host.async:
             self.request_job()
         else:
             self.request_update()
 
     def update_result_received(self, result):
         if result == b'0':
-            self.factory.host.warning("Last update was rejected")
+            self.warning("Last update was rejected")
         else:
             assert result == b'1'
-            self.factory.host.debug("Update was confirmed")
+            self.debug("Update was confirmed")
         if self.state.current == "END":
-            self.factory.host.launcher.stop()
+            self.host.launcher.stop()
             return
-        if not self.async or self.state.current == "POSTPONED":
+        if not self.host.async or self.state.current == "POSTPONED":
             self.request_job()
 
     def sendLine(self, line):
@@ -307,106 +292,62 @@ class VelesProtocol(StringLineReceiver):
 
     def _common_id(self):
         return {'cmd': 'handshake',
-                'power': self.factory.host.workflow.computing_power,
-                'checksum': self.factory.host.workflow.checksum(),
-                'mid': self.factory.host.mid,
-                'pid': self.factory.host.pid}
+                'power': self.host.workflow.computing_power,
+                'checksum': self.host.workflow.checksum(),
+                'mid': self.host.mid,
+                'pid': self.host.pid}
 
     def send_id(self):
         common = self._common_id()
-        common['id'] = self.factory.id
+        common['id'] = self.id
         self.sendLine(common)
 
     def request_id(self):
         request = self._common_id()
-        request['data'] = self.factory.host.initial_data
+        request['data'] = self.host.initial_data
         self.sendLine(request)
         self.state.request_id()
 
     def request_job(self):
         self.state.request_job()
-        self.factory.zmq_connection.request("job")
+        self.zmq_connection.request("job")
 
     def request_update(self):
-        self.factory.host.debug("Sending the update...")
+        self.debug("Sending the update...")
         update, self._last_update = self._last_update, None
-        if self.async:
+        if self.host.async:
             # we have to copy the update since it may be overwritten in do_job
             update = copy(update)
-        self.factory.zmq_connection.request("update", update or b'')
+        self.zmq_connection.request("update", update or b'')
 
     def disconnect(self, msg, *args, **kwargs):
-        self.factory.host.error(msg, *args, **kwargs)
+        self.error(msg, *args, **kwargs)
         self.state.disconnect()
         self.transport.loseConnection()
 
 
-class VelesProtocolFactory(ReconnectingClientFactory):
-    RECONNECTION_INTERVAL = 1
-    RECONNECTION_ATTEMPTS = 60
-
-    def __init__(self, host, async, death_probability):
-        if six.PY3:
-            super(VelesProtocolFactory, self).__init__()
-        self.host = host
-        self.id = None
-        self.state = None
-        self._async = async
-        self._death_probability = death_probability
-        self.disconnect_time = None
-        self.zmq_connection = None
-
-    def startedConnecting(self, connector):
-        self.host.info('Connecting to %s:%s...',
-                       self.host.address, self.host.port)
-
-    def buildProtocol(self, addr):
-        return VelesProtocol(addr, self, self._async, self._death_probability)
-
-    def clientConnectionLost(self, connector, reason):
-        if self.state is None or self.state.current not in ['ERROR', 'END']:
-            lost_state = "<None>"
-            if self.state is not None:
-                lost_state = self.state.current
-                self.state.reconnect()
-            if self.disconnect_time is None:
-                self.disconnect_time = time.time()
-            if ((time.time() - self.disconnect_time) //
-                    VelesProtocolFactory.RECONNECTION_INTERVAL >
-                    VelesProtocolFactory.RECONNECTION_ATTEMPTS):
-                self.host.error("Max reconnection attempts reached, exiting")
-                self.host.launcher.stop()
-                return
-            self.host.warning("Disconnected in %s state, trying to "
-                              "reconnect...", lost_state)
-            reactor.callLater(VelesProtocolFactory.RECONNECTION_INTERVAL,
-                              connector.connect)
-        else:
-            self.host.info("Disconnected")
-            if self.state.current == 'ERROR':
-                self.host.launcher.stop()
-
-    def clientConnectionFailed(self, connector, reason):
-        self.host.warning('Connection failed. Reason: %s', reason)
-        self.clientConnectionLost(connector, reason)
-
-
 @add_metaclass(CommandLineArgumentsRegistry)
-class Client(NetworkAgent):
+class Client(NetworkAgent, ReconnectingClientFactory):
     """
-    UDT/TCP client operating on a single socket.
+    Twisted factory which operates on a TCP socket for commands and a ZeroMQ
+    endpoint for data exchange.
     """
 
-    def __init__(self, configuration, workflow):
-        super(Client, self).__init__(configuration)
-        self.workflow = workflow
-        self.launcher = workflow.workflow
+    def __init__(self, configuration, workflow, timeout=300,
+                 reconnection_interval=1, reconnection_attempts=60):
+        super(Client, self).__init__(configuration, workflow)
         parser = Client.init_parser()
         args, _ = parser.parse_known_args()
-        self.factory = VelesProtocolFactory(self, args.async,
-                                            args.death_probability)
+        self._async = args.async
+        self._death_probability = args.death_probability
         self._initial_data = None
-        reactor.connectTCP(self.address, self.port, self.factory, timeout=300)
+        self.id = None
+        self.state = fysom.Fysom(VelesProtocol.FSM_DESCRIPTION, self)
+        self.zmq_connection = None
+        self.disconnect_time = None
+        self.reconnection_interval = 1
+        self.reconnection_attempts = reconnection_attempts
+        reactor.connectTCP(self.address, self.port, self, timeout=timeout)
 
     @staticmethod
     def init_parser(**kwargs):
@@ -427,5 +368,46 @@ class Client(NetworkAgent):
     def initial_data(self):
         return self._initial_data
 
+    @property
+    def async(self):
+        return self._async
+
+    @property
+    def death_probability(self):
+        return self._death_probability
+
     def initialize(self):
         self._initial_data = self.workflow.generate_initial_data_for_master()
+
+    def startedConnecting(self, connector):
+        self.info('Connecting to %s:%s...', self.address, self.port)
+
+    def buildProtocol(self, addr):
+        self.protocol = VelesProtocol(addr, self)
+        self.state.owner = self.protocol
+        return self.protocol
+
+    def clientConnectionLost(self, connector, reason):
+        if self.state is None or self.state.current not in ['ERROR', 'END']:
+            lost_state = "<None>"
+            if self.state is not None:
+                lost_state = self.state.current
+                self.state.reconnect()
+            if self.disconnect_time is None:
+                self.disconnect_time = time.time()
+            if ((time.time() - self.disconnect_time) //
+                    self.reconnection_interval > self.reconnection_attempts):
+                self.error("Max reconnection attempts reached, exiting")
+                self.launcher.stop()
+                return
+            self.warning("Disconnected in %s state, trying to reconnect...",
+                         lost_state)
+            reactor.callLater(self.reconnection_interval, connector.connect)
+        else:
+            self.info("Disconnected")
+            if self.state.current == 'ERROR':
+                self.launcher.stop()
+
+    def clientConnectionFailed(self, connector, reason):
+        self.warning('Connection failed. Reason: %s', reason)
+        self.clientConnectionLost(connector, reason)
