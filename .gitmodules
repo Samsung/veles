@@ -19,6 +19,6 @@
   url = https://github.com/madler/zlib
   ignore = dirty
 [submodule "web_status/viz.js"]
-  path = web_status/viz.js
+  path = web/viz.js
   url = https://github.com/vmarkovtsev/viz.js
   ignore = dirty
