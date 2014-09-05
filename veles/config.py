@@ -101,6 +101,8 @@ root.common.update = {
     "web_status_port": 8090,
     "web_status_update": "update",
     "web_status_pidfile": "/var/run/veles/web_status",
+    "web_folder": os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                               "web"),
     "ThreadPool": {
         "minthreads": 2,
         "maxthreads": 2,
