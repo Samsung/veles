@@ -30,9 +30,9 @@ class ZmqRouter(ZmqConnection, Logger):
     socketType = zmq.ROUTER
 
     COMMANDS = {
-        b'job':
+        'job':
         lambda protocol, payload: protocol.jobRequestReceived(),
-        b'update':
+        'update':
         lambda protocol, payload: protocol.updateReceived(payload)
     }
     RESERVE_SHMEM_SIZE = 0.05
@@ -45,6 +45,7 @@ class ZmqRouter(ZmqConnection, Logger):
         self.shmem = {}
         self.use_shmem = kwargs.get('use_shared_memory', True)
         self._command = None
+        self._command_str = None
         self.ignore_unknown_commands = ignore_unknown_commands
 
     def change_log_message(self, msg):
@@ -63,13 +64,14 @@ class ZmqRouter(ZmqConnection, Logger):
             self.error("ZeroMQ sent unknown node ID %s", node_id)
             self.reply(node_id, b'error', b'Unknown node ID')
             return
-        command = ZmqRouter.COMMANDS.get(command)
+        cmdstr = command.decode('charmap')
+        command = ZmqRouter.COMMANDS.get(cmdstr)
         if command is None and not self.ignore_unknown_commands:
             self.error("Received an unknown command %s with node ID %s",
-                       message[2], node_id)
+                       cmdstr, node_id)
             self.reply(node_id, b'error', b'Unknown command')
             return
-        return node_id, command, protocol
+        return node_id, command, cmdstr, protocol
 
     def messageReceived(self, message):
         if self._command is None:
@@ -82,17 +84,23 @@ class ZmqRouter(ZmqConnection, Logger):
                        message, self.node_id)
             self.reply(self.node_id, b'error', b'Invalid message')
             return
+        self.event("ZeroMQ", "end", dir="receive", id=self.node_id,
+                   command=self._command_str)
         self._command(self._protocol, payload)
         self._command = None
 
     def messageHeaderReceived(self, header):
         try:
-            self.node_id, self._command, self._protocol = \
+            self.node_id, self._command, self._command_str, self._protocol = \
                 self.parseHeader(header)
         except:
             errback(Failure())
+        self.event("ZeroMQ", "begin", dir="receive", id=self.node_id,
+                   command=self._command_str)
 
     def reply(self, node_id, channel, message):
+        self.event("ZeroMQ", "begin", dir="send", id=node_id,
+                   command=channel.decode('charmap'))
         if self.use_shmem:
             is_ipc = self.host.nodes[node_id]['endpoint'].startswith("ipc://")
             io_overflow = False
@@ -112,6 +120,8 @@ class ZmqRouter(ZmqConnection, Logger):
                 self.shmem[node_id] = SharedIO(
                     "veles-job-" + node_id,
                     int(pickles_size * (1.0 + ZmqRouter.RESERVE_SHMEM_SIZE)))
+        self.event("ZeroMQ", "end", dir="send", id=node_id,
+                   command=channel.decode('charmap'))
 
 
 class SlaveDescription(namedtuple(

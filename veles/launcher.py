@@ -108,8 +108,10 @@ class Launcher(logger.Logger):
         if self.logs_to_mongo:
             if self.mongo_log_addr == "":
                 self.args.log_mongo = root.common.mongodb_logging_address
-            logger.Logger.duplicate_all_logging_to_mongo(self.args.log_mongo,
-                                                         self._log_id)
+            if self.is_master:
+                logger.Logger.duplicate_all_logging_to_mongo(
+                    self.args.log_mongo, self._log_id, "master")
+
         self._monkey_patch_twisted_failure()
         self.info("My PID is %d", os.getpid())
         self.info("My log ID is %s", self.log_id)
@@ -310,6 +312,12 @@ class Launcher(logger.Logger):
         self.workflow.thread_pool.register_on_shutdown(shutdown)
         if self.is_slave:
             self._agent = client.Client(self.args.master_address, workflow)
+
+            def on_id_received(node_id):
+                logger.Logger.duplicate_all_logging_to_mongo(
+                    self.args.log_mongo, self._log_id, node_id)
+
+            self.agent.on_id_received = on_id_received
         else:
             if self.reports_web_status:
                 timeout = self._notify_update_interval / 2
@@ -344,6 +352,7 @@ class Launcher(logger.Logger):
     def run(self):
         self._pre_run()
         reactor.callLater(0, self.info, "Reactor is running")
+        self.event("work", "begin")
         try:
             reactor.run()
         except:
@@ -379,6 +388,8 @@ class Launcher(logger.Logger):
             self._agent.initialize()
         reactor.addSystemEventTrigger('before', 'shutdown', self._on_stop)
         reactor.addSystemEventTrigger('after', 'shutdown', self._print_stats)
+        reactor.addSystemEventTrigger('after', 'shutdown', self.event,
+                                      "work", "end")
         self._start_time = time.time()
         if self.is_master and not self.is_slave and not self.is_standalone:
             self.workflow_graph, _ = self.workflow.generate_graph(

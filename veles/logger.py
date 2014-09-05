@@ -5,6 +5,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
+import bson
 import codecs
 from copy import copy
 import logging.handlers
@@ -12,7 +13,9 @@ import os
 from pymongo import MongoClient
 import re
 import sys
+import time
 
+from veles.error import Bug
 from veles.external.daemon import redirect_stream
 from veles.external.progressbar import ProgressBar
 
@@ -126,8 +129,8 @@ class Logger(object):
         logging.info("Continuing to log in %s", file_name)
 
     @staticmethod
-    def duplicate_all_logging_to_mongo(addr, docid):
-        handler = MongoLogHandler(addr=addr, docid=docid)
+    def duplicate_all_logging_to_mongo(addr, docid, nodeid):
+        handler = MongoLogHandler(addr=addr, docid=docid, nodeid=nodeid)
         logging.info("Saving logs to Mongo on %s", addr)
         logging.getLogger().addHandler(handler)
 
@@ -168,23 +171,66 @@ class Logger(object):
 
     msg_changeable = staticmethod(msg_changeable)
 
+    def event(self, name, etype, **info):
+        """
+        Records an event to MongoDB. Events can be later viewed in web status.
+        Parameters:
+            name: the name of the event, for example, "Work".
+            etype: the type of the event, can be either "begin", "end" or
+                   "single".
+            info: any extra event attributes.
+        """
+        if etype not in ("begin", "end", "single"):
+            raise ValueError("Event type must any of the following: 'begin', "
+                             "'end', 'single'")
+        for handler in logging.getLogger().handlers:
+            if isinstance(handler, MongoLogHandler):
+                data = {"session": handler.log_id,
+                        "instance": handler.node_id,
+                        "time": time.time(),
+                        "domain": self.__class__.__name__,
+                        "name": name,
+                        "type": etype}
+                dupkeys = set(data.keys()).intersection(set(info.keys()))
+                if len(dupkeys) > 0:
+                    raise ValueError("Event kwargs may not contain %s" %
+                                     dupkeys)
+                data.update(info)
+                handler.events.insert(data)
+
 
 class MongoLogHandler(logging.Handler):
-    def __init__(self, addr, docid, level=logging.NOTSET):
+    def __init__(self, addr, docid, nodeid, level=logging.NOTSET):
         super(MongoLogHandler, self).__init__(level)
         self._client = MongoClient("mongodb://" + addr)
         self._db = self._client.veles
         self._collection = self._db.logs
-        self._id = docid
+        self._events = self._db.events
+        self._log_id = docid
+        self._node_id = nodeid
 
     @property
-    def id(self):
-        return self._id
+    def log_id(self):
+        return self._log_id
+
+    @property
+    def node_id(self):
+        return self._node_id
+
+    @property
+    def events(self):
+        return self._events
 
     def emit(self, record):
         data = copy(record.__dict__)
-        for bs in "levelno", "funcName", "args", "msg", "module", \
-                  "processName", "msecs":
+        for bs in ("levelno", "funcName", "args", "msg", "module", "msecs",
+                   "processName"):
             del data[bs]
-        data["session"] = self.id
-        self._collection.insert(data)
+        data["session"] = self.log_id
+        data["node"] = self.node_id
+        if data["exc_info"] is not None:
+            data["exc_info"] = repr(data["exc_info"])
+        try:
+            self._collection.insert(data)
+        except bson.errors.InvalidDocument:
+            raise Bug("bson failed to encode %s" % data)

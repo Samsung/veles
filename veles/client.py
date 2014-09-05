@@ -32,11 +32,11 @@ class ZmqDealer(ZmqConnection):
     socketType = zmq.DEALER
 
     RECEIVERS = {
-        b'job':
+        'job':
         lambda self, message: self.host.job_received(message),
-        b'update':
+        'update':
         lambda self, message: self.host.update_result_received(message),
-        b'error':
+        'error':
         lambda self, message: self.host.disconnect(message)
     }
 
@@ -50,22 +50,36 @@ class ZmqDealer(ZmqConnection):
         self.shmem = None
         self.pickles_compression = "snappy" if not self.is_ipc else None
         self._request_timings = {}
+        self._command = None
+        self._command_str = None
         self._receive_timing = (0.0, 0)
 
+    def parseHeader(self, header):
+        self._command_str = header[0].decode('charmap')
+        self._command = ZmqDealer.RECEIVERS.get(self._command_str)
+
     def messageReceived(self, message):
-        command = message[0]
-        receiver = ZmqDealer.RECEIVERS.get(command)
-        if receiver is None:
+        if self._command is None and self._command_str is None:
+            self.parseHeader(message)
+        if self._command is None:
             raise RuntimeError("Received an unknown command %s" %
-                               str(command))
+                               self._command_str)
         try:
-            receiver(self, *message[1:])
+            self._command(self, *message[1:])
         except:
             errback(Failure())
         finally:
+            self.event("ZeroMQ", "end", dir="receive",
+                       command=self._command_str)
+            self._command = None
+            self._command_str = None
             self._receive_timing = (
                 self._receive_timing[0] + self.last_read_time,
                 self._receive_timing[1] + 1)
+
+    def messageHeaderReceived(self, header):
+        self.parseHeader(header)
+        self.event("ZeroMQ", "begin", dir="receive", command=self._command_str)
 
     @property
     def request_timings(self):
@@ -85,6 +99,7 @@ class ZmqDealer(ZmqConnection):
         return sum((val[0] for val in self._request_timings.values()))
 
     def request(self, command, message=b''):
+        self.event("ZeroMQ", "begin", dir="send", command=command)
         if self.shmem is not None and command == 'update':
             self.shmem.seek(0)
         try:
@@ -106,6 +121,7 @@ class ZmqDealer(ZmqConnection):
             self.shmem = SharedIO(
                 "veles-update-" + self.id.decode('charmap'),
                 int(pickles_size * (1.0 + ZmqDealer.RESERVE_SHMEM_SIZE)))
+        self.event("ZeroMQ", "end", dir="send", command=command)
 
 
 class VelesProtocol(StringLineReceiver, IDLogger):
@@ -198,6 +214,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
                 return
             self.id = cid
             self.info("Received ID")
+            self.host.on_id_received(self.id)
             endpoint = msg.get("endpoint")
             if endpoint is None:
                 self.error("No endpoint was received")
@@ -432,3 +449,6 @@ class Client(NetworkAgent, ReconnectingClientFactory):
     def clientConnectionFailed(self, connector, reason):
         self.warning('Connection failed. Reason: %s', reason)
         self.clientConnectionLost(connector, reason)
+
+    def on_id_received(self, node_id):
+        pass
