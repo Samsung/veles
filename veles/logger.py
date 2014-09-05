@@ -196,7 +196,7 @@ class Logger(object):
                     raise ValueError("Event kwargs may not contain %s" %
                                      dupkeys)
                 data.update(info)
-                handler.events.insert(data)
+                handler.events.insert(data, w=0)
 
 
 class MongoLogHandler(logging.Handler):
@@ -231,6 +231,6 @@ class MongoLogHandler(logging.Handler):
         if data["exc_info"] is not None:
             data["exc_info"] = repr(data["exc_info"])
         try:
-            self._collection.insert(data)
+            self._collection.insert(data, w=0)
         except bson.errors.InvalidDocument:
             raise Bug("bson failed to encode %s" % data)
