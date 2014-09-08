@@ -15,6 +15,17 @@ import veles.error as error
 from veles.distributable import Pickleable
 
 
+class MemWatcher(object):
+    mem_in_use = 0
+    max_mem_in_use = 0
+    mutex = threading.Lock()
+
+    @staticmethod
+    def reset_counter():
+        with MemWatcher.mutex:
+            MemWatcher.max_mem_in_use = MemWatcher.mem_in_use
+
+
 def roundup(num, align):
     d = num % align
     if d == 0:
@@ -322,6 +333,12 @@ class Vector(Pickleable):
         self.devmem = self.device.queue_.context.create_buffer(
             cl.CL_MEM_READ_WRITE | cl.CL_MEM_USE_HOST_PTR, ravel(self._mem))
 
+        if self.devmem is not None:
+            with MemWatcher.mutex:
+                MemWatcher.mem_in_use += self.devmem.size
+                MemWatcher.max_mem_in_use = max(MemWatcher.mem_in_use,
+                                                MemWatcher.max_mem_in_use)
+
     @threadsafe
     def initialize(self, device=None):
         self._initialize(device)
@@ -386,6 +403,9 @@ class Vector(Pickleable):
         """Sets buffers to None
         """
         self._unmap()
+        if self.devmem is not None:
+            with MemWatcher.mutex:
+                MemWatcher.mem_in_use -= self.devmem.size
         self.devmem = None
         self._mem = None
         self.map_flags = 0
