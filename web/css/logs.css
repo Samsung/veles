@@ -1,0 +1,215 @@
+#main {
+  padding: 2em;
+  display: flex;
+}
+div, span, p, td {
+  font-family: Arial, sans-serif;
+}
+#content {
+  width: 100%;
+  display: flex;
+}
+.chart {
+  display: inline-block;
+  border: 1px solid #f0f0f0;
+}
+.chart path {
+  -webkit-transition: opacity 0.2s linear;
+}
+#preview {
+  margin-top: 0.625em;
+}
+#legend {
+  display: inline-block;
+  position: relative;
+  left: 0.5em;
+  margin-bottom: 0.3125em;
+}
+#charts-container {
+  position: relative;
+  display: inline-block;
+  flex: auto;
+}
+#graph-master-title {
+  margin-top: 0;
+}
+#slave-box {
+  display: flex;
+  align-items: center;
+}
+#graph-slave-title {
+  display: block;
+}
+#slave-setter-dummy-placeholder {
+  flex: auto;
+}
+#slave-setter-horizontal-centering {
+  width: 40%;
+}
+#slave-setter-horizontal-offset {
+  width: 30%;
+}
+.slave-setter {
+  width: 100%;
+  font-size: 8pt;
+}
+.slave-setter .overflow {
+  height: 8em;
+}
+.rickshaw_graph .detail {
+  left: -62.5em;
+}
+#charts-middle {
+  width: 600px;
+}
+#side_panel {
+  padding: 0;
+  width: 7.5em;
+  display: inline-block;
+  vertical-align: top;
+  margin-right: 1em;
+}
+#side_panel section {
+  color: #505050;
+  font-size: 0.75em;
+}
+#side_panel section h6 {
+  margin: 0 0 1em 0;
+  font-size: 1em;
+  font-weight: normal;
+}
+#side_panel .ui-slider-horizontal {
+  height: 1px !important;
+  border-color: #e0e0e0;
+  margin-bottom: 0.625em;
+}
+#side_panel .ui-slider-handle {
+  border-color: #a0a0a0;
+  height: 0.5625em !important;
+  width: 0.5625em !important;
+  top: -0.3125em !important;
+  border-radius: 0.375em;
+  outline: none;
+  cursor: pointer;
+}
+#legend {
+  background-color: white;
+  margin-left: 0;
+  padding: 0;
+  left: 0;
+}
+#legend .label {
+  color: #404040;
+}
+#legend .action {
+  color: black;
+  opacity: 0.5;
+}
+#legend ul {
+  padding: 0;
+}
+h1 {
+  font-family: Franklin Gothic Medium, UnDotum, Helvetica, Arial;
+  font-weight: normal;
+  font-size: 1.25em;
+}
+section {
+  border: none;
+  border-top: 1px solid #eaeaea;
+  padding: 0.625em 0;
+}
+#renderer_section {
+  padding: 0.3125em 0;
+}
+#smoother {
+  margin: 10% 0 0 10%;
+  width: 80%;
+}
+label.disabled {
+  opacity: 0.4;
+}
+#renderer_form.toggler {
+  display: block;
+  margin: 0;
+}
+#renderer_form.toggler input[type=radio]:checked + label {
+  outline: 2px solid steelblue;
+}
+#renderer_form.toggler input[type=radio] {
+  display: none;
+}
+#renderer_form.toggler label {
+  display: inline-block;
+  padding: 0;
+  width: 4.0625em;
+  padding-top: 2.8125em;
+  text-align: center;
+  font-size: 0.8em;
+  color: #808080;
+  background-repeat: no-repeat;
+  position: relative;
+  margin: 0.7291em;
+  cursor: pointer;
+}
+#interpolation_form,
+#offset_form {
+  /*vertical-align: top;*/
+  display: block;
+  width: 100%;
+}
+#interpolation_form label,
+#offset_form label {
+  display: block;
+}
+label[for=area] {
+  background: url(../img/om_stack.png);
+}
+label[for=line] {
+  background: url(../img/om_lines.png);
+}
+label[for=bar] {
+  background: url(../img/om_bar.png);
+}
+label[for=scatter] {
+  background: url(../img/om_scatter.png);
+}
+#offset_form label,
+#interpolation_form label {
+  background-repeat: no-repeat;
+  background-position: 2em center;
+  cursor: pointer;
+  cursor: hand;
+}
+#offset_form label span,
+#interpolation_form label span {
+  padding-left: 3em;
+}
+label[for=stack] {
+  background-image: url(../img/offset_stack.png);
+}
+label[for=pct] {
+  background-image: url(../img/offset_pct.png);
+}
+label[for=stream] {
+  background-image: url(../img/offset_stream.png);
+}
+label[for=value] {
+  background-image: url(../img/offset_value.png);
+}
+label[for=cardinal] {
+  background-image: url(../img/interp_cardinal.png);
+}
+label[for=linear] {
+  background-image: url(../img/interp_linear.png);
+}
+label[for=step] {
+  background-image: url(../img/interp_step.png);
+}
+.chart-container {
+  display: flex;
+  width: 100%;
+}
+.logs {
+  flex: auto;
+  overflow: auto;
+}
