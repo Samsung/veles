@@ -45,6 +45,16 @@ extensions = [
     'sphinxarg.ext'
 ]
 
+# Skipping undocumented members
+autodoc_default_flags = ['members']
+
+def maybe_skip_member(app, what, name, obj, skip, options):
+    return obj.__doc__ is None or skip
+
+def setup(app):
+    app.connect('autodoc-skip-member', maybe_skip_member)
+
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
