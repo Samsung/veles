@@ -144,7 +144,7 @@ Rickshaw.Graph.RangeSlider = function(args) {
                     range: true,
                     min: graph[0].dataDomain()[0],
                     max: graph[0].dataDomain()[1],
-                    values: [ 
+                    values: [
                         graph[0].dataDomain()[0],
                         graph[0].dataDomain()[1]
                     ],
@@ -153,7 +153,7 @@ Rickshaw.Graph.RangeSlider = function(args) {
                         graph[i].window.xMin = ui.values[0];
                         graph[i].window.xMax = ui.values[1];
                         graph[i].update();
-        
+
                         // if we're at an extreme, stick there
                         if (graph[i].dataDomain()[0] == ui.values[0]) {
                             graph[i].window.xMin = undefined;
@@ -166,21 +166,21 @@ Rickshaw.Graph.RangeSlider = function(args) {
                 } );
             } );
             graph[0].onUpdate( function() {
-        
+
                 var values = $(element).slider('option', 'values');
-        
+
                 $(element).slider('option', 'min', graph[0].dataDomain()[0]);
                 $(element).slider('option', 'max', graph[0].dataDomain()[1]);
-        
+
                 if (graph[0].window.xMin == undefined) {
                     values[0] = graph[0].dataDomain()[0];
                 }
                 if (graph[0].window.xMax == undefined) {
                     values[1] = graph[0].dataDomain()[1];
                 }
-        
+
                 $(element).slider('option', 'values', values);
-        
+
             } );
     }else{
     $( function() {
@@ -188,7 +188,7 @@ Rickshaw.Graph.RangeSlider = function(args) {
             range: true,
             min: graph.dataDomain()[0],
             max: graph.dataDomain()[1],
-            values: [ 
+            values: [
                 graph.dataDomain()[0],
                 graph.dataDomain()[1]
             ],
@@ -229,14 +229,14 @@ Rickshaw.Graph.RangeSlider = function(args) {
     }
 };
 
-Rickshaw.Graph.Legend.prototype.initialize = function(args) {    
+Rickshaw.Graph.Legend.prototype.initialize = function(args) {
     this.graph = args.graph;
     this.naturalOrder = args.naturalOrder;
 
     this.element = args.element;
     var jq_list = $(this.element).addClass(this.className).find("#rickshaw-legend");
     this.list = jq_list.get(0);
-    if (this.list === undefined || args.force === true) {        
+    if (this.list === undefined || args.force === true) {
         this.list = document.createElement('ul');
         this.list.id = "rickshaw-legend";
         this.element.appendChild(this.list);
@@ -277,25 +277,25 @@ Rickshaw.Graph.Behavior.Series.Toggle = function(args) {
 
 	this.legend = args.legend;
     this.graph = this.legend.graph;
-    
+
 	var self = this;
     var graph_index = self.legend.graph_indices[this.graph.element.id];
 
 	this.addAnchor = function(line) {
-        var anchor = $(line.element).find("#rickshaw-legend-toggle").get(0);
-        if (anchor === undefined) {
-            anchor = document.createElement('a');
-            anchor.innerHTML = '&#10004;';
-            anchor.classList.add('action');
-            anchor.id = "rickshaw-legend-toggle";
-            line.element.insertBefore(anchor, line.element.firstChild);
-        }
+    var anchor = $(line.element).find("#rickshaw-legend-toggle").get(0);
+    if (anchor === undefined) {
+        anchor = document.createElement('a');
+        anchor.innerHTML = '&#10004;';
+        anchor.classList.add('action');
+        anchor.id = "rickshaw-legend-toggle";
+        line.element.insertBefore(anchor, line.element.firstChild);
+    }
 
 		anchor.addEventListener( 'click', (function(e) {
 			if (line.series[graph_index].disabled) {
 				line.series[graph_index].enable();
 				line.element.classList.remove('disabled');
-			} else { 
+			} else {
 				if (this.graph.series.filter(function(s) { return !s.disabled }).length <= 1) return;
 				line.series[graph_index].disable();
 				line.element.classList.add('disabled');
@@ -304,53 +304,60 @@ Rickshaw.Graph.Behavior.Series.Toggle = function(args) {
 			self.graph.update();
 
 		}).bind(this));
-		
-        var label = line.element.getElementsByTagName('span')[0];
-        label.onclick = function(e){
 
-                var disableAllOtherLines = line.series[graph_index].disabled;
-                if ( ! disableAllOtherLines ) {
-                        for ( var i = 0; i < self.legend.lines.length; i++ ) {
-                                var l = self.legend.lines[i];
-                                if ( line.series === l.series ) {
-                                        // noop
-                                } else if ( l.series[graph_index].disabled ) {
-                                        // noop
-                                } else {
-                                        disableAllOtherLines = true;
-                                        break;
-                                }
-                        }
-                }
+    var label = line.element.getElementsByTagName('span')[0];
 
-                // show all or none
-                if ( disableAllOtherLines ) {
+    label.onclick = function(e) {
 
-                        // these must happen first or else we try ( and probably fail ) to make a no line graph
-                        line.series[graph_index].enable();
-                        line.element.classList.remove('disabled');
+            var disableAllOtherLines = line.series[0].disabled;
+            if ( ! disableAllOtherLines ) {
+                    for ( var i = 0; i < self.legend.lines.length; i++ ) {
+                            var l = self.legend.lines[i];
+                            if ( line.series === l.series ) {
+                                    // noop
+                            } else if ( l.series[0].disabled ) {
+                                    // noop
+                            } else {
+                                    disableAllOtherLines = true;
+                                    break;
+                            }
+                    }
+            }
 
-                        self.legend.lines.forEach(function(l){
-                                if ( line.series === l.series ) {
-                                        // noop
-                                } else {
-                                        l.series[graph_index].disable();
-                                        l.element.classList.add('disabled');
-                                }
-                        });
+            // show all or none
+            if ( disableAllOtherLines ) {
 
-                } else {
+                    // these must happen first or else we try ( and probably fail ) to make a no line graph
+                    for (var index in line.series) {
+                      line.series[index].enable();
+                    }
+                    line.element.classList.remove('disabled');
 
-                        self.legend.lines.forEach(function(l){
-                                l.series[graph_index].enable();
-                                l.element.classList.remove('disabled');
-                        });
+                    self.legend.lines.forEach(function(l){
+                            if ( line.series === l.series ) {
+                                    // noop
+                            } else {
+                               for (var index in l.series) {
+                                 l.series[index].disable();
+                               }
+                               l.element.classList.add('disabled');
+                            }
+                    });
 
-                }
+            } else {
 
-                self.graph.update();
+                    self.legend.lines.forEach(function(l){
+                      for (var index in l.series) {
+                        l.series[index].enable();
+                      }
+                      l.element.classList.remove('disabled');
+                    });
 
-        };
+            }
+            for (index in self.legend.graphs) {
+              graphs[index].update();
+            }
+    };
 	};
 
 	if (this.legend) {
@@ -382,13 +389,13 @@ Rickshaw.Graph.Behavior.Series.Toggle = function(args) {
 	this._addBehavior = function() {
 
 		this.graph.series.forEach( function(s) {
-			
+
 			s.disable = function() {
 
 				if (self.graph.series.length <= 1) {
 					throw('only one series left');
 				}
-				
+
 				s.disabled = true;
 			};
 
@@ -397,6 +404,7 @@ Rickshaw.Graph.Behavior.Series.Toggle = function(args) {
 			};
 		} );
 	};
+
 	this._addBehavior();
 
 	this.updateBehaviour = function () { this._addBehavior() };
@@ -404,7 +412,7 @@ Rickshaw.Graph.Behavior.Series.Toggle = function(args) {
 };
 
 Rickshaw.Graph.Behavior.Series.Highlight = function(args) {
-	
+
 	this.legend = args.legend;
     this.graph = this.legend.graph;
 
@@ -417,7 +425,7 @@ Rickshaw.Graph.Behavior.Series.Highlight = function(args) {
 	var disabledColor = args.disabledColor || function(seriesColor) {
 		return d3.interpolateRgb(seriesColor, d3.rgb('#d8d8d8'))(0.8).toString();
 	};
-    
+
     this.addHighlightEvents = function (l) {
 
 		l.element.addEventListener( 'mouseover', function(e) {
@@ -450,16 +458,16 @@ Rickshaw.Graph.Behavior.Series.Highlight = function(args) {
 
 		}, false );
 
-		l.element.addEventListener( 'mouseout', function(e) {            
+		l.element.addEventListener( 'mouseout', function(e) {
 			if (!activeLine) return;
-			else activeLine = null;            
+			else activeLine = null;
 			self.legend.lines.forEach( function(line) {
 
 				// return reordered series to its original place
 				if (l === line && line.hasOwnProperty('originalIndex')) {
 
 					var series = self.graph.series.pop();
-					self.graph.series.splice(line.originalIndex, 0, series);                    
+					self.graph.series.splice(line.originalIndex, 0, series);
 					delete line.originalIndex;
 				}
 
@@ -497,14 +505,14 @@ Rickshaw.Graph.Behavior.Series.Order = function(args) {
 		$(self.legend.list).sortable( {
 			containment: 'parent',
 			tolerance: 'pointer',
-			update: function( event, ui ) {				
+			update: function( event, ui ) {
                 for (var index in self.legend.graphs) {
                     var series = [];
                     $(self.legend.list).find('li').each( function(index, item) {
                         if (!item.series) return;
                         series.push(item.series);
                     } );
-                
+
                     var graph = self.legend.graphs[index];
                     for (var i = graph.series.length - 1; i >= 0; i--) {
                         graph.series[i] = series.shift();
@@ -517,7 +525,7 @@ Rickshaw.Graph.Behavior.Series.Order = function(args) {
 	});
 
 	//hack to make jquery-ui sortable behave
-	this.legend.graph.onUpdate( function() { 
+	this.legend.graph.onUpdate( function() {
 		var h = window.getComputedStyle(self.legend.element).height;
 		self.legend.element.style.height = h;
 	} );

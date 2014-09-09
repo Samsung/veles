@@ -25,6 +25,9 @@ div, span, p, td {
   left: 0.5em;
   margin-bottom: 0.3125em;
 }
+.rickshaw_legend .line {
+    padding-right: 0px !Important;
+}
 #charts-container {
   position: relative;
   display: inline-block;
