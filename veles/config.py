@@ -78,6 +78,8 @@ def get(value, default_value=None):
     return value
 
 
+__path__ = os.path.dirname(os.path.dirname(__file__))
+
 root.common.update = {
     "graphics_multicast_address": "239.192.1.1",
     "matplotlib_backend": "Qt4Agg",
@@ -92,17 +94,21 @@ root.common.update = {
     "test_known_device": False,
     "test_unknown_device": True,
     "unit_test": False,
-    "veles_dir": os.path.dirname(os.path.dirname(__file__)),
+    "veles_dir": __path__,
     "veles_user_dir": os.path.join(os.environ.get("HOME", "./"), "velesuser"),
-    "web_status_host": "smaug",
-    "web_status_log_file":
-    "/var/log/veles/web_status.log",
-    "web_status_notification_interval": 1,
-    "web_status_port": 8090,
-    "web_status_update": "update",
-    "web_status_pidfile": "/var/run/veles/web_status",
-    "web_folder": os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                               "web"),
+    "device_dir": os.path.join(__path__, "devices"),
+    "ocl_dirs": (os.environ.get("VELES_OPENCL_DIRS", "").split(":") +
+                 [os.path.join(__path__, "ocl")]),
+    "opencl_dir": os.path.join(__path__, "veles"),
+    "web": {
+        "host": "smaug",
+        "port": 8090,
+        "log_file": "/var/log/veles/web_status.log",
+        "log_backups": 9,
+        "notification_interval": 1,
+        "pidfile": "/var/run/veles/web_status",
+        "root": os.path.join(__path__, "web"),
+    },
     "ThreadPool": {
         "minthreads": 2,
         "maxthreads": 2,
@@ -123,9 +129,4 @@ try:
 except OSError:
     pass
 
-root.common.device_dir = os.path.join(root.common.veles_dir, "devices")
-root.common.ocl_dirs = (os.environ.get("VELES_OPENCL_DIRS", "").split(":") +
-                        [os.path.join(root.common.veles_dir, "ocl")])
-root.common.opencl_dir = os.path.join(root.common.veles_dir, "veles")
 root.common.test_dataset_root = "/data/veles/datasets"
-root.common.web_status_root = os.path.join(root.common.veles_dir, "web_status")

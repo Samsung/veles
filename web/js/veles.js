@@ -39,16 +39,17 @@ function updateUI() {
     data: JSON.stringify(msg),
     contentType: "application/json; charset=utf-8",
       async: true,
-      success: function(ret) {
-        console.log("Received response");
-        listed_workflows = ret;
-        if (!ret) {
+      success: function(result) {
+        console.log("Received response", result);
+        if (!result || !result.result) {
           updating = false;
-          console.log("Server returned an empty response " + ret);
+          console.log("Server returned an empty response, skipped");
           return;
         }
-        var workflows = Object.keys(ret).map(function(key) {
-          return { "key": key, "value": ret[key] };
+        result = result.result;
+        listed_workflows = result;
+        var workflows = Object.keys(result).map(function(key) {
+          return { "key": key, "value": result[key] };
         });
         if (workflows.length == 0) {
           updating = false;
@@ -57,7 +58,7 @@ function updateUI() {
         workflows.sort(function(a, b) {
           return a.value.name > b.value.name;
         });
-        if (active_workflow_id == null || !(active_workflow_id in ret)) {
+        if (active_workflow_id == null || !(active_workflow_id in result)) {
           active_workflow_id = workflows[0].key;
         }
         var items = '';
@@ -135,9 +136,9 @@ function updateUI() {
               then = measure.time;
               jobs_diff = measure.jobs;
               offset++;
-            }            
+            }
             jobs_diff = latest.jobs - jobs_diff;
-            if (now > then) {                
+            if (now > then) {
               items += (jobs_diff / (now - then)).toFixed(0);
             } else {
               items += 'N/A';
@@ -327,7 +328,7 @@ function activateListItem(item_id) {
     details += slave.state;
     details += '</td>\n';
     details += '<td class="center-cell">\n';
-    if (slave.state != 'Offline') {      
+    if (slave.state != 'Offline') {
       details += '<a href="#"><span class="glyphicon glyphicon-pause"></span></a>\n';
       details += '<a href="#"><span class="glyphicon glyphicon-remove"></span></a>\n';
       details += '<a href="#"><span class="glyphicon glyphicon-info-sign"></span></a>\n';

@@ -125,7 +125,7 @@ class Launcher(logger.Logger):
         self.graphics_client = None
         self._notify_update_interval = kwargs.get(
             "status_update_interval",
-            root.common.web_status_notification_interval)
+            root.common.web.notification_interval)
         if self.args.yarn_nodes is not None and self.is_master:
             self._discover_nodes_from_yarn(self.args.yarn_nodes)
 
@@ -432,7 +432,8 @@ class Launcher(logger.Logger):
 
     def _print_stats(self):
         self.workflow.print_stats()
-        self.agent.print_stats()
+        if self.agent is not None:
+            self.agent.print_stats()
         if self._start_time is not None:
             self.info(
                 "Time elapsed: %s", datetime.timedelta(
@@ -442,13 +443,13 @@ class Launcher(logger.Logger):
         if not self.reports_web_status:
             return
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        result = sock.connect_ex((root.common.web_status_host,
-                                  root.common.web_status_port))
+        result = sock.connect_ex((root.common.web.host,
+                                  root.common.web.port))
         sock.close()
         if result != 0:
             self.info("Launching the web status server")
             self._launch_remote_progs(
-                root.common.web_status_host,
+                root.common.web.host,
                 "PYTHONPATH=%s %s 2>>%s" %
                 (os.path.dirname(
                     os.path.abspath(
@@ -456,7 +457,7 @@ class Launcher(logger.Logger):
                  os.path.abspath(os.path.join(root.common.veles_dir,
                                               "veles/web_status.py")),
                  "%s.stderr%s" %
-                 os.path.splitext(root.common.web_status_log_file)))
+                 os.path.splitext(root.common.web.log_file)))
         else:
             self.info("Discovered an already running web status server")
 
@@ -572,9 +573,8 @@ class Launcher(logger.Logger):
                'custom_plots': "<br/>".join(self.plots_endpoints),
                'description':
                "<br />".join(escape(self.workflow.__doc__).split("\n"))}
-        url = "http://%s:%d/%s" % (root.common.web_status_host,
-                                   root.common.web_status_port,
-                                   root.common.web_status_update)
+        url = "http://%s:%d/update" % (root.common.web.host,
+                                       root.common.web.port)
         headers = Headers({b'User-Agent': [b'twisted']})
         body = FileBodyProducer(BytesIO(json.dumps(ret).encode('charmap')))
         self.debug("Uploading status update to %s", url)

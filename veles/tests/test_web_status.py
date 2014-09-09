@@ -10,7 +10,7 @@ import threading
 import unittest
 
 from veles.config import root
-from veles.web_status import WebStatus
+from veles.web_status import WebServer
 from veles.tests import timeout
 
 
@@ -18,8 +18,8 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         logging.basicConfig(level=logging.INFO)
-        root.common.web_status_log_file = "/tmp/veles_web_status_test.log"
-        self.ws = WebStatus()
+        root.common.web.log_file = "/tmp/veles_web.test.log"
+        self.ws = WebServer()
 
     def tearDown(self):
         pass
@@ -27,7 +27,6 @@ class Test(unittest.TestCase):
     @timeout(2)
     def testStop(self):
         def stop():
-            self.ws.running.wait()
             self.ws.stop()
 
         stopper = threading.Thread(target=stop)
