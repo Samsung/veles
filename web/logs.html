@@ -72,7 +72,20 @@
                 </form>
 
                 <div id="charts-container">
-                    <h2 id="graph-master-title" class="node-title">Master</h2>
+                    <div class="flex-box">
+                        <h2 id="graph-master-title" class="node-title ui-widget">Master</h2>
+                        <div id="log-level-container">
+
+                                <span id="log-level-label" class="ui-widget">Logs level: </span>
+                                <select id="log-level">
+                                  <option>DEBUG</option>
+                                  <option selected="selected">INFO</option>
+                                  <option>WARNING</option>
+                                  <option>ERROR</option>
+                                </select>
+
+                        </div>
+                    </div>
                     <div class="chart-container">
                         <div class="chart" id="chart-master"></div>
                         <div class="logs" id="logs-master"></div>
@@ -80,8 +93,8 @@
                     <div id="charts-middle">
                         <div id="timeline"></div>
                         <div id="preview"></div>
-                        <div id="slave-box">
-                            <h2 id="graph-slave-title" class="node-title">Slave</h2>
+                        <div class="flex-box">
+                            <h2 id="graph-slave-title" class="node-title ui-widget">Slave</h2>
                             <div id="slave-setter-dummy-placeholder"></div>
                             <div id="slave-setter-horizontal-centering">
                                 <select class="slave-setter">
@@ -99,8 +112,8 @@
                         <div class="chart" id="chart-slave"></div>
                         <div class="logs" id="logs-slave"></div>
                     </div>
-                </div>                
-            </div>            
+                </div>
+            </div>
         </div>
 
         <!-- JS dependencies begin -->
@@ -108,14 +121,18 @@
         <script src="js/jquery-ui.min.js"></script>
         <script>
             $(function() {
-                var menu = $(".slave-setter").selectmenu();
-                menu.selectmenu("menuWidget").addClass("overflow").addClass("slave-setter");
-                menu.selectmenu("widget").removeAttr("style").addClass("slave-setter");
+                $("select").selectmenu().each(function() {
+                    var menu = $(this);
+                    menu.selectmenu("menuWidget").addClass("overflow").addClass("cool-select");
+                    menu.selectmenu("widget").removeAttr("style").addClass("cool-select");
+                });
+                $(".slave-setter").selectmenu().selectmenu("widget").addClass("slave-setter");
             });
         </script>
         <script src="js/d3.v3.min.js"></script>
         <script src="js/rickshaw.min.js"></script>
-        <script src="js/rickshaw-extensions.js"></script>
+        <script src="js/rickshaw-extensions.min.js"></script>
+        <script src="js/logs.js"></script>
         <!-- JS dependencies end -->
 
         <script>
@@ -138,7 +155,7 @@ var palette = new Rickshaw.Color.Palette( { scheme: 'classic9' } );
 
 
 var graph_width = 600;
-var graph_height = 360;
+var graph_height = 390;
 var graph_series = [
     {
         color: palette.color(),
@@ -210,7 +227,7 @@ var xAxes = [];
 var yAxes = [];
 var controls = [];
 
-for (var index in graphs) {   
+for (var index in graphs) {
     hoverDetails.push(new Rickshaw.Graph.HoverDetail( {
         graph: graphs[index],
         xFormatter: function(x) {
@@ -226,7 +243,7 @@ for (var index in graphs) {
     } ));
     orders.push(new Rickshaw.Graph.Behavior.Series.Order( {
         legend: legends[index]
-    } ));    
+    } ));
     highlighters.push(new Rickshaw.Graph.Behavior.Series.Highlight( {
         legend: legends[index]
     } ));
@@ -252,7 +269,7 @@ var annotator = new Rickshaw.Graph.Annotate( {
     graph: graphs[0],
     element: document.getElementById('timeline')
 } );
-    
+
 // add some data every so often
 
 var messages = [
