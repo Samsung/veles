@@ -4,6 +4,9 @@ body {
 html, body {
   height: 100%;
 }
+p {
+  margin-bottom: 0;
+}
 #arguments {
   margin-left: auto;
   margin-right: auto;
@@ -22,4 +25,7 @@ html, body {
 }
 .description {
   width: 50%;
+}
+.input-group {
+  margin-right: calc(50% + 1em);
 }
