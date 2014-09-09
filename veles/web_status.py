@@ -8,14 +8,19 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import argparse
+from bson import json_util
 from collections import defaultdict
 import logging
+import json
+import motor
 import os
 from six import print_
 import socket
 import sys
 import time
-import tornado.escape
+
+from tornado.escape import json_decode
+import tornado.gen as gen
 from tornado.ioloop import IOLoop
 import tornado.web as web
 
@@ -29,23 +34,26 @@ if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
     BrokenPipeError = OSError  # pylint: disable=W0622
 
 
-debug_mode = False
+debug_mode = True
 
 
 class ServiceHandler(web.RequestHandler):
     def initialize(self, server):
         self.server = server
 
-    @tornado.web.asynchronous
+    @web.asynchronous
+    @gen.coroutine
     def post(self):
         self.server.debug("service POST from %s: %s", self.request.remote_ip,
                           self.request.body)
         try:
-            data = tornado.escape.json_decode(self.request.body)
-            self.server.receive_request(self, data)
+            data = json_decode(self.request.body)
+            yield self.server.receive_request(self, data)
         except:
             self.server.exception("service POST")
-            self.finish()
+            self.clear()
+            self.finish({"request": data["request"] if data else "",
+                         "result": "error"})
 
 
 class UpdateHandler(web.RequestHandler):
@@ -56,12 +64,23 @@ class UpdateHandler(web.RequestHandler):
         self.server.debug("update POST from %s: %s", self.request.remote_ip,
                           self.request.body)
         try:
-            data = tornado.escape.json_decode(self.request.body)
+            data = json_decode(self.request.body)
             self.server.receive_update(self, data)
         except:
             self.server.exception("update POST")
-        finally:
-            self.finish()
+
+
+class LogsHandler(web.RequestHandler):
+    def initialize(self, server):
+        self.server = server
+
+    def get(self):
+        session = self.get_argument("session", None)
+        if session is None:
+            self.clear()
+            self.set_status(400)
+        else:
+            self.render("logs.html", session=session)
 
 
 class WebServer(Logger):
@@ -79,6 +98,7 @@ class WebServer(Logger):
         self.application = web.Application([
             ("/service", ServiceHandler, {"server": self}),
             ("/update", UpdateHandler, {"server": self}),
+            ("/logs.html?.*", LogsHandler, {"server": self}),
             (r"/(js/.*)",
              web.StaticFileHandler, {'path': root.common.web.root}),
             (r"/(css/.*)",
@@ -95,15 +115,21 @@ class WebServer(Logger):
                                         "permanent": True}),
             ("", web.RedirectHandler, {"url": "/status.html",
                                        "permanent": True})
-        ])
+        ], template_path=os.path.join(root.common.web.root, "templates"),
+            gzip=True)
         self._port = kwargs.get("port", root.common.web.port)
         self.application.listen(self._port)
         self.masters = {}
+        self.motor = motor.MotorClient(
+            "mongodb://" + kwargs.get("mongodb",
+                                      root.common.mongodb_logging_address))
+        self.db = self.motor.veles
 
     @property
     def port(self):
         return self._port
 
+    @gen.coroutine
     def receive_request(self, handler, data):
         rtype = data["request"]
         if rtype == "workflows":
@@ -121,8 +147,20 @@ class WebServer(Logger):
                 del self.masters[mid]
             self.debug("Request %s: %s", rtype, ret)
             handler.finish({"request": rtype, "result": ret})
-        elif rtype == "logs":
-            pass
+        elif rtype in ("logs", "events"):
+            cursor = self.db[rtype].find(data["query"])
+            handler.set_header("Content-Type",
+                               "application/json; charset=UTF-8")
+            handler.write("{\"request\": \"%s\", \"result\": [" % rtype)
+            count = 0
+            while (yield cursor.fetch_next):
+                handler.write(
+                    json.dumps(cursor.next_object(), default=json_util.default)
+                        .replace("</", "<\\/") +
+                    ",\n")
+                count += 1
+            handler.finish("]}")
+            self.debug("Fetched %d %s", count, rtype)
         else:
             handler.finish({"request": rtype, "result": None})
 
