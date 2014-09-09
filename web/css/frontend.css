@@ -26,6 +26,13 @@ p {
 .description {
   width: 50%;
 }
+.disabled {
+  border-color: #AAAAAA !Important;
+  background-color: #AAAAAA !Important;
+}
+.panel-body {
+  background-color: #FFFFFF;
+}
 .input-group {
   margin-right: calc(50% + 1em);
 }

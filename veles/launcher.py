@@ -157,12 +157,12 @@ class Launcher(logger.Logger):
                             default=kwargs.get("master_address", ""),
                             help="Workflow will be launched in client mode "
                             "and connected to the master at the specified "
-                            "address.")
+                            "address.").mode = ["slave"]
         parser.add_argument("-l", "--listen-address", type=str,
                             default=kwargs.get("listen_address", ""),
                             help="Workflow will be launched in server mode "
                                  "and will accept client connections at the "
-                                 "specified address.")
+                                 "specified address.").mode = ["master"]
         parser.add_argument("-p", "--matplotlib-backend", type=str, nargs='?',
                             const="",
                             default=kwargs.get("matplotlib_backend",
@@ -188,10 +188,11 @@ class Launcher(logger.Logger):
                                  "separated by commas. Slave format is "
                                  "host/OpenCLPlatformNumber:OpenCLDevice(s)xN,"
                                   "examples: host/0:0, host/1:0-2, "
-                                  "host/0:2-3x3.")
+                                  "host/0:2-3x3.").mode = ["master"]
         parser.add_argument("--validate-history",
                             default=False, help="Check the apply/generate "
-                            "history on master.", action='store_true')
+                            "history on master.", action='store_true'
+                            ).mode = ["master"]
         parser.add_argument("-f", "--log-file", type=str,
                             default=kwargs.get("log_file", ""),
                             help="The file name where logs will be copied.")
@@ -208,10 +209,10 @@ class Launcher(logger.Logger):
                             help="Log identifier (used my Mongo logger).")
         parser.add_argument("--yarn-nodes", type=str, default=None,
                             help="Discover the nodes from this YARN "
-                            "ResourceManager's address.")
+                            "ResourceManager's address.").mode = ["master"]
         parser.add_argument("--max-nodes", type=int, default=0,
                             help="Max number of slaves launched. 0 means "
-                            "unlimited number.")
+                            "unlimited number.").mode = ["master"]
         return parser
 
     @property

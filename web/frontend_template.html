@@ -19,8 +19,8 @@
     </head>
     <body>
         <div id="arguments">
-            <div class="panel panel-primary argument">
-                <div class="panel-heading">
+            <div class="panel panel-primary argument master slave standalone">
+                <div class="panel-heading master slave standalone">
                   <span class="label label-danger argtype">Obligatory</span>
                   <h3 class="panel-title">Mode</h3>
                 </div>
@@ -29,14 +29,14 @@
                       <p>Selects VELES operation mode. Standalone is the best choice for debugging workflows and relatively small tasks. Master mode runs VELES workflow server which accepts slaves. Slave mode is the headless VELES instance which requests jobs from a master and returns results.</p>
                     </div>
                     <div class="dropdown">
-                      <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown">
+                      <button class="btn btn-default dropdown-toggle master slave standalone" type="button" id="dropdownMode" data-toggle="dropdown">
                         Standalone
                         <span class="caret"></span>
                       </button>
-                      <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
-                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Standalone</a></li>
-                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Master</a></li>
-                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Slave</a></li>
+                      <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMode">
+                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#" onclick="select_mode('Standalone')">Standalone</a></li>
+                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#" onclick="select_mode('Master')">Master</a></li>
+                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#" onclick="select_mode('Slave')">Slave</a></li>
                       </ul>
                     </div>
                 </div>
@@ -51,6 +51,29 @@
 
 	<script>
           $(".switch").bootstrapSwitch();
+
+          function disable(mode) {
+            $(".argument:not(." + mode + ")").addClass("disabled");
+            $(".panel-heading:not(." + mode + ")").addClass("disabled");
+	    $(".form-control:not(." + mode + ")").attr("disabled", "disabled");
+            $(".switch:not(." + mode + ")").attr("disabled", "disabled");
+            $(".dropdown-toggle:not(." + mode + ")").attr("disabled", "disabled");
+          };
+
+          function return_colors() {
+	    $(".argument").removeClass("disabled");
+            $(".panel-heading").removeClass("disabled");
+	    $(".form-control").removeAttr("disabled", "disabled");
+            $(".switch").removeAttr("disabled", "disabled");
+            $(".dropdown-toggle").removeAttr("disabled", "disabled");
+          };
+
+	  function select_mode(mode) {
+              $("#dropdownMode").get(0).firstChild.nodeValue = mode + " ";
+              mode = mode.toLowerCase();
+              return_colors();
+              disable(mode);
+          }
 	</script>
     </body>
 </html>
