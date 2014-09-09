@@ -18,10 +18,14 @@
     <![endif]-->
     </head>
     <body>
+        <div id="command-line-container" class="input-group">
+            <span class="input-group-addon">RESULT</span>
+            <input type="text" class="form-control standalone master slave" id="command-line">
+        </div>
         <div id="arguments">
             <div class="panel panel-primary argument master slave standalone">
                 <div class="panel-heading master slave standalone">
-                  <span class="label label-danger argtype">Obligatory</span>
+                  <span class="label label-danger argtype">Mandatory</span>
                   <h3 class="panel-title">Mode</h3>
                 </div>
                 <div class="panel-body">
@@ -48,9 +52,37 @@
         <!-- Include all compiled plugins (below), or include individual files as needed -->
         <script src="js/bootstrap.min.js"></script>
         <script src="js/bootstrap-switch.min.js"></script>
+        <script src="js/typeahead.min.js"></script>
+	
+        <script>
+          initial_disable();
 
-	<script>
-          $(".switch").bootstrapSwitch();
+          var substringMatcher = function(strs) {
+            return function findMatches(q, cb) {
+              var matches, substrRegex;
+              matches = [];
+              substrRegex = new RegExp(q, 'i');
+              $.each(strs, function(i, str) {
+                if (substrRegex.test(str)) {
+                  matches.push({ value: str });
+                }
+              });
+              cb(matches);
+            };
+          };
+
+          //INSERT_WORKFLOWS_HERE
+
+          $('.typeahead').typeahead({
+            hint: true,
+            highlight: true,
+            minLength: 1
+          },
+          {
+            name: 'workflows',
+            displayKey: 'value',
+            source: substringMatcher(workflows)
+          });
 
           function disable(mode) {
             $(".argument:not(." + mode + ")").addClass("disabled");
@@ -60,7 +92,7 @@
             $(".dropdown-toggle:not(." + mode + ")").attr("disabled", "disabled");
           };
 
-          function return_colors() {
+          function enable_all() {
 	    $(".argument").removeClass("disabled");
             $(".panel-heading").removeClass("disabled");
 	    $(".form-control").removeAttr("disabled", "disabled");
@@ -68,12 +100,35 @@
             $(".dropdown-toggle").removeAttr("disabled", "disabled");
           };
 
+          function initial_disable() {
+              common_mode = $("#dropdownMode").text().trim();
+              common_mode = common_mode.toLowerCase();
+              disable(common_mode);
+          }
+
 	  function select_mode(mode) {
               $("#dropdownMode").get(0).firstChild.nodeValue = mode + " ";
               mode = mode.toLowerCase();
-              return_colors();
+              enable_all();
               disable(mode);
           }
+
+          function select(choice) {
+              $("#dropdown_menu").get(0).firstChild.nodeValue = choice + " ";
+              choice = choice.toLowerCase();
+              var value = choice;
+          }
+
+          $(function() {
+              $("input:not(#command-line)").on("change", function() {
+                  var id = this.id;
+                  var value = this.value;
+              });
+              $(".switch").bootstrapSwitch().on('switchChange.bootstrapSwitch', function(event, state) {
+                  var id = this.id;
+                  var value = state;
+              });
+          });
 	</script>
     </body>
 </html>

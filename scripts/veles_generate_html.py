@@ -5,11 +5,15 @@ This scripts generates an HTML page with all velescli's command line arguments,
  allowing for fast command line composition
 
 '''
+
+
 import argparse
+from inspect import getargspec
 import os
 import sys
 from scripts.velescli import Main
 from veles.config import root
+import warnings
 
 WEB_FOLDER = root.common.web_folder
 
@@ -20,13 +24,36 @@ def main():
     path_to_file = os.path.join(WEB_FOLDER, "frontend_template.html")
     path_to_out = os.path.join(WEB_FOLDER, "frontend.html")
     list_lines = []
+    list_workflows = []
+    root_path = root.common.veles_dir
+    warnings.simplefilter("ignore")
+    for path, _, files in os.walk(root_path, followlinks=True):
+        for f in files:
+            f_path = os.path.join(path, f)
+            modname, ext = os.path.splitext(f)
+            if ext == '.py':
+                try:
+                    sys.path.insert(0, path)
+                    mod = __import__(modname)
+                    for func in dir(mod):
+                        if func == "run":
+                            if getargspec(mod.run).args == ["load", "main"]:
+                                wf_path = os.path.relpath(f_path, root_path)
+                                list_workflows.append(wf_path)
+                    del sys.path[0]
+                except:
+                    pass
+    warnings.simplefilter("default")
     for tuple_obj in sorted([convert_argument(arg) for arg in arguments]):
         list_lines.append(tuple_obj[1])
     html = ''.join(list_lines)
     with open(path_to_file, "r") as fin:
         sin = fin.read()
         str_rp = ("<!-- INSERT ARGUMENTS HERE-->")
+        str_rp_wf = ("//INSERT_WORKFLOWS_HERE")
+        workflows_html = "var workflows = %s" % list_workflows
         sout = sin.replace(str_rp, html)
+        sout = sout.replace(str_rp_wf, workflows_html)
 
     with open(path_to_out, "w") as fout:
         fout.write(sout)
@@ -34,21 +61,28 @@ def main():
 
 def convert_argument(arg):
     choices = arg.choices
-    required = arg.required
+    nargs = arg.nargs
+    required = arg.required and nargs != '*'
     dest = arg.dest
     hlp = arg.help
     arg_mode = getattr(arg, "mode", ["standalone", "master", "slave"])
     arg_line = ""
-    if choices is not None:
-        arg_line = convert_choices(arg, arg_mode)
+    if arg.option_strings:
+        option_strings = " ".join(arg.option_strings)
     else:
-        if isinstance(arg, argparse._StoreTrueAction):
-            arg_line = convert_boolean(arg, arg_mode)
-        if isinstance(arg, argparse._StoreAction):
-            arg_line = convert_string(arg, arg_mode)
-    imp = (int(required)) ^ 1
-
-    importance = 'Obligatory' if required else 'Optional'
+        option_strings = arg.dest
+    if dest == "workflow":
+        arg_line = convert_workflow(arg, arg_mode, option_strings)
+    else:
+        if choices is not None:
+            arg_line = convert_choices(arg, arg_mode, option_strings)
+        else:
+            if isinstance(arg, argparse._StoreTrueAction):
+                arg_line = convert_boolean(arg, arg_mode, option_strings)
+            if isinstance(arg, argparse._StoreAction):
+                arg_line = convert_string(arg, arg_mode, option_strings)
+    imp = int(not required)
+    importance = 'Mandatory' if required else 'Optional'
     importance_class = 'danger' if required else 'default'
     template_line = """
             <div class="panel panel-primary argument %s">
@@ -67,50 +101,67 @@ def convert_argument(arg):
     return (imp, template_line)
 
 
-def convert_string(arg, arg_mode):
+def convert_workflow(arg, arg_mode, option_strings):
+    dest = arg.dest
+    default = arg.default
+    arg_line = ("""
+                    <div class="input-group" id = "scrollable-dropdown-menu">
+                     <span class="input-group-addon">%s</span>
+                     <input type="text" class="typeahead form-control %s"
+                      placeholder="%s" id="%s">
+                    </div>""" % (dest, " ".join(arg_mode), default,
+                                 option_strings))
+    return arg_line
+
+
+def convert_string(arg, arg_mode, option_strings):
     dest = arg.dest
     default = arg.default
     arg_line = ("""
                     <div class="input-group">
                      <span class="input-group-addon">%s</span>
-                     <input type="text" class="form-control %s" placeholder=%s>
-                    </div>""" % (dest, " ".join(arg_mode), default))
+                     <input type="text" class="form-control %s"
+                      placeholder="%s" id="%s">
+                    </div>""" % (dest, " ".join(arg_mode), default,
+                                 option_strings))
     return arg_line
 
 
-def convert_boolean(arg, arg_mode):
+def convert_boolean(arg, arg_mode, option_strings):
     default = arg.default
     checked = "checked" if default else ""
     arg_line = ("""
                     <div class="bootstrap-switch-container">
                       <input type="checkbox" class="switch %s"
                        data-on-text="Yes"
-                       data-off-text="No" data-size="large" %s />
-                    </div>""" % (" ".join(arg_mode), checked))
+                       data-off-text="No" data-size="large" %sid="%s"/>
+                    </div>""" % (" ".join(arg_mode), checked, option_strings))
     return arg_line
 
 
-def convert_choices(arg, arg_mode):
+def convert_choices(arg, arg_mode, option_strings):
     choices = arg.choices
     choices_lines = ''
     default = arg.default
     for choice in choices:
         line_ch = ("""
-                        <li role="presentation"><a role=
-                   "menuitem"tabindex="-1"href="#">%s</a></li>""" % choice)
+                        <li role="presentation"><a role="menuitem"tabindex="-1"
+                        href="#" onclick="select('%s')">%s</a></li>""" %
+                        (choice, choice))
         choices_lines += line_ch
         arg_line = ("""
                     <div class="dropdown">
                       <button class="btn btn-default dropdown-toggle %s"
-                      type="button" id="dropdownMenu1" data-toggle="dropdown">
+                      type="button" id="dropdown_menu" data-toggle="dropdown">
                         %s
                         <span class="caret"></span>
                       </button>
                       <ul class="dropdown-menu" role="menu"
-                      aria-labelledby="dropdownMenu1">
+                      aria-labelledby="dropdown_menu" id="%s">
                         %s
                       </ul>
-                    </div>""" % (" ".join(arg_mode), default, choices_lines))
+                    </div>""" % (" ".join(arg_mode), default,
+                                 option_strings, choices_lines))
     return arg_line
 
 if __name__ == "__main__":

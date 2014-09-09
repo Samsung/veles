@@ -36,3 +36,23 @@ p {
 .input-group {
   margin-right: calc(50% + 1em);
 }
+#scrollable-dropdown-menu .tt-dropdown-menu {
+  max-height: 150px;
+  overflow-y: auto;
+}
+.twitter-typeahead {
+  width: 100%;
+  display: table !Important;
+}
+.tt-dropdown-menu {
+  color: #FFFFFF;
+  background: linear-gradient(to left, rgba(77, 144, 203, 1) 0%, rgba(14, 94, 165, 1) 30%, rgba(31, 107, 174, 1) 100%);
+  width: 100%;
+}
+#command-line-container {
+  padding: 0em 2em 2em 2em;
+  margin-right: 0 !Important;
+}
+#command-line {
+  margin: 0;
+}
