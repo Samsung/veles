@@ -365,7 +365,7 @@ class Workflow(Unit):
     def generate_data_for_master(self):
         data = []
         self.debug("Generating the update for master...")
-        self.event("generate_data_for_master", "begin")
+        self.event("generate_data", "begin")
         for unit in self:
             if not unit.negotiates_on_connect:
                 try:
@@ -376,7 +376,7 @@ class Workflow(Unit):
                     raise
             else:
                 data.append(None)
-        self.event("generate_data_for_master", "end")
+        self.event("generate_data", "end")
         self.debug("Done with generating the update for master")
         return data
 
@@ -395,11 +395,11 @@ class Workflow(Unit):
                 has_data &= unit.has_data_for_slave
         if not has_data:
             # Try again later
-            self.event("generate_data_for_slave", "single", slave=slave.id,
+            self.event("generate_data", "single", slave=slave.id,
                        postpone=True)
             return False
         self.debug("Generating a job for slave %s", slave.id)
-        self.event("generate_data_for_slave", "begin", slave=slave.id)
+        self.event("generate_data", "begin", slave=slave.id)
         self._record_history("generate", slave.id)
         for unit in self:
             if not unit.negotiates_on_connect:
@@ -414,7 +414,7 @@ class Workflow(Unit):
                     raise
             else:
                 data.append(None)
-        self.event("generate_data_for_slave", "end", slave=slave.id)
+        self.event("generate_data", "end", slave=slave.id)
         self.debug("Done with generating a job for slave %s", slave.id)
         return data
 
@@ -424,7 +424,7 @@ class Workflow(Unit):
         if not isinstance(data, list):
             raise ValueError("data must be a list")
         self.debug("Applying the job from master")
-        self.event("apply_data_from_master", "begin")
+        self.event("apply_data", "begin")
         for i in range(len(data)):
             unit = self[i]
             if data[i] is not None and not unit.negotiates_on_connect:
@@ -434,7 +434,7 @@ class Workflow(Unit):
                     self.error("Unit %s failed to apply data from master",
                                unit)
                     raise
-        self.event("apply_data_from_master", "end")
+        self.event("apply_data", "end")
         self.debug("Done with applying the job from master")
 
     @run_timed
@@ -444,7 +444,7 @@ class Workflow(Unit):
             raise ValueError("data must be a list")
         sid = slave.id if slave is not None else "self"
         self.debug("Applying the update from slave %s", sid)
-        self.event("apply_data_from_slave", "begin", slave=slave.id)
+        self.event("apply_data", "begin", slave=slave.id)
         self._record_history("apply", sid)
         for i in range(len(self)):
             unit = self[i]
@@ -454,7 +454,7 @@ class Workflow(Unit):
                 except:
                     self.error("Unit %s failed to apply data from slave", unit)
                     raise
-        self.event("apply_data_from_slave", "end", slave=slave.id)
+        self.event("apply_data", "end", slave=slave.id)
         self.debug("Done with applying the update from slave %s", sid)
         return True
 
