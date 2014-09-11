@@ -45,7 +45,7 @@
                     </div>
                 </div>
             </div>
-            <!-- INSERT ARGUMENTS HERE-->
+            {% raw arguments %}
         </div>
         <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
         <script src="js/jquery.min.js"></script>
@@ -71,7 +71,9 @@
             };
           };
 
-          //INSERT_WORKFLOWS_HERE
+          var workflows = {% raw workflows %};
+
+          var initial_states = {% raw initial_states %};
 
           $('.typeahead').typeahead({
             hint: true,
@@ -85,19 +87,18 @@
           });
 
           function disable(mode) {
-            $(".argument:not(." + mode + ")").addClass("disabled");
-            $(".panel-heading:not(." + mode + ")").addClass("disabled");
-	    $(".form-control:not(." + mode + ")").attr("disabled", "disabled");
-            $(".switch:not(." + mode + ")").attr("disabled", "disabled");
-            $(".dropdown-toggle:not(." + mode + ")").attr("disabled", "disabled");
+              $(".argument:not(." + mode + ")").addClass("disabled");
+              $(".panel-heading:not(." + mode + ")").addClass("disabled");
+              $(".form-control:not(." + mode + ")").attr("disabled", "disabled");
+              $(".switch:not(." + mode + ")").bootstrapSwitch('disabled', true);
+              $(".dropdown-toggle:not(." + mode + ")").attr("disabled", "disabled");
           };
-
           function enable_all() {
-	    $(".argument").removeClass("disabled");
-            $(".panel-heading").removeClass("disabled");
-	    $(".form-control").removeAttr("disabled", "disabled");
-            $(".switch").removeAttr("disabled", "disabled");
-            $(".dropdown-toggle").removeAttr("disabled", "disabled");
+              $(".argument").removeClass("disabled");
+              $(".panel-heading").removeClass("disabled");
+              $(".form-control").removeAttr("disabled", "disabled");
+              $(".switch").bootstrapSwitch('disabled', false);
+              $(".dropdown-toggle").removeAttr("disabled", "disabled");
           };
 
           function initial_disable() {
@@ -113,20 +114,65 @@
               disable(mode);
           }
 
-          function select(choice) {
+          function select(choice, id) {
               $("#dropdown_menu").get(0).firstChild.nodeValue = choice + " ";
               choice = choice.toLowerCase();
+              var id = id;
               var value = choice;
+              initial_states[id]=value;
+              generate_cl(initial_states);
+          }
+
+          function generate_cl(initial_states) {
+              var command_line = "";
+              var wf = "";
+              var config = "";
+              var config_list = "";
+              var params = "";
+              $.each(initial_states, function(key, value) {
+              if((key != "config") && (key != "workflow") && (key != "config_list")) {
+                  if (value==true) {
+                      params+= key + ' ';
+                  };
+                  if ((value!=true) && (value!=false)) {
+                      params+= key + ' ' + value + ' ';
+                  };
+              };
+              if (key == "workflow"){
+                  wf = value + " ";};
+              if (key == "config"){
+                  config = value + " ";};
+              if (key == "config_list"){
+                  config_list = value + " ";};
+              command_line = wf + config + config_list + params;
+              });
+              
+              var elem = document.getElementById("command-line");
+              elem.value = command_line;
           }
 
           $(function() {
               $("input:not(#command-line)").on("change", function() {
-                  var id = this.id;
-                  var value = this.value;
+              var id = this.id;
+              var value = this.value;
+              initial_states[id]=value;
+              generate_cl(initial_states);
               });
               $(".switch").bootstrapSwitch().on('switchChange.bootstrapSwitch', function(event, state) {
-                  var id = this.id;
-                  var value = state;
+              var id = this.id;
+              var value = state;
+              initial_states[id]=value;
+              generate_cl(initial_states);
+              });
+              $('.typeahead').on('typeahead:selected', function(event, value) {
+              var selected_wf = value;
+              var wf = selected_wf["value"];
+              initial_states["workflow"]=wf;
+              generate_cl(initial_states);
+              $(".dropdown-menu li a").click(function(event, value){
+                 var value = value;
+                 alert(value)
+                 });
               });
           });
 	</script>

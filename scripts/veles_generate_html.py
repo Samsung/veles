@@ -8,10 +8,13 @@ This scripts generates an HTML page with all velescli's command line arguments,
 
 
 import argparse
+import gc
 from inspect import getargspec
+import json
 import os
 import sys
 from scripts.velescli import Main
+import tornado.template as template
 from veles.config import root
 import warnings
 
@@ -21,41 +24,41 @@ WEB_FOLDER = root.common.web_folder
 def main():
     parser = Main.init_parser()
     arguments = parser._actions
-    path_to_file = os.path.join(WEB_FOLDER, "frontend_template.html")
     path_to_out = os.path.join(WEB_FOLDER, "frontend.html")
     list_lines = []
     list_workflows = []
     root_path = root.common.veles_dir
     warnings.simplefilter("ignore")
     for path, _, files in os.walk(root_path, followlinks=True):
+        if os.path.relpath(path, root_path).startswith('docs'):
+            continue
         for f in files:
             f_path = os.path.join(path, f)
             modname, ext = os.path.splitext(f)
             if ext == '.py':
+                sys.path.insert(0, path)
                 try:
-                    sys.path.insert(0, path)
                     mod = __import__(modname)
                     for func in dir(mod):
                         if func == "run":
                             if getargspec(mod.run).args == ["load", "main"]:
                                 wf_path = os.path.relpath(f_path, root_path)
                                 list_workflows.append(wf_path)
-                    del sys.path[0]
                 except:
                     pass
+                finally:
+                    del sys.path[0]
+    gc.collect()
     warnings.simplefilter("default")
     for tuple_obj in sorted([convert_argument(arg) for arg in arguments]):
         list_lines.append(tuple_obj[1])
+    defaults = {}
     html = ''.join(list_lines)
-    with open(path_to_file, "r") as fin:
-        sin = fin.read()
-        str_rp = ("<!-- INSERT ARGUMENTS HERE-->")
-        str_rp_wf = ("//INSERT_WORKFLOWS_HERE")
-        workflows_html = "var workflows = %s" % list_workflows
-        sout = sin.replace(str_rp, html)
-        sout = sout.replace(str_rp_wf, workflows_html)
-
-    with open(path_to_out, "w") as fout:
+    loader = template.Loader(os.path.join(WEB_FOLDER, "templates"))
+    sout = loader.load("frontend.html").generate(
+        arguments=html, workflows=list_workflows,
+        initial_states=json.dumps(defaults))
+    with open(path_to_out, "wb") as fout:
         fout.write(sout)
 
 
@@ -68,7 +71,7 @@ def convert_argument(arg):
     arg_mode = getattr(arg, "mode", ["standalone", "master", "slave"])
     arg_line = ""
     if arg.option_strings:
-        option_strings = " ".join(arg.option_strings)
+        option_strings = str(arg.option_strings[0])
     else:
         option_strings = arg.dest
     if dest == "workflow":
@@ -146,8 +149,8 @@ def convert_choices(arg, arg_mode, option_strings):
     for choice in choices:
         line_ch = ("""
                         <li role="presentation"><a role="menuitem"tabindex="-1"
-                        href="#" onclick="select('%s')">%s</a></li>""" %
-                        (choice, choice))
+                        href="#" onclick="select('%s', '%s')">%s</a></li>""" %
+                        (choice, option_strings, choice))
         choices_lines += line_ch
         arg_line = ("""
                     <div class="dropdown">
