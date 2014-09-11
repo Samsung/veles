@@ -16,8 +16,9 @@ div, span, p, td {
 .chart path {
   -webkit-transition: opacity 0.2s linear;
 }
-#preview {
+#preview, #timescale {
   margin-top: 0.625em;
+  width: 100%;
 }
 #legend {
   display: inline-block;
@@ -136,10 +137,6 @@ section {
 }
 #renderer_section {
   padding: 0.3125em 0;
-}
-#smoother {
-  margin: 10% 0 0 10%;
-  width: 80%;
 }
 label.disabled {
   opacity: 0.4;
