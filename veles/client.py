@@ -213,8 +213,13 @@ class VelesProtocol(StringLineReceiver, IDLogger):
                 self.request_id()
                 return
             self.id = cid
-            self.info("Received ID")
-            self.host.on_id_received(self.id)
+            self.debug("Received ID")
+            log_id = msg.get("log_id")
+            if log_id is None:
+                self.error("No log ID was received in WAIT state")
+                self.request_id()
+                return
+            self.host.on_id_received(self.id, log_id)
             endpoint = msg.get("endpoint")
             if endpoint is None:
                 self.error("No endpoint was received")
@@ -450,5 +455,5 @@ class Client(NetworkAgent, ReconnectingClientFactory):
         self.warning('Connection failed. Reason: %s', reason)
         self.clientConnectionLost(connector, reason)
 
-    def on_id_received(self, node_id):
+    def on_id_received(self, node_id, log_id):
         pass

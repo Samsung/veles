@@ -103,18 +103,17 @@ class Launcher(logger.Logger):
                                  log_base_name[1]))
             logger.Logger.redirect_all_logging_to_file(log_file)
 
-        self._id = str(uuid.uuid4())
-        self._log_id = self.args.log_id or self.id
+        self.info("My PID is %d", os.getpid())
+        self.id = str(uuid.uuid4()) if not self.is_slave else None
+        self.log_id = self.args.log_id or self.id
         if self.logs_to_mongo:
             if self.mongo_log_addr == "":
                 self.args.log_mongo = root.common.mongodb_logging_address
             if self.is_master:
                 logger.Logger.duplicate_all_logging_to_mongo(
-                    self.args.log_mongo, self._log_id, "master")
+                    self.args.log_mongo, self.log_id, "master")
 
         self._monkey_patch_twisted_failure()
-        self.info("My PID is %d", os.getpid())
-        self.info("My log ID is %s", self.log_id)
         self._lock = threading.Lock()
         self._webagg_port = 0
         self._agent = None
@@ -219,9 +218,21 @@ class Launcher(logger.Logger):
     def id(self):
         return self._id
 
+    @id.setter
+    def id(self, value):
+        self._id = value
+        if self.id is not None:
+            self.info("My ID is %s", self.id)
+
     @property
     def log_id(self):
         return self._log_id
+
+    @log_id.setter
+    def log_id(self, value):
+        self._log_id = value
+        if self.log_id is not None:
+            self.info("My log ID is %s", self.log_id)
 
     @property
     def runs_in_background(self):
@@ -314,9 +325,11 @@ class Launcher(logger.Logger):
         if self.is_slave:
             self._agent = client.Client(self.args.master_address, workflow)
 
-            def on_id_received(node_id):
+            def on_id_received(node_id, log_id):
+                self.id = node_id
+                self.log_id = log_id
                 logger.Logger.duplicate_all_logging_to_mongo(
-                    self.args.log_mongo, self._log_id, node_id)
+                    self.args.log_mongo, self.log_id, node_id)
 
             self.agent.on_id_received = on_id_received
         else:

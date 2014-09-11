@@ -438,6 +438,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
             retmsg = {'endpoint': endpoint, 'data': data}
             if not msgid:
                 retmsg['id'] = self.id
+            retmsg['log_id'] = self.host.launcher.log_id
             self.sendLine(retmsg)
         data = msg.get('data')
         if data is not None:
