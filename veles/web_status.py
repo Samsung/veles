@@ -88,7 +88,7 @@ class WebServer(Logger):
     Operates a web server based on Tornado to show various runtime information.
     """
 
-    GARBAGE_TIMEOUT = 30
+    GARBAGE_TIMEOUT = 60
 
     def __init__(self, **kwargs):
         super(WebServer, self).__init__()
@@ -116,7 +116,7 @@ class WebServer(Logger):
             ("", web.RedirectHandler, {"url": "/status.html",
                                        "permanent": True})
         ], template_path=os.path.join(root.common.web.root, "templates"),
-            gzip=True)
+            gzip=not debug_mode)
         self._port = kwargs.get("port", root.common.web.port)
         self.application.listen(self._port)
         self.masters = {}
@@ -153,11 +153,15 @@ class WebServer(Logger):
                                "application/json; charset=UTF-8")
             handler.write("{\"request\": \"%s\", \"result\": [" % rtype)
             count = 0
+            first = True
             while (yield cursor.fetch_next):
-                handler.write(
-                    json.dumps(cursor.next_object(), default=json_util.default)
-                        .replace("</", "<\\/") +
-                    ",\n")
+                if not first:
+                    handler.write(",\n")
+                else:
+                    first = False
+                json_raw = json.dumps(cursor.next_object(),
+                                      default=json_util.default)
+                handler.write(json_raw.replace("</", "<\\/"))
                 count += 1
             handler.finish("]}")
             self.debug("Fetched %d %s", count, rtype)
