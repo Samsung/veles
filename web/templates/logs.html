@@ -6,25 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="img/veles.png" />
     <title>VELES Logs Viewer - {{session}}</title>
-    <script>
-      var events = null;
-      var logs = null;
-
-      function render_events() {}
-
-      var dataRequest = new XMLHttpRequest();
-      dataRequest.open("POST", "service", true);
-      dataRequest.onload = function() {
-        if (dataRequest.readyState == 4 && dataRequest.status == 200) {
-          events = JSON.parse(dataRequest.responseText).result;
-          if (document.readyState === "complete") {
-            render_events();
-          }
-        }
-      };
-      dataRequest.send(JSON.stringify({"request": "events",
-                                       "query": {"session": "{{session}}"}}));
-    </script>
+    <script>var session = "{% raw session %}";</script>
+    <script src="js/logs-fetch.js"></script>
     <link type="text/css" rel="stylesheet" href="css/jquery-ui.min.css">
 	  <link type="text/css" rel="stylesheet" href="css/rickshaw.min.css">
     <link href="css/logs.css" rel="stylesheet" type="text/css" />

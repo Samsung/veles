@@ -1,7 +1,3 @@
-Rickshaw.Graph.HoverDetail.prototype.formatter = function(series, x, y, formattedX, formattedY, d) {
-  return series.name;
-};
-
 Rickshaw.Graph.Legend.prototype.initialize = function(args) {
     this.graph = args.graph;
     this.naturalOrder = args.naturalOrder;
@@ -14,6 +10,7 @@ Rickshaw.Graph.Legend.prototype.initialize = function(args) {
         this.list.id = "rickshaw-legend";
         this.element.appendChild(this.list);
         this.render();
+        $(this.lines[this.lines.length - 1].element).css("visibility", "hidden");
         $(this.element).addClass(this.className).find("#rickshaw-legend")
             .data("Rickshaw.Graph.Legend", this);
         for (var index in this.lines) {

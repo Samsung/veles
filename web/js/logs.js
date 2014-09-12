@@ -1,15 +1,5 @@
-var seriesData = [[], []];
-var slaves = [];
-var slaves_mapping = {};
-var selected_slave = 0;
-var event_names = ["dummy"];
-var event_names_mapping = {"dummy": 0};
-var smallest_time = Infinity;
-var biggest_time = -Infinity;
-var elapsed_time = 0;
 var graphs = [];
-var time_scale = 0;
-
+/*
 render_events = function() {
   var instances = new Set();
   var names = new Set();
@@ -112,7 +102,18 @@ function update_node(node, min, max) {
     if (event.type === "begin") {
       data.push({x: time, y: 0});
     }
-    data.push({x: time, y: 1});
+    var value = 1;
+    if (event.height != undefined) {
+      value = event.height;
+    }
+    meta = $.extend({}, event);
+    delete meta._id;
+    delete meta.time;
+    delete meta.name;
+    delete meta.session;
+    delete meta.instance;
+    delete meta.height;
+    data.push({x: time, y: value, event: JSON.stringify(meta)});
     if (event.type === "end") {
       data.push({x: time, y: 0});
     }
@@ -126,6 +127,12 @@ $(document).ready(function() {
     render_events();
   }
 });
+
+
+Rickshaw.Graph.HoverDetail.prototype.formatter = function(series, x, y, formattedX, formattedY, d) {
+  return series.name + (d.value.event? ("  " + d.value.event) : "");
+};
+
 
 Rickshaw.Graph.RangeSlider = function(args) {
     var element = this.element = args.element;
@@ -143,6 +150,7 @@ Rickshaw.Graph.RangeSlider = function(args) {
         } );
     } );
 };
+
 
 function render_graphs(graph_series) {
   var graph_width = 600;
@@ -224,3 +232,4 @@ function logs_to_html(logs, level) {
 
   return $.parseHTML(html);
 }
+*/
