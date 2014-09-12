@@ -125,6 +125,8 @@ class WebServer(Logger):
             "mongodb://" + kwargs.get("mongodb",
                                       root.common.mongodb_logging_address))
         self.db = self.motor.veles
+        self.db.events.ensure_index(
+            (("session", 1), ("instance", 1), ("name", 1), ("time", 1)))
 
     @property
     def port(self):
@@ -146,10 +148,19 @@ class WebServer(Logger):
             for mid in garbage:
                 self.info("Removing the garbage collected master %s", mid)
                 del self.masters[mid]
-            self.debug("Request %s: %s", rtype, ret)
+            self.debug("Request %s: returning %d workflows", rtype, len(ret))
             handler.finish({"request": rtype, "result": ret})
         elif rtype in ("logs", "events"):
-            cursor = self.db[rtype].find(data["query"])
+            query = data.get("find")
+            if query is not None:
+                cursor = self.db[rtype].find(query)
+            else:
+                query = data.get("aggregate")
+                if query is not None:
+                    cursor = yield self.db[rtype].aggregate(query, cursor={})
+                else:
+                    raise ValueError("Only 'find' and 'aggregate' commands are"
+                                     " supported")
             handler.set_header("Content-Type",
                                "application/json; charset=UTF-8")
             handler.write("{\"request\": \"%s\", \"result\": [" % rtype)
