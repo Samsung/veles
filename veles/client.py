@@ -61,6 +61,9 @@ class ZmqDealer(ZmqConnection):
     def messageReceived(self, message):
         if self._command is None and self._command_str is None:
             self.parseHeader(message)
+            event_type = "single"
+        else:
+            event_type = "end"
         if self._command is None:
             raise RuntimeError("Received an unknown command %s" %
                                self._command_str)
@@ -69,7 +72,7 @@ class ZmqDealer(ZmqConnection):
         except:
             errback(Failure())
         finally:
-            self.event("ZeroMQ", "end", dir="receive",
+            self.event("ZeroMQ", event_type, dir="receive",
                        command=self._command_str, height=0.5)
             self._command = None
             self._command_str = None
