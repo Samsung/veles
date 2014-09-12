@@ -11,3 +11,15 @@ Veles Machine Learning Platform
     manualrst_veles_launcher
     manualrst_veles_units
     manualrst_veles_ocl
+
+
+***************
+`All modules`_
+***************
+.. _`All modules`: modules.html
+
+***************
+`Veles package`_
+***************
+.. _`Veles package`: veles.html
+
