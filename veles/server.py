@@ -85,7 +85,7 @@ class ZmqRouter(ZmqConnection, Logger):
             self.reply(self.node_id, b'error', b'Invalid message')
             return
         self.event("ZeroMQ", "end", dir="receive", id=self.node_id,
-                   command=self._command_str)
+                   command=self._command_str, height=0.5)
         self._command(self._protocol, payload)
         self._command = None
 
@@ -96,11 +96,11 @@ class ZmqRouter(ZmqConnection, Logger):
         except:
             errback(Failure())
         self.event("ZeroMQ", "begin", dir="receive", id=self.node_id,
-                   command=self._command_str)
+                   command=self._command_str, height=0.5)
 
     def reply(self, node_id, channel, message):
         self.event("ZeroMQ", "begin", dir="send", id=node_id,
-                   command=channel.decode('charmap'))
+                   command=channel.decode('charmap'), height=0.5)
         if self.use_shmem:
             is_ipc = self.host.nodes[node_id]['endpoint'].startswith("ipc://")
             io_overflow = False
@@ -121,7 +121,7 @@ class ZmqRouter(ZmqConnection, Logger):
                     "veles-job-" + node_id,
                     int(pickles_size * (1.0 + ZmqRouter.RESERVE_SHMEM_SIZE)))
         self.event("ZeroMQ", "end", dir="send", id=node_id,
-                   command=channel.decode('charmap'))
+                   command=channel.decode('charmap'), height=0.5)
 
 
 class SlaveDescription(namedtuple(

@@ -70,7 +70,7 @@ class ZmqDealer(ZmqConnection):
             errback(Failure())
         finally:
             self.event("ZeroMQ", "end", dir="receive",
-                       command=self._command_str)
+                       command=self._command_str, height=0.5)
             self._command = None
             self._command_str = None
             self._receive_timing = (
@@ -79,7 +79,8 @@ class ZmqDealer(ZmqConnection):
 
     def messageHeaderReceived(self, header):
         self.parseHeader(header)
-        self.event("ZeroMQ", "begin", dir="receive", command=self._command_str)
+        self.event("ZeroMQ", "begin", dir="receive", command=self._command_str,
+                   height=0.5)
 
     @property
     def request_timings(self):
@@ -99,7 +100,7 @@ class ZmqDealer(ZmqConnection):
         return sum((val[0] for val in self._request_timings.values()))
 
     def request(self, command, message=b''):
-        self.event("ZeroMQ", "begin", dir="send", command=command)
+        self.event("ZeroMQ", "begin", dir="send", command=command, height=0.5)
         if self.shmem is not None and command == 'update':
             self.shmem.seek(0)
         try:
@@ -121,7 +122,7 @@ class ZmqDealer(ZmqConnection):
             self.shmem = SharedIO(
                 "veles-update-" + self.id.decode('charmap'),
                 int(pickles_size * (1.0 + ZmqDealer.RESERVE_SHMEM_SIZE)))
-        self.event("ZeroMQ", "end", dir="send", command=command)
+        self.event("ZeroMQ", "end", dir="send", command=command, height=0.5)
 
 
 class VelesProtocol(StringLineReceiver, IDLogger):

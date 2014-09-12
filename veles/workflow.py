@@ -284,7 +284,8 @@ class Workflow(Unit):
         """
         self._run_time_started_ = time.time()
         self.is_running = True
-        self.event("run", "begin")
+        if not self.is_master:
+            self.event("run", "begin")
         if not self.is_master:
             self.start_point.run_dependent()
         self._sync_event_.wait()
@@ -308,7 +309,8 @@ class Workflow(Unit):
         self._run_time_ += run_time
         self._method_time_["run"] += run_time
         self.is_running = False
-        self.event("run", "end")
+        if not self.is_master:
+            self.event("run", "end")
         if self.is_standalone or force_propagate:
             self.workflow.on_workflow_finished()
         elif self.is_slave:
@@ -680,6 +682,8 @@ class Workflow(Unit):
             table.align["method"] = "l"
             time_all = 0
             for k, v in sorted(self._method_time_.items()):
+                if k == "run":
+                    continue
                 time_all += v
                 table.add_row(k, int(v * 100 / self._run_time_),
                               datetime.timedelta(seconds=v))

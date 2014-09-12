@@ -366,7 +366,7 @@ class Launcher(logger.Logger):
     def run(self):
         self._pre_run()
         reactor.callLater(0, self.info, "Reactor is running")
-        self.event("work", "begin")
+        self.event("work", "begin", height=0.1)
         try:
             reactor.run()
         except:
@@ -403,7 +403,7 @@ class Launcher(logger.Logger):
         reactor.addSystemEventTrigger('before', 'shutdown', self._on_stop)
         reactor.addSystemEventTrigger('after', 'shutdown', self._print_stats)
         reactor.addSystemEventTrigger('after', 'shutdown', self.event,
-                                      "work", "end")
+                                      "work", "end", height=0.1)
         self._start_time = time.time()
         if self.is_master and not self.is_slave and not self.is_standalone:
             self.workflow_graph, _ = self.workflow.generate_graph(
