@@ -62,7 +62,8 @@ class UpdateHandler(web.RequestHandler):
 
     def post(self):
         self.server.debug("update POST from %s: %s", self.request.remote_ip,
-                          self.request.body)
+                          self.request.body[:200] +
+                          b"..." if len(self.request.body) > 200 else b"")
         try:
             data = json_decode(self.request.body)
             self.server.receive_update(self, data)
@@ -164,13 +165,16 @@ class WebServer(Logger):
                 handler.write(json_raw.replace("</", "<\\/"))
                 count += 1
             handler.finish("]}")
-            self.debug("Fetched %d %s", count, rtype)
+            self.debug("Fetched %d \"%s\" documents", count, rtype)
         else:
             handler.finish({"request": rtype, "result": None})
 
     def receive_update(self, handler, data):
         mid = data["id"]
+        graph = data["graph"]
+        data["graph"] = "<cut>"
         self.debug("Master %s yielded %s", mid, data)
+        data["graph"] = graph
         self.masters[mid] = data
         self.masters[mid]["last_update"] = time.time()
 
