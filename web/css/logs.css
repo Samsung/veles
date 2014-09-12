@@ -34,9 +34,11 @@ div, span, p, td {
   display: inline-block;
   flex: auto;
 }
+#master-header {
+  width: 600px;
+}
 #graph-master-title {
   margin-top: 0;
-  width: 600px;
 }
 .flex-box {
   display: flex;
@@ -44,6 +46,16 @@ div, span, p, td {
 }
 .node-title {
   display: inline-block;
+}
+#time-display {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 600px;
+  text-align: center;
+}
+#time-interval {
+
 }
 #log-level-container {
   flex: auto;

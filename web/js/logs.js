@@ -1,32 +1,49 @@
 var graphs = [];
-/*
-render_events = function() {
-  var instances = new Set();
-  var names = new Set();
-  var master = null;
-  for (var index in events) {
-    var event = events[index];
-    instances.add(event.instance);
-    names.add(event.name);
-    smallest_time = Math.min(smallest_time, event.time);
-    biggest_time = Math.max(biggest_time, event.time);
+var graph_width = 600;
+var graph_height = 390;
+
+function format_date(unix) {
+  var date = new Date(unix * 1000);
+  var month = date.getMonth();
+  if (month < 10) {
+    month = "0" + month;
   }
-  elapsed_time = biggest_time - smallest_time;
-  time_scale = elapsed_time;
-  names.forEach(function(name) {
-    event_names_mapping[name] = event_names.push(name) - 1;
-  });
-  instances.forEach(function(instance) {
-    if (instance != "master") {
-      slaves_mapping[instance] = slaves.push(instance) - 1;
-      $("select.slave-setter").append($.parseHTML("<option>" + instance + "</option>"));
+  var hours = date.getHours();
+  if (hours < 10) {
+    hours = "0" + hours;
+  }
+  var minutes = date.getMinutes();
+  if (minutes < 10) {
+    minutes = "0" + minutes;
+  }
+  var seconds = date.getSeconds();
+  if (seconds < 10) {
+    seconds = "0" + seconds;
+  }
+  var millisecs = date.getMilliseconds();
+  if (millisecs < 10) {
+    millisecs = "0" + millisecs;
+  }
+  if (millisecs < 100) {
+    millisecs = "0" + millisecs;
+  }
+  return "" + date.getDate() + "." + month + " " + hours + ":" + minutes + ":" + seconds + "." + millisecs;
+}
+
+function setup_ui() {
+  if (ui_is_setup) {
+    return;
+  }
+  ui_is_setup = true;
+  nodes.forEach(function(node) {
+    if (node.id != "master") {
+      $("select.slave-setter").append($.parseHTML("<option>" + node.id + "</option>"));
     }
   });
-  if (slaves.length > 0) {
+  if (nodes.length > 1) {
     $("select.slave-setter").children().first().attr("selected", "selected");
     $("select.slave-setter").selectmenu("refresh").selectmenu("widget").removeAttr("style");
   }
-
   var palette = new Rickshaw.Color.Palette( { scheme: 'classic9' } );
   var graph_series = [[], []];
   var colors = event_names.map(function() { return palette.color(); });
@@ -34,128 +51,49 @@ render_events = function() {
     for (var event in event_names) {
       graph_series[index].push({
           color: colors[event],
-          data: seriesData[index][seriesData[index].push([]) - 1],
+          data: series_data[index][event],
           name: event_names[event]
       });
     }
   }
-  render_graphs(graph_series);
-  update_nodes(0, elapsed_time);
+  setup_graphs(graph_series);
   var scale_min = Math.log(0.001);
   var scale_max = Math.log(elapsed_time);
   $("#timescale").slider({
-      min: scale_min,
-      max: scale_max,
-      step: (scale_max - scale_min) / 20}).on("slide", function(event, ui) {
-         ui.value = Math.min(Math.max(ui.value, scale_min), scale_max);
-         var new_time_scale = Math.exp(ui.value);
-         if (new_time_scale == time_scale) {
-           return;
-         }
-         var preview = $("#preview");
-         var pos = preview.slider("values");
-         var middle = (pos[0] + pos[1]) / 2;
-         var length = (pos[1] - pos[0]);
-         var ratio = new_time_scale / time_scale;
-         var min = preview.slider("option", "min");
-         var max = preview.slider("option", "max");
-         var offset = middle * (1 - ratio);
-         min = min * ratio + offset;
-         max = max * ratio + offset;
-         if (pos[1] > max) {
-           pos[1] = max;
-         }
-         if (pos[0] < min) {
-           pos[0] = min;
-         }
-         preview.slider({values: pos, min: min, max: max,
-                         step: (max - min) / 100});
-         time_scale = new_time_scale;
-     });
+    min: scale_min,
+    max: scale_max,
+    step: (scale_max - scale_min) / 20}).on("slide", function(event, ui) {
+       ui.value = Math.min(Math.max(ui.value, scale_min), scale_max);
+       var new_time_scale = Math.exp(ui.value);
+       if (new_time_scale == time_scale) {
+         return;
+       }
+       var preview = $("#preview");
+       var pos = preview.slider("values");
+       var middle = (pos[0] + pos[1]) / 2;
+       var length = (pos[1] - pos[0]);
+       var ratio = new_time_scale / time_scale;
+       var min = preview.slider("option", "min");
+       var max = preview.slider("option", "max");
+       var offset = middle * (1 - ratio);
+       min = min * ratio + offset;
+       max = max * ratio + offset;
+       if (pos[1] > max) {
+         pos[1] = max;
+       }
+       if (pos[0] < min) {
+         pos[0] = min;
+       }
+       current_min_time = pos[0];
+       current_max_time = pos[1];
+       preview.slider({values: pos, min: min, max: max,
+                       step: (max - min) / 100});
+       time_scale = new_time_scale;
+   });
+   $("#time-interval").text(format_date(current_min_time) + " - " + format_date(current_max_time));
 }
 
-function update_nodes(min, max) {
-  update_node("master", min, max);
-  update_node(slaves[selected_slave], min, max);
-}
-
-function update_node(node, min, max) {
-  var node_index = node === "master"? 0 : 1;
-  var series = seriesData[node_index];
-  for (var index in series) {
-    series[index].length = 0;
-  }
-  series[0].push({x: min, y: 0});
-  for (var index in events) {
-    var event = events[index];
-    if (event.instance != node) {
-      continue;
-    }
-    if (event.type === "single") {
-      continue;
-    }
-    var time = event.time - smallest_time;
-    if (time < min || time > max) {
-      continue;
-    }
-    var data = series[event_names_mapping[event.name]];
-    if (event.type === "begin") {
-      data.push({x: time, y: 0});
-    }
-    var value = 1;
-    if (event.height != undefined) {
-      value = event.height;
-    }
-    meta = $.extend({}, event);
-    delete meta._id;
-    delete meta.time;
-    delete meta.name;
-    delete meta.session;
-    delete meta.instance;
-    delete meta.height;
-    data.push({x: time, y: value, event: JSON.stringify(meta)});
-    if (event.type === "end") {
-      data.push({x: time, y: 0});
-    }
-  }
-  series[0].push({x: max, y: 0});
-  graphs[node_index].update();
-}
-
-$(document).ready(function() {
-  if (events != null) {
-    render_events();
-  }
-});
-
-
-Rickshaw.Graph.HoverDetail.prototype.formatter = function(series, x, y, formattedX, formattedY, d) {
-  return series.name + (d.value.event? ("  " + d.value.event) : "");
-};
-
-
-Rickshaw.Graph.RangeSlider = function(args) {
-    var element = this.element = args.element;
-    var graph = this.graph = args.graph;
-
-    $(function() {
-        $(element).slider( {
-            range: true,
-            min: 0,
-            max: elapsed_time,
-            values: [0, elapsed_time],
-            slide: function(event, ui) {
-                update_nodes(ui.values[0], ui.values[1]);
-            }
-        } );
-    } );
-};
-
-
-function render_graphs(graph_series) {
-  var graph_width = 600;
-  var graph_height = 390;
-
+function setup_graphs(graph_series) {
   for (var index = 0; index < 2; index++) {
     graphs.push(new Rickshaw.Graph( {
       element: document.getElementById(index === 0? "chart-master" : "chart-slave"),
@@ -223,6 +161,53 @@ function render_graphs(graph_series) {
   }
 }
 
+
+render_events = function() {
+  setup_ui();
+  for (var index in graphs) {
+    var graph = graphs[index];
+    series_data[0][0][0] = {x: current_min_time - smallest_time, y: 0};
+    series_data[0][0][1] = {x: current_max_time - smallest_time, y: 0};
+    series_data[1][0][0] = {x: current_min_time - smallest_time, y: 0};
+    series_data[1][0][1] = {x: current_max_time - smallest_time, y: 0};
+    graph.window.xMin = current_min_time - smallest_time;
+    graph.window.xMax = current_max_time - smallest_time;
+    graph.update();
+  }
+}
+
+$(document).ready(function() {
+  if (!fetching_events[0] && !fetching_events[1] && nodes.length > 0) {
+    render_events();
+  }
+});
+
+
+Rickshaw.Graph.HoverDetail.prototype.formatter = function(series, x, y, formattedX, formattedY, d) {
+  return series.name + (d.value.event? ("  " + d.value.event) : "");
+};
+
+
+Rickshaw.Graph.RangeSlider = function(args) {
+    var element = this.element = args.element;
+    var graph = this.graph = args.graph;
+
+    $(function() {
+        $(element).slider( {
+            range: true,
+            min: 0,
+            max: elapsed_time,
+            values: [0, elapsed_time],
+            slide: function(event, ui) {
+              current_min_time = ui.values[0] + smallest_time;
+              current_max_time = ui.values[1] + smallest_time;
+              fetch_events();
+            }
+        } );
+    } );
+};
+
+
 function logs_to_html(logs, level) {
   var html = "";
 
@@ -232,4 +217,3 @@ function logs_to_html(logs, level) {
 
   return $.parseHTML(html);
 }
-*/
