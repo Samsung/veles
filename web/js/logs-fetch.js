@@ -41,10 +41,17 @@ function install_slave_events(node) {
   }
 }
 
-function finalize_fetch(node) {
+function finalize_fetch(node, no_install) {
   var ni = (node.id == "master")? 0 : 1;
-  if (ni == 1) {
+  if (ni == 1 && !no_install) {
     install_slave_events(node);
+  }
+  if (document.readyState === "complete") {
+    if (node.id == "master") {
+      $("#chart-loading-master").css("visibility", "hidden");
+    } else {
+      $("#chart-loading-slave").css("visibility", "hidden");
+    }
   }
   fetching_events[ni] = false;
   if (!fetching_events[0] && !fetching_events[1]) {
@@ -57,17 +64,30 @@ function finalize_fetch(node) {
 }
 
 function fetch_events_for_node(node_name) {
+  var my_min_time = current_min_time;
+  var my_max_time = current_max_time;
   var node = nodes[nodes_mapping[node_name]];
   var fetched_events = [];
   for (var name in node.events) {
-    if (node.events[name].fetch) {
+    var event = node.events[name];
+    if (event.fetch && (event.min_fetch_time > my_min_time ||
+                        event.max_fetch_time < my_max_time)) {
       fetched_events.push(name);
     }
+  }
+  if (fetched_events.length == 0) {
+    finalize_fetch(node, true);
+    return;
+  }
+  if (node_name == "master") {
+    $("#chart-loading-master").css("visibility", "default");
+  } else {
+    $("#chart-loading-slave").css("visibility", "default");
   }
   mongo_request("events", "aggregate", [
       { $match: { session: session, instance: node.id,
                   name: { $in: fetched_events },
-                  time: { $gt: current_min_time, $lt: current_max_time } } },
+                  time: { $gt: my_min_time, $lt: my_max_time } } },
       { $group: { _id: { name: "$name" },
                   count: { $sum: 1 },
                   min: { $min: "$time" },
@@ -94,14 +114,19 @@ function fetch_events_for_node(node_name) {
       mongo_request("events", "find", {session: session,
                                        instance: node.id,
                                        name: { $in: fetched_events },
-                                       time: { $gt: current_min_time,
-                                               $lt: current_max_time }},
+                                       time: { $gt: my_min_time,
+                                               $lt: my_max_time }},
         function(data) {
         set_events(node, data);
-        finalize_fetch(node);
+        for (var index in fetched_events) {
+          var event = node.events[fetched_events[index]];
+          event.min_fetch_time = my_min_time;
+          event.max_fetch_time = my_max_time;
+        }
+        finalize_fetch(node, false);
       });
     } else {
-      finalize_fetch(node);
+      finalize_fetch(node, true);
     }
   });
 }
@@ -109,7 +134,6 @@ function fetch_events_for_node(node_name) {
 function fetch_events() {
   if (fetching_events[0] || fetching_events[1]) {
     need_fetch = true;
-    console.log(fetching_events);
     return;
   }
   fetching_events[0] = fetching_events[1] = true;
@@ -163,12 +187,14 @@ function initial_fetch_events_for_node(node) {
       event.data.push({x: event.min - smallest_time, y: 1, event: too_many});
       event.data.push({x: event.max - smallest_time, y: 1, event: too_many});
       event.data.push({x: event.max - smallest_time, y: 0, event: too_many});
+      event.min_fetch_time = smallest_time;
+      event.max_fetch_time = smallest_time;
     }
   }
   if (query.name.$in.length > 0) {
     mongo_request("events", "find", query, function(result) {
       set_events(node, result);
-      finalize_fetch(node);
+      finalize_fetch(node, false);
     });
   }
 }

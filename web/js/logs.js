@@ -35,6 +35,8 @@ function setup_ui() {
     return;
   }
   ui_is_setup = true;
+  $("#chart-loading-master").css("visibility", "hidden");
+  $("#chart-loading-slave").css("visibility", "hidden");
   nodes.forEach(function(node) {
     if (node.id != "master") {
       $("select.slave-setter").append($.parseHTML("<option>" + node.id + "</option>"));

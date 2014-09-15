@@ -27,12 +27,18 @@ div, span, p, td {
   margin-bottom: 0.3125em;
 }
 .rickshaw_legend .line {
-    padding-right: 0px !Important;
+  padding-right: 0px !Important;
 }
 #charts-container {
   position: relative;
   display: inline-block;
   flex: auto;
+}
+.chart-loading {
+  position: absolute;
+  width: 600px;
+  height: 390px;
+  background:url(../img/ajax-loader.gif) no-repeat center center;
 }
 #master-header {
   width: 600px;
@@ -53,9 +59,6 @@ div, span, p, td {
   top: 0;
   width: 600px;
   text-align: center;
-}
-#time-interval {
-
 }
 #log-level-container {
   flex: auto;
