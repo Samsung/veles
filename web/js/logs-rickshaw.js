@@ -10,7 +10,9 @@ Rickshaw.Graph.Legend.prototype.initialize = function(args) {
         this.list.id = "rickshaw-legend";
         this.element.appendChild(this.list);
         this.render();
+        // Remove the "hidden" line, which is always comes last
         $(this.lines[this.lines.length - 1].element).css("visibility", "hidden");
+        this.lines.length = this.lines.length - 1
         $(this.element).addClass(this.className).find("#rickshaw-legend")
             .data("Rickshaw.Graph.Legend", this);
         for (var index in this.lines) {

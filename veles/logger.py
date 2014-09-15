@@ -228,6 +228,7 @@ class MongoLogHandler(logging.Handler):
             del data[bs]
         data["session"] = self.log_id
         data["node"] = self.node_id
+        data["pathname"] = os.path.normpath(data["pathname"])
         if data["exc_info"] is not None:
             data["exc_info"] = repr(data["exc_info"])
         try:

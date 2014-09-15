@@ -127,6 +127,8 @@ class WebServer(Logger):
         self.db = self.motor.veles
         self.db.events.ensure_index(
             (("session", 1), ("instance", 1), ("name", 1), ("time", 1)))
+        self.db.logs.ensure_index(
+            (("session", 1), ("node", 1), ("levelname", 1), ("time", 1)))
 
     @property
     def port(self):

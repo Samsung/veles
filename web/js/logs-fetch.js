@@ -17,7 +17,7 @@ var too_many = "too many events in the current interval";
 var ui_is_setup = false;
 
 
-function mongo_request(target, type, query, then) {
+function mongoRequest(target, type, query, then) {
   var dataRequest = new XMLHttpRequest();
   dataRequest.open("POST", "service", true);
   dataRequest.onload = function() {
@@ -31,7 +31,7 @@ function mongo_request(target, type, query, then) {
   dataRequest.send(JSON.stringify(message));
 }
 
-function install_slave_events(node) {
+function installSlaveEvents(node) {
   for (var index = 1; index < event_names.length; index++) {
     series_data[1][index].length = 0;
     var events = node.events[event_names[index]].data;
@@ -41,29 +41,29 @@ function install_slave_events(node) {
   }
 }
 
-function finalize_fetch(node, no_install) {
+function finalizeFetch(node, no_install) {
   var ni = (node.id == "master")? 0 : 1;
   if (ni == 1 && !no_install) {
-    install_slave_events(node);
+    installSlaveEvents(node);
   }
   if (document.readyState === "complete") {
     if (node.id == "master") {
-      $("#chart-loading-master").css("visibility", "hidden");
+      $("#chart-loading-master").hide();
     } else {
-      $("#chart-loading-slave").css("visibility", "hidden");
+      $("#chart-loading-slave").hide();
     }
   }
   fetching_events[ni] = false;
   if (!fetching_events[0] && !fetching_events[1]) {
     if (need_fetch) {
-      fetch_events();
+      fetchEvents();
     } else if (document.readyState === "complete") {
-      render_events();
+      renderEvents();
     }
   }
 }
 
-function fetch_events_for_node(node_name) {
+function fetchEventsForNode(node_name) {
   var my_min_time = current_min_time;
   var my_max_time = current_max_time;
   var node = nodes[nodes_mapping[node_name]];
@@ -76,15 +76,15 @@ function fetch_events_for_node(node_name) {
     }
   }
   if (fetched_events.length == 0) {
-    finalize_fetch(node, true);
+    finalizeFetch(node, true);
     return;
   }
   if (node_name == "master") {
-    $("#chart-loading-master").css("visibility", "default");
+    $("#chart-loading-master").show();
   } else {
-    $("#chart-loading-slave").css("visibility", "default");
+    $("#chart-loading-slave").show();
   }
-  mongo_request("events", "aggregate", [
+  mongoRequest("events", "aggregate", [
       { $match: { session: session, instance: node.id,
                   name: { $in: fetched_events },
                   time: { $gt: my_min_time, $lt: my_max_time } } },
@@ -111,38 +111,38 @@ function fetch_events_for_node(node_name) {
     }
 
     if (fetched_events.length > 0) {
-      mongo_request("events", "find", {session: session,
+      mongoRequest("events", "find", {session: session,
                                        instance: node.id,
                                        name: { $in: fetched_events },
                                        time: { $gt: my_min_time,
                                                $lt: my_max_time }},
         function(data) {
-        set_events(node, data);
+        setEvents(node, data);
         for (var index in fetched_events) {
           var event = node.events[fetched_events[index]];
           event.min_fetch_time = my_min_time;
           event.max_fetch_time = my_max_time;
         }
-        finalize_fetch(node, false);
+        finalizeFetch(node, false);
       });
     } else {
-      finalize_fetch(node, true);
+      finalizeFetch(node, true);
     }
   });
 }
 
-function fetch_events() {
+function fetchEvents() {
   if (fetching_events[0] || fetching_events[1]) {
     need_fetch = true;
     return;
   }
   fetching_events[0] = fetching_events[1] = true;
   need_fetch = false;
-  fetch_events_for_node("master");
-  fetch_events_for_node(selected_slave.id);
+  fetchEventsForNode("master");
+  fetchEventsForNode(selected_slave.id);
 }
 
-function set_events(node, result) {
+function setEvents(node, result) {
   var meta_ignored_keys = {"_id": null, "time": null, "name": null,
                            "session": null, "instance": null, "height": null};
   for (var index in result) {
@@ -175,7 +175,7 @@ function set_events(node, result) {
   }
 }
 
-function initial_fetch_events_for_node(node) {
+function initialFetchEventsForNode(node) {
   var query = {session: session, instance: node.id, name: { $in: [] }};
   for (var name in node.events) {
     var event = node.events[name];
@@ -192,15 +192,15 @@ function initial_fetch_events_for_node(node) {
     }
   }
   if (query.name.$in.length > 0) {
-    mongo_request("events", "find", query, function(result) {
-      set_events(node, result);
-      finalize_fetch(node, false);
+    mongoRequest("events", "find", query, function(result) {
+      setEvents(node, result);
+      finalizeFetch(node, false);
     });
   }
 }
 
 
-mongo_request("events", "aggregate", [
+mongoRequest("events", "aggregate", [
     { $match: { session: session } },
 
     { $group: { _id: { instance: "$instance",
@@ -268,7 +268,8 @@ mongo_request("events", "aggregate", [
 
   // Initial events fetch
   fetching_events[0] = true;
-  initial_fetch_events_for_node(master);
+  initialFetchEventsForNode(master);
+  fetchLogsForNode("master", "INFO");
   if (nodes.length > 1) {
     fetching_events[1] = true;
     for (var index in nodes) {
@@ -277,7 +278,36 @@ mongo_request("events", "aggregate", [
         break;
       }
     }
-    initial_fetch_events_for_node(selected_slave);
-    install_slave_events(selected_slave);
+    initialFetchEventsForNode(selected_slave);
+    fetchLogsForNode(selected_slave.id, "INFO");
   }
 });
+
+function fetchLogsForNode(instance, level) {
+  var levels = ["CRITICAL", "ERROR"];
+  switch (level) {
+    case "DEBUG":
+      levels.push(level);
+    case "INFO":
+      levels.push(level);
+    case "WARNING":
+      levels.push(level);
+    default:
+      break;
+  }
+  if (document.readyState === "complete") {
+    var node = (instance == "master")? "master" : "slave";
+    $("#logs-loading-" + node).show();
+  }
+  mongoRequest("logs", "find", {session: session,
+                                node: instance,
+                                levelname: { $in: levels }},
+    function(data) {
+      renderLogs(data, instance);
+  });
+}
+
+function fetchLogs(level) {
+  fetchLogsForNode("master", level);
+  fetchLogsForNode(selected_slave.id, level);
+}

@@ -1,8 +1,8 @@
 var graphs = [];
 var graph_width = 600;
-var graph_height = 390;
+var graph_height = 380;
 
-function format_date(unix) {
+function formatDate(unix) {
   var date = new Date(unix * 1000);
   var month = date.getMonth();
   if (month < 10) {
@@ -27,16 +27,17 @@ function format_date(unix) {
   if (millisecs < 100) {
     millisecs = "0" + millisecs;
   }
-  return "" + date.getDate() + "." + month + " " + hours + ":" + minutes + ":" + seconds + "." + millisecs;
+  return "" + date.getDate() + "." + month + " " +
+      hours + ":" + minutes + ":" + seconds + "." + millisecs;
 }
 
-function setup_ui() {
+function setupUI() {
   if (ui_is_setup) {
     return;
   }
   ui_is_setup = true;
-  $("#chart-loading-master").css("visibility", "hidden");
-  $("#chart-loading-slave").css("visibility", "hidden");
+  $("#chart-loading-master").hide();
+  $("#chart-loading-slave").hide();
   nodes.forEach(function(node) {
     if (node.id != "master") {
       $("select.slave-setter").append($.parseHTML("<option>" + node.id + "</option>"));
@@ -58,44 +59,72 @@ function setup_ui() {
       });
     }
   }
-  setup_graphs(graph_series);
+  setupGraphs(graph_series);
   var scale_min = Math.log(0.001);
   var scale_max = Math.log(elapsed_time);
   $("#timescale").slider({
     min: scale_min,
     max: scale_max,
     step: (scale_max - scale_min) / 20}).on("slide", function(event, ui) {
-       ui.value = Math.min(Math.max(ui.value, scale_min), scale_max);
-       var new_time_scale = Math.exp(ui.value);
-       if (new_time_scale == time_scale) {
-         return;
-       }
-       var preview = $("#preview");
-       var pos = preview.slider("values");
-       var middle = (pos[0] + pos[1]) / 2;
-       var length = (pos[1] - pos[0]);
-       var ratio = new_time_scale / time_scale;
-       var min = preview.slider("option", "min");
-       var max = preview.slider("option", "max");
-       var offset = middle * (1 - ratio);
-       min = min * ratio + offset;
-       max = max * ratio + offset;
-       if (pos[1] > max) {
-         pos[1] = max;
-       }
-       if (pos[0] < min) {
-         pos[0] = min;
-       }
-       current_min_time = pos[0];
-       current_max_time = pos[1];
-       preview.slider({values: pos, min: min, max: max,
-                       step: (max - min) / 100});
-       time_scale = new_time_scale;
-   });
-   $("#time-interval").text(format_date(current_min_time) + " - " + format_date(current_max_time));
+      ui.value = Math.min(Math.max(ui.value, scale_min), scale_max);
+      var new_time_scale = Math.exp(ui.value);
+      if (new_time_scale == time_scale) {
+        return;
+      }
+      var preview = $("#preview");
+      var pos = preview.slider("values");
+      var middle = (pos[0] + pos[1]) / 2;
+      var length = (pos[1] - pos[0]);
+      var ratio = new_time_scale / time_scale;
+      var min = preview.slider("option", "min");
+      var max = preview.slider("option", "max");
+      var offset = middle * (1 - ratio);
+      min = min * ratio + offset;
+      max = max * ratio + offset;
+      if (pos[1] > max) {
+        pos[1] = max;
+      }
+      if (pos[0] < min) {
+        pos[0] = min;
+      }
+      current_min_time = pos[0];
+      current_max_time = pos[1];
+      preview.slider({values: pos, min: min, max: max,
+                     step: (max - min) / 100});
+      time_scale = new_time_scale;
+  });
+  $("#time-interval").text(formatDate(current_min_time) + " - " + formatDate(current_max_time));
+  setupLogTables();
 }
 
-function setup_graphs(graph_series) {
+function setupLogTables() {
+  var tablesorter_options = {theme: 'jui', widthFixed: true, headers: {
+      0: { sorter: "digit" },
+      1: { sorter: "text" },
+      2: { sorter: "text" },
+      3: { sorter: false }
+  }, widgets: ['uitheme', 'zebra', 'columns', 'stickyHeaders'],
+  cancelSelection: true,
+  widgetOptions: {
+      zebra: [
+          "ui-widget-content even",
+          "ui-state-default odd"],
+      stickyHeaders_attachTo : $("#logs-master"),
+
+  },
+  sortList: [[0, 0]],
+  textExtraction: {
+        0: function (node) {
+            return $(node).attr("created");
+        }
+  }};
+  $("#logs-contents-master").tablesorter(tablesorter_options).trigger('pagerComplete.tsSticky', null);
+  tablesorter_options.widgetOptions.stickyHeaders_attachTo = $("#logs-slave");
+  $("#logs-contents-slave").tablesorter(tablesorter_options).trigger('pagerComplete.tsSticky', null);
+  $(".logs-contents").css("visibility", "visible");
+}
+
+function setupGraphs(graph_series) {
   for (var index = 0; index < 2; index++) {
     graphs.push(new Rickshaw.Graph( {
       element: document.getElementById(index === 0? "chart-master" : "chart-slave"),
@@ -164,8 +193,8 @@ function setup_graphs(graph_series) {
 }
 
 
-render_events = function() {
-  setup_ui();
+renderEvents = function() {
+  setupUI();
   for (var index in graphs) {
     var graph = graphs[index];
     series_data[0][0][0] = {x: current_min_time - smallest_time, y: 0};
@@ -180,7 +209,7 @@ render_events = function() {
 
 $(document).ready(function() {
   if (!fetching_events[0] && !fetching_events[1] && nodes.length > 0) {
-    render_events();
+    renderEvents();
   }
 });
 
@@ -203,19 +232,36 @@ Rickshaw.Graph.RangeSlider = function(args) {
             slide: function(event, ui) {
               current_min_time = ui.values[0] + smallest_time;
               current_max_time = ui.values[1] + smallest_time;
-              fetch_events();
+              fetchEvents();
             }
         } );
     } );
 };
 
 
-function logs_to_html(logs, level) {
-  var html = "";
+function makeVerbatimText(msg) {
+  return "<pre>" + msg.replace(/</g, "&lt;").replace(/>/g, "&gt;") + "</pre>";
+}
+
+
+function logsToHtml(logs) {
+  var html = [];
 
   for (var index in logs) {
     var record = logs[index];
+    var tr = "<tr><td created=\"" + record.created + "\">" + formatDate(record.created).replace(" ", "&nbsp;");
+    tr += "</td><td>" + record.pathname + ":" + record.lineno + "</td><td>";
+    tr += record.name + "</td><td>" + makeVerbatimText(record.message) + "</td></tr>\n";
+    html.push(tr);
   }
 
-  return $.parseHTML(html);
+  return $.parseHTML(html.join());
+}
+
+
+function renderLogs(logs, instance) {
+  var html = logsToHtml(logs);
+  var node = (instance == "master")? "master" : "slave";
+  $("#logs-loading-" + node).hide();
+  $("#logs-contents-" + node + " > tbody").empty().append(html);
 }

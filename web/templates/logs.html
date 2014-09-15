@@ -10,6 +10,7 @@
     <script src="js/logs-fetch.js"></script>
     <link type="text/css" rel="stylesheet" href="css/jquery-ui.min.css">
 	  <link type="text/css" rel="stylesheet" href="css/rickshaw.min.css">
+    <link type="text/css" rel="stylesheet" href="css/theme.jui.css">
     <link href="css/logs.css" rel="stylesheet" type="text/css" />
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -46,7 +47,17 @@
                     <div class="chart-loading" id="chart-loading-master"></div>
                     <div class="chart-container">
                         <div class="chart" id="chart-master"></div>
-                        <div class="logs" id="logs-master"></div>
+                        <div class="logs" id="logs-master">
+                          <div class="logs-loading" id="logs-loading-master"></div>
+                          <table class="logs-contents" id="logs-contents-master">
+                            <thead><tr>
+                              <th>Time</th>
+                              <th>Source</th>
+                              <th>Domain</th>
+                              <th>Message</th>
+                            </tr></thead><tbody></tbody>
+                          </table>
+                        </div>
                     </div>
                     <div id="charts-middle">
                         <div id="timescale"></div>
@@ -63,7 +74,17 @@
                     <div class="chart-loading" id="chart-loading-slave"></div>
                     <div class="chart-container">
                         <div class="chart" id="chart-slave"></div>
-                        <div class="logs" id="logs-slave"></div>
+                        <div class="logs" id="logs-slave">
+                          <div class="logs-loading" id="logs-loading-slave"></div>
+                          <table class="logs-contents" id="logs-contents-slave">
+                            <thead><tr>
+                              <th>Time</th>
+                              <th>Source</th>
+                              <th>Domain</th>
+                              <th>Message</th>
+                            </tr></thead><tbody></tbody>
+                          </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -88,6 +109,8 @@
         </script>
         <script src="js/d3.v3.min.js"></script>
         <script src="js/rickshaw.min.js"></script>
+        <script src="js/jquery.tablesorter.min.js"></script>
+        <script src="js/jquery.tablesorter.widgets.min.js"></script>
         <!-- JS dependencies end -->
         <script src="js/logs-rickshaw.js"></script>
         <script src="js/logs.js"></script>

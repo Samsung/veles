@@ -2,7 +2,7 @@
   padding: 2em;
   display: flex;
 }
-div, span, p, td {
+div, span, p {
   font-family: Arial, sans-serif;
 }
 #content {
@@ -37,7 +37,7 @@ div, span, p, td {
 .chart-loading {
   position: absolute;
   width: 600px;
-  height: 390px;
+  height: 380px;
   background:url(../img/ajax-loader.gif) no-repeat center center;
 }
 #master-header {
@@ -239,5 +239,37 @@ label[for=step] {
 }
 .logs {
   flex: auto;
+  position: relative;
+  margin-left: 1em;
   overflow: auto;
+}
+.logs-loading {
+  width: 100%;
+  height: 100%;
+  background:url(../img/ajax-loader.gif) no-repeat center center;
+  position: absolute;
+}
+.logs-contents {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  font-size: 10pt;
+  visibility: hidden;
+}
+.odd, .even {
+  font-weight: normal !Important;
+  color: black !Important;
+}
+table.ui-widget-content {
+  background: none;
+}
+.even {
+  background: none;
+}
+td {
+  font-family: monospace;
+  padding: 0.2em 0.5em 0.2em 0.5em;
+}
+pre {
+  margin: 0;
 }
