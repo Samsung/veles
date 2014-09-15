@@ -21,6 +21,10 @@ class DummyLauncher(object):
     def is_standalone(self):
         return True
 
+    @property
+    def log_id(self):
+        return "DUMMY"
+
     def add_ref(self, workflow):
         pass
 

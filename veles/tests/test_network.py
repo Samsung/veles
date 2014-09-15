@@ -22,7 +22,7 @@ class TestWorkflow(Workflow):
     update_applied = False
     power_requested = False
     job_dropped = False
-    event = threading.Event()
+    sync = threading.Event()
 
     def __init__(self, **kwargs):
         super(TestWorkflow, self).__init__(DummyLauncher(), **kwargs)
@@ -43,7 +43,7 @@ class TestWorkflow(Workflow):
     @Workflow.method_timed
     def apply_data_from_slave(self, obj, slave):
         if TestWorkflow.update_applied:
-            TestWorkflow.event.set()
+            TestWorkflow.sync.set()
         if isinstance(obj, dict):
             TestWorkflow.update_applied = True
             return True
@@ -83,7 +83,7 @@ class Test(unittest.TestCase):
         self.stopper.start()
 
     def stop(self):
-        TestWorkflow.event.wait(0.1)
+        TestWorkflow.sync.wait(0.1)
         reactor.callFromThread(reactor.stop)
 
     def tearDown(self):
