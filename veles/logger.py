@@ -147,27 +147,33 @@ class Logger(object):
 
     @msg_changeable
     def debug(self, msg, *args, **kwargs):
-        self.logger.debug(msg, *args, **kwargs)
+        self.logger.debug(
+            msg, *args, extra={"caller": self.logger.findCaller()}, **kwargs)
 
     @msg_changeable
     def info(self, msg, *args, **kwargs):
-        self.logger.info(msg, *args, **kwargs)
+        self.logger.info(
+            msg, *args, extra={"caller": self.logger.findCaller()}, **kwargs)
 
     @msg_changeable
     def warning(self, msg, *args, **kwargs):
-        self.logger.warning(msg, *args, **kwargs)
+        self.logger.warning(
+            msg, *args, extra={"caller": self.logger.findCaller()}, **kwargs)
 
     @msg_changeable
     def error(self, msg, *args, **kwargs):
-        self.logger.error(msg, *args, **kwargs)
-
-    @msg_changeable
-    def exception(self, msg="Exception", *args, **kwargs):
-        self.logger.exception(msg, *args, **kwargs)
+        self.logger.error(
+            msg, *args, extra={"caller": self.logger.findCaller()}, **kwargs)
 
     @msg_changeable
     def critical(self, msg, *args, **kwargs):
-        self.logger.critical(msg, *args, **kwargs)
+        self.logger.critical(
+            msg, *args, extra={"caller": self.logger.findCaller()}, **kwargs)
+
+    @msg_changeable
+    def exception(self, msg="Exception", *args, **kwargs):
+        self.logger.exception(
+            msg, *args, extra={"caller": self.logger.findCaller()}, **kwargs)
 
     msg_changeable = staticmethod(msg_changeable)
 
@@ -224,8 +230,12 @@ class MongoLogHandler(logging.Handler):
     def emit(self, record):
         data = copy(record.__dict__)
         for bs in ("levelno", "funcName", "args", "msg", "module", "msecs",
-                   "processName"):
+                   "processName", "pathname", "lineno"):
             del data[bs]
+        fn, lno, func, _ = data["caller"]
+        data["pathname"] = os.path.normpath(fn)
+        data["lineno"] = lno
+        data["funcName"] = func
         data["session"] = self.log_id
         data["node"] = self.node_id
         data["pathname"] = os.path.normpath(data["pathname"])
