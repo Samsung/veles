@@ -109,7 +109,7 @@ class Launcher(logger.Logger):
         if self.logs_to_mongo:
             if self.mongo_log_addr == "":
                 self.args.log_mongo = root.common.mongodb_logging_address
-            if self.is_master:
+            if not self.is_slave:
                 logger.Logger.duplicate_all_logging_to_mongo(
                     self.args.log_mongo, self.log_id, "master")
 
