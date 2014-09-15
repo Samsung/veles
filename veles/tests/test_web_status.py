@@ -19,6 +19,7 @@ class Test(unittest.TestCase):
     def setUp(self):
         logging.basicConfig(level=logging.INFO)
         root.common.web.log_file = "/tmp/veles_web.test.log"
+        root.common.web.port = 8071
         self.ws = WebServer()
 
     def tearDown(self):
