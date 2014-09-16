@@ -62,11 +62,14 @@ div, span, p {
 }
 #log-level-container {
   flex: auto;
-  margin-left: 2em;
+  margin-left: calc(1em + 2px);
 }
 .cool-select {
   font-size: 8pt;
   vertical-align: middle;
+}
+.middle {
+  display: flex;
 }
 #log-level-label {
   font-size: 10pt;
@@ -93,6 +96,11 @@ div, span, p {
 }
 #charts-middle {
   width: 600px;
+}
+#logs-settings {
+  flex: auto;
+  margin-left: 1em;
+  padding: 0.5em;
 }
 #side_panel {
   padding: 0;
@@ -272,4 +280,30 @@ td {
 }
 pre {
   margin: 0;
+}
+.log-record-debug {
+  background: linear-gradient(to bottom, #dff0d8 0%, #c8e5bc 100%) !Important;
+  color: #3c763d;
+}
+.log-record-warning {
+  background: linear-gradient(to bottom, #fcf8e3 0%, #f8efc0 100%) !Important;
+  color: #8a6d3b !Important;
+}
+.log-record-error {
+  background: linear-gradient(to bottom, #f2dede 0%, #e7c3c3 100%) !Important;
+  color: #a94442 !Important;
+}
+.log-record-critical {
+  background: linear-gradient(to bottom, #f2dede 0%, #e7c3c3 100%) !Important;
+  font-weight: bold !Important;
+  color: #a94442 !Important;
+}
+.ui-checkbox {
+  font-size: 8pt;
+  margin-right: 0.4em;
+  height: 1.8em;
+  width: 1.8em !Important;
+}
+.checkbox-label {
+  font-size: 10pt;
 }

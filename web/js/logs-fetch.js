@@ -287,11 +287,11 @@ function fetchLogsForNode(instance, level) {
   var levels = ["CRITICAL", "ERROR"];
   switch (level) {
     case "DEBUG":
-      levels.push(level);
+      levels.push("DEBUG");
     case "INFO":
-      levels.push(level);
+      levels.push("INFO");
     case "WARNING":
-      levels.push(level);
+      levels.push("WARNING");
     default:
       break;
   }

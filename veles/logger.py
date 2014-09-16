@@ -229,13 +229,12 @@ class MongoLogHandler(logging.Handler):
 
     def emit(self, record):
         data = copy(record.__dict__)
-        for bs in ("levelno", "funcName", "args", "msg", "module", "msecs",
-                   "processName", "pathname", "lineno"):
+        for bs in ("levelno", "args", "msg", "module", "msecs", "processName"):
             del data[bs]
-        fn, lno, func, _ = data["caller"]
-        data["pathname"] = os.path.normpath(fn)
-        data["lineno"] = lno
-        data["funcName"] = func
+        if "caller" in data:
+            data["pathname"], data["lineno"], data["funcName"], _ = \
+                data["caller"]
+            del data["caller"]
         data["session"] = self.log_id
         data["node"] = self.node_id
         data["pathname"] = os.path.normpath(data["pathname"])

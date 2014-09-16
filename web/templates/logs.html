@@ -33,15 +33,13 @@
                           <div id="time-display"><span id="time-interval"></span></div>
                         </div>
                         <div id="log-level-container">
-
-                                <span id="log-level-label" class="ui-widget">Logs level: </span>
-                                <select id="log-level">
-                                  <option>DEBUG</option>
-                                  <option selected="selected">INFO</option>
-                                  <option>WARNING</option>
-                                  <option>ERROR</option>
-                                </select>
-
+                            <span id="log-level-label" class="ui-widget">Logs level: </span>
+                            <select id="log-level">
+                              <option>DEBUG</option>
+                              <option selected="selected">INFO</option>
+                              <option>WARNING</option>
+                              <option>ERROR</option>
+                            </select>
                         </div>
                     </div>
                     <div class="chart-loading" id="chart-loading-master"></div>
@@ -59,16 +57,22 @@
                           </table>
                         </div>
                     </div>
-                    <div id="charts-middle">
-                        <div id="timescale"></div>
-                        <div id="preview"></div>
-                        <div class="flex-box">
-                            <h2 id="graph-slave-title" class="node-title ui-widget">Slave</h2>
-                            <div id="slave-setter-dummy-placeholder"></div>
-                            <div id="slave-setter-horizontal-centering">
-                                <select class="slave-setter"></select>
-                            </div>
-                            <div id="slave-setter-horizontal-offset"></div>
+                    <div class="middle">
+                        <div id="charts-middle">
+                          <div id="timescale"></div>
+                          <div id="preview"></div>
+                          <div class="flex-box">
+                              <h2 id="graph-slave-title" class="node-title ui-widget">Slave</h2>
+                              <div id="slave-setter-dummy-placeholder"></div>
+                              <div id="slave-setter-horizontal-centering">
+                                  <select class="slave-setter"></select>
+                              </div>
+                              <div id="slave-setter-horizontal-offset"></div>
+                          </div>
+                        </div>
+                        <div id="logs-settings">
+                            <input id="sync-logs" type="checkbox" checked="checked"/>
+                            <label for="check" class="ui-widget checkbox-label">Sync slave's logs with master's</label>
                         </div>
                     </div>
                     <div class="chart-loading" id="chart-loading-slave"></div>
@@ -96,6 +100,9 @@
         <script>
             var slave_setter = null;
             $(function() {
+                $("#slave-setter-horizontal-centering").hide();
+                $("#timescale").hide();
+                $("#preview").hide();
                 $("select").selectmenu().each(function() {
                     var menu = $(this);
                     menu.selectmenu("menuWidget").addClass("overflow").addClass("cool-select");
@@ -111,6 +118,7 @@
         <script src="js/rickshaw.min.js"></script>
         <script src="js/jquery.tablesorter.min.js"></script>
         <script src="js/jquery.tablesorter.widgets.min.js"></script>
+        <script src="js/jquery.checkbox.min.js"></script>
         <!-- JS dependencies end -->
         <script src="js/logs-rickshaw.js"></script>
         <script src="js/logs.js"></script>

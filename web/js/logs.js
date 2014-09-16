@@ -1,6 +1,9 @@
 var graphs = [];
 var graph_width = 600;
 var graph_height = 380;
+var table_rows = [[], []];
+var animating_scroll = false;
+var pending_scroll_offset = -1;
 
 function formatDate(unix) {
   var date = new Date(unix * 1000);
@@ -47,6 +50,14 @@ function setupUI() {
     $("select.slave-setter").children().first().attr("selected", "selected");
     $("select.slave-setter").selectmenu("refresh").selectmenu("widget").removeAttr("style");
   }
+  $("#timescale").show();
+  $("#preview").show();
+  $("#slave-setter-horizontal-centering").show();
+  $("#log-level").selectmenu({
+    select: function(event, ui) {
+      fetchLogs(ui.item.label);
+    }
+  });
   var palette = new Rickshaw.Color.Palette( { scheme: 'classic9' } );
   var graph_series = [[], []];
   var colors = event_names.map(function() { return palette.color(); });
@@ -122,6 +133,66 @@ function setupLogTables() {
   tablesorter_options.widgetOptions.stickyHeaders_attachTo = $("#logs-slave");
   $("#logs-contents-slave").tablesorter(tablesorter_options).trigger('pagerComplete.tsSticky', null);
   $(".logs-contents").css("visibility", "visible");
+  enumerateMasterTableRows();
+  $("#logs-master").scroll(function(event) {
+    if (!$("#sync-logs").is(":checked")) {
+      return;
+    }
+    var offset = $("#logs-master").scrollTop();
+    var rows = table_rows[0];
+    var left = 0;
+    var right = rows.length;
+    while (left < right) {
+      var middle = (left + right) >> 1;
+      var val = rows[middle];
+      if (val > offset) {
+        right = middle;
+      } else {
+        left = (left == middle)? right : middle;
+      }
+    }
+    offset = $($("#logs-contents-master > tbody > tr")[left]).find("td").attr("created");
+    rows = table_rows[1];
+    left = 0;
+    right = rows.length;
+    while (left < right) {
+      var middle = (left + right) >> 1;
+      var val = rows[middle];
+      if (val > offset) {
+        right = middle;
+      } else {
+        left = (left == middle)? right : middle;
+      }
+    }
+    if (left > 0) {
+      offset = $($("#logs-contents-slave > tbody > tr")[left - 1]).position().top - $("thead").height();
+      if (offset < 0) {
+        offset = 0;
+      }
+    } else {
+      offset = 0;
+    }
+    scrollSlaveLogsDiv(offset);
+  });
+}
+
+function scrollSlaveLogsDiv(offset) {
+  var pos = $("#logs-slave").scrollTop();
+  if (pos != offset) {
+    if (!animating_scroll) {
+      animating_scroll = true;
+      $("#logs-slave").animate({scrollTop: offset}, 500, function() {
+        animating_scroll = false;
+        if (pending_scroll_offset >= 0) {
+          offset = pending_scroll_offset;
+          pending_scroll_offset = -1;
+          scrollSlaveLogsDiv(offset);
+        }
+      });
+    } else {
+      pending_scroll_offset = offset;
+    }
+  }
 }
 
 function setupGraphs(graph_series) {
@@ -244,12 +315,29 @@ function makeVerbatimText(msg) {
 }
 
 
+function enumerateMasterTableRows() {
+  var table = $("#logs-contents-master");
+  table_rows[0].length = 0;
+  $("#logs-contents-master > tbody > tr").each(function() {
+    table_rows[0].push($(this).position().top);
+  });
+}
+
+function enumerateSlaveRows(logs) {
+  table_rows[1].length = 0;
+  for (var index in logs) {
+    var record = logs[index];
+    table_rows[1].push(record.created);
+  }
+}
+
 function logsToHtml(logs) {
   var html = [];
 
   for (var index in logs) {
     var record = logs[index];
-    var tr = "<tr><td created=\"" + record.created + "\">" + formatDate(record.created).replace(" ", "&nbsp;");
+    var tr = "<tr class=\"log-record-" + record.levelname.toLowerCase() + "\">";
+    tr += "<td created=\"" + record.created + "\">" + formatDate(record.created).replace(" ", "&nbsp;");
     tr += "</td><td>" + record.pathname + ":" + record.lineno + "</td><td>";
     tr += record.name + "</td><td>" + makeVerbatimText(record.message) + "</td></tr>\n";
     html.push(tr);
@@ -258,10 +346,22 @@ function logsToHtml(logs) {
   return $.parseHTML(html.join());
 }
 
-
 function renderLogs(logs, instance) {
   var html = logsToHtml(logs);
   var node = (instance == "master")? "master" : "slave";
   $("#logs-loading-" + node).hide();
   $("#logs-contents-" + node + " > tbody").empty().append(html);
+  var table = $("#logs-contents-" + node);
+  if (ui_is_setup) {
+    table.trigger("update")
+      .trigger("sorton", table.first().config.sortList)
+      .trigger("appendCache")
+      .trigger("applyWidgets");
+    if (node == "master") {
+      enumerateMasterTableRows();
+    }
+  }
+  if (node == "slave") {
+    enumerateSlaveRows(logs);
+  }
 }
