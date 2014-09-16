@@ -100,7 +100,7 @@ class MeanDispNormalizer(OpenCLUnit, TriviallyDistributable):
             dtype=dtype)
 
         self.assign_kernel("normalize_mean_disp")
-        self.set_args(self.input, self.mean, self.rdisp, self.output)
+        self._set_args(self.input, self.mean, self.rdisp, self.output)
 
         self.global_size = [sample_size, self.input.shape[0]]
 

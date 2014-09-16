@@ -131,7 +131,7 @@ class TestRandom128(unittest.TestCase):
         obj.build_program({}, os.path.join(root.common.cache_dir,
                                            "test_random.cl"))
         obj.assign_kernel("random_xorshift128plus")
-        obj.set_args(states, output)
+        obj._set_args(states, output)
         obj.execute_kernel((output.mem.size >> self.chunk,), None,
                            need_event=False)
 

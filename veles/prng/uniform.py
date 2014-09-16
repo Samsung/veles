@@ -66,7 +66,7 @@ class Uniform(OpenCLUnit):
         self.build_program({}, "uniform_%d.cl" % self.num_states)
 
         self.assign_kernel("random_xorshift1024star")
-        self.set_args(self.states, self.cl_const, self.output)
+        self._set_args(self.states, self.cl_const, self.output)
 
     def fill_ocl(self, nbytes):
         bytes_per_round = self.num_states * 16 * 8
@@ -76,7 +76,7 @@ class Uniform(OpenCLUnit):
         self.states.unmap()
         self.output.unmap()
         self.cl_const[0] = nbytes // bytes_per_round
-        self.set_arg(1, self.cl_const)
+        self._set_arg(1, self.cl_const)
         self.execute_kernel([self.num_states], None)
 
     def fill_cpu(self, nbytes):
