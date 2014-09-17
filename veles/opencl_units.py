@@ -160,13 +160,13 @@ class OpenCLUnit(Unit):
                        str(global_size), str(local_size))
             raise
 
-    def _set_arg(self, index, arg):
+    def set_arg(self, index, arg):
         if isinstance(arg, formats.Vector):
             self._kernel_.set_arg(index, arg.devmem)
         else:
             self._kernel_.set_arg(index, arg)
 
-    def _set_args(self, *args):
+    def set_args(self, *args):
         filtered_args = []
         for arg in args:
             if isinstance(arg, formats.Vector):
@@ -337,7 +337,7 @@ class OpenCLBenchmark(OpenCLUnit):
         self.assign_kernel("benchmark")
         self.input_A_.initialize(self.device)
         self.input_B_.initialize(self.device)
-        self._set_args(self.input_A_, self.input_A_, self.input_B_)
+        self.set_args(self.input_A_, self.input_A_, self.input_B_)
 
     def estimate(self):
         """
