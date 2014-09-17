@@ -328,8 +328,9 @@ class Launcher(logger.Logger):
             def on_id_received(node_id, log_id):
                 self.id = node_id
                 self.log_id = log_id
-                logger.Logger.duplicate_all_logging_to_mongo(
-                    self.args.log_mongo, self.log_id, node_id)
+                if self.args.logs_to_mongo:
+                    logger.Logger.duplicate_all_logging_to_mongo(
+                        self.args.logs_to_mongo, self.log_id, node_id)
 
             self.agent.on_id_received = on_id_received
         else:
