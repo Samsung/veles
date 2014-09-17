@@ -132,12 +132,10 @@ function setupLogTables() {
   $("#logs-contents-master").tablesorter(tablesorter_options).trigger('pagerComplete.tsSticky', null);
   tablesorter_options.widgetOptions.stickyHeaders_attachTo = $("#logs-slave");
   $("#logs-contents-slave").tablesorter(tablesorter_options).trigger('pagerComplete.tsSticky', null);
-  $(".logs-contents").css("visibility", "visible").trigger("scroll");
+  $(".logs-contents").css("visibility", "visible");
   enumerateMasterTableRows();
   $("#logs-master").scroll(function(event) {
-    if (!$("#sync-logs").is(":checked") ||
-        $("#logs-contents-master").data().tablesorter.sortList[0][0] > 0 ||
-        $("#logs-contents-slave").data().tablesorter.sortList[0][0] > 0) {
+    if (!$("#sync-logs").is(":checked")) {
       return;
     }
     var offset = $("#logs-master").scrollTop();
@@ -167,27 +165,14 @@ function setupLogTables() {
       }
     }
     if (left > 0) {
-      if ($("#logs-contents-slave").data().tablesorter.sortList[0][1] > 0) {
-        left = rows.length - left;
-      }
       offset = $($("#logs-contents-slave > tbody > tr")[left - 1]).position().top - $("thead").height();
       if (offset < 0) {
         offset = 0;
       }
     } else {
-      if ($("#logs-contents-slave").data().tablesorter.sortList[0][1] > 0) {
-        offset = $($("#logs-contents-slave > tbody > tr")[rows.length - 1]).position().top - $("thead").height();
-      } else {
-        offset = 0;
-      }
+      offset = 0;
     }
     scrollSlaveLogsDiv(offset);
-  });
-  $(".logs-contents").on("sortEnd", function(event) {
-    $("#logs-master").trigger("scroll");
-  });
-  $("#sync-logs").data().appCheckbox.button.on("click", function(event) {
-    $("#logs-master").trigger("scroll");
   });
 }
 
@@ -369,7 +354,7 @@ function renderLogs(logs, instance) {
   var table = $("#logs-contents-" + node);
   if (ui_is_setup) {
     table.trigger("update")
-      .trigger("sorton", table.data().tablesorter.sortList)
+      .trigger("sorton", table.first().config.sortList)
       .trigger("appendCache")
       .trigger("applyWidgets");
     if (node == "master") {
