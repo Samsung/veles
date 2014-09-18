@@ -82,8 +82,8 @@ class Launcher(logger.Logger):
             twisted_epollfd = None
             for fd in os.listdir("/proc/self/fd"):
                 try:
-                    if os.readlink("/proc/self/fd/" + fd) == \
-                       "anon_inode:[eventpoll]":
+                    s = os.readlink("/proc/self/fd/" + fd)
+                    if s.find("[eventpoll]") >= 0:
                         twisted_epollfd = int(fd)
                 except FileNotFoundError:
                     pass
