@@ -71,8 +71,14 @@
                           </div>
                         </div>
                         <div id="logs-settings">
-                            <input id="sync-logs" type="checkbox" checked="checked"/>
-                            <label for="check" class="ui-widget checkbox-label">Sync slave's logs with master's</label>
+                            <div>
+                              <input id="sync-logs" type="checkbox" checked="checked"/>
+                              <label for="check" class="ui-widget checkbox-label">Sync slave's logs with master's</label>
+                            </div>
+                            <div class="check-div">
+                              <input id="sync-events-with-logs" type="checkbox" checked="checked"/>
+                              <label for="check" class="ui-widget checkbox-label">Sync events with logs</label>
+                            </div>
                         </div>
                     </div>
                     <div class="chart-loading" id="chart-loading-slave"></div>

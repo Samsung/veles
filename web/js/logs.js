@@ -1,13 +1,14 @@
 var graphs = [];
 var graph_width = 600;
 var graph_height = 380;
-var table_rows = [[], []];
-var animating_scroll = false;
-var pending_scroll_offset = -1;
+var table_rows = {master: {pos: [], time: []}, slave: {time: []}};
+var animating_scroll = {master: false, slave: false};
+var pending_scroll_offset = {master: -1, slave: -1};
+var sync_scroll_block = {master: false, slave: false};
 
 function formatDate(unix) {
   var date = new Date(unix * 1000);
-  var month = date.getMonth();
+  var month = (date.getMonth() + 1);
   if (month < 10) {
     month = "0" + month;
   }
@@ -34,11 +35,11 @@ function formatDate(unix) {
       hours + ":" + minutes + ":" + seconds + "." + millisecs;
 }
 
+/// setupUI is called from renderEvents if UI is not initialized - only once
 function setupUI() {
   if (ui_is_setup) {
     return;
   }
-  ui_is_setup = true;
   $("#chart-loading-master").hide();
   $("#chart-loading-slave").hide();
   nodes.forEach(function(node) {
@@ -56,6 +57,14 @@ function setupUI() {
   $("#log-level").selectmenu({
     select: function(event, ui) {
       fetchLogs(ui.item.label);
+    }
+  });
+  $("select.slave-setter").selectmenu({
+    change: function(event, ui) {
+      var node = nodes[nodes_mapping[ui.item.label]];
+      selected_slave = node;
+      fetchEventsForNode(node, true);
+      fetchLogsForNode(node.id, $("#log-level option:selected").text());
     }
   });
   var palette = new Rickshaw.Color.Palette( { scheme: 'classic9' } );
@@ -90,8 +99,8 @@ function setupUI() {
       var min = preview.slider("option", "min");
       var max = preview.slider("option", "max");
       var offset = middle * (1 - ratio);
-      min = min * ratio + offset;
-      max = max * ratio + offset;
+      min = Math.max(min * ratio + offset, 0);
+      max = Math.min(max * ratio + offset, elapsed_time);
       if (pos[1] > max) {
         pos[1] = max;
       }
@@ -101,14 +110,17 @@ function setupUI() {
       current_min_time = pos[0];
       current_max_time = pos[1];
       preview.slider({values: pos, min: min, max: max,
-                     step: (max - min) / 100});
+                      step: (max - min) / 100});
       time_scale = new_time_scale;
   });
   $("#time-interval").text(formatDate(current_min_time) + " - " + formatDate(current_max_time));
   setupLogTables();
+  ui_is_setup = true;
 }
 
+/// Part of setupUI
 function setupLogTables() {
+  $(".logs").css("overflow", "auto");
   var tablesorter_options = {theme: 'jui', widthFixed: true, headers: {
       0: { sorter: "digit" },
       1: { sorter: "text" },
@@ -129,21 +141,31 @@ function setupLogTables() {
             return $(node).attr("created");
         }
   }};
-  $("#logs-contents-master").tablesorter(tablesorter_options).trigger('pagerComplete.tsSticky', null);
+  var tablesorter = $("#logs-contents-master").tablesorter(tablesorter_options);
+  tablesorter.trigger('pagerComplete.tsSticky', null);
+  if (fetching_logs.master) {
+    tablesorter.hide();
+  }
   tablesorter_options.widgetOptions.stickyHeaders_attachTo = $("#logs-slave");
-  $("#logs-contents-slave").tablesorter(tablesorter_options).trigger('pagerComplete.tsSticky', null);
-  $(".logs-contents").css("visibility", "visible").trigger("scroll");
-  enumerateMasterTableRows();
+  tablesorter = $("#logs-contents-slave").tablesorter(tablesorter_options);
+  tablesorter.trigger('pagerComplete.tsSticky', null);
+  if (fetching_logs.slave) {
+    tablesorter.hide();
+  } else {
+    enumerateMasterTableRows();
+  }
   $("#logs-master").scroll(function(event) {
-    if (!$("#sync-logs").is(":checked") ||
-        $("#logs-contents-master").data().tablesorter.sortList[0][0] > 0 ||
-        $("#logs-contents-slave").data().tablesorter.sortList[0][0] > 0) {
+    var master_list = $("#logs-contents-master").data().tablesorter.sortList;
+    var slave_list = $("#logs-contents-slave").data().tablesorter.sortList;
+    if (!$("#sync-logs").is(":checked") || sync_scroll_block.master || sync_scroll_block.slave ||
+        master_list.length == 0 || slave_list.length == 0 ||
+        master_list[0][0] > 0 || slave_list[0][0] > 0) {
       return;
     }
     var offset = $("#logs-master").scrollTop();
-    var rows = table_rows[0];
+    var rows = table_rows.master.pos;
     var left = 0;
-    var right = rows.length;
+    var right = rows.length - 1;
     while (left < right) {
       var middle = (left + right) >> 1;
       var val = rows[middle];
@@ -153,10 +175,10 @@ function setupLogTables() {
         left = (left == middle)? right : middle;
       }
     }
-    offset = $($("#logs-contents-master > tbody > tr")[left]).find("td").attr("created");
-    rows = table_rows[1];
+    offset = parseFloat($($("#logs-contents-master > tbody > tr")[left]).find("td").attr("created"));
+    rows = table_rows.slave.time;
     left = 0;
-    right = rows.length;
+    right = rows.length - 1;
     while (left < right) {
       var middle = (left + right) >> 1;
       var val = rows[middle];
@@ -167,7 +189,7 @@ function setupLogTables() {
       }
     }
     if (left > 0) {
-      if ($("#logs-contents-slave").data().tablesorter.sortList[0][1] > 0) {
+      if (slave_list[0][1] > 0) {
         left = rows.length - left;
       }
       offset = $($("#logs-contents-slave > tbody > tr")[left - 1]).position().top - $("thead").height();
@@ -175,7 +197,7 @@ function setupLogTables() {
         offset = 0;
       }
     } else {
-      if ($("#logs-contents-slave").data().tablesorter.sortList[0][1] > 0) {
+      if (slave_list[0][1] > 0) {
         offset = $($("#logs-contents-slave > tbody > tr")[rows.length - 1]).position().top - $("thead").height();
       } else {
         offset = 0;
@@ -191,25 +213,27 @@ function setupLogTables() {
   });
 }
 
+/// Used by setupLogTables's scroll event handler
 function scrollSlaveLogsDiv(offset) {
   var pos = $("#logs-slave").scrollTop();
   if (pos != offset) {
-    if (!animating_scroll) {
-      animating_scroll = true;
+    if (!animating_scroll.slave) {
+      animating_scroll.slave = true;
       $("#logs-slave").animate({scrollTop: offset}, 500, function() {
-        animating_scroll = false;
-        if (pending_scroll_offset >= 0) {
-          offset = pending_scroll_offset;
-          pending_scroll_offset = -1;
+        animating_scroll.slave = false;
+        if (pending_scroll_offset.slave >= 0) {
+          offset = pending_scroll_offset.slave;
+          pending_scroll_offset.slave = -1;
           scrollSlaveLogsDiv(offset);
         }
       });
     } else {
-      pending_scroll_offset = offset;
+      pending_scroll_offset.slave = offset;
     }
   }
 }
 
+/// Part of setupUI
 function setupGraphs(graph_series) {
   for (var index = 0; index < 2; index++) {
     graphs.push(new Rickshaw.Graph( {
@@ -278,7 +302,7 @@ function setupGraphs(graph_series) {
   }
 }
 
-
+/// Called by preview slider event handler and at startup
 renderEvents = function() {
   setupUI();
   for (var index in graphs) {
@@ -293,16 +317,53 @@ renderEvents = function() {
   }
 }
 
+/// Sometimes events are fetched faster than document loads - but unlikely, though.
 $(document).ready(function() {
-  if (!fetching_events[0] && !fetching_events[1] && nodes.length > 0) {
+  if (!fetching_events.master && !fetching_events.slave && nodes.length > 0) {
     renderEvents();
   }
 });
 
 
-Rickshaw.Graph.HoverDetail.prototype.formatter = function(series, x, y, formattedX, formattedY, d) {
-  return series.name + (d.value.event? ("  " + d.value.event) : "");
-};
+function scrollLogs(node) {
+  var sort_list = $("#logs-contents-" + node).data().tablesorter.sortList;
+  if (sort_list[0][0] != 0) {
+    return;
+  }
+  if ($("#sync-events-with-logs").is(":checked")) {
+  if (animating_scroll[node]) {
+    pending_scroll_offset[node] = current_min_time;
+    return;
+  }
+  var rows = table_rows[node].time;
+  var left = 0;
+  var right = rows.length - 1;
+  while (left < right) {
+    var middle = (left + right) >> 1;
+    var val = rows[middle];
+    if (val > current_min_time) {
+      right = middle;
+    } else {
+      left = (left == middle)? right : middle;
+    }
+  }
+  left = Math.max(left, 1);
+  var offset = $($("#logs-contents-" + node + " > tbody > tr")[left - 1]).position().top - $("thead").height();
+  if ($("#logs-" + node).scrollTop() != offset) {
+    animating_scroll[node] = true;
+    sync_scroll_block[node] = true;
+    $("#logs-" + node).animate({scrollTop: offset}, 500, function() {
+      animating_scroll[node] = false;
+      if (pending_scroll_offset[node] >= 0) {
+        pending_scroll_offset[node] = -1;
+        scrollLogs(node);
+      } else {
+        setTimeout(function() { sync_scroll_block[node] = false; }, 100);
+      }
+    });
+  }
+}
+}
 
 
 Rickshaw.Graph.RangeSlider = function(args) {
@@ -318,7 +379,10 @@ Rickshaw.Graph.RangeSlider = function(args) {
             slide: function(event, ui) {
               current_min_time = ui.values[0] + smallest_time;
               current_max_time = ui.values[1] + smallest_time;
+              $("#time-interval").text(formatDate(current_min_time) + " - " + formatDate(current_max_time));
               fetchEvents();
+              scrollLogs("master");
+              scrollLogs("slave");
             }
         } );
     } );
@@ -332,18 +396,21 @@ function makeVerbatimText(msg) {
 
 function enumerateMasterTableRows() {
   var table = $("#logs-contents-master");
-  table_rows[0].length = 0;
+  table_rows.master.pos.length = 0;
+  table_rows.master.time.length = 0;
   $("#logs-contents-master > tbody > tr").each(function() {
-    table_rows[0].push($(this).position().top);
+    table_rows.master.pos.push($(this).position().top);
+    table_rows.master.time.push(parseFloat($(this).find("td").attr("created")));
   });
 }
 
 function enumerateSlaveRows(logs) {
-  table_rows[1].length = 0;
+  table_rows.slave.time.length = 0;
   for (var index in logs) {
     var record = logs[index];
-    table_rows[1].push(record.created);
+    table_rows.slave.time.push(record.created);
   }
+  table_rows.slave.time.sort();
 }
 
 function logsToHtml(logs) {
@@ -364,16 +431,18 @@ function logsToHtml(logs) {
 function renderLogs(logs, instance) {
   var html = logsToHtml(logs);
   var node = (instance == "master")? "master" : "slave";
+  var tbody = $("#logs-contents-" + node + " > tbody").empty().append(html);
   $("#logs-loading-" + node).hide();
-  $("#logs-contents-" + node + " > tbody").empty().append(html);
-  var table = $("#logs-contents-" + node);
+  var table = $("#logs-contents-" + node).show();
   if (ui_is_setup) {
-    table.trigger("update")
-      .trigger("sorton", table.data().tablesorter.sortList)
-      .trigger("appendCache")
-      .trigger("applyWidgets");
+    tbody.trigger("update");
     if (node == "master") {
       enumerateMasterTableRows();
+      if (!fetching_logs.slave) {
+        $("#logs-master").trigger("scroll");
+      }
+    } else if (!fetching_logs.master) {
+      $("#logs-master").trigger("scroll");
     }
   }
   if (node == "slave") {

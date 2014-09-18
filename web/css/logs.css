@@ -11,7 +11,6 @@ div, span, p {
 }
 .chart {
   display: inline-block;
-  border: 1px solid #f0f0f0;
 }
 .chart path {
   -webkit-transition: opacity 0.2s linear;
@@ -249,7 +248,7 @@ label[for=step] {
   flex: auto;
   position: relative;
   margin-left: 1em;
-  overflow: auto;
+  overflow: hidden;
 }
 .logs-loading {
   width: 100%;
@@ -262,7 +261,6 @@ label[for=step] {
   height: 100%;
   position: absolute;
   font-size: 10pt;
-  visibility: hidden;
 }
 .odd, .even {
   font-weight: normal !Important;
@@ -306,4 +304,7 @@ pre {
 }
 .checkbox-label {
   font-size: 10pt;
+}
+.check-div {
+  margin-top: 0.4em;
 }

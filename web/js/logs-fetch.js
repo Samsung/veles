@@ -11,7 +11,8 @@ var selected_slave = null;
 var current_min_time = null;
 var current_max_time = null;
 var series_data = [[], []];
-var fetching_events = [false, false];
+var fetching_events = {master: false, slave: false};
+var fetching_logs = {master: false, slave: false};
 var need_fetch = false;
 var too_many = "too many events in the current interval";
 var ui_is_setup = false;
@@ -31,6 +32,10 @@ function mongoRequest(target, type, query, then) {
   dataRequest.send(JSON.stringify(message));
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Events
+///////////////////////////////////////////////////////////////////////////////
+
 function installSlaveEvents(node) {
   for (var index = 1; index < event_names.length; index++) {
     series_data[1][index].length = 0;
@@ -41,9 +46,9 @@ function installSlaveEvents(node) {
   }
 }
 
-function finalizeFetch(node, no_install) {
-  var ni = (node.id == "master")? 0 : 1;
-  if (ni == 1 && !no_install) {
+function finalizeFetch(node, no_install, callback) {
+  var ntype = (node.id == "master")? "master" : "slave";
+  if (ntype == "slave" && !no_install) {
     installSlaveEvents(node);
   }
   if (document.readyState === "complete") {
@@ -53,20 +58,30 @@ function finalizeFetch(node, no_install) {
       $("#chart-loading-slave").hide();
     }
   }
-  fetching_events[ni] = false;
-  if (!fetching_events[0] && !fetching_events[1]) {
+  fetching_events[ntype] = false;
+  if (!fetching_events.master && !fetching_events.slave) {
     if (need_fetch) {
       fetchEvents();
     } else if (document.readyState === "complete") {
       renderEvents();
     }
   }
+  if (callback != undefined) {
+    callback(node);
+  }
 }
 
-function fetchEventsForNode(node_name) {
+function fetchEventsForNode(node, force_install) {
+  if (!node.initialized) {
+    initialFetchEventsForNode(node, fetchEventsForNode);
+    return;
+  }
+  if (force_install == undefined) {
+    force_install = false;
+  }
+  fetching_events[node.id == "master"? "master" : "slave"] = true;
   var my_min_time = current_min_time;
   var my_max_time = current_max_time;
-  var node = nodes[nodes_mapping[node_name]];
   var fetched_events = [];
   for (var name in node.events) {
     var event = node.events[name];
@@ -76,10 +91,10 @@ function fetchEventsForNode(node_name) {
     }
   }
   if (fetched_events.length == 0) {
-    finalizeFetch(node, true);
+    finalizeFetch(node, !force_install);
     return;
   }
-  if (node_name == "master") {
+  if (node.id == "master") {
     $("#chart-loading-master").show();
   } else {
     $("#chart-loading-slave").show();
@@ -98,11 +113,11 @@ function fetchEventsForNode(node_name) {
     fetched_events = [];
     for (var index in result) {
       var event = result[index];
+      var data = node.events[event._id.name].data;
+      data.length = 0;
       if (event.count <= max_count) {
         fetched_events.push(event._id.name);
       } else {
-        var data = node.events[event._id.name].data;
-        data.length = 0;
         data.push({x: event.min - smallest_time, y: 0, event: too_many});
         data.push({x: event.min - smallest_time, y: 1, event: too_many});
         data.push({x: event.max - smallest_time, y: 1, event: too_many});
@@ -112,11 +127,12 @@ function fetchEventsForNode(node_name) {
 
     if (fetched_events.length > 0) {
       mongoRequest("events", "find", {session: session,
-                                       instance: node.id,
-                                       name: { $in: fetched_events },
-                                       time: { $gt: my_min_time,
-                                               $lt: my_max_time }},
+                                      instance: node.id,
+                                      name: { $in: fetched_events },
+                                      time: { $gt: my_min_time,
+                                              $lt: my_max_time }},
         function(data) {
+
         setEvents(node, data);
         for (var index in fetched_events) {
           var event = node.events[fetched_events[index]];
@@ -126,20 +142,19 @@ function fetchEventsForNode(node_name) {
         finalizeFetch(node, false);
       });
     } else {
-      finalizeFetch(node, true);
+      finalizeFetch(node, !force_install);
     }
   });
 }
 
 function fetchEvents() {
-  if (fetching_events[0] || fetching_events[1]) {
+  if (fetching_events.master || fetching_events.slave) {
     need_fetch = true;
     return;
   }
-  fetching_events[0] = fetching_events[1] = true;
   need_fetch = false;
-  fetchEventsForNode("master");
-  fetchEventsForNode(selected_slave.id);
+  fetchEventsForNode(nodes[nodes_mapping["master"]]);
+  fetchEventsForNode(selected_slave);
 }
 
 function setEvents(node, result) {
@@ -175,7 +190,8 @@ function setEvents(node, result) {
   }
 }
 
-function initialFetchEventsForNode(node) {
+function initialFetchEventsForNode(node, callback) {
+  fetching_events[node.id == "master"? "master" : "slave"] = true;
   var query = {session: session, instance: node.id, name: { $in: [] }};
   for (var name in node.events) {
     var event = node.events[name];
@@ -194,11 +210,56 @@ function initialFetchEventsForNode(node) {
   if (query.name.$in.length > 0) {
     mongoRequest("events", "find", query, function(result) {
       setEvents(node, result);
-      finalizeFetch(node, false);
+      finalizeFetch(node, false, callback);
+      node.initialized = true;
     });
+  } else {
+    node.initialized = true;
+    if (callback != undefined) {
+      callback(node);
+    }
   }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Logs
+///////////////////////////////////////////////////////////////////////////////
+
+function fetchLogsForNode(instance, level) {
+  var node = (instance == "master")? "master" : "slave";
+  fetching_logs[node] = true;
+  if (document.readyState === "complete") {
+    $("#logs-contents-" + node).hide();
+    $("#logs-loading-" + node).show();
+  }
+  var levels = ["CRITICAL", "ERROR"];
+  switch (level) {
+    case "DEBUG":
+      levels.push("DEBUG");
+    case "INFO":
+      levels.push("INFO");
+    case "WARNING":
+      levels.push("WARNING");
+    default:
+      break;
+  }
+  mongoRequest("logs", "find", {session: session,
+                                node: instance,
+                                levelname: { $in: levels }},
+    function(data) {
+      fetching_logs[node] = false;
+      renderLogs(data, instance);
+  });
+}
+
+function fetchLogs(level) {
+  fetchLogsForNode("master", level);
+  fetchLogsForNode(selected_slave.id, level);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Startup sequence
+///////////////////////////////////////////////////////////////////////////////
 
 mongoRequest("events", "aggregate", [
     { $match: { session: session } },
@@ -226,9 +287,11 @@ mongoRequest("events", "aggregate", [
     estats.details.forEach(function(item) {
       event_names_unique[item.name] = null;
     });
-    var node = nodes[nodes.push({id: estats._id}) - 1];
+    var node = nodes[nodes.push({ id: estats._id,
+                                  initialized: false,
+                                  events: {}
+                                }) - 1];
     nodes_mapping[estats._id] = nodes.length - 1;
-    node.events = {}
     estats.details.forEach(function(item) {
       item.fetch = true;
       item.data = [];
@@ -267,11 +330,9 @@ mongoRequest("events", "aggregate", [
   }
 
   // Initial events fetch
-  fetching_events[0] = true;
   initialFetchEventsForNode(master);
   fetchLogsForNode("master", "INFO");
   if (nodes.length > 1) {
-    fetching_events[1] = true;
     for (var index in nodes) {
       if (nodes[index].id != "master") {
         selected_slave = nodes[index];
@@ -282,32 +343,3 @@ mongoRequest("events", "aggregate", [
     fetchLogsForNode(selected_slave.id, "INFO");
   }
 });
-
-function fetchLogsForNode(instance, level) {
-  var levels = ["CRITICAL", "ERROR"];
-  switch (level) {
-    case "DEBUG":
-      levels.push("DEBUG");
-    case "INFO":
-      levels.push("INFO");
-    case "WARNING":
-      levels.push("WARNING");
-    default:
-      break;
-  }
-  if (document.readyState === "complete") {
-    var node = (instance == "master")? "master" : "slave";
-    $("#logs-loading-" + node).show();
-  }
-  mongoRequest("logs", "find", {session: session,
-                                node: instance,
-                                levelname: { $in: levels }},
-    function(data) {
-      renderLogs(data, instance);
-  });
-}
-
-function fetchLogs(level) {
-  fetchLogsForNode("master", level);
-  fetchLogsForNode(selected_slave.id, level);
-}

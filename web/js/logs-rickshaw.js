@@ -1,3 +1,7 @@
+Rickshaw.Graph.HoverDetail.prototype.formatter = function(series, x, y, formattedX, formattedY, d) {
+  return series.name + (d.value.event? ("  " + d.value.event) : "");
+};
+
 Rickshaw.Graph.Legend.prototype.initialize = function(args) {
     this.graph = args.graph;
     this.naturalOrder = args.naturalOrder;
