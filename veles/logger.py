@@ -15,6 +15,7 @@ import re
 import sys
 import time
 
+from veles.config import __path__
 from veles.error import Bug
 from veles.external.daemon import redirect_stream
 from veles.external.progressbar import ProgressBar
@@ -238,6 +239,8 @@ class MongoLogHandler(logging.Handler):
         data["session"] = self.log_id
         data["node"] = self.node_id
         data["pathname"] = os.path.normpath(data["pathname"])
+        if os.path.isabs(data["pathname"]):
+            data["pathname"] = os.path.relpath(data["pathname"], __path__)
         if data["exc_info"] is not None:
             data["exc_info"] = repr(data["exc_info"])
         try:
