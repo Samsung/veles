@@ -160,6 +160,7 @@ function setupLogTables() {
     if (!$("#sync-logs").is(":checked") || sync_scroll_block.master || sync_scroll_block.slave ||
         master_list.length == 0 || slave_list.length == 0 ||
         master_list[0][0] > 0 || slave_list[0][0] > 0) {
+      console.log(sync_scroll_block);
       return;
     }
     var offset = $("#logs-master").scrollTop();
@@ -358,9 +359,11 @@ function scrollLogs(node) {
         pending_scroll_offset[node] = -1;
         scrollLogs(node);
       } else {
-        setTimeout(function() { sync_scroll_block[node] = false; }, 100);
+        setTimeout(function() { sync_scroll_block[node] = false }, 100);
       }
     });
+  } else {
+    setTimeout(function() { sync_scroll_block[node] = false }, 100);
   }
 }
 }
