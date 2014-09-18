@@ -18,7 +18,7 @@ import tornado.template as template
 from veles.config import root
 import warnings
 
-WEB_FOLDER = root.common.web_folder
+WEB_FOLDER = root.common.web.root
 
 
 def main():
@@ -55,11 +55,52 @@ def main():
     defaults = {}
     html = ''.join(list_lines)
     loader = template.Loader(os.path.join(WEB_FOLDER, "templates"))
+    opts, positional_opts, choices, defaults_opt = generate_opts(arguments)
     sout = loader.load("frontend.html").generate(
         arguments=html, workflows=list_workflows,
-        initial_states=json.dumps(defaults))
+        initial_states=json.dumps(defaults),
+        opts=json.dumps(opts), positional_opts=json.dumps(positional_opts),
+        choices=json.dumps(choices), defaults_opt=json.dumps(defaults_opt))
     with open(path_to_out, "wb") as fout:
         fout.write(sout)
+
+
+def generate_opts(arguments):
+    string_arguments = []
+    boolean_arguments = []
+    positional_opts = []
+    alias = {}
+    choices = {}
+    defaults = {}
+    for arg in arguments:
+        if arg.option_strings:
+            option_strings = arg.option_strings
+            option = str(option_strings[:2][-1])
+        else:
+            positional_opts.append(arg.dest)
+            option = arg.dest
+        if arg.choices is not None:
+            choice = list(arg.choices)
+            choices[option] = choice
+        defaults[option] = arg.default
+        while option[0] == "-":
+            option = option[1:]
+        if isinstance(arg, argparse._StoreTrueAction):
+            boolean_arguments.append(option)
+        elif isinstance(arg, argparse._StoreAction):
+            string_arguments.append(option)
+        if len(option_strings) > 1:
+            for i in range(0, len(option_strings), 2):
+                while option_strings[i][0] == "-":
+                    option_strings[i] = option_strings[i][1:]
+                while option_strings[i + 1][0] == "-":
+                    option_strings[i + 1] = option_strings[i + 1][1:]
+                alias[option_strings[i]] = option_strings[i + 1]
+    opts = {"string": string_arguments,
+            "alias": alias,
+            "boolean": boolean_arguments,
+            "stopEarly": True}
+    return opts, positional_opts, choices, defaults
 
 
 def convert_argument(arg):
@@ -71,7 +112,7 @@ def convert_argument(arg):
     arg_mode = getattr(arg, "mode", ["standalone", "master", "slave"])
     arg_line = ""
     if arg.option_strings:
-        option_strings = str(arg.option_strings[0])
+        option_strings = str(arg.option_strings[:2][-1])
     else:
         option_strings = arg.dest
     if dest == "workflow":
@@ -155,15 +196,17 @@ def convert_choices(arg, arg_mode, option_strings):
         arg_line = ("""
                     <div class="dropdown">
                       <button class="btn btn-default dropdown-toggle %s"
-                      type="button" id="dropdown_menu" data-toggle="dropdown">
+                      type="button" id="dropdown_menu%s" data-toggle="dropdown"
+                      >
                         %s
                         <span class="caret"></span>
                       </button>
-                      <ul class="dropdown-menu" role="menu"
+                      <ul class="dropdown-menu %s" role="menu"
                       aria-labelledby="dropdown_menu" id="%s">
                         %s
                       </ul>
-                    </div>""" % (" ".join(arg_mode), default,
+                    </div>""" % (" ".join(arg_mode), option_strings, default,
+                                 " ".join(arg_mode),
                                  option_strings, choices_lines))
     return arg_line
 
