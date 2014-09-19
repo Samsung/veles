@@ -104,14 +104,14 @@ function updateUI() {
           items += '<a class="view-plots" href=log_viewer.html?id="';
           items += workflow.log_id;
           items += '"target="_blank">logs</a>\n';
-          items += '<h4 class="list-group-item-heading"><a href="#" ';
+          items += '<h4 class="list-group-item-heading graceful-overflow"><a href="#" ';
           items += 'onclick="activateListItem(\'';
           items += pair.key;
           items += '\')">';
           items += workflow.name;
           items += '</a></h4>\n';
           items += '<span class="list-group-item-text">Master: ';
-          items += '<a href="#"><strong>';
+          items += '<a class="graceful-overflow" href="#"><strong>';
           items += workflow.master;
           items += '</strong></a><br/>\n';
           items += '<span class="badge pull-right">';
@@ -151,7 +151,7 @@ function updateUI() {
           items += workflow.time;
           items += '</strong><br/>\n';
           items += 'Started by: <i class="glyphicon glyphicon-user">';
-          items += '<a href="#"><strong>';
+          items += '<a href="#" class="graceful-overflow"><strong>';
           items += workflow.user;
           items += '</strong></a></i></span>\n';
           items += '</div>\n';
@@ -167,8 +167,7 @@ function updateUI() {
           delete svg_cache[key];
         }
         objs = $.parseHTML(items);
-        $("#list-loading-indicator").remove();
-        $("#workflow-list").empty().append(objs);
+        $("#workflows-list").empty().append(objs);
         console.log("Finished update");
         setTimeout(activateListItem, 0, active_workflow_id);
         updating = false;
@@ -188,55 +187,15 @@ function activateListItem(item_id) {
     full_update = false;
   } else {
     detailed_workflow_id = item_id;
+    $("#indicator").show();
   }
   var workflow = listed_workflows[item_id];
-  var details = "";
   if (full_update) {
-    details += '<div class="detailed-description">\n';
-    details += '<div class="panel panel-borderless">\n';
-    details += '<div class="panel-heading details-panel-heading">';
-    details += 'Actions</div>\n';
-    details += '<div class="btn-group btn-group-justified">\n';
-    details += '<div class="btn-group">\n';
-    details += '<button type="button" class="btn btn-default" ';
-    details += 'onclick="showPlots(\'';
-    details += item_id;
-    details += '\')">View plots';
-    details += '</button>\n';
-    details += '</div>\n';
-    details += '<div class="btn-group">\n';
-    details += '<button type="button" class="btn btn-default" ';
-    details += 'onclick="showLogs(\'';
-    details += item_id;
-    details += '\')">View logs';
-    details += '</button>\n';
-    details += '</div>\n';
-    details += '<div class="btn-group">\n';
-    details += '<button type="button" class="btn btn-default">Suspend';
-    details += '</button>\n';
-    details += '</div>\n';
-    details += '<div class="btn-group">\n';
-    details += '<button type="button" class="btn btn-danger">Cancel</button>\n';
-    details += '</div>\n';
-    details += '</div>\n';
-    details += '</div>\n';
-    details += '<div class="panel panel-borderless">\n';
-    details += '<div class="panel-heading details-panel-heading">Slaves';
-    details += '</div>\n';
-    details += '<div class="panel panel-default panel-margin-zero" ';
-    details += 'id="slaves-table">\n';
+    $("#button-plots").off("click").on("click", function() { showPlots(item_id) });
+    $("#button-logs").off("click").on("click", function() { showLogs(item_id) });
+    $("#button-plots").off("click").on("click", function() { });
+    $("#button-plots").off("click").on("click", function() { });
   }
-  details += '<table class="table table-condensed">\n';
-  details += '<thead>\n';
-  details += '<tr>\n';
-  details += '<th>ID</th>\n';
-  details += '<th>Host</th>\n';
-  details += '<th class="center-cell">Power</th>\n';
-  details += '<th class="center-cell">Status</th>\n';
-  details += '<th class="center-cell">Actions</th>\n';
-  details += '</tr>\n';
-  details += '</thead>\n';
-  details += '<tbody>\n';
   var max_power = 1;
   var mean_jobs = 0;
   var online_slaves = 0;
@@ -261,9 +220,10 @@ function activateListItem(item_id) {
     });
     jobs_stddev = Math.sqrt(jobs_stddev / (online_slaves - 1));
   }
+  var rows = "";
   workflow.slaves.forEach(function(slave_pair) {
     var slave = slave_pair.value;
-    details += '<tr class="';
+    rows += '<tr class="';
     var line_style = "";
     switch (slave.state) {
       case "Working":
@@ -281,97 +241,81 @@ function activateListItem(item_id) {
     if (slave.jobs < mean_jobs - jobs_stddev * 2 && line_style == "success") {
       line_style = "warning";
     }
-    details += line_style + '">\n';
-    details += '<td><div class="slave-id graceful-overflow">';
-    details += slave_pair.key;
-    details += '</div></td>\n';
-    details += '<td><div class="slave-host graceful-overflow"><a href="#">';
-    details += slave.host;
-    details += '</a>';
+    rows += line_style + '">\n';
+    rows += '<td><div class="slave-id graceful-overflow">';
+    rows += slave_pair.key;
+    rows += '</div></td>\n';
+    rows += '<td><div class="slave-host graceful-overflow"><a href="#">';
+    rows += slave.host;
+    rows += '</a>';
     if (slave.host == workflow.master) {
-      details += ' <span class="glyphicon glyphicon-flag"></span>';
+      rows += ' <span class="glyphicon glyphicon-flag"></span>';
     }
-    details += '</div></td>\n';
-    details += '<td class="power">';
-    details += '<div class="progress"><div class="progress-bar ';
+    rows += '</div></td>\n<td>';
+    rows += '<div class="progress"><div class="progress-bar ';
     var pwr = slave.power / max_power;
     if (pwr >= 0.7) {
-      details += 'progress-bar-success';
+      rows += 'progress-bar-success';
     } else if (pwr >= 0.4) {
-      details += 'progress-bar-warning';
+      rows += 'progress-bar-warning';
     } else {
-      details += 'progress-bar-danger';
+      rows += 'progress-bar-danger';
     }
-    details += '" role="progressbar" aria-valuenow="';
-    details += slave.power.toFixed(0);
-    details += '" aria-valuemin="0" aria-valuemax="';
-    details += max_power.toFixed(0);
-    details += '" style="width: ';
+    rows += '" role="progressbar" aria-valuenow="';
+    rows += slave.power.toFixed(0);
+    rows += '" aria-valuemin="0" aria-valuemax="';
+    rows += max_power.toFixed(0);
+    rows += '" style="width: ';
     var spp = slave.power * 100 / max_power;
-    details += spp.toFixed(0);
-    details += '%;">';
+    rows += spp.toFixed(0);
+    rows += '%;">';
     if (pwr >= 0.5) {
-      details += slave.power.toFixed(0);
+      rows += slave.power.toFixed(0);
     }
-    details += '</div>';
+    rows += '</div>';
     if (pwr < 0.5) {
-        details += '<div class="progress-bar progress-overflow" ';
-        details += 'role="progressbar" style="width: ';
-        details += (100 - spp).toFixed(0);
-        details += '%;">'
-        details += slave.power.toFixed(0);
-        details += '</div>';
+        rows += '<div class="progress-bar progress-overflow" ';
+        rows += 'role="progressbar" style="width: ';
+        rows += (100 - spp).toFixed(0);
+        rows += '%;">'
+        rows += slave.power.toFixed(0);
+        rows += '</div>';
     }
-    details += '</div>';
-    details += '</td>\n';
-    details += '<td class="center-cell">';
-    details += slave.state;
-    details += '</td>\n';
-    details += '<td class="center-cell">\n';
+    rows += '</div>';
+    rows += '</td>\n<td class="center-cell">';
+    rows += slave.state;
+    rows += '</td>\n<td class="center-cell">\n';
     if (slave.state != 'Offline') {
-      details += '<a href="#"><span class="glyphicon glyphicon-pause"></span></a>\n';
-      details += '<a href="#"><span class="glyphicon glyphicon-remove"></span></a>\n';
-      details += '<a href="#"><span class="glyphicon glyphicon-info-sign"></span></a>\n';
+      rows += '<a href="#"><span class="glyphicon glyphicon-pause"></span></a>\n';
+      rows += '<a href="#"><span class="glyphicon glyphicon-remove"></span></a>\n';
+      rows += '<a href="#"><span class="glyphicon glyphicon-info-sign"></span></a>\n';
     }
-    details += '</td>\n';
-    details += '</tr>\n';
+    rows += '</td>\n';
+    rows += '</tr>\n';
   });
-  details += '</tbody>\n';
-  details += '</table>\n';
-  if (full_update) {
-    details += '</div>\n';
-    details += '</div>\n';
-    details += '</div>\n';
-    details += '<div class="detailed-text"><h3 class="media-heading">';
-    details += workflow.name;
-    details += '</h3>\n';
-    details += workflow.description;
-    details += 'This workflow is managed by ';
-    details += '<i class="glyphicon glyphicon-user"><a href="#"">';
-    details += workflow.user;
-    details += '</a></i> on <a href="#">';
-    details += workflow.master;
-    details += "</a> and has ";
-    details += online_slaves;
-    details += ' nodes (';
-    details += Object.keys(workflow.slaves).length - online_slaves;
-    details += ' offline).<br/>';
-    details += "Log ID: <strong>" + workflow.log_id + "</strong><br/>";
-    details += 'ØMQ endpoints for custom plots:<br/><strong>';
-    details += workflow.custom_plots;
-    details += '</strong><br/><br/>';
-    var svg = workflow.svg.clone();
-    svg.attr("id", "workflow-svg");
-    details += svg.wrap('<div>').parent().html();
-    details += '</div>\n';
-  }
-  objs = $.parseHTML(details);
-  $("#details-loading-indicator").remove();
-  if (full_update) {
-    $('#workflow-details').empty().append(objs);
+  if (rows != "") {
+    rows = $.parseHTML(rows);
+    $("#slaves-table > table > tbody").empty().append(rows);
+    $("#slaves-panel").show();
   } else {
-    $('#slaves-table').empty().append(objs);
+    $("#slaves-panel").hide();
   }
+
+  $("#workflow-name").text(workflow.name);
+  $("#workflow-description").html(workflow.description);
+  $("#workflow-owner").text(workflow.user);
+  $("#workflow-master-host").text(workflow.master);
+  $("#workflow-online-nodes").text(online_slaves);
+  $("#workflow-offline-nodes").text(Object.keys(workflow.slaves).length - online_slaves);
+  $("#workflow-log-id").text(workflow.log_id);
+  $("#workflow-log-id").attr("href", "logs.html?session=" + workflow.log_id);
+  $("#workflow-zeromq-plotting-endpoints").html(workflow.custom_plots);
+  $("#content").show();
+  if (full_update) {
+    $("#workflow-svg-container-fill").resize();
+    $("#workflow-svg-container").empty().append(workflow.svg.clone().attr("width", "100%").attr("height", "100%"));
+  }
+  $("#indicator").hide();
 }
 
 function showPlots(item_id) {
@@ -382,7 +326,7 @@ function showPlots(item_id) {
 
 function showLogs(item_id) {
   var workflow = listed_workflows[item_id];
-  var win = window.open(workflow.plots, '_blank');
+  var win = window.open("logs.html?session=" + workflow.log_id, '_blank');
   win.focus();
 }
 

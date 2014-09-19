@@ -42,6 +42,7 @@ function setupUI() {
   }
   $("#chart-loading-master").hide();
   $("#chart-loading-slave").hide();
+  $(".chart-loading").css("position", "absolute");
   nodes.forEach(function(node) {
     if (node.id != "master") {
       $("select.slave-setter").append($.parseHTML("<option>" + node.id + "</option>"));
