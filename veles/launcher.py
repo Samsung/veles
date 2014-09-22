@@ -79,18 +79,8 @@ class Launcher(logger.Logger):
         if self.runs_in_background:
             self._daemon_context = daemon.DaemonContext()
             self._daemon_context.working_directory = os.getcwd()
-            twisted_epollfd = None
-            for fd in os.listdir("/proc/self/fd"):
-                try:
-                    s = os.readlink("/proc/self/fd/" + fd)
-                    if s.find("[eventpoll]") >= 0:
-                        twisted_epollfd = int(fd)
-                except FileNotFoundError:
-                    pass
-            if twisted_epollfd is None:
-                raise RuntimeError("Twisted reactor was not imported")
-            self._daemon_context.files_preserve = list(range(
-                twisted_epollfd, twisted_epollfd + 3))
+            self._daemon_context.files_preserve = [
+                int(fd) for fd in os.listdir("/proc/self/fd") if int(fd) > 2]
             self.info("Daemonized")
             self._daemon_context.open()
         if self.args.log_file != "":
