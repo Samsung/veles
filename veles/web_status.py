@@ -125,14 +125,21 @@ class WebServer(Logger):
             "mongodb://" + kwargs.get("mongodb",
                                       root.common.mongodb_logging_address))
         self.db = self.motor.veles
-        self.db.events.ensure_index(
-            (("session", 1), ("instance", 1), ("name", 1), ("time", 1)))
-        self.db.logs.ensure_index(
-            (("session", 1), ("node", 1), ("levelname", 1), ("time", 1)))
+        self.ensure_mongo_indexes()
+        self.mongo_drop_time_threshold = kwargs.get(
+            "mongo_drop_time_threshold", root.common.web.drop_time)
 
     @property
     def port(self):
         return self._port
+
+    def ensure_mongo_indexes(self):
+        self.db.events.ensure_index(
+            (("session", 1), ("instance", 1), ("name", 1), ("time", 1)))
+        self.db.events.ensure_index((("session", 1), ("time", 1)))
+        self.db.logs.ensure_index(
+            (("session", 1), ("node", 1), ("levelname", 1)))
+        self.db.logs.ensure_index((("session", 1), ("time", 1)))
 
     @gen.coroutine
     def receive_request(self, handler, data):
