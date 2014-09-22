@@ -9,7 +9,6 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import argparse
-import veles.external.daemon as daemon
 import datetime
 import getpass
 import json
@@ -58,7 +57,6 @@ class Launcher(logger.Logger):
         master_address        The server's address (implies Slave mode).
         listen_address        The address to listen (implies Master mode).
         matplotlib_backend    Matplotlib backend to use (only in Master mode).
-        background            Run in background as a daemon.
         stealth               Do not report the status to the web server,
                               do not launch it if necessary (only in Master
                               mode).
@@ -76,13 +74,7 @@ class Launcher(logger.Logger):
         self.args.matplotlib_backend = self.args.matplotlib_backend.strip()
         self._slaves = [x.strip() for x in self.args.nodes.split(',')
                         if x.strip() != ""]
-        if self.runs_in_background:
-            self._daemon_context = daemon.DaemonContext()
-            self._daemon_context.working_directory = os.getcwd()
-            self._daemon_context.files_preserve = [
-                int(fd) for fd in os.listdir("/proc/self/fd") if int(fd) > 2]
-            self.info("Daemonized")
-            self._daemon_context.open()
+
         if self.args.log_file != "":
             log_file = self.args.log_file
             if self.args.log_file_pid:
@@ -162,10 +154,6 @@ class Launcher(logger.Logger):
                             help="Do not launch the graphics client. Server "
                             "will still be started unless matplotlib backend "
                             "is an empty string.", action='store_true')
-        parser.add_argument("-b", "--background",
-                            default=kwargs.get("background", False),
-                            help="Run in background as a daemon.",
-                            action='store_true')
         parser.add_argument("-s", "--stealth",
                             default=kwargs.get("stealth", False),
                             help="Do not report own status to the Web Status "
@@ -318,9 +306,9 @@ class Launcher(logger.Logger):
             def on_id_received(node_id, log_id):
                 self.id = node_id
                 self.log_id = log_id
-                if self.args.logs_to_mongo:
+                if self.logs_to_mongo:
                     logger.Logger.duplicate_all_logging_to_mongo(
-                        self.args.logs_to_mongo, self.log_id, node_id)
+                        self.args.log_mongo, self.log_id, node_id)
 
             self.agent.on_id_received = on_id_received
         else:

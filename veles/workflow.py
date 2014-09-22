@@ -111,6 +111,7 @@ class Workflow(Unit):
         _run_time: the total time workflow has been running for.
         _method_time: Workflow's method timings measured by method_timed
                       decorator. Used mainly to profile master-slave.
+        fitness: numeric fitness or None (used by genetic optimization).
     """
     hide_all = True
 
@@ -128,6 +129,7 @@ class Workflow(Unit):
         self.negotiates_on_connect = True
         self._checksum = None
         self._history = []
+        self.fitness = None
 
     def init_unpickled(self):
         super(Workflow, self).init_unpickled()
