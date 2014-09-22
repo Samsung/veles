@@ -108,6 +108,7 @@ root.common.update = {
         "notification_interval": 1,
         "pidfile": "/var/run/veles/web_status",
         "root": os.path.join(__path__, "web"),
+        "drop_time": 30 * 24 * 3600,
     },
     "ThreadPool": {
         "minthreads": 2,

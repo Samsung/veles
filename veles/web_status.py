@@ -21,7 +21,7 @@ import time
 
 from tornado.escape import json_decode
 import tornado.gen as gen
-from tornado.ioloop import IOLoop
+from tornado.ioloop import IOLoop, PeriodicCallback
 import tornado.web as web
 
 from veles.config import root
@@ -128,6 +128,8 @@ class WebServer(Logger):
         self.ensure_mongo_indexes()
         self.mongo_drop_time_threshold = kwargs.get(
             "mongo_drop_time_threshold", root.common.web.drop_time)
+        self.mongo_dropper = PeriodicCallback(
+            self.drop_old_mongo_records, self.mongo_drop_time_threshold * 1000)
 
     @property
     def port(self):
@@ -140,6 +142,39 @@ class WebServer(Logger):
         self.db.logs.ensure_index(
             (("session", 1), ("node", 1), ("levelname", 1)))
         self.db.logs.ensure_index((("session", 1), ("time", 1)))
+
+    @gen.coroutine
+    def drop_old_mongo_records(self):
+        self.info("Discovering outdated MongoDB records...")
+        logs_cursor = yield self.db.logs.aggregate(
+            [{"$group": {"_id": "$session", "last": {"$max": "$created"}}}],
+            cursor={})
+        events_cursor = yield self.db.events.aggregate(
+            [{"$group": {"_id": "$session", "last": {"$max": "$time"}}}],
+            cursor={})
+        to_remove = {"logs": [], "events": []}
+        now = time.time()
+
+        for cursor in (logs_cursor, events_cursor):
+            while (yield cursor.fetch_next):
+                obj = cursor.next_object()
+                if obj['last'] is None:
+                    self.warning("MongoDB aggregation failure for %s in %s",
+                                 obj['_id'], cursor.collection.name)
+                    continue
+                if (obj['last'] - now) > self.mongo_drop_time_threshold:
+                    to_remove[cursor.collection.name].append(obj['_id'])
+            if len(to_remove[cursor.collection.name]) == 0:
+                self.info("No outdated sessions was found in %s",
+                          cursor.collection.name)
+
+        for col in ("logs", "events"):
+            if len(to_remove[col]) == 0:
+                continue
+            ack = yield self.db[col].remove(
+                {"session": {"$in": to_remove[col]}})
+            self.info("Removed %d sessions in %s with status %s",
+                      ack["n"], col, "ok" if ack["ok"] else "error")
 
     @gen.coroutine
     def receive_request(self, handler, data):
@@ -199,11 +234,15 @@ class WebServer(Logger):
         self.masters[mid]["last_update"] = time.time()
 
     def run(self):
-        self.info("HTTP server is running on %s:%s",
-                  socket.gethostname(), self.port)
+        IOLoop.instance().add_callback(
+            self.info, "HTTP server is running on %s:%s", socket.gethostname(),
+            self.port)
+        IOLoop.instance().add_callback(self.drop_old_mongo_records)
+        self.mongo_dropper.start()
         IOLoop.instance().start()
 
     def stop(self):
+        self.mongo_dropper.stop()
         IOLoop.instance().stop()
 
 
