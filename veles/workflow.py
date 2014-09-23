@@ -594,9 +594,9 @@ class Workflow(Unit):
                     if key.startswith('__') and hasattr(unit, key[2:]) and \
                        LinkableAttribute.__is_reference__(val):
                         refs.append((unit, key[2:]) + val)
-                    if not val is None and not Unit.is_immutable(val) and \
-                       not isinstance(val, Device) and \
-                       not key in Workflow.HIDDEN_UNIT_ATTRS:
+                    if (val is not None and not Unit.is_immutable(val) and
+                            not isinstance(val, Device) and
+                            key not in Workflow.HIDDEN_UNIT_ATTRS):
                         if key[0] == '_' and hasattr(unit, key[1:]):
                             key = key[1:]
                         attrs[id(val)].append((unit, key))
