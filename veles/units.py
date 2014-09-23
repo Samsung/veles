@@ -111,7 +111,7 @@ class Unit(Distributable):
         self._links_to = {}
         self._gate_block = Bool(False)
         self._gate_skip = Bool(False)
-        self._ran = False
+        self._run_calls = 0
         timings = get(root.common.timings, None)
         if timings is not None and isinstance(timings, set):
             timings = self.__class__.__name__ in timings
@@ -296,11 +296,21 @@ class Unit(Distributable):
 
     @property
     def run_was_called(self):
-        return self._ran
+        return self._run_calls > 0
 
     @run_was_called.setter
     def run_was_called(self, value):
-        self._ran = value
+        if value:
+            self._run_calls += 1
+
+    @property
+    def total_run_time(self):
+        return Unit.timers[self.id]
+
+    @property
+    def average_run_time(self):
+        return self.total_run_time / self._run_calls \
+            if self._run_calls > 0 else 0
 
     def stop(self):
         """By default, do nothing and consider run() to always finish.
