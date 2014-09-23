@@ -22,6 +22,9 @@
             <span class="input-group-addon">RESULT</span>
             <input type="text" class="form-control standalone master slave" id="command-line">
         </div>
+        <div class="alert alert-danger" id="error-message" role="alert">
+          <strong>Warning!</strong> Better check yourself, you're not looking too good.
+        </div>
         <div id="arguments">
             <div class="panel panel-primary argument master slave standalone">
                 <div class="panel-heading master slave standalone">
@@ -53,7 +56,8 @@
         <script src="js/bootstrap.min.js"></script>
         <script src="js/bootstrap-switch.min.js"></script>
         <script src="js/typeahead.min.js"></script>
-	
+        <script src="js/minimist.min.js"></script>
+
         <script>
           initial_disable();
 
@@ -123,32 +127,69 @@
               generate_cl(initial_states);
           }
 
-          function generate_cl(initial_states) {
-              var command_line = "";
-              var wf = "";
-              var config = "";
-              var config_list = "";
-              var params = "";
-              $.each(initial_states, function(key, value) {
-              if((key != "config") && (key != "workflow") && (key != "config_list")) {
-                  if (value==true) {
-                      params+= key + ' ';
-                  };
-                  if ((value!=true) && (value!=false)) {
-                      params+= key + ' ' + value + ' ';
-                  };
-              };
-              if (key == "workflow"){
-                  wf = value + " ";};
-              if (key == "config"){
-                  config = value + " ";};
-              if (key == "config_list"){
-                  config_list = value + " ";};
-              command_line = wf + config + config_list + params;
+          function get_diff(obj1, obj2) {
+            var result = {};
+            var keys_result = Object.keys(obj1).concat(Object.keys(obj2));
+            for (var ind in keys_result) {
+              var key = keys_result[ind];
+              var ok1 = obj1[key];
+              var ok2 = obj2[key];
+              if (ok1 == undefined && ok2 != undefined) {
+                result[key] = "created";
+              } else {
+                if (ok1 != undefined && ok2 == undefined) {
+                  result[key] = "deleted";
+                } else {
+                  if (ok1 != undefined && ok2 != undefined && ok1 == ok2) {
+                    result[key] = "unchanged";
+                  } else {
+                        result[key] = "updated";
+                    }
+                  }
+                }
+            }
+            return result
+          }
+          function parse_cl(cl) {
+              var opts = {% raw opts %};
+              var args = minimist_parse(cl.split(/\s+/), opts);
+              var positional = args["_"];
+              var config_list = [];
+              var positional_opts = {% raw positional_opts %};
+              if (positional.length <= positional_opts.length) {
+                for (var ind in positional) {
+                  args[positional_opts[ind]] = positional[ind];
+                }
+              }
+              else {
+                for (var ind in positional) {
+                  if (positional_opts[ind] != undefined && (ind != positional_opts.length - 1)) {
+                    args[positional_opts[ind]] = positional[ind];
+                  } else {
+                    config_list.push(positional[ind]);
+                    args[positional_opts[positional_opts.length - 1]] = config_list;
+                  }
+                }
+              }
+              delete args["_"];
+              return args
+          }
+          
+          function from_args_to_states(args, states) {
+              var positional_opts = {% raw positional_opts %};
+              var opts = {% raw opts %};
+              $.each(args, function(opt, arg) {
+                if ($.inArray(opt, positional_opts) != -1) {
+                  states[opt] = arg;
+                } else {
+                    if (opts["alias"][opt] == undefined) {
+                      opt_str = "--" + opt;
+                      states[opt_str] = arg;
+                    }
+                }
               });
-              
-              var elem = document.getElementById("command-line");
-              elem.value = command_line;
+              return states
+          }
           }
 
           $(function() {
@@ -173,8 +214,58 @@
                  var value = value;
                  alert(value)
                  });
+              // This event changes value of widgets for each change of command line.
+              $("#command-line").on("change", function() {
+                $("#error-message").css("display", "none");
+                var command_line = $("#command-line").val();
+                var args = parse_cl(command_line);
+                var defaults = {% raw defaults_opt %};
+                var prev_initial_states = {};
+                $.each(initial_states, function(opt, arg) {
+                  prev_initial_states[opt] = arg;
+                  opt_for_arg = opt.replace(/^-+/, "");
+                  if (args[opt_for_arg] == undefined) {
+                    initial_states[opt] = defaults[opt];
+                  }
+                });
+                initial_states = from_args_to_states(args, initial_states);
+                var diff = get_diff(prev_initial_states, initial_states);
+                for (var option in diff) {
+                  var status_arg = diff[option];
+                  var arg = initial_states[option];
+                  var choices = {% raw choices %};
+                  var elem_opt = $("#" + option);
+                  if (status_arg == "unchanged" || status_arg == "deleted") {
+                    continue;
+                  }
+                  if (status_arg == "created" || status_arg == "updated") {
+                    if (elem_opt.hasClass("switch")) {
+                        if (arg === false) {
+                          elem_opt.bootstrapSwitch('state', false);
+                        } else {
+                          elem_opt.bootstrapSwitch('state', true);
+                          }
+                    }
+                    if (elem_opt.hasClass("typeahead") || (elem_opt.hasClass("form-control") && !(elem_opt.hasClass("typeahead")))) {
+                      elem_opt.val(arg);
+                    }
+                    if (elem_opt.hasClass("dropdown-menu")) {
+                      var elem = $("#dropdown_menu" + option)
+                        if ($.inArray(arg, choices[option]) != -1) {
+                          elem.get(0).firstChild.nodeValue = arg;
+                        } else {
+                          $("#error-message").text("Wrong value of " + option + ". You should choose from " + choices[option]);
+                          $("#error-message").css("display", "block");
+                        }
+                    }
+                    if (!(elem_opt.hasClass("switch")) && !(elem_opt.hasClass("form-control")) && !(elem_opt.hasClass("dropdown-menu"))) {
+                      $("#error-message").text("Wrong option " + option);
+                      $("#error-message").css("display", "block");
+                    }
+                  }
+                }
               });
           });
-	</script>
+       </script>
     </body>
 </html>

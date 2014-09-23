@@ -56,3 +56,7 @@ p {
 #command-line {
   margin: 0;
 }
+#error-message {
+  display: none;
+  margin: 0 2em 2em 2em;
+}
