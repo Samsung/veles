@@ -356,7 +356,7 @@ class ConfigPopulation(Population):
                 continue
             if arg == "-s":
                 was_s = True
-            if arg.startswith("--genetics"):
+            if arg.startswith("--optimize"):
                 i_genetics = i
             args.append(arg)
         if not was_s:
@@ -385,35 +385,29 @@ class ConfigPopulation(Population):
             chromo.evaluate()
             response_queue.put(chromo.fitness)
 
-    def evolution(self):
-        try:
-            self._evolution()
-        except Exception as e:
-            self.error("Exception occured while doing the evolution, "
-                       "will exit the main process, reason is: %s",
-                       str(e))
-            os._exit(1)
+    def evolve_multi(self):
+        # Fork before creating the twisted reactor
+        self.job_request_queue_ = Queue()
+        self.job_response_queue_ = Queue()
+        job_process = Process(
+            target=self.job_process,
+            args=(self.job_request_queue_, self.job_response_queue_))
+        job_process.start()
+        # Launch thread for evolution,
+        # thread will be started in the container workflow
+        thread = threading.Thread(
+            target=super(ConfigPopulation, self).evolution, args=())
+        # Launch the container workflow
+        self.main_.run_workflow(
+            GeneticsWorkflow,
+            kwargs_load={"population": self, "thread_to_start": thread})
+        if thread.is_alive():  # it will not be started on slave
+            thread.join()
+        self.job_request_queue_.put(None)
+        job_process.join()
 
-    def _evolution(self):
+    def evolve(self):
         if self.multi:
-            # Fork before creating the twisted reactor
-            self.job_request_queue_ = Queue()
-            self.job_response_queue_ = Queue()
-            job_process = Process(
-                target=self.job_process,
-                args=(self.job_request_queue_, self.job_response_queue_))
-            job_process.start()
-            # Launch thread for evolution,
-            # thread will be started in the container workflow
-            thread = threading.Thread(
-                target=super(ConfigPopulation, self).evolution, args=())
-            # Launch the container workflow
-            self.main_.run_workflow(
-                GeneticsWorkflow,
-                kwargs_load={"population": self, "thread_to_start": thread})
-            if thread.is_alive():  # it will not be started on slave
-                thread.join()
-            self.job_request_queue_.put(None)
-            job_process.join()
+            self.evolve_multi()
         else:
-            super(ConfigPopulation, self).evolution()
+            super(ConfigPopulation, self).evolve()

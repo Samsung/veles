@@ -168,13 +168,14 @@ class Main(Logger):
                             help="initialize, but do not run the loaded "
                             "model, show workflow graph and plots",
                             action='store_true')
-        parser.add_argument("--genetics", type=str, default="no",
+        parser.add_argument("--optimize", type=str, default="no",
                             choices=["no", "single", "multi"],
-                            help="Do genetic optimization of the parameters: "
-                            "no: off; single: sequential optimization; "
-                            "multi: use master/slave parameters to do "
-                            "optimization of the workflow "
-                            "(each instance in standalone mode).")
+                            help="Do optimization of the parameters using the "
+                            "genetic algorithm. Possible values: "
+                            "no: off; single: local sequential optimization; "
+                            "multi: use master's nodes to do the "
+                            "distributed optimization "
+                            "(each instance will run in standalone mode).")
         parser.add_argument("--workflow-graph", type=str, default="",
                             help="Save workflow graph to file.")
         parser.add_argument("--dump-unit-attributes", default=False,
@@ -206,6 +207,18 @@ class Main(Logger):
         except:
             pass
         return parser
+
+    @property
+    def optimization(self):
+        return self._optimization != "no"
+
+    @optimization.setter
+    def optimization(self, value):
+        if value:
+            if not self.optimization:
+                raise ValueError("Genetics cannot be forced to be used")
+            return
+        self._optimization = "no"
 
     def _load_model(self, fname_workflow, fname_snapshot):
         self.debug("Loading the model \"%s\"...", fname_workflow)
@@ -258,17 +271,6 @@ class Main(Logger):
         except:
             self.exception("Invalid configuration overloads")
             sys.exit(Main.EXIT_FAILURE)
-
-    def run_module(self, module):
-        self.debug("Calling %s.run()...", module.__name__)
-        module.run(self._load, self._main)
-        if not self.main_called and self._dry_run > 2:
-            self.warning("main() was not called by run() in %s",
-                         module.__file__)
-
-    def run_workflow(self, workflow, kwargs_load={}, kwargs_main={}):
-        self._load(workflow, **kwargs_load)
-        self._main(**kwargs_main)
 
     def _seed_random(self, rndvals):
         rndvals_split = rndvals.split(',')
@@ -364,18 +366,6 @@ class Main(Logger):
                                          background='white')
         return self.workflow, snapshot
 
-    @property
-    def genetics(self):
-        return self._genetics != "no"
-
-    @genetics.setter
-    def genetics(self, value):
-        if value:
-            if not self.genetics:
-                raise ValueError("Genetics cannot be forced on")
-            return
-        self._genetics = "no"
-
     def _main(self, **kwargs):
         if self._dry_run < 2:
             self.launcher.stop()
@@ -387,7 +377,7 @@ class Main(Logger):
         self.main_called = True
         try:
             self.device = (None if self.launcher.is_master or
-                           self.genetics else Device())
+                           self.optimization else Device())
         except:
             self.error("Failed to create the OpenCL device.")
             raise
@@ -424,7 +414,7 @@ class Main(Logger):
         table.max_width["value"] = 100
         for i, u in enumerate(self.workflow.units_in_dependency_order):
             for k, v in sorted(u.__dict__.items()):
-                if not k in Workflow.HIDDEN_UNIT_ATTRS:
+                if k not in Workflow.HIDDEN_UNIT_ATTRS:
                     if not arrays and hasattr(v, "__len__") and len(v) > 32 \
                        and not isinstance(v, str) and not isinstance(v, bytes):
                         strv = "object of class %s of length %d" % (
@@ -459,6 +449,14 @@ class Main(Logger):
                 unit.run()
                 break
 
+    def _prepare_configuration(self):
+        from veles.genetics import fix_config
+        fix_config(root)
+
+    def _do_genetic_optimization(self, wm, multi):
+        from veles.genetics import ConfigPopulation
+        ConfigPopulation(root, self, wm, multi).evolve()
+
     def _print_logo(self, args):
         if not args.no_logo:
             try:
@@ -469,6 +467,20 @@ class Main(Logger):
     def print_max_rss(self):
         res = resource.getrusage(resource.RUSAGE_SELF)
         self.info("Peak resident memory used: %d Kb", res.ru_maxrss)
+
+    def run_module(self, module):
+        self.debug("Calling %s.run()...", module.__name__)
+        module.run(self._load, self._main)
+        if not self.main_called and self._dry_run > 2:
+            self.warning("main() was not called by run() in %s",
+                         module.__file__)
+
+    """
+    Basically, this is what each workflow module's run() should do.
+    """
+    def run_workflow(self, Workflow, kwargs_load={}, kwargs_main={}):
+        self._load(Workflow, **kwargs_load)
+        self._main(**kwargs_main)
 
     def run(self):
         """VELES Machine Learning Platform Command Line Interface
@@ -483,7 +495,7 @@ class Main(Logger):
         self._visualization_mode = args.visualize
         self._workflow_graph = args.workflow_graph
         self._dry_run = Main.DRY_RUN_CHOICES.index(args.dry_run)
-        self._genetics = args.genetics
+        self._optimization = args.optimize
         self._dump_attrs = args.dump_unit_attributes
         self._dump_all_attrs = args.dump_all_unit_attributes
 
@@ -500,32 +512,25 @@ class Main(Logger):
         self._apply_config(fname_config, args.config_list)
         if args.dump_config:
             root.print_config()
-        if self._dry_run > 0:
-            if args.background:
-                daemon_context = daemon.DaemonContext()
-                daemon_context.working_directory = os.getcwd()
-                daemon_context.files_preserve = [
-                    int(fd) for fd in os.listdir("/proc/self/fd")
-                    if int(fd) > 2]
-                self.info("Daemonized")
-                daemon_context.open()
-            if self._genetics == "single":
-                self._do_genetics(wm, False)
-            elif self._genetics == "multi":
-                self._do_genetics(wm, True)
-            else:
-                self._no_genetics()
-                self.run_module(wm)
-            self.info("End of job")
+        if self._dry_run <= 0:
+            return Main.EXIT_SUCCESS
+
+        if args.background:
+            daemon_context = daemon.DaemonContext()
+            daemon_context.working_directory = os.getcwd()
+            daemon_context.files_preserve = [
+                int(fd) for fd in os.listdir("/proc/self/fd")
+                if int(fd) > 2]
+            self.info("Daemonized")
+            # Daemonization happens in open()
+            daemon_context.open()
+        if not self.optimization:
+            self._prepare_configuration()
+            self.run_module(wm)
+        else:
+            self._do_genetic_optimization(wm, self._optimization == "multi")
+        self.info("End of job")
         return Main.EXIT_SUCCESS
-
-    def _no_genetics(self):
-        from veles.genetics import fix_config
-        fix_config(root)
-
-    def _do_genetics(self, wm, multi):
-        from veles.genetics import ConfigPopulation
-        ConfigPopulation(root, self, wm, multi).evolution()
 
 
 if __name__ == "__main__":

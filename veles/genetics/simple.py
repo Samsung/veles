@@ -364,7 +364,7 @@ class Population(Pickleable):
                          "points": None,
                          "probability": 0.35}}
 
-        self.epoch = 0
+        self.generation = 0
 
         self.prev_state_fnme = None
 
@@ -643,7 +643,7 @@ class Population(Pickleable):
         # +1 symbol 1/0 for positive/negative
         self.delimeter += 1
 
-    def evolve(self):
+    def do_evolution_step(self):
         """Evolves the population (one step).
         """
         fin = self.get_pickle_fin()
@@ -716,21 +716,24 @@ class Population(Pickleable):
     def get_pickle_fout(self):
         try:
             self.prev_state_fnme = "%s/chromosomes_%d_%.2f.pickle" % (
-                root.common.snapshot_dir, self.epoch, self.best_fit)
+                root.common.snapshot_dir, self.generation, self.best_fit)
             return open(self.prev_state_fnme, "wb")
         except OSError:
             return None
 
-    def evolution(self):
+    def evolve(self):
         """Evolve until completion.
         """
-        while True:
-            self.evolve()
-            if self.on_after_evolve():
-                break
-            self.epoch += 1
+        try:
+            while True:
+                self.do_evolution_step()
+                if self.on_after_evolution_step():
+                    break
+                self.generation += 1
+        except KeyboardInterrupt:
+            self.error("Evolution was interrupted")
 
-    def on_after_evolve(self):
+    def on_after_evolution_step(self):
         """Called after an evolution step.
 
         Returns:
@@ -741,6 +744,6 @@ class Population(Pickleable):
 
     def log_statistics(self):
         self.info("Epochs completed %d: fitness: best=%.2f total=%.2f "
-                  "average=%.2f median=%.2f worst=%.2f", self.epoch + 1,
+                  "average=%.2f median=%.2f worst=%.2f", self.generation + 1,
                   self.best_fit, self.fitness,
                   self.average_fit, self.median_fit, self.worst_fit)
