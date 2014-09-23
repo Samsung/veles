@@ -147,9 +147,16 @@ class Snapshotter(SnapshotterBase):
         file_name_link = os.path.join(
             self.directory, "%s_current.%d.pickle%s" % (
                 self.prefix, best_protocol, ext))
-        if os.path.exists(file_name_link):
+        # Link creation may fail when several processes do this all at once,
+        # so try-except here:
+        try:
             os.remove(file_name_link)
-        os.symlink(rel_file_name, file_name_link)
+        except OSError:
+            pass
+        try:
+            os.symlink(rel_file_name, file_name_link)
+        except OSError:
+            pass
 
     def _open_file(self):
         return Snapshotter.WRITE_CODECS[self.compress](self.file_name,
