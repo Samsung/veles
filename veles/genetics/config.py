@@ -9,6 +9,7 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 
 from multiprocessing import Process, Queue
 import numpy
+import os
 import queue
 import threading
 import time
@@ -148,6 +149,7 @@ class GeneticsContainer(Unit):
         self.chromo = None  # for slave only
         self.scheduled_chromos = {}
         self.thread_to_start = kwargs["thread_to_start"]
+        self.last_exec_time = 86400
 
     def initialize(self, **kwargs):
         pass
@@ -160,8 +162,10 @@ class GeneticsContainer(Unit):
         if self.is_master:
             raise ValueError("Should not be called in master mode")
         if self.chromo is not None:
+            t0 = time.time()
             self.population_.job_request_queue_.put(self.chromo)
             self.chromo.fitness = self.population_.job_response_queue_.get()
+            self.last_exec_time = time.time() - t0
         else:
             self.info("No job yet, sleeping for 5 seconds")
             time.sleep(5)
@@ -178,8 +182,8 @@ class GeneticsContainer(Unit):
             try:
                 idx = self.queue_.get_nowait()
             except queue.Empty:
-                self.info("No job yet, sending None, None to slave %s",
-                          slave.id)
+                self.debug("No job yet, sending None, None to slave %s",
+                           slave.id)
                 return None, None
             chromo = self.population_.chromosomes[idx]
         self.scheduled_chromos[slave.id] = (chromo, idx)
@@ -192,13 +196,13 @@ class GeneticsContainer(Unit):
             self.chromo.population_ = self.population_
             self.info("Received for evaluation chromosome number %d", idx)
         else:
-            self.info("Received None, None from master")
+            self.debug("Received None, None from master")
         self.workflow.end_point.gate_block <<= True
         self.gate_block <<= False
 
     def generate_data_for_master(self):
         if self.chromo is None:
-            self.info("Sending None to master")
+            self.debug("Sending None to master")
             return None
         self.info("Sending to master fitness %.2f", self.chromo.fitness)
         return self.chromo.fitness
@@ -216,8 +220,8 @@ class GeneticsContainer(Unit):
         except KeyError:
             self.warning("Dropped slave that has not received a job")
             return
-        self.info("Slave %s dropped, appending chromosome "
-                  "number %d to the retry list", slave.id, idx)
+        self.warning("Slave %s dropped, appending chromosome "
+                     "number %d to the retry list", slave.id, idx)
         self.retry_list.append((chromo, idx))
 
     def enqueue_for_evaluation(self, chromo, idx):
@@ -230,7 +234,7 @@ class GeneticsContainer(Unit):
                 if self.population_.evaluations_pending <= 0:
                     break
             time.sleep(0.5)
-        self.info("Evaluated everything, breeding season approaches...")
+        self.debug("Evaluated everything, breeding season approaches...")
 
 
 class GeneticsWorkflow(Workflow):
@@ -252,6 +256,10 @@ class GeneticsWorkflow(Workflow):
         self.repeater.link_from(self.container)
         self.end_point.link_from(self.container)
         self.end_point.gate_block <<= True
+
+    @property
+    def computing_power(self):
+        return 9999.99 / self.container.last_exec_time
 
 
 class ConfigPopulation(Population):
@@ -348,7 +356,7 @@ class ConfigPopulation(Population):
                 continue
             if arg == "-s":
                 was_s = True
-            if arg == "--genetics":
+            if arg.startswith("--genetics"):
                 i_genetics = i
             args.append(arg)
         if not was_s:
@@ -358,6 +366,15 @@ class ConfigPopulation(Population):
         self.info("#" * 80)
 
     def job_process(self, request_queue, response_queue):
+        try:
+            self._job_process(request_queue, response_queue)
+        except Exception as e:
+            self.error("Exception occured while processing the job, "
+                       "will exit the worker process, reason is: %s",
+                       str(e))
+            os._exit(1)
+
+    def _job_process(self, request_queue, response_queue):
         # Switch off genetics for the contained workflow launches
         self.main_.genetics = False
         while True:
@@ -369,6 +386,15 @@ class ConfigPopulation(Population):
             response_queue.put(chromo.fitness)
 
     def evolution(self):
+        try:
+            self._evolution()
+        except Exception as e:
+            self.error("Exception occured while doing the evolution, "
+                       "will exit the main process, reason is: %s",
+                       str(e))
+            os._exit(1)
+
+    def _evolution(self):
         if self.multi:
             # Fork before creating the twisted reactor
             self.job_request_queue_ = Queue()
@@ -385,7 +411,9 @@ class ConfigPopulation(Population):
             self.main_.run_workflow(
                 GeneticsWorkflow,
                 kwargs_load={"population": self, "thread_to_start": thread})
-            thread.join()
+            if thread.is_alive():  # it will not be started on slave
+                thread.join()
+            self.job_request_queue_.put(None)
             job_process.join()
         else:
             super(ConfigPopulation, self).evolution()
