@@ -208,7 +208,7 @@ class ZmqConnection(Logger):
 
     @pickles_compression.setter
     def pickles_compression(self, value):
-        if not value in (None, "", "gzip", "snappy", "xz"):
+        if value not in (None, "", "gzip", "snappy", "xz"):
             raise ValueError()
         self._pickles_compression = value
 
@@ -274,6 +274,7 @@ class ZmqConnection(Logger):
 
         class Unpickler(object):
             def __init__(self):
+                self._data = []
                 self._active = False
 
             @property
