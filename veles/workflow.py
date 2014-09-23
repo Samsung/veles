@@ -692,7 +692,8 @@ class Workflow(Unit):
             if self.is_slave:
                 table.add_row("Σ", int(time_all * 100 / self._run_time_),
                               datetime.timedelta(seconds=time_all))
-            self.info("Workflow methods run time:\n%s", table)
+            if time_all > 0:
+                self.info("Workflow methods run time:\n%s", table)
 
     def print_history(self):
         table = PrettyTable("operation", "time", "slave")
