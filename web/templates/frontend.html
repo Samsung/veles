@@ -111,11 +111,24 @@
               disable(common_mode);
           }
 
-	  function select_mode(mode) {
+          function select_mode(mode) {
               $("#dropdownMode").get(0).firstChild.nodeValue = mode + " ";
               mode = mode.toLowerCase();
               enable_all();
               disable(mode);
+              var cl = $("#command-line").val().replace(/\s+/, " ");
+              var opts = {% raw opts %};
+              var args = parse_cl(cl);
+              var states = from_args_to_states(args, states);
+              $.each(states, function(opt, arg) {
+                var elem_opt = $("#" + opt);
+                if (!elem_opt.hasClass(mode)) {
+                  delete initial_states[opt];
+                  cl = cl.replace(opt + " " + arg, "");
+                  cl = cl.replace(opt, "");
+                }
+              });
+              elem.val(cl);
           }
 
           function select(choice, id) {
