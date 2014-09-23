@@ -268,7 +268,8 @@ class VelesProtocol(StringLineReceiver, IDLogger):
         if not self.host.workflow.is_running:
             if self.id in self.nodes:
                 del self.nodes[self.id]
-            del self.host.protocols[self.id]
+            if self.id in self.host.protocols:
+                del self.host.protocols[self.id]
             if len(self.nodes) == 0:
                 self.host.launcher.stop()
         elif self.id in self.nodes:
