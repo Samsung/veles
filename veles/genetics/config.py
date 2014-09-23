@@ -7,7 +7,7 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
 
 
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Value
 import numpy
 import os
 import queue
@@ -52,11 +52,10 @@ def process_config(root, class_to_process, callback):
     kv = {}
     if isinstance(root, Config):
         arr = sorted(root.__dict__.items())
+    elif isinstance(root, dict):
+        arr = sorted(root.items())
     else:
-        if type(root) == dict:
-            arr = sorted(root.items())
-        else:
-            arr = enumerate(root)
+        arr = enumerate(root)
     for k, v in arr:
         if isinstance(v, Config) or type(v) in (list, tuple, dict):
             process_config(v, class_to_process, callback)
@@ -118,23 +117,28 @@ class ConfigChromosome(Chromosome):
     def evaluate_config(self):
         """Evaluates current Config root.
         """
-        q = Queue()
-        p = Process(target=self.run_workflow, args=(q,))
+        fitness = Value('d', 0.0)
+        p = Process(target=self.run_workflow, args=(fitness,))
         p.start()
-        fitness = q.get()
-        p.join()
-        return fitness
+        try:
+            p.join()
+        except KeyboardInterrupt:
+            if p.is_alive():
+                self.info("Giving the evaluator process a fair chance to die")
+                p.join(1.0)
+                if p.is_alive():
+                    self.warning("Terminating the evaluator process")
+                    p.terminate()
+            raise
+        return fitness.value
 
-    def run_workflow(self, q):
-        import logging
-        logging.basicConfig(level=logging.INFO)
+    def run_workflow(self, fitness):
         self.info("Will evaluate the following config:")
         self.population_.root_.print_config()
         if self.population_.multi:
             self.population_.force_standalone()
         self.population_.main_.run_module(self.population_.workflow_module_)
-        fitness = self.population_.main_.workflow.fitness
-        q.put(fitness)
+        fitness.value = self.population_.main_.workflow.fitness
 
 
 @implementer(IUnit, IDistributable)
