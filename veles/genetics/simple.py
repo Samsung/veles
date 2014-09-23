@@ -22,6 +22,7 @@ import pickle
 
 from veles.config import root
 from veles.distributable import Pickleable
+from veles.external.progressbar import ProgressBar
 
 
 def schwefel(values):
@@ -650,8 +651,10 @@ class Population(Pickleable):
         if fin is not None:
             self.chromosomes = pickle.load(fin)
             fin.close()
-        for _i in range(self.population_size - len(self.chromosomes)):
-            self.info("Creating chromo %d" % _i)
+
+        self.info("Creating chromosomes...")
+        for _ in ProgressBar(term_width=20)(range(self.population_size -
+                                                  len(self.chromosomes))):
             chromo = self.new_chromo(self.optimization_size,
                                      self.optimization_minvles,
                                      self.optimization_maxvles,
