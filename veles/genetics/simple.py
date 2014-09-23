@@ -19,6 +19,7 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 
 import numpy
 import pickle
+from twisted.internet import reactor
 
 from veles.config import root
 from veles.distributable import Pickleable
@@ -314,7 +315,7 @@ class Population(Pickleable):
 
         self.chromosomes = []
 
-        self.population_size = 50
+        self.population_size = 10
 
         self.fitness = None
         self.average_fit = None
@@ -403,7 +404,7 @@ class Population(Pickleable):
         self.chromosomes.sort(key=lambda x: x.fitness, reverse=True)
         del self.chromosomes[self.population_size:]
 
-    def evaluate(self):
+    def evaluate(self, callback):
         """Sequential evaluation.
         """
         for i, u in enumerate(self):
@@ -411,11 +412,7 @@ class Population(Pickleable):
                 self.info("Will evaluate chromosome number %d (%.2f%%)",
                           i, 100.0 * i / len(self))
                 u.evaluate()
-
-    def _evaluate(self):
-        self.evaluate()  # evaluate population
-        self.sort()  # kill excessive worst ones
-        self.fitness = sum(u.fitness for u in self)
+        callback()
 
     def selection(self):
         """Current selection procedure.
@@ -644,7 +641,7 @@ class Population(Pickleable):
         # +1 symbol 1/0 for positive/negative
         self.delimeter += 1
 
-    def do_evolution_step(self):
+    def do_evolution_step(self, callback):
         """Evolves the population (one step).
         """
         fin = self.get_pickle_fin()
@@ -665,7 +662,15 @@ class Population(Pickleable):
         if self.optimization_code == "gray":
             self.compute_gray_codes()
 
-        self._evaluate()
+        def continue_callback():
+            self.continue_evolution_step()
+            callback()
+
+        self.evaluate(continue_callback)
+
+    def continue_evolution_step(self):
+        self.sort()  # kill excessive worst ones
+        self.fitness = sum(u.fitness for u in self)
 
         self.average_fit = self.fitness / self.population_size
         self.best_fit = self.chromosomes[0].fitness
@@ -727,12 +732,14 @@ class Population(Pickleable):
     def evolve(self):
         """Evolve until completion.
         """
+
+        def after_evolution_step():
+            if not self.on_after_evolution_step():
+                reactor.callWhenRunning(self.evolve)
+            self.generation += 1
+
         try:
-            while True:
-                self.do_evolution_step()
-                if self.on_after_evolution_step():
-                    break
-                self.generation += 1
+            self.do_evolution_step(after_evolution_step)
         except KeyboardInterrupt:
             self.error("Evolution was interrupted")
 
@@ -746,7 +753,7 @@ class Population(Pickleable):
         return False
 
     def log_statistics(self):
-        self.info("Epochs completed %d: fitness: best=%.2f total=%.2f "
+        self.info("Generations completed %d: fitness: best=%.2f total=%.2f "
                   "average=%.2f median=%.2f worst=%.2f", self.generation + 1,
                   self.best_fit, self.fitness,
                   self.average_fit, self.median_fit, self.worst_fit)
