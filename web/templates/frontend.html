@@ -159,17 +159,13 @@
               var ok2 = obj2[key];
               if (ok1 == undefined && ok2 != undefined) {
                 result[key] = "created";
+              } else if (ok1 != undefined && ok2 == undefined) {
+                result[key] = "deleted";
+              } else if (ok1 != undefined && ok2 != undefined && ok1 == ok2) {
+                result[key] = "unchanged";
               } else {
-                if (ok1 != undefined && ok2 == undefined) {
-                  result[key] = "deleted";
-                } else {
-                  if (ok1 != undefined && ok2 != undefined && ok1 == ok2) {
-                    result[key] = "unchanged";
-                  } else {
-                        result[key] = "updated";
-                    }
-                  }
-                }
+                result[key] = "updated";
+              }
             }
             return result
           }
@@ -197,7 +193,7 @@
               delete args["_"];
               return args
           }
-          
+
           function from_args_to_states(args, states) {
               var positional_opts = {% raw positional_opts %};
               var opts = {% raw opts %};
@@ -211,7 +207,7 @@
                     }
                 }
               });
-              return states
+          return states
           }
 
           function change_cl_by_input(cl, prev_value, value, id) {
@@ -343,11 +339,11 @@
                   }
                   if (status_arg == "created" || status_arg == "updated") {
                     if (elem_opt.hasClass("switch")) {
-                        if (arg === false) {
-                          elem_opt.bootstrapSwitch('state', false);
-                        } else {
-                          elem_opt.bootstrapSwitch('state', true);
-                          }
+                      if (arg === false) {
+                        elem_opt.bootstrapSwitch('state', false);
+                      } else {
+                        elem_opt.bootstrapSwitch('state', true);
+                      }
                     }
                     if (elem_opt.hasClass("typeahead") || (elem_opt.hasClass("form-control") && !(elem_opt.hasClass("typeahead")))) {
                       elem_opt.val(arg);
