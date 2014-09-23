@@ -132,12 +132,22 @@
           }
 
           function select(choice, id) {
-              $("#dropdown_menu").get(0).firstChild.nodeValue = choice + " ";
+              $("#dropdown_menu" + id).get(0).firstChild.nodeValue = choice + " ";
               choice = choice.toLowerCase();
               var id = id;
+              var prev_value = initial_states[id];
               var value = choice;
               initial_states[id]=value;
-              generate_cl(initial_states);
+              var elem = $("#command-line");
+              var cl = elem.val();
+              var reg = /\s+/;
+              cl = cl.replace(reg, " ");
+              if (cl.indexOf(id + " " + prev_value) != -1) {
+                 cl = cl.replace(id + " " + prev_value, id + ' ' + value);
+              } else {
+                 cl = id + ' ' + value + ' ' + cl;
+              }
+              elem.val(cl);
           }
 
           function get_diff(obj1, obj2) {
@@ -203,30 +213,110 @@
               });
               return states
           }
+
+          function change_cl_by_input(cl, prev_value, value, id) {
+              function generate_tail(id, value, wf, config, config_list) {
+                var kwargs = {"workflow": 0, "config": 1, "config_list": 2};
+                var tail = [].slice.call(arguments, 2);
+                return tail.join(" ");
+              }
+
+              function cl_tail(wf, config, config_list) {
+                return [].filter.call(arguments, function(s) { return s }).join(" ");
+              }
+
+              var positional_opts = {% raw positional_opts %};
+              var wf = initial_states["workflow"];
+              var config = initial_states["config"];
+              var config_list = initial_states["config_list"];
+              if ($.inArray(id, positional_opts) == -1) {
+                if (cl.indexOf(id + " " + prev_value) != -1) {
+                  cl = cl.replace(id + " " + prev_value, id + ' ' + value);
+                } else {
+                  cl = id + ' ' + value + ' ' + cl;
+                }
+              } else {
+                var tail = cl_tail(wf, config, config_list);
+                var new_tail = generate_tail(id, value, wf, config, config_list);
+                if (cl.indexOf(prev_value) != -1) {
+                  cl = cl.replace(prev_value, value);
+                } else {
+                  if (cl.indexOf(tail) != -1) {
+                    cl = cl.replace(tail, new_tail);
+                  } else {
+                      cl += " " + value;
+                  }
+                }
+              }
+              return cl
           }
 
+          // This function modified command line for each change of value of widgets: input, switch, typeahead.
+          // Also it modified value of widgets for each change of command line.
           $(function() {
+              // This event changes value of option and value of command line if value of input has been changed.
               $("input:not(#command-line)").on("change", function() {
-              var id = this.id;
-              var value = this.value;
-              initial_states[id]=value;
-              generate_cl(initial_states);
+                var id = this.id;
+                var prev_value = initial_states[id];
+                var value = this.value;
+                initial_states[id]=value;
+                var elem = $("#command-line");
+                var cl = elem.val();
+                var reg = /\s+/;
+                cl = cl.replace(reg, " ");
+                cl = change_cl_by_input(cl, prev_value, value, id);
+                elem.val(cl);
               });
+              // This event changes value of option and value of command line if switch has been switched.
               $(".switch").bootstrapSwitch().on('switchChange.bootstrapSwitch', function(event, state) {
-              var id = this.id;
-              var value = state;
-              initial_states[id]=value;
-              generate_cl(initial_states);
+                var id = this.id;
+                var prev_value = initial_states[id];
+                var value = state;
+                var elem = $("#command-line");
+                var cl = elem.val();
+                initial_states[id]=value;
+                if (cl.indexOf(id) != -1 && value === false) {
+                  cl = cl.replace(id, '');
+                } else {
+                  if (cl.indexOf(id) == -1 && value === true) {
+                    cl = id + ' ' + cl;
+                  }
+                }
+                elem.val(cl);
               });
+              // This event changes value of option and value of command line if workflow was chosen.
               $('.typeahead').on('typeahead:selected', function(event, value) {
-              var selected_wf = value;
-              var wf = selected_wf["value"];
-              initial_states["workflow"]=wf;
-              generate_cl(initial_states);
-              $(".dropdown-menu li a").click(function(event, value){
-                 var value = value;
-                 alert(value)
-                 });
+                var selected_wf = value;
+                var prev_wf = initial_states["workflow"];
+                var wf = selected_wf["value"];
+                var config = initial_states["config"];
+                var spase = " ";
+                var config_list = initial_states["config_list"];
+                if (config == undefined) {
+                  config = "";
+                  space = "";
+                }
+                if (config_list == undefined) {
+                  config_list = "";
+                  space = "";
+                }
+                initial_states["workflow"]=wf;
+                var elem = $("#command-line");
+                var cl = elem.val();
+                var reg = /\s+/;
+                cl = cl.replace(reg, " ");
+                if (cl.indexOf(prev_wf) != -1) {
+                  cl = cl.replace(prev_wf, wf);
+                } else {
+                  var conf_str = config + space + config_list;
+                  if (cl.indexOf(config + space + config_list) != -1) {
+                    cl = cl.replace(config + space + config_list, wf + " " + conf_str);
+                  } else {
+                    cl += wf;
+                  }
+                }
+                elem.val(cl);
+              });
               // This event changes value of widgets for each change of command line.
               $("#command-line").on("change", function() {
                 $("#error-message").css("display", "none");
