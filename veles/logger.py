@@ -147,6 +147,12 @@ class Logger(object):
         return msg_changeable_wrapper
 
     @msg_changeable
+    def log(self, level, msg, *args, **kwargs):
+        self.logger.log(
+            level, msg, *args, extra={"caller": self.logger.findCaller()},
+            **kwargs)
+
+    @msg_changeable
     def debug(self, msg, *args, **kwargs):
         self.logger.debug(
             msg, *args, extra={"caller": self.logger.findCaller()}, **kwargs)
