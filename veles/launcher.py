@@ -74,6 +74,9 @@ class Launcher(logger.Logger):
         self.args.matplotlib_backend = self.args.matplotlib_backend.strip()
         self._slaves = [x.strip() for x in self.args.nodes.split(',')
                         if x.strip() != ""]
+        self._slave_launch_transform = self.args.slave_launch_transform
+        if self._slave_launch_transform.find("%s") < 0:
+            raise ValueError("Slave launch command transform must contain %s")
 
         if self.args.log_file != "":
             log_file = self.args.log_file
@@ -190,6 +193,10 @@ class Launcher(logger.Logger):
         parser.add_argument("--max-nodes", type=int, default=0,
                             help="Max number of slaves launched. 0 means "
                             "unlimited number.").mode = ["master"]
+        parser.add_argument("--slave-launch-transform", type=str, default="%s",
+                            help="Transformation of the slave remote launch "
+                            "command given over ssh (%s corresponds to the "
+                            "original command).").mode = ["master"]
         return parser
 
     @property
@@ -462,7 +469,8 @@ class Launcher(logger.Logger):
         skip = False
         ignored_args = {"-l", "--listen-address", "-n", "--nodes", "-p",
                         "--matplotlib-backend", "-b", "--background",
-                        "-s", "--stealth", "-d", "--device"}
+                        "-s", "--stealth", "-d", "--device",
+                        "--slave-launch-transform"}
         for i in range(1, len(sys.argv)):
             if sys.argv[i] in ignored_args:
                 skip = True
@@ -525,8 +533,10 @@ class Launcher(logger.Logger):
                 return
             for prog in progs:
                 prog = prog.replace(r'"', r'\"').replace(r"'", r"\'")
-                self.debug("Launching %s", prog)
-                pc.exec_command("cd '%s' && %s" % (cwd, prog))
+                cmd = self._slave_launch_transform % ("cd '%s' && %s" %
+                                                      (cwd, prog))
+                self.debug("Executing %s", cmd)
+                pc.exec_command(cmd)
         except:
             self.exception("Failed to launch '%s' on %s", progs, host)
         finally:
