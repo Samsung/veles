@@ -642,7 +642,9 @@ class Population(Pickleable):
         self.delimeter += 1
 
     def do_evolution_step(self, callback):
-        """Evolves the population (one step).
+        """Evolves the population (one step) asynchronously.
+
+        callback will be called after the step is finished.
         """
         fin = self.get_pickle_fin()
         if fin is not None:
@@ -663,12 +665,12 @@ class Population(Pickleable):
             self.compute_gray_codes()
 
         def continue_callback():
-            self.continue_evolution_step()
+            self._continue_evolution_step()
             callback()
 
         self.evaluate(continue_callback)
 
-    def continue_evolution_step(self):
+    def _continue_evolution_step(self):
         self.sort()  # kill excessive worst ones
         self.fitness = sum(u.fitness for u in self)
 
@@ -729,19 +731,24 @@ class Population(Pickleable):
         except OSError:
             return None
 
-    def evolve(self):
-        """Evolve until completion.
+    def _evolve(self):
+        """Evolve until the completion.
         """
 
         def after_evolution_step():
             if not self.on_after_evolution_step():
-                reactor.callWhenRunning(self.evolve)
+                reactor.callWhenRunning(self._evolve)
             self.generation += 1
 
         try:
             self.do_evolution_step(after_evolution_step)
         except KeyboardInterrupt:
             self.error("Evolution was interrupted")
+
+    def evolve(self):
+        """This method can be overriden.
+        """
+        self._evolve()
 
     def on_after_evolution_step(self):
         """Called after an evolution step.

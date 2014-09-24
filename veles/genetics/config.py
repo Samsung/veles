@@ -7,16 +7,18 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
 
 
+from logging import DEBUG, INFO
 from multiprocessing import Process, Pipe, Value
 import numpy
 import sys
 from zope.interface import implementer
 
-from veles.config import Config
+from veles.config import Config, root
 from veles.distributable import IDistributable
 from veles.genetics import Chromosome, Population
 from veles.units import IUnit, Unit
 from veles.workflow import Workflow, Repeater
+from veles.launcher import Launcher
 
 
 if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
@@ -144,14 +146,18 @@ class ConfigChromosome(Chromosome):
 class GeneticsContainer(Unit):
     """Unit which contains requested workflow for optimization.
     """
-    def __init__(self, workflow, **kwargs):
+    def __init__(self, workflow, population, **kwargs):
         super(GeneticsContainer, self).__init__(workflow, **kwargs)
-        self.population_ = kwargs["population"]
-        self.pending_chromos = []
-        self.retry_chromos = []
-        self.scheduled_chromos = {}
-        self.chromo = None  # for slave only
-        self.on_evaluation_finished = self.nothing
+        self.population_ = population
+        assert not self.is_standalone
+        if self.is_slave:
+            self._pipe = self.population_.job_connection[1]
+            self._chromo = None
+        else:
+            self.pending_chromos = []
+            self.retry_chromos = []
+            self.scheduled_chromos = {}
+            self._on_evaluation_finished = self.nothing
 
     def initialize(self, **kwargs):
         pass
@@ -161,63 +167,97 @@ class GeneticsContainer(Unit):
 
         One chromosome at a time.
         """
-        self.population_.job_connection[1].send(self.chromo)
-        # Block until the resulting fitness is calculated
-        self.chromo.fitness = self.population_.job_connection[1].recv()
-        self.workflow.end_point.gate_block <<= False
-        # Block until doRead() is fired
-        self.gate_block <<= True
+        assert self.is_slave
+        self.pipe.send(self.chromosome)
+        try:
+            self.chromosome.fitness = self.pipe.recv()  # blocks
+        except:
+            self.exception("Failed to receive the resulting fitness")
+        else:
+            self.gate_block <<= True
+
+    @property
+    def pipe(self):
+        assert self.is_slave
+        return self._pipe
+
+    @property
+    def generation_evolved(self):
+        return (len(self.scheduled_chromos) | len(self.retry_chromos) |
+                len(self.pending_chromos)) == 0
+
+    @property
+    def on_evaluation_finished(self):
+        assert self.is_master
+        return self._on_evaluation_finished
+
+    @on_evaluation_finished.setter
+    def on_evaluation_finished(self, value):
+        assert self.is_master
+        self._on_evaluation_finished = value
+
+    @property
+    def chromosome(self):
+        assert self.is_slave
+        return self._chromo
+
+    @chromosome.setter
+    def chromosome(self, value):
+        assert self.is_slave
+        self._chromo = value
 
     def generate_data_for_slave(self, slave):
-        if len(self.retry_chromos):
-            chromo, idx = self.retry_chromos.pop(0)
-        else:
+        if slave.id in self.scheduled_chromos:
+            # We do not support more than one job for a slave
+            # Wait until the previous job finishes via apply_data_from_slave()
+            return False
+        try:
+            idx = self.retry_chromos.pop()
+        except IndexError:
             try:
                 idx = self.pending_chromos.pop()
             except IndexError:
                 return False
-            chromo = self.population_.chromosomes[idx]
-        self.scheduled_chromos[slave.id] = (chromo, idx)
-        self.info("Sent chromosome %d to slave %s", idx, slave.id)
-        return chromo, idx
+        self.scheduled_chromos[slave.id] = idx
+        self.info("Assigned chromosome %d to slave %s", idx, slave.id)
+        return self._chromo_by_idx(idx), idx
 
     def apply_data_from_master(self, data):
-        self.chromo, idx = data
-        if self.chromo is not None:
-            self.chromo.population_ = self.population_
-            self.info("Received chromosome #%d for evaluation", idx)
-        else:
-            self.debug("Received None, None from master")
-        self.workflow.end_point.gate_block <<= True
+        self.chromosome, idx = data
+        assert self.chromosome is not None
+        self.chromosome.population_ = self.population_
+        self.info("Received chromosome #%d for evaluation", idx)
         self.gate_block <<= False
 
     def generate_data_for_master(self):
-        if self.chromo is None:
-            self.debug("Sending None to master")
-            return None
-        self.info("Sending to master fitness %.2f", self.chromo.fitness)
-        return self.chromo.fitness
+        self.debug("Sending to master fitness %.2f", self.chromosome.fitness)
+        return self.chromosome.fitness
 
     def apply_data_from_slave(self, data, slave):
-        chromo, idx = self.scheduled_chromos.pop(slave.id)
+        idx = self.scheduled_chromos.pop(slave.id)
+        chromo = self._chromo_by_idx(idx)
         chromo.fitness = data
         self.info("Got fitness %.2f for chromosome number %d", data, idx)
-        if len(self.pending_chromos) == 0:
+        if self.generation_evolved:
             self.debug("Evaluated everything, breeding season approaches...")
             self.on_evaluation_finished()
 
     def drop_slave(self, slave):
         try:
-            chromo, idx = self.scheduled_chromos.pop(slave.id)
+            idx = self.scheduled_chromos.pop(slave.id)
         except KeyError:
             self.warning("Dropped slave that had not received a job")
             return
         self.warning("Slave %s dropped, appending chromosome "
                      "number %d to the retry list", slave.id, idx)
-        self.retry_chromos.append((chromo, idx))
+        self.retry_chromos.append(idx)
 
     def enqueue_for_evaluation(self, chromo, idx):
         self.pending_chromos.append(idx)
+
+    def _chromo_by_idx(self, idx):
+        assert self.is_master  # slaves do not have the whole population
+        return self.population_.chromosomes[idx]
 
 
 class GeneticsWorkflow(Workflow):
@@ -230,14 +270,13 @@ class GeneticsWorkflow(Workflow):
         self.repeater.link_from(self.start_point)
 
         self.population = kwargs["population"]
-        self.container = GeneticsContainer(
-            self, population=self.population)
+        self.container = GeneticsContainer(self, self.population)
         self.population.container = self.container
         self.container.link_from(self.repeater)
 
         self.repeater.link_from(self.container)
         self.end_point.link_from(self.container)
-        self.end_point.gate_block <<= True
+        self.end_point.gate_block = ~self.container.gate_block
 
     def initialize(self, **kwargs):
         super(GeneticsWorkflow, self).initialize(**kwargs)
@@ -315,8 +354,9 @@ class ConfigPopulation(Population):
         self.container.on_evaluation_finished = callback
         for i, u in enumerate(self):
             if u.fitness is None:
-                self.info("Enqueued for evaluation chromosome number %d "
-                          "(%.2f%%)", i, 100.0 * i / len(self))
+                self.log(INFO if self.container.is_standalone else DEBUG,
+                         "Enqueued for evaluation chromosome number %d "
+                         "(%.2f%%)", i, 100.0 * i / len(self))
                 self.container.enqueue_for_evaluation(u, i)
 
     def force_standalone(self):
@@ -371,25 +411,31 @@ class ConfigPopulation(Population):
                 parent_conn.send(None)
 
     def evolve_multi(self):
-        # Fork before creating the OpenCL device
-        self.job_connection = Pipe()
-        job_process = Process(target=self.job_process,
-                              args=self.job_connection)
-        job_process.start()
-        self.job_connection[0].close()
+        parser = Launcher.init_parser()
+        args, _ = parser.parse_known_args()
+        is_slave = bool(args.master_address.strip())
+        if is_slave:
+            # Fork before creating the OpenCL device
+            self.job_connection = Pipe()
+            self.job_process = Process(target=self.job_process,
+                                       args=self.job_connection)
+            self.job_process.start()
+            self.job_connection[0].close()
 
+        root.common.plotters_disabled = True
         # Launch the container workflow
         self.main_.run_workflow(GeneticsWorkflow,
                                 kwargs_load={"population": self})
 
-        # Terminate the worker process
-        try:
-            self.job_connection[1].send(None)
-        except BrokenPipeError:
-            pass
-        for conn in self.job_connection:
-            conn.close()
-        job_process.join()
+        if is_slave:
+            # Terminate the worker process
+            try:
+                self.job_connection[1].send(None)
+            except BrokenPipeError:
+                pass
+            for conn in self.job_connection:
+                conn.close()
+            self.job_process.join()
 
     def evolve_on_master(self):
         super(ConfigPopulation, self).evolve()
