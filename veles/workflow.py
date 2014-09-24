@@ -117,7 +117,7 @@ class Workflow(Unit):
 
     def __init__(self, workflow, **kwargs):
         self._plotters_are_enabled = kwargs.get(
-            "disable_plotters", not root.common.plotters_disabled)
+            "enable_plotters", not root.common.plotters_disabled)
         self._sync = kwargs.get("sync", True)
         super(Workflow, self).__init__(workflow,
                                        generate_data_for_slave_threadsafe=True,
