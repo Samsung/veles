@@ -21,6 +21,7 @@ from zope.interface import implementer, Interface
 from veles.config import root
 import veles.formats as formats
 import veles.opencl_types as opencl_types
+from veles.timeit import timeit
 from veles.units import Unit, IUnit, UnitCommandLineArgumentsRegistry
 from veles.workflow import Workflow
 
@@ -349,13 +350,13 @@ class OpenCLBenchmark(OpenCLUnit):
                        formats.roundup(self.size, self.block_size)]
         local_size = [self.block_size, self.block_size]
         self.device.queue_.finish()
-        tstart = time.time()
-        for _ in range(self.repeats):
-            self.execute_kernel(global_size, local_size)
-        self.device.queue_.finish()
-        tfinish = time.time()
-        delta = tfinish - tstart
-        res = 1000 / delta
+
+        def execute():
+            for _ in range(self.repeats):
+                self.execute_kernel(global_size, local_size)
+            self.device.queue_.finish()
+
+        res = 1000 / timeit(execute)[1]
         self.debug("Result is %.2f", res)
         return res
 

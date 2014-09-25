@@ -26,6 +26,7 @@ from veles.external.prettytable import PrettyTable
 from veles.external.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
 from veles.network_common import NetworkAgent, StringLineReceiver, IDLogger
 from veles.thread_pool import errback
+from veles.timeit import timeit
 
 
 class ZmqDealer(ZmqConnection):
@@ -107,12 +108,11 @@ class ZmqDealer(ZmqConnection):
         if self.shmem is not None and command == 'update':
             self.shmem.seek(0)
         try:
-            checkpt = time.time()
-            pickles_size = self.send(
+            pickles_size, delta = timeit(
+                self.send,
                 self.id, command.encode('charmap'), message,
                 io=self.shmem,
                 pickles_compression=self.pickles_compression)
-            delta = time.time() - checkpt
             if command not in self._request_timings:
                 self._request_timings[command] = (0.0, 0)
             self._request_timings[command] = (

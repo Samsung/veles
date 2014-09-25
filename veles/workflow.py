@@ -27,6 +27,7 @@ from veles.units import Unit, TrivialUnit, IUnit
 from veles.external.prettytable import PrettyTable
 from veles.external.progressbar import ProgressBar, Percentage, Bar
 import veles.external.pydot as pydot
+from veles.timeit import timeit
 
 
 if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
@@ -339,10 +340,9 @@ class Workflow(Unit):
         """Decorator function to measure the overall run time.
         """
         def wrapped(self, *args, **kwargs):
-            t = time.time()
-            res = fn(self, *args, **kwargs)
+            res, delta = timeit(fn, self, *args, **kwargs)
             if self.is_slave:
-                self._run_time_ += time.time() - t
+                self._run_time_ += delta
             return res
         name = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
         wrapped.__name__ = name + '_run_timed'
@@ -352,12 +352,11 @@ class Workflow(Unit):
         """Decorator function to profile particular methods.
         """
         def wrapped(self, *args, **kwargs):
-            t = time.time()
-            res = fn(self, *args, **kwargs)
             mt = self._method_time_.get(fn.__name__)
             if mt is None:
                 mt = 0
-            mt += time.time() - t
+            res, dt = timeit(fn, self, *args, **kwargs)
+            mt += dt
             self._method_time_[fn.__name__] = mt
             return res
         name = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)

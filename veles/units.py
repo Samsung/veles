@@ -9,7 +9,6 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 import six
 import threading
-import time
 import uuid
 from zope.interface import Interface, implementer
 from zope.interface.verify import verifyObject, verifyClass
@@ -21,6 +20,7 @@ from veles.distributable import Distributable, TriviallyDistributable, \
 import veles.error as error
 from veles.mutable import Bool, LinkableAttribute
 import veles.thread_pool as thread_pool
+from veles.timeit import timeit
 import veles.zope_verify_fix  # pylint: disable=W0611
 
 
@@ -523,10 +523,7 @@ class Unit(Distributable):
 
     def _measure_time(self, fn, storage):
         def wrapped_measure_time(*args, **kwargs):
-            sp = time.time()
-            res = fn(*args, **kwargs)
-            fp = time.time()
-            delta = fp - sp
+            res, delta = timeit(fn, *args, **kwargs)
             if self.id in storage:
                 storage[self.id] += delta
             if self.timings:
