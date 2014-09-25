@@ -659,7 +659,7 @@ class Population(Pickleable):
             self.chromosomes = pickle.load(fin)
             fin.close()
 
-        chromo_count = self.population_size - len(self.chromosomes)
+        chromo_count = max(self.population_size - len(self.chromosomes), 0)
         self.info("Creating %d chromosomes...", chromo_count)
         for _ in ProgressBar(term_width=20)(range(chromo_count)):
             chromo = self.new(self.optimization.size,
