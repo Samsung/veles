@@ -169,13 +169,14 @@ class Main(Logger):
                             "model, show workflow graph and plots",
                             action='store_true')
         parser.add_argument("--optimize", type=str, default="no",
-                            choices=["no", "single", "multi"],
                             help="Do optimization of the parameters using the "
                             "genetic algorithm. Possible values: "
                             "no: off; single: local sequential optimization; "
                             "multi: use master's nodes to do the "
-                            "distributed optimization "
-                            "(each instance will run in standalone mode).")
+                            "distributed optimization (each instance will run "
+                            "in standalone mode). \"single\" and \"multi\" may"
+                            " end with the colon with a number; that number "
+                            "sets the population size.")
         parser.add_argument("--workflow-graph", type=str, default="",
                             help="Save workflow graph to file.")
         parser.add_argument("--dump-unit-attributes", default=False,
@@ -453,9 +454,9 @@ class Main(Logger):
         from veles.genetics import fix_config
         fix_config(root)
 
-    def _do_genetic_optimization(self, wm, multi):
+    def _do_genetic_optimization(self, wm, multi, size):
         from veles.genetics import ConfigPopulation
-        ConfigPopulation(root, self, wm, multi).evolve()
+        ConfigPopulation(root, self, wm, multi, size or 50).evolve()
 
     def _print_logo(self, args):
         if not args.no_logo:
@@ -495,7 +496,19 @@ class Main(Logger):
         self._visualization_mode = args.visualize
         self._workflow_graph = args.workflow_graph
         self._dry_run = Main.DRY_RUN_CHOICES.index(args.dry_run)
-        self._optimization = args.optimize
+        optparsed = args.optimize.split(':')
+        if len(optparsed) > 2:
+            raise ValueError("\"%s\" is not a valid optimization setting" %
+                             args.optimize)
+        self._optimization = optparsed[0]
+        if len(optparsed) > 1:
+            try:
+                population_size = int(optparsed[1])
+            except:
+                raise ValueError("\"%s\" is not a valid optimization size" %
+                                 optparsed[1])
+        else:
+            population_size = 0
         self._dump_attrs = args.dump_unit_attributes
         self._dump_all_attrs = args.dump_all_unit_attributes
 
@@ -528,7 +541,8 @@ class Main(Logger):
             self._prepare_configuration()
             self.run_module(wm)
         else:
-            self._do_genetic_optimization(wm, self._optimization == "multi")
+            self._do_genetic_optimization(wm, self._optimization == "multi",
+                                          population_size)
         self.info("End of job")
         return Main.EXIT_SUCCESS
 

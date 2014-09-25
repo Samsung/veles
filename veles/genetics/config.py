@@ -41,11 +41,11 @@ class Tune(Tuneable):
         self.maxvle = maxvle
 
 
-def process_config(root, class_to_process, callback):
+def process_config(cfgroot, class_to_process, callback):
     """Applies callback to Config tree elements with the specified class.
 
     Parameters:
-        root: instance of the Config object.
+        cfgroot: instance of the Config object.
         class_to_process: class of the elements on which to apply callback.
         callback: callback function with 3 arguments:
                   root: instance of the Config object (leaf of the tree).
@@ -53,19 +53,19 @@ def process_config(root, class_to_process, callback):
                   value: value of the parameter (of type class_to_process).
     """
     kv = {}
-    if isinstance(root, Config):
-        arr = sorted(root.__dict__.items())
-    elif isinstance(root, dict):
-        arr = sorted(root.items())
+    if isinstance(cfgroot, Config):
+        arr = sorted(cfgroot.__dict__.items())
+    elif isinstance(cfgroot, dict):
+        arr = sorted(cfgroot.items())
     else:
-        arr = enumerate(root)
+        arr = enumerate(cfgroot)
     for k, v in arr:
         if isinstance(v, Config) or type(v) in (list, tuple, dict):
             process_config(v, class_to_process, callback)
         elif isinstance(v, class_to_process):
             kv[k] = v
     for k, v in sorted(kv.items()):
-        callback(root, k, v)
+        callback(cfgroot, k, v)
 
 
 def set_config_or_array(r, n, v):
@@ -79,67 +79,13 @@ def fix_attr(r, n, v):
     set_config_or_array(r, n, v.defvle)
 
 
-def fix_config(root):
+def fix_config(cfgroot):
     """Replaces all Tune values in Config tree with its defaults.
 
     Parameters:
-        root: instance of the Config object.
+        cfgroot: instance of the Config object.
     """
-    return process_config(root, Tune, fix_attr)
-
-
-class ConfigChromosome(Chromosome):
-    """Chromosome, based on Config tree's Tune elements.
-    """
-    def __init__(self, population,
-                 size, minvles, maxvles, accuracy, codes,
-                 binary, numeric):
-        self.population_ = population
-        self.fitness = None
-        super(ConfigChromosome, self).__init__(
-            size, minvles, maxvles, accuracy, codes, binary, numeric)
-
-    def apply_config(self):
-        for i, tune in enumerate(self.population_.registered_tunes_):
-            set_config_or_array(tune.root, tune.name, self.numeric[i])
-
-    def evaluate(self):
-        self.apply_config()
-        while self.fitness is None:
-            self.fitness = self.evaluate_config()
-        self.info("FITNESS = %.2f", self.fitness)
-
-    def evaluate_config(self):
-        """Evaluates current Config root.
-        """
-        fitness = Value('d', 0.0)
-        p = Process(target=self.run_workflow, args=(fitness,))
-        p.start()
-        try:
-            p.join()
-        except KeyboardInterrupt:
-            if p.is_alive():
-                self.info("Giving the evaluator process a fair chance to die")
-                p.join(1.0)
-                if p.is_alive():
-                    self.warning("Terminating the evaluator process")
-                    p.terminate()
-            raise
-        if p.exitcode != 0:
-            self.warning("Child process died with error code %d => "
-                         "reevaluating", p.exitcode)
-            return None
-        return fitness.value
-
-    def run_workflow(self, fitness):
-        self.info("Will evaluate the following config:")
-        self.population_.root_.print_config()
-        if self.population_.multi:
-            self.population_.force_standalone()
-        self.population_.main_.run_module(self.population_.workflow_module_)
-        fv = self.population_.main_.workflow.fitness
-        if fv is not None:
-            fitness.value = fv
+    return process_config(cfgroot, Tune, fix_attr)
 
 
 @implementer(IUnit, IDistributable)
@@ -292,11 +238,65 @@ class GeneticsWorkflow(Workflow):
             return 0
 
 
+class ConfigChromosome(Chromosome):
+    """Chromosome, based on Config tree's Tune elements.
+    """
+    def __init__(self, population,
+                 size, minvles, maxvles, accuracy, codes,
+                 binary, numeric):
+        self.population_ = population
+        self.fitness = None
+        super(ConfigChromosome, self).__init__(
+            size, minvles, maxvles, accuracy, codes, binary, numeric)
+
+    def apply_config(self):
+        for i, tune in enumerate(self.population_.registered_tunes_):
+            set_config_or_array(tune.root, tune.name, self.numeric[i])
+
+    def evaluate(self):
+        self.apply_config()
+        while self.fitness is None:
+            self.fitness = self.evaluate_config()
+        self.info("FITNESS = %.2f", self.fitness)
+
+    def evaluate_config(self):
+        """Evaluates current Config root.
+        """
+        fitness = Value('d', 0.0)
+        p = Process(target=self.run_workflow, args=(fitness,))
+        p.start()
+        try:
+            p.join()
+        except KeyboardInterrupt:
+            if p.is_alive():
+                self.info("Giving the evaluator process a fair chance to die")
+                p.join(1.0)
+                if p.is_alive():
+                    self.warning("Terminating the evaluator process")
+                    p.terminate()
+            raise
+        if p.exitcode != 0:
+            self.warning("Child process died with error code %d => "
+                         "reevaluating", p.exitcode)
+            return None
+        return fitness.value
+
+    def run_workflow(self, fitness):
+        self.info("Will evaluate the following config:")
+        self.population_.root_.print_config()
+        if self.population_.multi:
+            self.population_.force_standalone()
+        self.population_.main_.run_module(self.population_.workflow_module_)
+        fv = self.population_.main_.workflow.fitness
+        if fv is not None:
+            fitness.value = fv
+
+
 class ConfigPopulation(Population):
     """Creates population based on Config tree's Tune elements.
     """
-    def __init__(self, root, main, workflow_module, multi,
-                 optimization_accuracy=0.00001):
+    def __init__(self, cfgroot, main, workflow_module, multi, size,
+                 accuracy=0.00001):
         """Constructor.
 
         Parameters:
@@ -305,7 +305,7 @@ class ConfigPopulation(Population):
             main: velescli Main instance.
             optimization_accuracy: float optimization accuracy.
         """
-        self.root_ = root
+        self.root_ = cfgroot
         self.main_ = main
         self.workflow_module_ = workflow_module
         self.multi = multi
@@ -319,20 +319,16 @@ class ConfigPopulation(Population):
         process_config(self.root_, Tune, self.register_tune)
 
         super(ConfigPopulation, self).__init__(
+            ConfigChromosome,
             len(self.registered_tunes_),
             list(x.minvle for x in self.registered_tunes_),
             list(x.maxvle for x in self.registered_tunes_),
-            optimization_accuracy=optimization_accuracy)
+            size, accuracy)
 
-    def register_tune(self, root, name, value):
-        value.root = root
+    def register_tune(self, cfgroot, name, value):
+        value.root = cfgroot
         value.name = name
         self.registered_tunes_.append(value)
-
-    def new_chromo(self, size, minvles, maxvles, accuracy, codes,
-                   binary=None, numeric=None):
-        return ConfigChromosome(
-            self, size, minvles, maxvles, accuracy, codes, binary, numeric)
 
     def log_statistics(self):
         self.info("#" * 80)
