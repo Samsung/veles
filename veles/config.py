@@ -93,6 +93,7 @@ root.common.update = {
     "test_dataset_root": "/data/veles",
     "test_known_device": False,
     "test_unknown_device": True,
+    "disable_snapshots": False,
     "unit_test": False,
     "veles_dir": __path__,
     "veles_user_dir": os.path.join(os.environ.get("HOME", "./"), "velesuser"),

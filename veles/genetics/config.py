@@ -286,6 +286,7 @@ class ConfigChromosome(Chromosome):
         self.population_.root_.print_config()
         if self.population_.multi:
             self.population_.fix_argv_to_run_standalone()
+        root.common.disable_snapshots = True
         self.population_.main_.run_module(self.population_.workflow_module_)
         fv = self.population_.main_.workflow.fitness
         if fv is not None:

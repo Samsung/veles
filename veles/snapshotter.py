@@ -13,6 +13,7 @@ import sys
 import time
 from zope.interface import implementer
 
+from veles.config import root
 from veles.distributable import IDistributable
 from veles.pickle2 import pickle, best_protocol
 from veles.units import Unit, IUnit
@@ -62,7 +63,7 @@ class SnapshotterBase(Unit):
         self.time = time.time()
 
     def run(self):
-        if self.is_slave:
+        if self.is_slave or root.common.disable_snapshots:
             return
         self._skipped_counter += 1
         if self._skipped_counter < self.interval:
