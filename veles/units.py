@@ -177,6 +177,17 @@ class Unit(Distributable):
         else:
             return object.__repr__(self)
 
+    def __lt__(self, other):
+        if not isinstance(other, Unit):
+            raise TypeError("unorderable types: %s() < %s()" % (
+                            self.__class__.__name__, other.__class__.__name__))
+        if self.workflow != other.workflow:
+            raise ValueError("unorderable instances: different parent")
+        if self.name != other.name:
+            return self.name < other.name
+        # Hard case: names are the same. Compare corr. indices in the workflow
+        return self.workflow.index_of(self) < other.workflow.index_of(other)
+
     @property
     def demanded(self):
         return self._demanded
@@ -338,7 +349,7 @@ class Unit(Distributable):
         units = [self]
         walk = []
         visited = {self}
-        for child in self.links_to.keys():
+        for child in sorted(self.links_to.keys()):
             walk.append((child, self))
         # flatten the dependency tree by doing breadth first search
         while len(walk) > 0:
@@ -348,7 +359,7 @@ class Unit(Distributable):
                 continue
             units.append(node)
             visited.add(node)
-            for child in node.links_to.keys():
+            for child in sorted(node.links_to.keys()):
                 walk.append((child, node))
         return units
 

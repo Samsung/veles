@@ -336,6 +336,12 @@ class Workflow(Unit):
         if unit.name in self._units.keys():
             self._units[unit.name].remove(unit)
 
+    def index_of(self, unit):
+        for index, child in enumerate(self):
+            if child == unit:
+                return index
+        raise IndexError()
+
     def run_timed(fn):
         """Decorator function to measure the overall run time.
         """
