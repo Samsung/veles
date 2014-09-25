@@ -681,7 +681,7 @@ class Workflow(Unit):
             table = PrettyTable("units", "real", "η,%")
             table.add_row(datetime.timedelta(seconds=time_all),
                           datetime.timedelta(seconds=self._run_time_),
-                          int(time_all * 100 / self._run_time_))
+                          int(time_all * 100 / (self._run_time_ or 1)))
             self.info("Total run time:\n%s", table)
             table = PrettyTable("method", "%", "time")
             table.align["method"] = "l"
