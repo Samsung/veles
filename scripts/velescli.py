@@ -138,6 +138,9 @@ class Main(Logger):
                             help="Do not print VELES version, copyright and "
                             "other information on startup.",
                             action='store_true')
+        parser.add_argument("--version", action="store_true",
+                            help="Print version number, date, commit hash and "
+                            "exit.")
         parser.add_argument("-v", "--verbose", type=str, default="info",
                             choices=Main.LOG_LEVEL_MAP.keys(),
                             help="Set the logging verbosity level.")
@@ -179,13 +182,11 @@ class Main(Logger):
                             "sets the population size.")
         parser.add_argument("--workflow-graph", type=str, default="",
                             help="Save workflow graph to file.")
-        parser.add_argument("--dump-unit-attributes", default=False,
+        parser.add_argument("--dump-unit-attributes", default="no",
                             help="Print unit __dict__-s after workflow "
-                            "initialization, excluding large numpy arrays.",
-                            action='store_true')
-        parser.add_argument("--dump-all-unit-attributes", default=False,
-                            help="Print all unit attributes, including large "
-                            "numpy arrays.", action='store_true')
+                            "initialization, excluding large numpy arrays if "
+                            "\"pretty\" is chosen.",
+                            choices=['no', 'pretty', 'all'])
         parser.add_argument('workflow',
                             help='Path to the Python script with workflow.')
         parser.add_argument('config', default="-",
@@ -220,6 +221,31 @@ class Main(Logger):
                 raise ValueError("Genetics cannot be forced to be used")
             return
         self._optimization = "no"
+
+    def _parse_optimization(self, args):
+        optparsed = args.optimize.split(':')
+        if len(optparsed) > 2:
+            raise ValueError("\"%s\" is not a valid optimization setting" %
+                             args.optimize)
+        self._optimization = optparsed[0]
+        if len(optparsed) > 1:
+            try:
+                self._population_size = int(optparsed[1])
+            except:
+                raise ValueError("\"%s\" is not a valid optimization size" %
+                                 optparsed[1])
+        else:
+            self._population_size = 0
+
+    def _daemonize(self):
+        daemon_context = daemon.DaemonContext()
+        daemon_context.working_directory = os.getcwd()
+        daemon_context.files_preserve = [
+            int(fd) for fd in os.listdir("/proc/self/fd")
+            if int(fd) > 2]
+        self.info("Daemonized")
+        # Daemonization happens in open()
+        daemon_context.open()
 
     def _load_model(self, fname_workflow, fname_snapshot):
         self.debug("Loading the model \"%s\"...", fname_workflow)
@@ -389,8 +415,8 @@ class Main(Logger):
             sys.exit(Main.EXIT_FAILURE)
         self.debug("Workflow initialization has been completed")
         try:
-            if self._dump_attrs:
-                self._dump_unit_attributes(self._dump_all_attrs)
+            if self._dump_attrs != "no":
+                self._dump_unit_attributes(self._dump_attrs == "all")
             gc.collect()
             if self._dry_run > 2:
                 self.debug("Running the launcher")
@@ -450,13 +476,19 @@ class Main(Logger):
                 unit.run()
                 break
 
-    def _prepare_configuration(self):
-        from veles.genetics import fix_config
-        fix_config(root)
-
-    def _do_genetic_optimization(self, wm, multi, size):
-        from veles.genetics import ConfigPopulation
-        ConfigPopulation(root, self, wm, multi, size or 50).evolve()
+    def _run_core(self, wm, background):
+        if self._dry_run <= 0:
+            return
+        if background:
+            self._daemonize()
+        if not self.optimization:
+            from veles.genetics import fix_config
+            fix_config(root)
+            self.run_module(wm)
+        else:
+            from veles.genetics import ConfigPopulation
+            ConfigPopulation(root, self, wm, self._optimization == "multi",
+                             self._population_size or 50).evolve()
 
     def _print_logo(self, args):
         if not args.no_logo:
@@ -464,6 +496,10 @@ class Main(Logger):
                 print(Main.LOGO)
             except:
                 print(Main.LOGO.replace("©", "(c)"))
+
+    def _print_version(self):
+        print(veles.__version__, formatdate(veles.__date__, True),
+              veles.__git__)
 
     def print_max_rss(self):
         res = resource.getrusage(resource.RUSAGE_SELF)
@@ -486,6 +522,9 @@ class Main(Logger):
     def run(self):
         """VELES Machine Learning Platform Command Line Interface
         """
+        if "--version" in sys.argv:
+            self._print_version()
+            return Main.EXIT_SUCCESS
         parser = Main.init_parser()
         args = parser.parse_args()
         fname_config = args.config
@@ -496,21 +535,8 @@ class Main(Logger):
         self._visualization_mode = args.visualize
         self._workflow_graph = args.workflow_graph
         self._dry_run = Main.DRY_RUN_CHOICES.index(args.dry_run)
-        optparsed = args.optimize.split(':')
-        if len(optparsed) > 2:
-            raise ValueError("\"%s\" is not a valid optimization setting" %
-                             args.optimize)
-        self._optimization = optparsed[0]
-        if len(optparsed) > 1:
-            try:
-                population_size = int(optparsed[1])
-            except:
-                raise ValueError("\"%s\" is not a valid optimization size" %
-                                 optparsed[1])
-        else:
-            population_size = 0
         self._dump_attrs = args.dump_unit_attributes
-        self._dump_all_attrs = args.dump_all_unit_attributes
+        self._parse_optimization(args)
 
         self._print_logo(args)
         Logger.setup(level=Main.LOG_LEVEL_MAP[args.verbose])
@@ -525,24 +551,7 @@ class Main(Logger):
         self._apply_config(fname_config, args.config_list)
         if args.dump_config:
             root.print_config()
-        if self._dry_run <= 0:
-            return Main.EXIT_SUCCESS
-
-        if args.background:
-            daemon_context = daemon.DaemonContext()
-            daemon_context.working_directory = os.getcwd()
-            daemon_context.files_preserve = [
-                int(fd) for fd in os.listdir("/proc/self/fd")
-                if int(fd) > 2]
-            self.info("Daemonized")
-            # Daemonization happens in open()
-            daemon_context.open()
-        if not self.optimization:
-            self._prepare_configuration()
-            self.run_module(wm)
-        else:
-            self._do_genetic_optimization(wm, self._optimization == "multi",
-                                          population_size)
+        self._run_core(wm, args.background)
         self.info("End of job")
         return Main.EXIT_SUCCESS
 

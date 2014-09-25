@@ -203,7 +203,7 @@ class Launcher(logger.Logger):
                             "unlimited number.").mode = ["master"]
         parser.add_argument("--slave-launch-transform", type=str, default="%s",
                             help="Transformation of the slave remote launch "
-                            "command given over ssh (%s corresponds to the "
+                            "command given over ssh (%%s corresponds to the "
                             "original command).").mode = ["master"]
         return parser
 
