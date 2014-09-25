@@ -18,7 +18,7 @@ from veles.distributable import IDistributable
 from veles.genetics import Chromosome, Population
 from veles.units import IUnit, Unit
 from veles.workflow import Workflow, Repeater
-from veles.launcher import Launcher
+from veles.launcher import Launcher, filter_argv
 
 
 if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
@@ -285,7 +285,7 @@ class ConfigChromosome(Chromosome):
         self.info("Will evaluate the following config:")
         self.population_.root_.print_config()
         if self.population_.multi:
-            self.population_.force_standalone()
+            self.population_.fix_argv_to_run_standalone()
         self.population_.main_.run_module(self.population_.workflow_module_)
         fv = self.population_.main_.workflow.fitness
         if fv is not None:
@@ -355,36 +355,17 @@ class ConfigPopulation(Population):
                          "(%.2f%%)", i, 100.0 * i / len(self))
                 self.container.enqueue_for_evaluation(u, i)
 
-    def force_standalone(self):
+    def fix_argv_to_run_standalone(self):
         """Forces standalone mode.
 
         Removes master-slave arguments from the command line.
         """
-        self.info("#" * 80)
-        self.info("sys.argv was %s", str(sys.argv))
-        args = [sys.argv[0]]
-        skip = True
-        was_s = False
-        i_genetics = -1
-        for i, arg in enumerate(sys.argv):
-            if skip:
-                skip = False
-                continue
-            if arg == "-b":  # avoid double daemonization
-                continue
-            if arg == "-m":  # should be standalone
-                skip = True
-                continue
-            if arg == "-s":
-                was_s = True
-            if arg.startswith("--optimize"):
-                i_genetics = i
-            args.append(arg)
-        if not was_s:
-            args.insert(i_genetics + 2, "-s")
-        sys.argv = args
-        self.info("sys.argv became %s", str(sys.argv))
-        self.info("#" * 80)
+        self.debug("#" * 80)
+        self.debug("sys.argv was %s", str(sys.argv))
+        sys.argv = filter_argv(sys.argv, "-b", "--background",
+                               "-m", "-master-address") + ["-p", ""]
+        self.debug("sys.argv became %s", str(sys.argv))
+        self.debug("#" * 80)
 
     def job_process(self, parent_conn, child_conn):
         # Switch off genetics for the contained workflow launches

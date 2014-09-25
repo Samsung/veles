@@ -90,6 +90,10 @@ def num_to_bin(numbers, accuracy, codes):
     return binary
 
 
+class InlineObject(object):
+    pass
+
+
 class Chromosome(Pickleable):
     """Chromosome (for now it is the same as individual).
 
@@ -115,9 +119,6 @@ class Chromosome(Pickleable):
             numeric: list of numeric genes.
         """
         super(Chromosome, self).__init__()
-
-        class InlineObject(object):
-            pass
 
         self.optimization = InlineObject()
         self.optimization.choice = "betw"
@@ -307,9 +308,6 @@ class Population(Pickleable):
         super(Population, self).__init__()
 
         self.chromosome_class = chromosome_class
-
-        class InlineObject(object):
-            pass
 
         self.optimization = InlineObject()
         self.optimization.choice = "betw"

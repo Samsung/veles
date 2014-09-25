@@ -14,7 +14,7 @@ from twisted.internet import reactor
 import unittest
 
 from veles.config import root
-from veles.launcher import Launcher
+from veles.launcher import Launcher, filter_argv
 from veles.workflow import Workflow
 
 
@@ -61,7 +61,7 @@ class TestWorkflow(Workflow):
         return 100
 
 
-class Test(unittest.TestCase):
+class TestLauncher(unittest.TestCase):
 
     def setUp(self):
         root.common.web.host = socket.gethostname()
@@ -90,6 +90,14 @@ class Test(unittest.TestCase):
         TestWorkflow.event.wait(0.1)
         reactor.callFromThread(reactor.stop)
 
+
+class TestGlobal(unittest.TestCase):
+    def testFilterArgv(self):
+        argv = ["-v", "--listen", "0.0.0.0:5000", "-p", "-k=3000", "-e",
+                "--full", "kwarg", "other", "-x", "--rec"]
+        f = filter_argv(argv, "--listen", "-k", "--full", "-x")
+        self.assertEqual(f, ["-v", "-p", "-e", "other", "--rec"],
+                         "filter_argv failed")
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)

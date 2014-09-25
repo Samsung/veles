@@ -33,19 +33,27 @@ import veles.graphics_server as graphics_server
 import veles.logger as logger
 import veles.server as server
 from veles.error import MasterSlaveCommunicationError
+from veles.external.pytrie import StringTrie
 
 
 if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
     FileNotFoundError = IOError  # pylint: disable=W0622
 
 
-def threadsafe(fn):
-    def wrapped(self, *args, **kwargs):
-        with self._lock:
-            return fn(self, *args, **kwargs)
-    name = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
-    wrapped.__name__ = name + '_threadsafe'
-    return wrapped
+def filter_argv(argv, *blacklist):
+    ptree = StringTrie({v: i for i, v in enumerate(blacklist)})
+    filtered = []
+    maybe_value = False
+    for arg in argv:
+        if maybe_value:
+            maybe_value = False
+            if arg[0] != "-":
+                continue
+        if ptree.longest_prefix(arg, None) is None:
+            filtered.append(arg)
+        else:
+            maybe_value = True
+    return filtered
 
 
 @add_metaclass(CommandLineArgumentsRegistry)
@@ -291,6 +299,14 @@ class Launcher(logger.Logger):
             [self.graphics_server.endpoints["ipc"]] \
             if hasattr(self, "graphics_server") else []
 
+    def threadsafe(fn):
+        def wrapped(self, *args, **kwargs):
+            with self._lock:
+                return fn(self, *args, **kwargs)
+        name = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
+        wrapped.__name__ = name + '_threadsafe'
+        return wrapped
+
     @threadsafe
     def add_ref(self, workflow):
         """
@@ -416,6 +432,8 @@ class Launcher(logger.Logger):
             except MasterSlaveCommunicationError as e:
                 self.error("Workflow history validation was failed: %s", e)
 
+    threadsafe = staticmethod(threadsafe)
+
     def _stop_graphics(self):
         if self.graphics_client is not None:
             attempt = 0
@@ -465,19 +483,10 @@ class Launcher(logger.Logger):
             return
         self.debug("Will launch the following slaves: %s",
                    ', '.join(self.slaves))
-        filtered_argv = []
-        skip = False
-        ignored_args = {"-l", "--listen-address", "-n", "--nodes", "-p",
-                        "--matplotlib-backend", "-b", "--background",
-                        "-s", "--stealth", "-d", "--device",
-                        "--slave-launch-transform"}
-        for i in range(1, len(sys.argv)):
-            if sys.argv[i] in ignored_args:
-                skip = True
-            elif not skip:
-                filtered_argv.append(sys.argv[i])
-            else:
-                skip = False
+        filtered_argv = filter_argv(
+            sys.argv, "-l", "--listen-address", "-n", "--nodes", "-p",
+            "--matplotlib-backend", "-b", "--background", "-s", "--stealth",
+            "-d", "--device", "--slave-launch-transform")
         filtered_argv.append("-m")
         host = self.args.listen_address[0:self.args.listen_address.index(':')]
         port = self.args.listen_address[len(host) + 1:]
