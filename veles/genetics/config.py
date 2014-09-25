@@ -249,7 +249,7 @@ class GeneticsWorkflow(Workflow):
     def computing_power(self):
         avg_time = self.container.average_run_time
         if avg_time > 0:
-            return 9999.99 / avg_time
+            return 10000 / avg_time
         else:
             return 0
 

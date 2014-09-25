@@ -5,10 +5,10 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
 
 
-from time import clock
+from time import perf_counter
 
 
 def timeit(function, *args, **kwargs):
-    ts = clock()
+    ts = perf_counter()
     res = function(*args, **kwargs)
-    return res, clock() - ts
+    return res, perf_counter() - ts
