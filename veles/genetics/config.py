@@ -16,9 +16,11 @@ from zope.interface import implementer
 from veles.config import Config, root
 from veles.distributable import IDistributable
 from veles.genetics import Chromosome, Population
+from veles.mutable import Bool
 from veles.units import IUnit, Unit
 from veles.workflow import Workflow, Repeater
 from veles.launcher import Launcher, filter_argv
+from veles.plotting_units import AccumulatingPlotter
 
 
 if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
@@ -104,6 +106,8 @@ class GeneticsContainer(Unit):
             self.retry_chromos = []
             self.scheduled_chromos = {}
             self._on_evaluation_finished = self.nothing
+        self.max_fitness = -numpy.inf
+        self.generation_evolved = Bool(False)
 
     def initialize(self, **kwargs):
         pass
@@ -128,7 +132,9 @@ class GeneticsContainer(Unit):
         return self._pipe
 
     @property
-    def generation_evolved(self):
+    def _generation_evolved(self):
+        if self.is_slave:
+            return False
         return (len(self.scheduled_chromos) | len(self.retry_chromos) |
                 len(self.pending_chromos)) == 0
 
@@ -164,6 +170,7 @@ class GeneticsContainer(Unit):
                 idx = self.pending_chromos.pop()
             except IndexError:
                 return False
+        self.generation_evolved <<= False
         self.scheduled_chromos[slave.id] = idx
         self.info("Assigned chromosome %d to slave %s", idx, slave.id)
         return self._chromo_by_idx(idx), idx
@@ -183,9 +190,11 @@ class GeneticsContainer(Unit):
         idx = self.scheduled_chromos.pop(slave.id)
         chromo = self._chromo_by_idx(idx)
         chromo.fitness = data
+        self.max_fitness = max(self.max_fitness, data)
         self.info("Got fitness %.2f for chromosome number %d", data, idx)
-        if self.generation_evolved:
-            self.debug("Evaluated everything, breeding season approaches...")
+        if self._generation_evolved:
+            self.info("Evaluated everything, breeding season approaches...")
+            self.generation_evolved <<= True
             self.on_evaluation_finished()
 
     def drop_slave(self, slave):
@@ -219,6 +228,13 @@ class GeneticsWorkflow(Workflow):
         self.container = GeneticsContainer(self, self.population)
         self.population.container = self.container
         self.container.link_from(self.repeater)
+
+        self.plotter = AccumulatingPlotter(
+            self, name="Genetic Optimization Max Fitness",
+            plot_style="g-", redraw_plot=True, clear_plot=True)
+        self.plotter.link_attrs(self.container, ("input", "max_fitness"))
+        self.plotter.link_from(self.container)
+        self.plotter.gate_skip = ~self.container.generation_evolved
 
         self.repeater.link_from(self.container)
         self.end_point.link_from(self.container)
@@ -400,7 +416,7 @@ class ConfigPopulation(Population):
             self.job_process.start()
             self.job_connection[0].close()
 
-        root.common.plotters_disabled = True
+            root.common.plotters_disabled = True
         # Launch the container workflow
         self.main_.run_workflow(GeneticsWorkflow,
                                 kwargs_load={"population": self})
