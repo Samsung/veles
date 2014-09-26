@@ -20,8 +20,8 @@
   ignore = dirty
 [submodule "web/viz.js"]
   path = web/viz.js
-  url = https://github.com/vmarkovtsev/viz.js
+  url = https://github.com/mdaines/viz.js
   ignore = dirty
 [submodule "deploy/pyenv"]
-	path = deploy/pyenv
-	url = https://github.com/yyuu/pyenv
+  path = deploy/pyenv
+  url = https://github.com/yyuu/pyenv
