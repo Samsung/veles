@@ -487,22 +487,20 @@ class Launcher(logger.Logger):
         filtered_argv = filter_argv(
             sys.argv, "-l", "--listen-address", "-n", "--nodes", "-p",
             "--matplotlib-backend", "-b", "--background", "-s", "--stealth",
-            "-d", "--device", "--slave-launch-transform")
-        filtered_argv.append("-m")
+            "-d", "--device", "--slave-launch-transform")[1:]
         host = self.args.listen_address[0:self.args.listen_address.index(':')]
         port = self.args.listen_address[len(host) + 1:]
         # No way we can send 'localhost' or empty host name to a slave.
         if not host or host == "0.0.0.0" or host == "localhost" or \
            host == "127.0.0.1":
             host = socket.gethostname()
-        filtered_argv.append("%s:%s" % (host, port))
-        filtered_argv.append("-b")
-        filtered_argv.append("-i %s" % self.log_id)
+        filtered_argv.insert(0, "-m %s:%s -b -i \"%s\"" % (host, port,
+                                                           self.log_id))
         slave_args = " ".join(filtered_argv)
         self.debug("Slave args: %s", slave_args)
         total_slaves = 0
         max_slaves = self.args.max_nodes or 1000
-        cmdline = "%s %s -d %d:%d"
+        cmdline = "%s -d %d:%d %s"
         if self.args.log_file:
             cmdline += " &>> " + self.args.log_file
         for node in self.slaves:
@@ -521,7 +519,7 @@ class Launcher(logger.Logger):
             for _ in range(multiplier):
                 for d in range(ocldevmin, ocldevmax + 1):
                     progs.append(cmdline % (os.path.abspath(sys.argv[0]),
-                                            slave_args, oclpnum, d))
+                                            oclpnum, d, slave_args))
             if total_slaves + len(progs) > max_slaves:
                 progs = progs[:max_slaves - total_slaves]
             total_slaves += len(progs)
