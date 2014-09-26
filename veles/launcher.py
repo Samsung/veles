@@ -539,12 +539,24 @@ class Launcher(logger.Logger):
             except paramiko.ssh_exception.SSHException:
                 self.exception("Failed to connect to %s", host)
                 return
+            buf_size = 128
+            channel = pc.get_transport().open_session()
+            channel.get_pty()
             for prog in progs:
                 prog = prog.replace(r'"', r'\"').replace(r"'", r"\'")
                 cmd = self._slave_launch_transform % ("cd '%s' && %s" %
                                                       (cwd, prog))
                 self.debug("Executing %s", cmd)
-                pc.exec_command(cmd)
+                channel.exec_command(cmd)
+                answer = channel.recv(buf_size)
+                if answer:
+                    self.warning("SSH returned %s", answer)
+                    if len(answer) == buf_size:
+                        self.warning("SSH answer looks longer than %d bytes, "
+                                     "draining the stream...", buf_size)
+                        while channel.recv(buf_size):
+                            pass
+            channel.close()
         except:
             self.exception("Failed to launch '%s' on %s", progs, host)
         finally:
