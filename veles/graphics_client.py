@@ -38,8 +38,9 @@ class ZmqSubscriber(ZmqConnection):
 
     def messageReceived(self, message):
         self.graphics.debug("Received %d bytes", len(message[0]))
-        obj = pickle.loads(snappy.decompress(message[0][len('graphics'):]))
-        self.graphics.update(obj)
+        raw_data = snappy.decompress(message[0][len('graphics'):])
+        obj = pickle.loads(raw_data)
+        self.graphics.update(obj, raw_data)
 
 
 class GraphicsClient(Logger):
@@ -64,6 +65,7 @@ class GraphicsClient(Logger):
         self._shutted_down = False
         self.webagg_fifo = webagg_fifo
         self._gc_counter = 0
+        self._dump_dir = kwargs.get("dump_dir")
         self._pdf_lock = threading.Lock()
         self._pdf_trigger = False
         self._pdf_pages = None
@@ -84,6 +86,9 @@ class GraphicsClient(Logger):
         """Creates and runs main graphics window.
         """
         self._lock.acquire()
+        if self.backend == "no":
+            self._run()
+            return
         try:
             if self._shutted_down:
                 return
@@ -101,7 +106,6 @@ class GraphicsClient(Logger):
             self.lines = lines
             self.patches = patches
             self.pp = pp
-            self.info("Graphics client is running in process %d", os.getpid())
             if pp.get_backend() == "TkAgg":
                 from six.moves import tkinter
                 self.root = tkinter.Tk()
@@ -143,54 +147,31 @@ class GraphicsClient(Logger):
                                        os.O_WRONLY | os.O_NONBLOCK)
                         self._webagg_port_bytes = \
                             str(self._webagg_port).encode()
-                        reactor.callLater(0, self._write_webagg_port, fifo)
+                        reactor.callWhenRunning(self._write_webagg_port, fifo)
         except:
             self._lock.release()
             raise
-        if pp.get_backend() != "WebAgg":
-            reactor.callLater(0, self._lock.release)
-            reactor.run()
-        else:
-            ioloop.IOLoop.instance().add_callback(self._lock.release)
-            self.pp.show()
-        self.info("Finished")
+        self._run()
 
-    def _process_qt_events(self):
-        self.root.processEvents()
-        reactor.callLater(GraphicsClient.ui_update_interval,
-                          self._process_qt_events)
-
-    def _process_tk_events(self):
-        self.root.update()
-        reactor.callLater(GraphicsClient.ui_update_interval,
-                          self._process_tk_events)
-
-    def _process_wx_events(self):
-        self.root.ProcessPendingEvents()
-        reactor.callLater(GraphicsClient.ui_update_interval,
-                          self._process_wx_events)
-
-    def _write_webagg_port(self, fifo):
-        try:
-            written = os.write(fifo, self._webagg_port_bytes)
-        except (OSError, IOError) as ioe:
-            if ioe.args[0] in (errno.EAGAIN, errno.EINTR):
-                written = 0
-        if written != len(self._webagg_port_bytes):
-            reactor.callLater(0, self._write_webagg_port, fifo)
-        else:
-            self.debug("Wrote the WebAgg port to pipe")
-            os.close(fifo)
-
-    def update(self, plotter):
+    def update(self, plotter, raw_data):
         """Processes one plotting event.
         """
         if plotter is not None:
+            if self._dump_dir:
+                file_name = os.path.join(self._dump_dir, "%s_%s.pickle" % (
+                    plotter.name.replace(" ", "_"),
+                    datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')))
+                with open(file_name, "wb") as fout:
+                    fout.write(raw_data)
+                self.info("Wrote %s", file_name)
+            del raw_data
             self._gc_counter += 1
             if self._gc_counter >= GraphicsClient.gc_limit:
                 gc.collect()
                 self._gc_counter = 0
 
+            if self.backend == "no":
+                return
             plotter.matplotlib = self.matplotlib
             plotter.cm = self.cm
             plotter.lines = self.lines
@@ -240,6 +221,43 @@ class GraphicsClient(Logger):
             # Not strictly necessary, but prevents from DoS
             self.zmq_connection.shutdown()
 
+    def _run(self):
+        self.info("Graphics client is running in process %d", os.getpid())
+        if self.backend == "no" or self.pp.get_backend() != "WebAgg":
+            reactor.callWhenRunning(self._lock.release)
+            reactor.run()
+        else:
+            ioloop.IOLoop.instance().add_callback(self._lock.release)
+            self.pp.show()
+        self.info("Finished")
+
+    def _process_qt_events(self):
+        self.root.processEvents()
+        reactor.callLater(GraphicsClient.ui_update_interval,
+                          self._process_qt_events)
+
+    def _process_tk_events(self):
+        self.root.update()
+        reactor.callLater(GraphicsClient.ui_update_interval,
+                          self._process_tk_events)
+
+    def _process_wx_events(self):
+        self.root.ProcessPendingEvents()
+        reactor.callLater(GraphicsClient.ui_update_interval,
+                          self._process_wx_events)
+
+    def _write_webagg_port(self, fifo):
+        try:
+            written = os.write(fifo, self._webagg_port_bytes)
+        except (OSError, IOError) as ioe:
+            if ioe.args[0] in (errno.EAGAIN, errno.EINTR):
+                written = 0
+        if written != len(self._webagg_port_bytes):
+            reactor.callWhenRunning(self._write_webagg_port, fifo)
+        else:
+            self.debug("Wrote the WebAgg port to pipe")
+            os.close(fifo)
+
     def _save_pdf(self, plotter):
         with self._pdf_lock:
             figure = plotter.redraw()
@@ -272,7 +290,7 @@ class GraphicsClient(Logger):
             self._pdf_units_served.add(plotter.id)
             if getattr(plotter, "clear_plot", False):
                 self._pdf_unit_chains.add(plotter.name)
-            elif (not plotter.name in self._pdf_unit_chains or
+            elif (plotter.name not in self._pdf_unit_chains or
                   getattr(plotter, "redraw_plot", False)):
                 self._pdf_pages.savefig(figure)
 
@@ -282,6 +300,7 @@ class GraphicsClient(Logger):
             self._sigint_initial(sign, frame)
         except KeyboardInterrupt:
             self.critical("KeyboardInterrupt")
+            reactor.callWhenRunning(reactor.stop)
 
     def _sigusr2_handler(self, sign, frame):
         self.info("Activated PDF mode...")
@@ -292,7 +311,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-b", "--backend", nargs='?',
                         default=root.common.matplotlib_backend,
-                        help="Matplotlib drawing backend.")
+                        help="Matplotlib drawing backend. \"no\" value "
+                        "disables any real plotting (useful with --dump).")
     parser.add_argument("-e", "--endpoint", required=True,
                         help="ZeroMQ endpoint to receive updates from.")
     parser.add_argument("--webagg-discovery-fifo", nargs='?',
@@ -302,6 +322,8 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--verbose", type=str, default="info",
                         choices=LOG_LEVEL_MAP.keys(),
                         help="set verbosity level [default: %(default)s]")
+    parser.add_argument("-d", "--dump", type=str, default="",
+                        help="Dump incoming messages to this directory.")
     cmdargs = parser.parse_args()
 
     log_level = LOG_LEVEL_MAP[cmdargs.verbose]
@@ -310,7 +332,8 @@ if __name__ == "__main__":
         setup_pickle_debug()
 
     client = GraphicsClient(cmdargs.backend, cmdargs.endpoint,
-                            webagg_fifo=cmdargs.webagg_discovery_fifo)
+                            webagg_fifo=cmdargs.webagg_discovery_fifo,
+                            dump_dir=cmdargs.dump)
     if log_level == logging.DEBUG:
         client.debug("Activated pickle debugging")
     if cmdargs.backend == "WebAgg":
