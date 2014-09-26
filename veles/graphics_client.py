@@ -17,6 +17,7 @@ import socket
 import sys
 import threading
 import tornado.ioloop as ioloop
+from twisted.internet.error import ReactorNotRunning
 from twisted.internet import reactor
 import zmq
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
@@ -300,7 +301,14 @@ class GraphicsClient(Logger):
             self._sigint_initial(sign, frame)
         except KeyboardInterrupt:
             self.critical("KeyboardInterrupt")
-            reactor.callWhenRunning(reactor.stop)
+
+            def stop():
+                try:
+                    reactor.stop()
+                except ReactorNotRunning:
+                    pass
+
+            reactor.callWhenRunning(stop)
 
     def _sigusr2_handler(self, sign, frame):
         self.info("Activated PDF mode...")
