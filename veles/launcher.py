@@ -97,6 +97,7 @@ class Launcher(logger.Logger):
             logger.Logger.redirect_all_logging_to_file(log_file)
 
         self.info("My PID is %d", os.getpid())
+        self.info("My time is %s", datetime.datetime.now())
         self.id = str(uuid.uuid4()) if not self.is_slave else None
         self.log_id = self.args.log_id or self.id
         if self.logs_to_mongo:
