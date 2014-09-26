@@ -126,6 +126,8 @@ class Logger(object):
                           encoding="utf-8")
             redirect_stream(sys.stderr, stderr)
             sys.stderr = stderr
+        else:
+            logging.getLogger().handlers.append(handler)
         logging.getLogger().addFilter(handler)
         logging.info("Continuing to log in %s", file_name)
 
