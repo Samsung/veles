@@ -348,6 +348,9 @@ class Launcher(logger.Logger):
                     graphics_server.GraphicsServer.launch(
                         workflow.thread_pool, self.matplotlib_backend,
                         self._set_webagg_port, self.args.no_graphics_client)
+            elif self.args.no_graphics_client:
+                self.warning("Plotters are disabled. --no-graphics-client has "
+                             "no effect.")
             if self.is_master:
                 try:
                     self._agent = server.Server(self.args.listen_address,
