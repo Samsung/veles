@@ -47,7 +47,7 @@ def filter_argv(argv, *blacklist):
     for arg in argv:
         if maybe_value:
             maybe_value = False
-            if arg[0] != "-":
+            if not arg or arg[0] != "-":
                 continue
         if ptree.longest_prefix(arg, None) is None:
             filtered.append(arg)
