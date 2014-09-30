@@ -200,8 +200,8 @@ class Vector(Pickleable):
             u2.b = u1.a
         3. Initialize numpy array:
             a.mem = numpy.zeros(...)
-        4. Initialize an object with device:
-            a.initialize(device)
+        4. Initialize an object with unit:
+            a.initialize(unit)
         5. Set OpenCL buffer as kernel parameter:
             krn.set_arg(0, a.devmem)
 
@@ -215,6 +215,7 @@ class Vector(Pickleable):
         self._mem = data
         self.device = None
         self.supposed_maxvle = 1.0
+        self._bufpool = None
 
     @property
     def mem(self):
@@ -320,28 +321,44 @@ class Vector(Pickleable):
         """
         self._mem[key] = value
 
-    def _initialize(self, device):
-        if self._mem is None or self.devmem is not None:
+    def _initialize(self, unit, bufpool=None):
+        if (self._mem is None or self.devmem is not None or
+            (unit.device is None and
+             (bufpool is None and self._bufpool is None))):
             return
-        if device is not None:
-            self.device = device
-        if self.device is None:
-            return
-        self._mem = cl.realign_array(
-            self._mem, 4096 if self.device.device_info.memalign <= 4096
-            else self.device.device_info.memalign, numpy)
-        self.devmem = self.device.queue_.context.create_buffer(
-            cl.CL_MEM_READ_WRITE | cl.CL_MEM_USE_HOST_PTR, ravel(self._mem))
 
-        if self.devmem is not None:
-            with MemWatcher.mutex:
-                MemWatcher.mem_in_use += self.devmem.size
-                MemWatcher.max_mem_in_use = max(MemWatcher.mem_in_use,
-                                                MemWatcher.max_mem_in_use)
+        if unit.device.device_info.memalign <= 4096:
+            memalign = 4096
+        else:
+            memalign = unit.device.device_info.memalign
+        self._mem = cl.realign_array(self._mem, memalign, numpy)
+
+        if bufpool is None and self._bufpool is None:
+            # create standalone ocl buffer
+            self.device = unit.device
+            self.devmem = self.device.queue_.context.create_buffer(
+                cl.CL_MEM_READ_WRITE | cl.CL_MEM_USE_HOST_PTR,
+                ravel(self._mem))
+
+            # account mem in memwatcher
+            if self.devmem is not None:
+                with MemWatcher.mutex:
+                    MemWatcher.mem_in_use += self.devmem.size
+                    MemWatcher.max_mem_in_use = max(MemWatcher.mem_in_use,
+                                                    MemWatcher.max_mem_in_use)
+        elif (unit is not None and
+              (bufpool is not None or self._bufpool is not None)):
+            # planing to create ocl buffer using bufpool
+            self.devmem = None
+            if bufpool is not None:
+                self._bufpool = bufpool
+            self._bufpool.add(unit, self)
+        else:
+            raise RuntimeError("Failed to initialize Vector object")
 
     @threadsafe
-    def initialize(self, device=None):
-        self._initialize(device)
+    def initialize(self, unit, bufpool=None):
+        self._initialize(unit, bufpool)
 
     def _map(self, flags):
         if self.device is None:

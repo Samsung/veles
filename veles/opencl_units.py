@@ -345,8 +345,8 @@ class OpenCLBenchmark(OpenCLUnit):
         }}
         self.build_program()
         self.assign_kernel("benchmark")
-        self.input_A_.initialize(self.device)
-        self.input_B_.initialize(self.device)
+        self.input_A_.initialize(self)
+        self.input_B_.initialize(self)
         self.set_args(self.input_A_, self.input_A_, self.input_B_)
 
     def estimate(self):
@@ -404,7 +404,7 @@ class OpenCLWorkflow(Workflow):
                 self._power_measure_time_interval):
             self._last_power_measurement_time = now
             bench = OpenCLBenchmark(self)
-            bench.initialize(device=self.device)
+            bench.initialize(self)
             self._power_ = bench.estimate()
             self.del_ref(bench)
             self.info("Computing power is %.2f", self._power_)

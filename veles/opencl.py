@@ -504,10 +504,10 @@ class Device(Pickleable):
 
         krn = obj.get_kernel("feed_layer")
 
-        self.a.initialize(self)
-        self.b.initialize(self)
-        self.c.initialize(self)
-        self.bias.initialize(self)
+        self.a.initialize(obj)
+        self.b.initialize(obj)
+        self.c.initialize(obj)
+        self.bias.initialize(obj)
 
         krn.set_arg(0, self.a.devmem)
         krn.set_arg(1, self.b.devmem)

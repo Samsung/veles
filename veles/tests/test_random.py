@@ -50,11 +50,11 @@ class TestRandom1024(unittest.TestCase):
         output.mem = numpy.zeros(states.mem.shape[0] * 128 // 8 * n_rounds[0],
                                  dtype=numpy.uint64)
 
-        states.initialize(self.device)
-        output.initialize(self.device)
-
         obj = TrivialOpenCLUnit(DummyWorkflow())
         obj.initialize(device=self.device)
+        states.initialize(obj)
+        output.initialize(obj)
+
         obj.cl_sources_["random.cl"] = {'LOG_CHUNK': self.chunk}
         obj.build_program({}, os.path.join(root.common.cache_dir,
                                            "test_random.cl"))
@@ -122,11 +122,12 @@ class TestRandom128(unittest.TestCase):
         output = formats.Vector()
         states.mem = self.states.copy()
         output.mem = numpy.zeros(states.mem.size // 2, dtype=numpy.uint64)
-        states.initialize(self.device)
-        output.initialize(self.device)
 
         obj = TrivialOpenCLUnit(DummyWorkflow())
         obj.initialize(device=self.device)
+        states.initialize(obj)
+        output.initialize(obj)
+
         obj.cl_sources_["random.cl"] = {'LOG_CHUNK': self.chunk}
         obj.build_program({}, os.path.join(root.common.cache_dir,
                                            "test_random.cl"))

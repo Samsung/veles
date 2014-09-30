@@ -57,8 +57,8 @@ class Uniform(OpenCLUnit):
         else:
             self.output_bytes = self.output.nbytes
 
-        self.states.initialize(self.device)
-        self.output.initialize(self.device)
+        self.states.initialize(self)
+        self.output.initialize(self)
 
         if self.device is None:
             return

@@ -72,7 +72,7 @@ class MeanDispNormalizer(OpenCLUnit, TriviallyDistributable):
                 sh = list(sh)
                 sh[0] <<= 1
                 self.output.mem = numpy.zeros(sh, dtype=dtype)
-                self.output.initialize(device)
+                self.output.initialize(self)
                 self.output.map_write()
                 self.output.vv = self.output.mem
                 sh[0] >>= 1
@@ -82,10 +82,10 @@ class MeanDispNormalizer(OpenCLUnit, TriviallyDistributable):
             else:
                 self.output.mem = numpy.zeros(sh, dtype=dtype)
 
-        self.input.initialize(device)
-        self.mean.initialize(device)
-        self.rdisp.initialize(device)
-        self.output.initialize(device)
+        self.input.initialize(self)
+        self.mean.initialize(self)
+        self.rdisp.initialize(self)
+        self.output.initialize(self)
 
         if self.device is None:
             return
