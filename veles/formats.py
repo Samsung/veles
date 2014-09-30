@@ -321,7 +321,8 @@ class Vector(Pickleable):
         """
         self._mem[key] = value
 
-    def _initialize(self, unit, bufpool=None):
+    @threadsafe
+    def initialize(self, unit, bufpool=None):
         if (self._mem is None or self.devmem is not None or
             (unit.device is None and
              (bufpool is None and self._bufpool is None))):
@@ -355,10 +356,6 @@ class Vector(Pickleable):
             self._bufpool.add(unit, self)
         else:
             raise RuntimeError("Failed to initialize Vector object")
-
-    @threadsafe
-    def initialize(self, unit, bufpool=None):
-        self._initialize(unit, bufpool)
 
     def _map(self, flags):
         if self.device is None:
