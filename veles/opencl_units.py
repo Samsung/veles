@@ -7,7 +7,6 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 
 import argparse
 from copy import copy
-# from lockfile import locked
 import numpy
 import opencl4py
 import os
@@ -61,6 +60,8 @@ class OpenCLUnit(Unit):
         self.verify_interface(IOpenCLUnit)
         self.device = None
         self._cache = kwargs.get("cache", True)
+        # Yup, this is right - self._force_cpu is initialized in init_unpickled
+        self._force_cpu = kwargs.get("force_cpu", self._force_cpu)
 
     def init_unpickled(self):
         super(OpenCLUnit, self).init_unpickled()
@@ -68,7 +69,7 @@ class OpenCLUnit(Unit):
         self.cl_sources_ = {}
         parser = OpenCLUnit.init_parser()
         args, _ = parser.parse_known_args()
-        self._force_cpu = args.cpu
+        self._force_cpu = self.__class__.__name__ in args.force_cpu.split(',')
         self._sync = args.sync_ocl
         self._kernel_ = None
 
@@ -80,11 +81,19 @@ class OpenCLUnit(Unit):
     def cache(self, value):
         self._cache = value
 
+    @property
+    def force_cpu(self):
+        return self._force_cpu
+
+    @force_cpu.setter
+    def force_cpu(self, value):
+        self._force_cpu = value
+
     def initialize(self, device, **kwargs):
         self.device = device
         if not (self.device is None or self.device.exists or self._force_cpu):
-            self.critical("No OpenCL device exist and --cpu option was not "
-                          "specified")
+            self.critical("No OpenCL device exists and --force-cpu option was "
+                          "not specified")
             raise ValueError()
         if self._force_cpu:
             self.device = None
@@ -100,15 +109,15 @@ class OpenCLUnit(Unit):
     @staticmethod
     def init_parser(parser=None):
         parser = parser or argparse.ArgumentParser()
-        parser.add_argument("--cpu", default=False, action="store_true",
-                            help="Force OpenCL units to run on CPU.")
+        parser.add_argument("--force-cpu", default="", type=str,
+                            help="Force these comma separated OpenCL units to "
+                            "run on CPU (that is, disable OpenCL for them).")
         parser.add_argument("--sync-ocl", default=False, action="store_true",
                             help="Force OpenCL units to run synchronously. "
                             "This option is useful for measuring the actual "
                             "unit run times.")
         return parser
 
-    # @locked(root.common.cache_dir + "/veles.lock")
     def build_program(self, defines=None, cache_file_name=None, dtype=None,
                       show_ocl_logs=True):
         """Builds the OpenCL program.

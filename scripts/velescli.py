@@ -201,6 +201,9 @@ class Main(Logger):
         parser.add_argument("-b", "--background", default=False,
                             help="Run in background as a daemon.",
                             action='store_true')
+        parser.add_argument("--disable-opencl", default=False,
+                            action="store_true", help="Completely disable the "
+                            "usage of OpenCL.")
         try:
             class NoEscapeCompleter(argcomplete.CompletionFinder):
                 def quote_completions(self, completions, *args, **kwargs):
@@ -236,6 +239,11 @@ class Main(Logger):
                                  optparsed[1])
         else:
             self._population_size = 0
+
+    @property
+    def opencl_is_enabled(self):
+        return not (self.launcher.is_master or self.optimization or
+                    self._disable_opencl)
 
     def _daemonize(self):
         daemon_context = daemon.DaemonContext()
@@ -400,14 +408,13 @@ class Main(Logger):
         self.debug("main() was called from run()")
         if not self.load_called:
             self.critical("Call load() first in run()")
-            raise RuntimeError()
+            sys.exit(Main.EXIT_FAILURE)
         self.main_called = True
         try:
-            self.device = (None if self.launcher.is_master or
-                           self.optimization else Device())
+            self.device = Device() if self.opencl_is_enabled else None
         except:
-            self.error("Failed to create the OpenCL device.")
-            raise
+            self.exception("Failed to create the OpenCL device.")
+            sys.exit(Main.EXIT_FAILURE)
         try:
             self.workflow.initialize(device=self.device, **kwargs)
         except:
@@ -536,6 +543,7 @@ class Main(Logger):
         self._workflow_graph = args.workflow_graph
         self._dry_run = Main.DRY_RUN_CHOICES.index(args.dry_run)
         self._dump_attrs = args.dump_unit_attributes
+        self._disable_opencl = args.disable_opencl
         self._parse_optimization(args)
 
         self._print_logo(args)
