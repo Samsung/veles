@@ -226,7 +226,10 @@ class GraphicsClient(Logger):
         self.info("Graphics client is running in process %d", os.getpid())
         if self.backend == "no" or self.pp.get_backend() != "WebAgg":
             reactor.callWhenRunning(self._lock.release)
-            reactor.run()
+            try:
+                reactor.run()
+            except ReactorNotRunning:
+                pass
         else:
             ioloop.IOLoop.instance().add_callback(self._lock.release)
             self.pp.show()
