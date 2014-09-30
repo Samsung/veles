@@ -66,6 +66,10 @@ class DeviceInfo(object):
             self.vector_opt[dtype] = 0
 
 
+class DeviceNotFoundError(Exception):
+    pass
+
+
 @add_metaclass(CommandLineArgumentsRegistry)
 class Device(Pickleable):
     """OpenCL device helper class.
@@ -85,7 +89,7 @@ class Device(Pickleable):
             os.putenv("CUDA_CACHE_DISABLE", "1")
 
         # Workaround for AMD
-        # (fixes segmentation fault when acessed over ssh with X and
+        # (fixes segmentation fault when accessed over ssh with X and
         #  no X is running or when accessing locally and integrated
         #  video device is used instead of AMD one)
         d = os.getenv("DISPLAY")
@@ -190,7 +194,11 @@ class Device(Pickleable):
             context = platforms.create_some_context()
         else:
             platfnum, devnums = args.device.split(':')
-            platform = platforms.platforms[int(platfnum)]
+            try:
+                platform = platforms.platforms[int(platfnum)]
+            except IndexError:
+                raise DeviceNotFoundError("Device %s was not found." %
+                                          args.device) from None
             context = platform.create_context(
                 [platform.devices[int(devnum)]
                  for devnum in devnums.split(',')])
