@@ -391,6 +391,7 @@ class Main(Logger):
                 self.workflow.workflow = self.launcher
         except:
             self.exception("Failed to create the workflow")
+            self.launcher.stop()
             sys.exit(Main.EXIT_FAILURE)
         if ThreadPool.manhole:
             from veles.external import manhole
@@ -414,11 +415,13 @@ class Main(Logger):
             self.device = Device() if self.opencl_is_enabled else None
         except:
             self.exception("Failed to create the OpenCL device.")
+            self.launcher.stop()
             sys.exit(Main.EXIT_FAILURE)
         try:
             self.workflow.initialize(device=self.device, **kwargs)
         except:
             self.exception("Failed to initialize the workflow")
+            self.launcher.stop()
             sys.exit(Main.EXIT_FAILURE)
         self.debug("Workflow initialization has been completed")
         try:
