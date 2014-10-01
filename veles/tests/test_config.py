@@ -35,10 +35,9 @@ class TestConfig(unittest.TestCase):
         test.test_.test_value = 5
         test.test_.test_str = "Test"
 
-        test.update = {"test_value": 0.5,
-                       "test_": {"test_value": 12,
-                                 "test_str": "new test"}
-                       }
+        test.update({"test_value": 0.5,
+                     "test_": {"test_value": 12,
+                               "test_str": "new test"}})
         self.assertEqual(test.test_value, 0.5,
                          "Not equal values on first level")
         self.assertEqual(test.test_.test_value, 12,
@@ -51,10 +50,9 @@ class TestConfig(unittest.TestCase):
         logging.info("Will test one-line update function")
         test = Config()
 
-        test.update = {"test_value": 0.5,
-                       "test_": {"test_value": 12,
-                                 "test_str": "new test"}
-                       }
+        test.update({"test_value": 0.5,
+                     "test_": {"test_value": 12,
+                               "test_str": "new test"}})
 
         test.test_value = 0.01
         test.test_.test_value = 5

@@ -35,6 +35,7 @@ encoding//veles/znicz/tests/research/imagenet/forward_bbox.py=utf-8
 encoding//veles/znicz/tests/research/imagenet/json2txt.py=utf-8
 encoding//veles/znicz/tests/research/imagenet/preparation_imagenet.py=utf-8
 encoding//veles/znicz/tests/research/imagenet_caffe.py=utf-8
+encoding//veles/znicz/tests/research/kernels/imagenet_deconv.py=utf-8
 encoding//veles/znicz/tests/research/utils/bbox_adjuster.py=utf-8
 encoding//veles/znicz/tests/research/utils/bbox_drawing.py=utf-8
 encoding//veles/znicz/tests/research/utils/draw_lines.py=utf-8

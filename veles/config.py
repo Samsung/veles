@@ -11,40 +11,34 @@ import os
 import pprint
 
 
+# : Global config
+root = None
+
+
 class Config(object):
     """Config service class.
     """
 
-    def _update(self, tree):
+    def update(self, value):
+        if self == root:
+            raise ValueError("Root updates are disabled")
+        if not isinstance(value, dict):
+            raise ValueError("Value must be an instance of dict")
+        self.__update__(value)
+
+    def __update__(self, tree):
         for k, v in tree.items():
             if isinstance(v, dict):
-                getattr(self, k)._update(v)
+                getattr(self, k).__update__(v)
             else:
                 setattr(self, k, v)
 
-    def _defaults(self, tree):
-        for k, v in tree.items():
-            if isinstance(v, dict):
-                getattr(self, k)._defaults(v)
-            else:
-                attr = getattr(self, k)
-                if isinstance(attr, Config):
-                    setattr(self, k, v)
-
     def __getattr__(self, name):
         temp = Config()
-        self.__setattr__(name, temp)
+        setattr(self, name, temp)
         return temp
 
     def __setattr__(self, name, value):
-        if name == "update":
-            if isinstance(value, dict):
-                self._update(value)
-                return
-        if name == "defaults":
-            if isinstance(value, dict):
-                self._defaults(value)
-                return
         super(Config, self).__setattr__(name, value)
 
     def __repr__(self):
@@ -65,7 +59,7 @@ class Config(object):
         pprint.pprint(contents, indent=1, width=width)
         print('-' * width)
 
-# : Global config
+
 root = Config()
 root.common = Config()
 
@@ -80,7 +74,7 @@ def get(value, default_value=None):
 
 __path__ = os.path.dirname(os.path.dirname(__file__))
 
-root.common.update = {
+root.common.update({
     "graphics_multicast_address": "239.192.1.1",
     "matplotlib_backend": "Qt4Agg",
     "matplotlib_webagg_port": 8081,
@@ -115,7 +109,7 @@ root.common.update = {
         "minthreads": 2,
         "maxthreads": 2,
     }
-}
+})
 
 root.common.cache_dir = os.path.join(root.common.veles_user_dir, "cache")
 
