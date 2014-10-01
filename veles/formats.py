@@ -13,6 +13,7 @@ import opencl4py as cl
 
 import veles.error as error
 from veles.distributable import Pickleable
+from veles.bufpool import OclBufPool
 
 
 class MemWatcher(object):
@@ -322,19 +323,34 @@ class Vector(Pickleable):
         self._mem[key] = value
 
     @threadsafe
-    def initialize(self, unit, bufpool=None):
+    def initialize(self, unit, bufpool=True):
         if (self._mem is None or self.devmem is not None or
             (unit.device is None and
              (bufpool is None and self._bufpool is None))):
             return
 
-        if unit.device.device_info.memalign <= 4096:
+        if bufpool is not None:
+            if isinstance(bufpool, bool):
+                if (hasattr(unit, 'workflow') and
+                        hasattr(unit.workflow, "bufpool") and
+                        unit.workflow.bufpool is not None):
+                    bufpool = unit.workflow.bufpool if bufpool else None
+                else:
+                    logging.error("Failed to initialize vector: "
+                                  "cannot get bufpool instance from workflow")
+                    bufpool = None
+            elif not isinstance(bufpool, OclBufPool):
+                raise RuntimeError("Failed to initialize vector: "
+                                   "cannot recognize bufpool type")
+
+        if unit.device is None or unit.device.device_info.memalign <= 4096:
             memalign = 4096
         else:
             memalign = unit.device.device_info.memalign
         self._mem = cl.realign_array(self._mem, memalign, numpy)
 
-        if bufpool is None and self._bufpool is None:
+        if (bufpool is None and self._bufpool is None and
+                unit.device is not None):
             # create standalone ocl buffer
             self.device = unit.device
             self.devmem = self.device.queue_.context.create_buffer(
@@ -355,7 +371,7 @@ class Vector(Pickleable):
                 self._bufpool = bufpool
             self._bufpool.add(unit, self)
         else:
-            raise RuntimeError("Failed to initialize Vector object")
+            logging.error("Failed to initialize Vector object")
 
     def _map(self, flags):
         if self.device is None:

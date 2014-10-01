@@ -15,6 +15,7 @@ from six import BytesIO, add_metaclass, PY3
 from six.moves import cPickle as pickle
 import tarfile
 import time
+import veles.bufpool as bufpool
 from zope.interface import implementer, Interface
 
 from veles.config import root
@@ -413,3 +414,7 @@ class OpenCLWorkflow(Workflow):
     def initialize(self, device, **kwargs):
         super(OpenCLWorkflow, self).initialize(device=device, **kwargs)
         self.device = device
+        if (self.bufpool is not None and
+                isinstance(self.bufpool, bufpool.OclBufPool)):
+            strategy = bufpool.TrivialStrategy(device.device_info.memalign)
+            self.bufpool.make_partitioning(self.start_point, strategy)

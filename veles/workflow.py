@@ -120,6 +120,7 @@ class Workflow(Unit):
         self._plotters_are_enabled = kwargs.get(
             "enable_plotters", not root.common.plotters_disabled)
         self._sync = kwargs.get("sync", True)
+        self.bufpool = kwargs.get("bufpool")
         super(Workflow, self).__init__(workflow,
                                        generate_data_for_slave_threadsafe=True,
                                        apply_data_from_slave_threadsafe=True,

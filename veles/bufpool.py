@@ -29,6 +29,32 @@ class PoolStrategy(object):
         return max_size
 
 
+class TrivialStrategy(PoolStrategy):
+    def __init__(self, mem_align=4096):
+        super(TrivialStrategy, self).__init__(mem_align)
+
+    def create(self, vector, pool_size, regions):
+        cur_pos = 0
+        if len(regions) > 0:
+            sizes = {}
+            for vec in regions:
+                sizes[regions[vec]["offset"]] = regions[vec]["size"]
+
+            max_offset = sorted(sizes.keys())[-1]
+            cur_pos = max_offset + sizes[max_offset] + self.mem_align
+            cur_pos -= cur_pos % self.mem_align
+
+        if pool_size - cur_pos >= vector.nbytes:
+            regions[vector] = {"offset": cur_pos,
+                               "size": vector.nbytes}
+            return cur_pos
+        else:
+            raise BufPoolError("Failed to find free space in pool")
+
+    def release(self, vector, pool_size, regions):
+        pass
+
+
 class FirstFitBuffer(PoolStrategy):
     def __init__(self, mem_align=4096):
         super(FirstFitBuffer, self).__init__(mem_align)
@@ -116,6 +142,8 @@ class OclBufPool(object):
             vec.mem[:] = saved[:]
             vec.devmem = self._ocl_buffer.create_sub_buffer(offset, vec.nbytes)
 
+        self._vectors = creation_dict
+
     def _build_action_list(self, start):
         usage_list = []
         fwd_prop = []
@@ -134,8 +162,8 @@ class OclBufPool(object):
                     logging.warn(
                         "unit %s links to %d units (%s)",
                         unit.__class__, len(unit.links_to),
-                        ', '.join([x.__class__ for x in unit.links_to]))
-                unit = unit.links_to[0]
+                        ', '.join([str(x.__class__) for x in unit.links_to]))
+                unit = sorted(unit.links_to.keys())[0]
             else:
                 unit = None
         logging.debug("buffers in use:\n%s", pformat(usage_list))
