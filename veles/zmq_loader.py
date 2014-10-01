@@ -99,7 +99,7 @@ class ZeroMQLoader(Unit):
     def generate_data_for_master(self):
         return {"ZmqLoaderEndpoints": self._endpoints}
 
-    def generate_data_for_slave(self):
+    def generate_data_for_slave(self, slave):
         return None
 
     def drop_slave(self, slave):
