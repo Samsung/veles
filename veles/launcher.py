@@ -314,6 +314,7 @@ class Launcher(logger.Logger):
         Links with the nested Workflow instance, so that we are able to
         initialize.
         """
+        self._initialized = True
         self._workflow = workflow
         workflow.run_is_blocking = False
         if self.is_slave or self.matplotlib_backend == "":
@@ -361,8 +362,6 @@ class Launcher(logger.Logger):
                     self._stop_graphics()
                     raise
 
-        self._initialized = True
-
     def del_ref(self, workflow):
         pass
 
@@ -404,6 +403,7 @@ class Launcher(logger.Logger):
         if not self._initialized:
             raise RuntimeError("Launcher was not initialized")
         self._running = True
+        self.info("Workflow checksum is %s", self.workflow.checksum())
         if not self.is_standalone:
             self._agent.initialize()
         reactor.addSystemEventTrigger('before', 'shutdown', self._on_stop)
