@@ -25,3 +25,6 @@
 [submodule "deploy/pyenv"]
   path = deploy/pyenv
   url = https://github.com/yyuu/pyenv
+[submodule "mastodon"]
+  path = mastodon
+  url = ssh://alserver.rnd.samsung.ru:29418/Mastodon
