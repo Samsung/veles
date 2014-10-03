@@ -3,6 +3,7 @@ ZeroMQ connection.
 """
 from collections import deque, namedtuple
 import gzip
+import zlib
 import sys
 import six
 from six.moves import cPickle as pickle
@@ -132,18 +133,9 @@ class ZmqConnection(Logger):
 
         self.fd = self.socket.get(constants.FD)
         self.socket.set(constants.LINGER, self.factory.lingerPeriod)
-
-        if not ZMQ3:
-            self.socket.set(
-                constants.MCAST_LOOP, int(self.allowLoopbackMulticast))
-
         self.socket.set(constants.RATE, self.multicastRate)
-
-        if not ZMQ3:
-            self.socket.set(constants.HWM, self.highWaterMark)
-        else:
-            self.socket.set(constants.SNDHWM, self.highWaterMark)
-            self.socket.set(constants.RCVHWM, self.highWaterMark)
+        self.socket.set(constants.SNDHWM, self.highWaterMark)
+        self.socket.set(constants.RCVHWM, self.highWaterMark)
 
         if ZMQ3 and self.tcpKeepalive:
             self.socket.set(
@@ -255,6 +247,65 @@ class ZmqConnection(Logger):
 
                 return result
 
+    class Unpickler(object):
+        def __init__(self):
+            self._data = []
+            self._active = False
+            self._decompressor = None
+
+        @property
+        def active(self):
+            return self._active
+
+        @active.setter
+        def active(self, value):
+            self._active = value
+            if not value:
+                buffer = self.merge_chunks()
+                self._object = pickle.loads(buffer if six.PY3 else str(buffer))
+            self._data = []
+
+        @property
+        def codec(self):
+            return self._codec
+
+        @codec.setter
+        def codec(self, value):
+            self._codec = value if six.PY3 else ord(value)
+            if self.codec == 0:
+                pass
+            elif self.codec == 1:
+                self._decompressor = \
+                    zlib.decompressobj(16 + zlib.MAX_WBITS)
+            elif self.codec == 2:
+                self._decompressor = snappy.StreamDecompressor()
+            elif self.codec == 3:
+                self._decompressor = lzma.LZMADecompressor()
+            else:
+                raise ValueError("Unknown compression type")
+
+        @property
+        def object(self):
+            return self._object
+
+        def merge_chunks(self):
+            if self.codec > 0 and not isinstance(self._decompressor,
+                                                 lzma.LZMADecompressor):
+                self._data.append(self._decompressor.flush())
+            size = sum([len(d) for d in self._data])
+            buffer = bytearray(size)
+            pos = 0
+            for d in self._data:
+                ld = len(d)
+                buffer[pos:pos + ld] = d
+                pos += ld
+            return buffer
+
+        def consume(self, data):
+            if self.codec > 0:
+                data = self._decompressor.decompress(data)
+            self._data.append(data)
+
     def doRead(self):
         """
         Some data is available for reading on ZeroMQ descriptor.
@@ -272,55 +323,7 @@ class ZmqConnection(Logger):
                 self.read_scheduled.cancel()
             self.read_scheduled = None
 
-        class Unpickler(object):
-            def __init__(self):
-                self._data = []
-                self._active = False
-
-            @property
-            def active(self):
-                return self._active
-
-            @active.setter
-            def active(self, value):
-                self._active = value
-                if not value:
-                    size = sum([len(d) for d in self._data])
-                    buffer = bytearray(size)
-                    pos = 0
-                    for d in self._data:
-                        buffer[pos:pos + len(d)] = d
-                    self._object = pickle.loads(buffer if six.PY3
-                                                else str(buffer))
-                self._data = []
-
-            @property
-            def codec(self):
-                return self._codec
-
-            @codec.setter
-            def codec(self, value):
-                self._codec = value if six.PY3 else ord(value)
-
-            @property
-            def object(self):
-                return self._object
-
-            def consume(self, data):
-                codec = self._codec
-                if codec == 2:
-                    chunk = snappy.decompress(data)
-                elif codec == 0:
-                    chunk = data
-                elif codec == 1:
-                    chunk = gzip.decompress(data)
-                elif codec == 3:
-                    chunk = lzma.decompress(data)
-                else:
-                    raise RuntimeError("Unknown compression type")
-                self._data.append(chunk)
-
-        unpickler = Unpickler()
+        unpickler = ZmqConnection.Unpickler()
         while True:
             if self.factory is None:  # disconnected
                 return
@@ -405,30 +408,83 @@ class ZmqConnection(Logger):
             raise ZmqConnection.IOOverflow()
         return pickles_size
 
+    class SocketFile(object):
+        def __init__(self, socket):
+            self._socket = socket
+            self._size = 0
+
+        @property
+        def size(self):
+            return self._size
+
+        @property
+        def mode(self):
+            return "wb"
+
+        def write(self, data):
+            self._size += len(data)
+            self._socket.send(data,
+                              constants.NOBLOCK | constants.SNDMORE)
+
+        def flush(self):
+            pass
+
+    class CompressedFile(object):
+        def __init__(self, fileobj, compressor):
+            self._file = fileobj
+            self._compressor = compressor
+
+        @property
+        def mode(self):
+            return "wb"
+
+        def write(self, data):
+            self._file.write(self._compressor.compress(data))
+
+        def flush(self):
+            last = self._compressor.flush()
+            if last is not None:
+                self._file.write(last)
+            self._file.flush()
+
+    class Pickler(object):
+        def __init__(self, socket, codec):
+            self._codec = codec if six.PY3 else ord(codec)
+            self._socketobj = ZmqConnection.SocketFile(socket)
+            if self.codec == 0:
+                self._compressor = self._socketobj
+            elif self.codec == 1:
+                self._compressor = gzip.GzipFile(fileobj=self._socketobj)
+            elif self.codec == 2:
+                self._compressor = ZmqConnection.CompressedFile(
+                    self._socketobj, snappy.StreamCompressor())
+            elif self.codec == 3:
+                self._compressor = ZmqConnection.CompressedFile(
+                    self._socketobj, lzma.LZMACompressor(lzma.FORMAT_XZ))
+            else:
+                raise ValueError("Unknown compression type")
+
+        @property
+        def size(self):
+            return self._socketobj.size
+
+        @property
+        def codec(self):
+            return self._codec
+
+        @property
+        def mode(self):
+            return "wb"
+
+        def write(self, data):
+            self._compressor.write(data)
+
+        def flush(self):
+            self._compressor.flush()
+
     def _send_pickled(self, message, last, compression, io):
         if self.shutted_down:
             return
-
-        class Pickler(object):
-            def __init__(self, socket, codec):
-                self._socket = socket
-                self._codec = codec if six.PY3 else ord(codec)
-                self.size = 0
-
-            def write(self, data):
-                codec = self._codec
-                if codec == 2:
-                    chunk = snappy.compress(data)
-                elif codec == 0:
-                    chunk = data
-                elif codec == 1:
-                    chunk = gzip.compress(data)
-                elif codec == 3:
-                    chunk = lzma.compress(data)
-                else:
-                    raise RuntimeError("Unknown compression type")
-                self.size += len(chunk)
-                self._socket.send(chunk, constants.NOBLOCK | constants.SNDMORE)
 
         codec = ZmqConnection.CODECS.get(compression)
         if codec is None:
@@ -450,8 +506,9 @@ class ZmqConnection(Logger):
 
         def send_to_socket():
             send_pickle_beg_marker(codec)
-            pickler = Pickler(self.socket, codec[0])
+            pickler = ZmqConnection.Pickler(self.socket, codec[0])
             dump(pickler)
+            pickler.flush()
             send_pickle_end_marker()
             return pickler.size
 

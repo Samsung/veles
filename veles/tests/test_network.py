@@ -6,6 +6,8 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import logging
+import numpy
+from six import BytesIO
 import threading
 from twisted.internet import reactor
 import unittest
@@ -14,6 +16,7 @@ import veles.client as client
 import veles.server as server
 from veles.workflow import Workflow
 from veles.tests import DummyLauncher
+from veles.external.txzmq.connection import ZmqConnection
 
 
 class TestWorkflow(Workflow):
@@ -73,7 +76,7 @@ class TestWorkflow(Workflow):
         pass
 
 
-class Test(unittest.TestCase):
+class TestClientServer(unittest.TestCase):
     def setUp(self):
         self.master = TestWorkflow()
         self.slave = TestWorkflow()
@@ -99,6 +102,43 @@ class Test(unittest.TestCase):
                         "Power was not requested.")
         self.assertTrue(TestWorkflow.job_dropped,
                         "Job was not dropped in the end.")
+
+
+class TestZmqConnection(unittest.TestCase):
+    def testPicklingUnpickling(self):
+        class FakeSocket(object):
+            def __init__(self, bio):
+                self._bio = bio
+
+            @property
+            def data(self):
+                return self._bio.getbuffer()
+
+            def send(self, data, *args, **kwargs):
+                self._bio.write(data)
+
+        idata = numpy.random.bytes(128000)
+        bufsize = 4096
+        for codec in range(4):
+            socket = FakeSocket(BytesIO())
+            pickler = ZmqConnection.Pickler(socket, codec)
+            offset = 0
+            while (offset < len(idata)):
+                pickler.write(idata[offset:offset + bufsize])
+                offset += bufsize
+            pickler.flush()
+            print("Codec %d results %d bytes" % (codec, pickler.size))
+            unpickler = ZmqConnection.Unpickler()
+            unpickler.codec = codec
+            odata = socket.data
+            self.assertEqual(len(odata), pickler.size)
+            offset = 0
+            while (offset < len(odata)):
+                unpickler.consume(odata[offset:offset + bufsize])
+                offset += bufsize
+            merged = unpickler.merge_chunks()
+            self.assertEqual(len(idata), len(merged))
+            self.assertEqual(idata, merged)
 
 
 if __name__ == "__main__":
