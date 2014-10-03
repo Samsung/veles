@@ -390,6 +390,15 @@ class VelesProtocol(StringLineReceiver, IDLogger):
         if query is None:
             return False
         self._not_a_slave = True
+        checksum = msg.get('workflow')
+        if checksum is None:
+            self._sendError("Workflow checksum was not specified")
+            return True
+        valid_checksum = self.host.workflow.checksum()
+        if checksum != valid_checksum:
+            self._sendError("Workflow checksum mismatch: mine is %s" %
+                            valid_checksum)
+            return True
         responders = {"nodes": lambda _: self.sendLine(self.nodes),
                       "endpoints":
                       lambda _: self.sendLine(self.host.zmq_endpoints)}
@@ -397,7 +406,9 @@ class VelesProtocol(StringLineReceiver, IDLogger):
         if responder is None:
             self._sendError("%s query is not supported" % query)
         else:
-            responder()
+            self.info("Fulfilled query \"%s\"", query)
+            responder(msg)
+        return True
 
     def _handshake(self, msg, line):
         if self.state.current != 'WAIT':
