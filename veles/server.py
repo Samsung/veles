@@ -266,10 +266,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
         except KeyError:
             pass
         if not self.host.workflow.is_running:
-            if self.id in self.nodes:
-                del self.nodes[self.id]
-            if self.id in self.host.protocols:
-                del self.host.protocols[self.id]
+            self._erase_self(True)
             if len(self.nodes) == 0:
                 self.host.launcher.stop()
         elif self.id in self.nodes:
@@ -278,9 +275,8 @@ class VelesProtocol(StringLineReceiver, IDLogger):
                 self.host.workflow.drop_slave,
                 SlaveDescription.make(self.nodes[self.id])).addErrback(
                 errback)
-            if self.id in self.host.protocols:
-                del self.host.protocols[self.id]
             d.addCallback(self._retryJobRequests)
+            self._erase_self()
 
     def lineReceived(self, line):
         self.debug("lineReceived:  %s", line)
@@ -378,6 +374,13 @@ class VelesProtocol(StringLineReceiver, IDLogger):
         else:
             StringLineReceiver.sendLine(self, json.dumps(line))
 
+    def _erase_self(self, del_node=False):
+        if self.id in self.host.protocols:
+            del self.host.protocols[self.id]
+        if del_node:
+            if self.id in self.nodes:
+                del self.nodes[self.id]
+
     def _retryJobRequests(self, _=None):
         while len(self.host.job_requests) > 0:
             requester = self.host.job_requests.pop()
@@ -399,10 +402,11 @@ class VelesProtocol(StringLineReceiver, IDLogger):
             self._sendError("Workflow checksum mismatch: mine is %s" %
                             valid_checksum)
             return True
-        responders = {"nodes": lambda _: self.sendLine(self.nodes),
+        responders = {"nodes": lambda _: self.sendLine(self.host.active_nodes),
                       "endpoints":
                       lambda _: self.sendLine(self.host.zmq_endpoints)}
         responder = responders.get(query)
+        self.info(self.nodes)
         if responder is None:
             self._sendError("%s query is not supported" % query)
         else:
@@ -635,3 +639,10 @@ class Server(NetworkAgent, ServerFactory):
 
     def buildProtocol(self, addr):
         return VelesProtocol(addr, self)
+
+    @property
+    def active_nodes(self):
+        nodes = {}
+        for pid in self.protocols.keys():
+            nodes[pid] = self.nodes[pid]
+        return nodes
