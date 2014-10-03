@@ -103,4 +103,5 @@ class ZeroMQLoader(Unit):
         return None
 
     def drop_slave(self, slave):
-        del self._endpoints[slave.id]
+        if slave.id in self._endpoints:
+            del self._endpoints[slave.id]
