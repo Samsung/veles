@@ -52,7 +52,7 @@ class MastodonSampleWorkflow(Workflow):
 
         self.printer = Printer(self)
         self.printer.link_attrs(self.loader, ("input", "output"))
-        self.printer.link_from(self.repeater)
+        self.printer.link_from(self.loader)
 
         self.repeater.link_from(self.printer)
         self.end_point.link_from(self.printer)
