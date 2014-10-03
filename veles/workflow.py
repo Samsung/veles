@@ -131,6 +131,7 @@ class Workflow(Unit):
         self._checksum = None
         self._history = []
         self.fitness = None
+        self.debug("My checksum is %s", self.checksum())
 
     def init_unpickled(self):
         super(Workflow, self).init_unpickled()

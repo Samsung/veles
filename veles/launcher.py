@@ -403,7 +403,6 @@ class Launcher(logger.Logger):
         if not self._initialized:
             raise RuntimeError("Launcher was not initialized")
         self._running = True
-        self.info("Workflow checksum is %s", self.workflow.checksum())
         if not self.is_standalone:
             self._agent.initialize()
         reactor.addSystemEventTrigger('before', 'shutdown', self._on_stop)
