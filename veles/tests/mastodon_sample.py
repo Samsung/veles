@@ -5,6 +5,7 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
 
 
+import sys
 from zope.interface.declarations import implementer
 
 from veles.workflow import Workflow, Repeater
@@ -26,6 +27,7 @@ class Printer(Unit, TriviallyDistributable):
 
     def run(self):
         print(self.input)
+        sys.stdout.flush()
         if self.input == "exit":
             self.exit <<= True
 

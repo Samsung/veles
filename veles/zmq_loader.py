@@ -36,7 +36,7 @@ class ZmqRouter(ZmqConnection):
         self.owner.receive_data(cid, payload)
 
     def reply(self, cid, message):
-        self.send(self.routing.pop(cid), message)
+        self.send(self.routing.pop(cid), cid, message)
 
 
 @implementer(IUnit, IDistributable)
