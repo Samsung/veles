@@ -42,6 +42,9 @@ __units__ = None
 
 
 def registered_units():
+    """
+    Returns the array with all Unit classes found in the current working tree.
+    """
     global __units__
     if __units__ is not None:
         return __units__
