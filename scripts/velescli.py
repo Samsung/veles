@@ -141,6 +141,8 @@ class Main(Logger):
         parser.add_argument("--version", action="store_true",
                             help="Print version number, date, commit hash and "
                             "exit.")
+        parser.add_argument("--html-help", action="store_true",
+                            help="Open VELES help in your web browser.")
         parser.add_argument("-v", "--verbose", type=str, default="info",
                             choices=Main.LOG_LEVEL_MAP.keys(),
                             help="Set the logging verbosity level.")
@@ -535,6 +537,9 @@ class Main(Logger):
         if "--version" in sys.argv:
             self._print_version()
             return Main.EXIT_SUCCESS
+        if "--html-help" in sys.argv:
+            veles.__html__()
+            return Main.EXIT_SUCCESS
         parser = Main.init_parser()
         args = parser.parse_args()
         fname_config = args.config
@@ -567,6 +572,9 @@ class Main(Logger):
         return Main.EXIT_SUCCESS
 
 
-if __name__ == "__main__":
+def __run__():
     retcode = Main().run()
     sys.exit(retcode)
+
+if __name__ == "__main__":
+    __run__()
