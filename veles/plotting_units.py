@@ -132,8 +132,11 @@ class AccumulatingPlotter(Plotter):
 
     def _add_value(self):
         if self.input_field is None:
-            assert isinstance(self.input, float)
-            value = self.input
+            try:
+                value = float(self.input)
+            except TypeError:
+                raise TypeError("input has a wrong type %s - must be "
+                                "float" % self.input.__class__) from None
         elif isinstance(self.input_field, int):
             if self.input_field < 0 or self.input_field >= len(self.input):
                 return
