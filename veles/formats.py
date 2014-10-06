@@ -336,8 +336,6 @@ class Vector(Pickleable):
                         unit.workflow.bufpool is not None):
                     bufpool = unit.workflow.bufpool if bufpool else None
                 else:
-                    logging.error("Failed to initialize vector: "
-                                  "cannot get bufpool instance from workflow")
                     bufpool = None
             elif not isinstance(bufpool, OclBufPool):
                 raise RuntimeError("Failed to initialize vector: "
