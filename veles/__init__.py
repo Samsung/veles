@@ -78,7 +78,7 @@ def __html__():
     from veles.portable import show_file
 
     root = os.path.dirname(__file__)
-    page = os.path.join(root, "../docs/build/html/veles.html")
+    page = os.path.join(root, "../docs/build/html/index.html")
     if not os.path.exists(page):
         from runpy import run_path
         print("Building the documentation...")
