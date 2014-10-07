@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 '''
-Created on May 21, 2013
+.. container:: flexbox
 
-Copyright (c) 2013 Samsung Electronics Co., Ltd.
+   .. image:: _static/veles_big.png
+      :class: left
+
+   .. container::
+
+      %s
 '''
 
 
-from email.utils import parsedate_tz, mktime_tz
+from email.utils import parsedate_tz, mktime_tz, formatdate
 from sys import version_info, modules
 from types import ModuleType
 from warnings import warn
@@ -33,6 +38,28 @@ except Exception as ex:
     __git__ = None
     __date__ = None
 
+__logo__ = \
+    r" _   _ _____ _     _____ _____  " "\n" \
+    r"| | | |  ___| |   |  ___/  ___| " + \
+    (" Version %s" % __version__) + \
+    (" %s\n" % formatdate(__date__, True)) + \
+    r"| | | | |__ | |   | |__ \ `--.  " + \
+    (" Copyright %s\n" % __copyright__) + \
+    r"| | | |  __|| |   |  __| `--. \ " \
+    " All rights reserved. Any unauthorized use of\n" \
+    r"\ \_/ / |___| |___| |___/\__/ / " \
+    " this software is strictly prohibited and is\n" \
+    r" \___/\____/\_____|____/\____/  " \
+    " a subject of your country's laws.\n"
+
+if "sphinx" in modules:
+    __doc__ %= "| %s\n      | Version %s %s\n      | %s\n\n      Authors:" \
+        "\n\n      * %s" % (__project__, __version__,
+                            formatdate(__date__, True), __copyright__,
+                            "\n      * ".join(__authors__))
+else:
+    __doc__ = __logo__.replace(" ", "_", 2)  # nopep8
+
 if version_info.major == 3 and version_info.minor == 4 and \
    version_info.micro < 1:
     warn("Python 3.4.0 has a bug which is critical to Veles OpenCL subsystem ("
@@ -40,6 +67,10 @@ if version_info.major == 3 and version_info.minor == 4 and \
 
 
 def __html__():
+    """
+    Opens VELES html documentation in the default web browser and builds it,
+    if it does not exist.
+    """
     import os
     from veles.portable import show_file
 

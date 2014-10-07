@@ -35,6 +35,14 @@ div.related li.right {
     margin-right: 5px;
 }
 
+div.flexbox {
+    display: flex;
+}
+
+img.left {
+    margin-right: 2em;
+}
+
 /* -- sidebar --------------------------------------------------------------- */
 
 div.sphinxsidebarwrapper {

@@ -16,21 +16,16 @@ Contact:
 
 
 '''
-__module_veles_logo__ = \
-    r"        _   _ _____ _     _____ _____\n" + \
-    r"       | | | |  ___| |   |  ___/  ___|  " + \
-    r"Version 0.3.0 Wed, 23 Apr 2014 14:46:21 +0400\n" + \
-    r"       | | | | |__ | |   | |__ \ `––.   " + \
-    r"Copyright © 2013 Samsung Electronics Co., Ltd.\n" + \
-    r"       | | | |  __|| |   |  __| `––. \  " + \
-    r"All rights reserved. Any unauthorized use of\n" + \
-    r"       \ \_/ / |___| |___| |___/\__/ /  " + \
-    r"this software is strictly prohibited and is\n" + \
-    r"        \___/\____/\_____|____/\____/   " + \
-    r"a subject of your country's laws.\n" + \
-    r"       \u200B\n"
 
-__doc__ += __module_veles_logo__  # nopep8
+
+from email.utils import formatdate
+import os
+import sys
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+import veles
+
+__doc__ += "       " + "\n       ".join(veles.__logo__.split('\n')) + u"\u200B\n"  # nopep8
 
 try:
     import argcomplete
@@ -39,18 +34,13 @@ except:
 import argparse
 import atexit
 import binascii
-from email.utils import formatdate
 import errno
 import gc
 import logging
 import numpy
-import os
 import resource
 import runpy
-import sys
 
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-import veles
 from veles.cmdline import CommandLineArgumentsRegistry
 from veles.config import root
 import veles.external.daemon as daemon
@@ -78,18 +68,7 @@ def create_args_parser_sphinx():
 class Main(Logger):
     EXIT_SUCCESS = 0
     EXIT_FAILURE = 1
-    LOGO_PLAIN = r" _   _ _____ _     _____ _____  " "\n" \
-                 r"| | | |  ___| |   |  ___/  ___| " + \
-                 (" Version %s" % veles.__version__) + \
-                 (" %s\n" % formatdate(veles.__date__, True)) + \
-                 r"| | | | |__ | |   | |__ \ `--.  " + \
-                 (" Copyright %s\n" % veles.__copyright__) + \
-                 r"| | | |  __|| |   |  __| `--. \ " \
-                 " All rights reserved. Any unauthorized use of\n" \
-                 r"\ \_/ / |___| |___| |___/\__/ / " \
-                 " this software is strictly prohibited and is\n" \
-                 r" \___/\____/\_____|____/\____/  " \
-                 " a subject of your country's laws.\n"
+    LOGO_PLAIN = veles.__logo__
 
     LOGO_COLORED = "\033" r"[1;32m _   _ _____ _     _____ _____  " \
                    "\033[0m\n" \

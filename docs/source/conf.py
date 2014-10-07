@@ -144,7 +144,7 @@ html_short_title = project
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-# html_logo = "../../web_status/img/veles.png"
+html_logo = "_static/veles_big.png"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -287,8 +287,8 @@ texinfo_documents = [
 # texinfo_no_detailmenu = False
 
 
-#Mock used C++ extensions to avoid import errors:
-#http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
+# Mock used C++ extensions to avoid import errors:
+# http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
 class Mock(object):
     __all__ = []
 
@@ -309,7 +309,7 @@ class Mock(object):
         else:
             return Mock()
 
-MOCK_MODULES = ['pygtk', 'gtk', 'gobject', "numpy", "numpy.random", "cv2", 
+MOCK_MODULES = ['pygtk', 'gtk', 'gobject', "numpy", "numpy.random", "cv2",
                 "scipy", "scipy.signal", "scipy.io", "scipy.misc",
                 "scipy.interpolate", "scipy.stats",
                 "scipy.ndimage", "freetype", "matplotlib", "matplotlib.pyplot",
@@ -317,7 +317,7 @@ MOCK_MODULES = ['pygtk', 'gtk', 'gobject', "numpy", "numpy.random", "cv2",
                 "caffe",
 
                 "scripts.music_features", "sound_feature_extraction",
-                "sound_feature_extraction.library" # deprecated
+                "sound_feature_extraction.library"  # deprecated
                 ]
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = Mock()
