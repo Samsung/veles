@@ -12,6 +12,7 @@
 
 
 from email.utils import parsedate_tz, mktime_tz, formatdate
+from os import path
 from sys import version_info, modules
 from types import ModuleType
 from warnings import warn
@@ -59,6 +60,8 @@ if "sphinx" in modules:
                             "\n      * ".join(__authors__))
 else:
     __doc__ = __logo__.replace(" ", "_", 2)  # nopep8
+
+__root__ = path.dirname(path.dirname(__file__))
 
 if version_info.major == 3 and version_info.minor == 4 and \
    version_info.micro < 1:
@@ -124,6 +127,25 @@ class VelesModule(ModuleType):
         from veles.units import UnitRegistry
         self.__units_cache__ = UnitRegistry.units
         return self.__units_cache__
+
+    @property
+    def __loc__(self):
+        from subprocess import Popen, PIPE
+        discovery = Popen(
+            "cd %s && echo $(find -name '*.py' -not -name 'cpplint*' -not "
+            "-path './deploy/*' -not -path './web/*' -not -path "
+            "'./veles/external/*' -not -name create-emitter-tests.py -exec "
+            "wc -l {} \; | cut -d ' ' -f 1 | tr '\n' '+' | head -c -1) | bc" %
+            self.__root__, shell=True, stdout=PIPE)
+        strnum, _ = discovery.communicate()
+        num = int(strnum)
+        discovery = Popen(
+            "cd %s && echo $(find veles/external/txzmq  -name '*.py' -exec "
+            "wc -l {} \; | cut -d ' ' -f 1 | tr '\n' '+' | head -c -1) | bc" %
+            self.__root__, shell=True, stdout=PIPE)
+        strnum, _ = discovery.communicate()
+        num += int(strnum)
+        return num
 
 
 if not isinstance(modules[__name__], VelesModule):
