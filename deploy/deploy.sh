@@ -20,11 +20,14 @@ do_pre() {
   git archive --format=tar --prefix veles/znicz/ HEAD -o $path/Znicz.tar
   cd $root/deploy/pyenv
   git archive --format=tar --prefix deploy/pyenv/ HEAD -o $path/pyenv.tar
+  cd $root/mastodon
+  git archive --format=tar --prefix mastodon/ HEAD -o $path/Mastodon.tar
   cd $path
   echo "Merging archives..."
   tar --concatenate --file Veles.tar Znicz.tar
   tar --concatenate --file Veles.tar pyenv.tar
-  rm Znicz.tar pyenv.tar
+  tar --concatenate --file Veles.tar Mastodon.tar
+  rm Znicz.tar pyenv.tar Mastodon.tar
   echo "Compressing..."
   rm -f Veles.tar.$COMPRESSION
   $COMPRESSION Veles.tar
@@ -34,7 +37,7 @@ do_pre() {
 do_post() {
   cd $path
   . ./init-pyenv
-  versions=$(pyenv versions | grep $PYVER)
+  versions=$(pyenv versions | grep $PYVER || true)
   if [ -z "$versions" ]; then
     pyenv install $PYVER
   fi
