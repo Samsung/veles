@@ -5,21 +5,22 @@ Veles Machine Learning Platform
     :maxdepth: 2
     :numbered:
 
-    manualrst_eclipse_setup
-    manualrst_veles_first_run
+    manualrst_veles_system_requirements
+    manualrst_veles_user_setup
+    manualrst_veles_developer_setup
+    manualrst_veles_ocl
     manualrst_veles_basics
     manualrst_veles_launcher
-    manualrst_veles_units
-    manualrst_veles_ocl
+    manualrst_veles_units    
 
 
-***************
+**************
 `All modules`_
-***************
+**************
 .. _`All modules`: modules.html
 
-***************
+****************
 `Veles package`_
-***************
+****************
 .. _`Veles package`: veles.html
 
