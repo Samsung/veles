@@ -1,6 +1,6 @@
 #!/bin/sh
 
-export PYENV_ROOT=$(pwd)/pyenv
+export PYENV_ROOT=$(dirname $(readlink -f $0))/pyenv
 export PATH="$PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH"
 export PYENV_SHELL=bash
 if [ -n "$BASH" ]; then
