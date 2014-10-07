@@ -58,12 +58,48 @@ class DeviceInfo(object):
         self.min_dt = {}
         for dtype in opencl_types.dtypes.keys():
             self.min_dt[dtype] = 86400
+
         self.BLOCK_SIZE = {}
         for dtype in opencl_types.dtypes.keys():
             self.BLOCK_SIZE[dtype] = 8
         self.vector_opt = {}
         for dtype in opencl_types.dtypes.keys():
             self.vector_opt[dtype] = 0
+
+    def get_block_sizes(self, **kwargs):
+        """Gets optimal block sizes for matrix multiplication.
+
+        Parameters:
+            kernel: hint for the name of the kernel for which the optimal
+                    block sizes will be returned:
+                    conv: convolutional forward propagation,
+                    deconv: convolutional back propagation,
+                    all other: simple matrix multiplication.
+            dtype: numeric data type (defaults to root.common.precision_type).
+            a_col: True if matrix A will be accessed by columns.
+            b_col: True if matrix B will be accessed by columns.
+            a_width: hint of width of matrix A.
+            b_width: hint of width of matrix B.
+            ab_common: hint of common side width.
+            kx: hint of kernel width for convolution.
+            ky: hint of kernel height for convolution.
+            n_kernels: hint of number of convolutional kernels.
+            sx: hint of width of the input image for convolution.
+            sy: hint of height of the input image for convolution.
+            n_channels: hint of number of channels in the input
+                        for convolution.
+
+        Returns:
+            a_block_size, b_block_size, common_block_size
+        """
+        # TODO(a.kazantsev): implement benchmark for optimal block sizes.
+        dtype = kwargs.get("dtype")
+        if dtype is None:
+            dtype = root.common.precision_type
+        a_block_size = self.BLOCK_SIZE[dtype]
+        b_block_size = self.BLOCK_SIZE[dtype]
+        common_block_size = self.BLOCK_SIZE[dtype]
+        return a_block_size, b_block_size, common_block_size
 
 
 class DeviceNotFoundError(Exception):

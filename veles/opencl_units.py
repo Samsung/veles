@@ -192,8 +192,11 @@ class OpenCLUnit(Unit):
         lines = []
         my_defines = copy(defines) if defines else {}
         for fnme, defs in self.cl_sources_.items():
+            for k, v in sorted(defs.items()):
+                lines.append("#define %s %s" % (k, v))
             lines.append("#include \"%s\"" % fnme)
-            my_defines.update(defs)
+            for k in sorted(defs.keys()):
+                lines.append("#undef %s" % k)
         if dtype is None:
             dtype = root.common.precision_type
         elif type(dtype) != str:
@@ -201,13 +204,10 @@ class OpenCLUnit(Unit):
         my_defines.update(opencl_types.cl_defines[dtype])
         if "PRECISION_LEVEL" not in my_defines:
             my_defines["PRECISION_LEVEL"] = root.common.precision_level
-        if "BLOCK_SIZE" not in my_defines:
-            my_defines["BLOCK_SIZE"] = self.device.device_info.BLOCK_SIZE[
-                dtype]
         if "VECTOR_OPT" not in my_defines:
             my_defines["VECTOR_OPT"] = self.device.device_info.vector_opt[
                 dtype]
-        if "GPU_FORCE_64BIT_PTR" not in my_defines:
+        if "GPU_FORCE_64BIT_PTR" not in my_defines:  # for AMD
             my_defines["GPU_FORCE_64BIT_PTR"] = os.getenv(
                 "GPU_FORCE_64BIT_PTR", 0)
 
@@ -334,14 +334,22 @@ class OpenCLBenchmark(OpenCLUnit):
         msize = [self.size, self.size]
         self.input_A_.mem = numpy.zeros(msize, dtype=numpy.double)
         self.input_B_.mem = numpy.zeros(msize, dtype=numpy.double)
+        self.a_block_size = 16
+        self.b_block_size = 16
 
     def initialize(self, device, **kwargs):
         """Compiles the benchmarking kernel.
         """
         super(OpenCLBenchmark, self).initialize(device=device, **kwargs)
-        self.block_size = self.device.device_info.BLOCK_SIZE[self.dtype]
+        self.a_block_size, self.b_block_size, common_block_size = (
+            device.device_info.get_block_sizes(
+                kernel="matrix_multiplication",
+                a_width=self.size, b_width=self.size, ab_common=self.size,
+                a_col=False, b_col=False))
         self.cl_sources_ = {"benchmark.cl": {
-            'BLOCK_SIZE': self.block_size,
+            'A_BLOCK_SIZE': self.a_block_size,
+            'B_BLOCK_SIZE': self.b_block_size,
+            'COMMON_BLOCK_SIZE': common_block_size,
             'SIZE': self.size
         }}
         self.build_program()
@@ -356,9 +364,9 @@ class OpenCLBenchmark(OpenCLUnit):
         """
         self.debug("Running %d repetitions of size %d on %s...",
                    self.repeats, self.size, self.dtype)
-        global_size = [formats.roundup(self.size, self.block_size),
-                       formats.roundup(self.size, self.block_size)]
-        local_size = [self.block_size, self.block_size]
+        global_size = [formats.roundup(self.size, self.b_block_size),
+                       formats.roundup(self.size, self.a_block_size)]
+        local_size = [self.b_block_size, self.a_block_size]
         self.device.queue_.finish()
 
         def execute():
