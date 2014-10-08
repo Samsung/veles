@@ -121,15 +121,16 @@ def convert_argument(arg):
     choices = arg.choices
     nargs = arg.nargs
     required = arg.required and nargs != '*'
-    dest = arg.dest
     hlp = arg.help
     arg_mode = getattr(arg, "mode", ["standalone", "master", "slave"])
     arg_line = ""
     if arg.option_strings:
+        title = ", ".join(arg.option_strings)
         option_strings = str(arg.option_strings[:2][-1])
     else:
+        title = arg.dest
         option_strings = arg.dest
-    if dest == "workflow":
+    if arg.dest == "workflow":
         arg_line = convert_workflow(arg, arg_mode, option_strings)
     else:
         if choices is not None:
@@ -155,7 +156,7 @@ def convert_argument(arg):
                     %s
                 </div>
             </div>""" % (" ".join(arg_mode), " ".join(arg_mode),
-                         importance_class, importance, dest, hlp, arg_line)
+                         importance_class, importance, title, hlp, arg_line)
     return (imp, template_line)
 
 
