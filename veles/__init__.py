@@ -130,22 +130,34 @@ class VelesModule(ModuleType):
 
     @property
     def __loc__(self):
+        """Calculation of lines of code relies on "cloc" utility.
+        """
         from subprocess import Popen, PIPE
-        discovery = Popen(
-            "cd %s && echo $(find -name '*.py' -not -name 'cpplint*' -not "
-            "-path './deploy/*' -not -path './web/*' -not -path "
-            "'./veles/external/*' -not -name create-emitter-tests.py -exec "
-            "wc -l {} \; | cut -d ' ' -f 1 | tr '\n' '+' | head -c -1) | bc" %
-            self.__root__, shell=True, stdout=PIPE)
-        strnum, _ = discovery.communicate()
-        num = int(strnum)
-        discovery = Popen(
-            "cd %s && echo $(find veles/external/txzmq  -name '*.py' -exec "
-            "wc -l {} \; | cut -d ' ' -f 1 | tr '\n' '+' | head -c -1) | bc" %
-            self.__root__, shell=True, stdout=PIPE)
-        strnum, _ = discovery.communicate()
-        num += int(strnum)
-        return num
+
+        result = {}
+
+        def calc(cond):
+            cmd = ("cd %s && echo $(find %s -exec cloc --quiet --csv {} \; | "
+                   "sed -n '1p;0~3p' | tail -n +2 | cut -d ',' -f 5 | "
+                   "tr '\n' '+' | head -c -1) | bc") % (self.__root__, cond)
+            discovery = Popen(cmd, shell=True, stdout=PIPE)
+            num, _ = discovery.communicate()
+            return int(num)
+
+        result["core"] = \
+            calc("-name '*.py' -not -name 'cpplint*' -not -path './deploy/*' "
+                 "-not -path './web/*' -not -path './veles/external/*' "
+                 "-not -name create-emitter-tests.py -not -path "
+                 "'./veles/tests/*' -not -path './veles/znicz/tests/*'")
+        result["core"] += calc("veles/external/txzmq  -name '*.py'")
+        result["tests"] = calc("'./veles/tests' './veles/znicz/tests' "
+                               "-name '*.py'")
+        result["opencl"] = calc("-name '*.cl' -not -path './web/*'")
+        result["java"] = calc("'./mastodon/lib/src/main' -name '*.java'")
+        result["tests"] += calc("'./mastodon/lib/src/test' -name '*.java'")
+
+        result["all"] = sum(result.values())
+        return result
 
 
 if not isinstance(modules[__name__], VelesModule):
