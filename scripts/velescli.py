@@ -232,6 +232,17 @@ class Main(Logger):
         return None
 
     def _open_frontend(self):
+        from multiprocessing import Process, SimpleQueue
+        connection = SimpleQueue()
+        frontend = Process(target=self._open_frontend_process,
+                           args=(connection,))
+        frontend.start()
+        cmdline = connection.get()
+        frontend.join()
+        sys.argv[1:] = cmdline.split()
+        print("Running with the following command line: %s" % sys.argv)
+
+    def _open_frontend_process(self, connection):
         if not os.path.exists(os.path.join(root.common.web.root,
                                            "frontend.html")):
             self.info("frontend.html was not found, generating it...")
@@ -282,9 +293,12 @@ class Main(Logger):
             show_file("http://localhost:%d" % port)
 
         IOLoop.instance().add_callback(open_browser)
-        IOLoop.instance().start()
-        print("Running with the following command line: " + cmdline[0])
-        sys.argv = cmdline[0].split()
+        try:
+            IOLoop.instance().start()
+        except KeyboardInterrupt:
+            sys.stderr.write("KeyboardInterrupt\n")
+        finally:
+            connection.put(cmdline[0])
 
     def _parse_optimization(self, args):
         optparsed = args.optimize.split(':')
