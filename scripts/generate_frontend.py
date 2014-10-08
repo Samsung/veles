@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # encoding: utf-8
 '''
-This scripts generates an HTML page with all velescli's command line arguments,
+This scripts generates the HTML page with all velescli's command line arguments,
  allowing for fast command line composition
 
 '''
@@ -13,15 +13,20 @@ from inspect import getargspec
 import json
 import os
 import sys
-from scripts.velescli import Main
 import tornado.template as template
-from veles.config import root
 import warnings
 
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from veles.config import root
+from scripts.velescli import Main
+
+
 WEB_FOLDER = root.common.web.root
+BLACKLISTED_DIRS = {'.', 'gource', 'docs', 'web', 'deploy'}
 
 
-def main():
+def main(debug_imports=False):
     parser = Main.init_parser()
     arguments = parser._actions
     path_to_out = os.path.join(WEB_FOLDER, "frontend.html")
@@ -30,7 +35,13 @@ def main():
     root_path = root.common.veles_dir
     warnings.simplefilter("ignore")
     for path, _, files in os.walk(root_path, followlinks=True):
-        if os.path.relpath(path, root_path).startswith('docs'):
+        relpath = os.path.relpath(path, root_path)
+        skip = False
+        for bdir in BLACKLISTED_DIRS:
+            if relpath.startswith(bdir):
+                skip = True
+                break
+        if skip:
             continue
         for f in files:
             f_path = os.path.join(path, f)
@@ -38,6 +49,8 @@ def main():
             if ext == '.py':
                 sys.path.insert(0, path)
                 try:
+                    if debug_imports:
+                        print("[%s] importing %s" % (relpath, modname))
                     mod = __import__(modname)
                     for func in dir(mod):
                         if func == "run":
@@ -58,9 +71,10 @@ def main():
     opts, positional_opts, choices, defaults_opt = generate_opts(arguments)
     sout = loader.load("frontend.html").generate(
         arguments=html, workflows=list_workflows,
-        initial_states=json.dumps(defaults),
+        cmdline_states=json.dumps(defaults),
         opts=json.dumps(opts), positional_opts=json.dumps(positional_opts),
-        choices=json.dumps(choices), defaults_opt=json.dumps(defaults_opt))
+        choices=json.dumps(choices), defaults_opt=json.dumps(defaults_opt),
+        special_opts=json.dumps(Main.SPECIAL_OPTS))
     with open(path_to_out, "wb") as fout:
         fout.write(sout)
 
@@ -189,9 +203,9 @@ def convert_choices(arg, arg_mode, option_strings):
     default = arg.default
     for choice in choices:
         line_ch = ("""
-                        <li role="presentation"><a role="menuitem"tabindex="-1"
-                        href="#" onclick="select('%s', '%s')">%s</a></li>""" %
-                        (choice, option_strings, choice))
+            <li role="presentation"><a role="menuitem"tabindex="-1"
+            href="javascript:select('%s', '%s')">%s</a></li>""" % (
+            choice, option_strings, choice))
         choices_lines += line_ch
         arg_line = ("""
                     <div class="dropdown">

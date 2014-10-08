@@ -110,8 +110,6 @@ class WebServer(Logger):
              web.StaticFileHandler, {'path': root.common.web.root}),
             (r"/(.+\.html)",
              web.StaticFileHandler, {'path': root.common.web.root}),
-            ("/(veles.png)",
-             web.StaticFileHandler, {'path': root.common.web.root}),
             ("/", web.RedirectHandler, {"url": "/status.html",
                                         "permanent": True}),
             ("", web.RedirectHandler, {"url": "/status.html",

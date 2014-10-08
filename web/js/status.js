@@ -38,140 +38,140 @@ function updateUI() {
     type: "POST",
     data: JSON.stringify(msg),
     contentType: "application/json; charset=utf-8",
-      async: true,
-      success: function(result) {
-        console.log("Received response", result);
-        if (!result || !result.result) {
-          updating = false;
-          console.log("Server returned an empty response, skipped");
-          return;
-        }
-        result = result.result;
-        listed_workflows = result;
-        var workflows = Object.keys(result).map(function(key) {
-          return { "key": key, "value": result[key] };
+    async: true,
+    success: function(result) {
+      console.log("Received response", result);
+      if (!result || !result.result) {
+        updating = false;
+        console.log("Server returned an empty response, skipped");
+        return;
+      }
+      result = result.result;
+      listed_workflows = result;
+      var workflows = Object.keys(result).map(function(key) {
+        return { "key": key, "value": result[key] };
+      });
+      if (workflows.length == 0) {
+        updating = false;
+        return;
+      }
+      workflows.sort(function(a, b) {
+        return a.value.name > b.value.name;
+      });
+      if (active_workflow_id == null || !(active_workflow_id in result)) {
+        active_workflow_id = workflows[0].key;
+      }
+      var items = '';
+      workflows.forEach(function(pair) {
+        var workflow = pair.value;
+        slaves = Object.keys(workflow.slaves).map(function(key) {
+          return { "key": key, "value": workflow.slaves[key] };
         });
-        if (workflows.length == 0) {
-          updating = false;
-          return;
-        }
-        workflows.sort(function(a, b) {
-          return a.value.name > b.value.name;
+        slaves.sort(function(a, b) {
+          return a.value.host > b.value.host;
         });
-        if (active_workflow_id == null || !(active_workflow_id in result)) {
-          active_workflow_id = workflows[0].key;
+        listed_workflows[pair.key].slaves = slaves;
+        var jobs = 0;
+        for (var slave in workflow.slaves) {
+          jobs += workflow.slaves[slave].value.jobs;
         }
-        var items = '';
-        workflows.forEach(function(pair) {
-          var workflow = pair.value;
-          slaves = Object.keys(workflow.slaves).map(function(key) {
-            return { "key": key, "value": workflow.slaves[key] };
-          });
-          slaves.sort(function(a, b) {
-            return a.value.host > b.value.host;
-          });
-          listed_workflows[pair.key].slaves = slaves;
-          var jobs = 0;
-          for (var slave in workflow.slaves) {
-            jobs += workflow.slaves[slave].value.jobs;
+        if (!(pair.key in jobs_per_minute)) {
+          jobs_per_minute[pair.key] = [];
+        }
+        jobs_per_minute[pair.key].push({"time": new Date().getTime() / 60000,
+                                        "jobs": jobs});
+        if (typeof svg_cache[pair.key] === "undefined") {
+          svg_cache[pair.key] =
+            $(renderGraphviz(workflow.graph)).find("svg");
+        }
+        listed_workflows[pair.key].svg = svg_cache[pair.key];
+        var svg = listed_workflows[pair.key].svg.clone();
+        svg.attr("class", "media-object pull-left");
+        svg.attr("width", "100").attr("height", 100);
+        items += '<li class="list-group-item media list-item-media';
+        if (active_workflow_id == pair.key) {
+          items += " active";
+        }
+        items += '" id="';
+        items += pair.key;
+        items += '">\n';
+        items += svg.wrap('<div>').parent().html();
+        items += '<div class="media-body graceful-overflow">\n';
+        items += '<a class="view-plots" href="';
+        items += workflow.plots;
+        items += '" target="_blank">plots</a>';
+        items += '<span class="view-plots">&nbsp;</span>\n';
+        items += '<a class="view-plots" href=log_viewer.html?id="';
+        items += workflow.log_id;
+        items += '"target="_blank">logs</a>\n';
+        items += '<h4 class="list-group-item-heading graceful-overflow"><a href="#" ';
+        items += 'onclick="activateListItem(\'';
+        items += pair.key;
+        items += '\')">';
+        items += workflow.name;
+        items += '</a></h4>\n';
+        items += '<span class="list-group-item-text">Master: ';
+        items += '<a class="graceful-overflow" href="#"><strong>';
+        items += workflow.master;
+        items += '</strong></a><br/>\n';
+        items += '<span class="badge pull-right">';
+        var online_slaves = 0;
+        for (var slave in workflow.slaves) {
+          if (workflow.slaves[slave].value.state != 'Offline') {
+            online_slaves++;
           }
-          if (!(pair.key in jobs_per_minute)) {
-            jobs_per_minute[pair.key] = [];
+        }
+        items += online_slaves;
+        items += '</span>\n';
+        items += 'Slaves: ';
+        var jpmp = jobs_per_minute[pair.key];
+        if (jobs_per_minute[pair.key].length >= 5) {
+          var latest = jpmp.slice(-1)[0];
+          var now = latest.time;
+          var then = now;
+          var offset = 2;
+          var jobs_diff = 0;
+          while (now - then <= 10 && offset <= jpmp.length) {
+            var measure = jpmp[jpmp.length - offset];
+            then = measure.time;
+            jobs_diff = measure.jobs;
+            offset++;
           }
-          jobs_per_minute[pair.key].push({"time": new Date().getTime() / 60000,
-                                          "jobs": jobs});
-          if (typeof svg_cache[pair.key] === "undefined") {
-            svg_cache[pair.key] =
-              $(renderGraphviz(workflow.graph)).find("svg");
-          }
-          listed_workflows[pair.key].svg = svg_cache[pair.key];
-          var svg = listed_workflows[pair.key].svg.clone();
-          svg.attr("class", "media-object pull-left");
-          svg.attr("width", "100").attr("height", 100);
-          items += '<li class="list-group-item media list-item-media';
-          if (active_workflow_id == pair.key) {
-            items += " active";
-          }
-          items += '" id="';
-          items += pair.key;
-          items += '">\n';
-          items += svg.wrap('<div>').parent().html();
-          items += '<div class="media-body graceful-overflow">\n';
-          items += '<a class="view-plots" href="';
-          items += workflow.plots;
-          items += '" target="_blank">plots</a>';
-          items += '<span class="view-plots">&nbsp;</span>\n';
-          items += '<a class="view-plots" href=log_viewer.html?id="';
-          items += workflow.log_id;
-          items += '"target="_blank">logs</a>\n';
-          items += '<h4 class="list-group-item-heading graceful-overflow"><a href="#" ';
-          items += 'onclick="activateListItem(\'';
-          items += pair.key;
-          items += '\')">';
-          items += workflow.name;
-          items += '</a></h4>\n';
-          items += '<span class="list-group-item-text">Master: ';
-          items += '<a class="graceful-overflow" href="#"><strong>';
-          items += workflow.master;
-          items += '</strong></a><br/>\n';
-          items += '<span class="badge pull-right">';
-          var online_slaves = 0;
-          for (var slave in workflow.slaves) {
-            if (workflow.slaves[slave].value.state != 'Offline') {
-              online_slaves++;
-            }
-          }
-          items += online_slaves;
-          items += '</span>\n';
-          items += 'Slaves: ';
-          var jpmp = jobs_per_minute[pair.key];
-          if (jobs_per_minute[pair.key].length >= 5) {
-            var latest = jpmp.slice(-1)[0];
-            var now = latest.time;
-            var then = now;
-            var offset = 2;
-            var jobs_diff = 0;
-            while (now - then <= 10 && offset <= jpmp.length) {
-              var measure = jpmp[jpmp.length - offset];
-              then = measure.time;
-              jobs_diff = measure.jobs;
-              offset++;
-            }
-            jobs_diff = latest.jobs - jobs_diff;
-            if (now > then) {
-              items += (jobs_diff / (now - then)).toFixed(0);
-            } else {
-              items += 'N/A';
-            }
+          jobs_diff = latest.jobs - jobs_diff;
+          if (now > then) {
+            items += (jobs_diff / (now - then)).toFixed(0);
           } else {
             items += 'N/A';
           }
-          items += ' jpm<br/>\n';
-          items += 'Time running: <strong>';
-          items += workflow.time;
-          items += '</strong><br/>\n';
-          items += 'Started by: <i class="glyphicon glyphicon-user">';
-          items += '<a href="#" class="graceful-overflow"><strong>';
-          items += workflow.user;
-          items += '</strong></a></i></span>\n';
-          items += '</div>\n';
-          items += '</li>\n';
-        });
-        free_svgs = [];
-        for (var key in svg_cache) {
-          if (typeof listed_workflows[key] === "undefined") {
-            free_svgs.push(key);
-          }
+        } else {
+          items += 'N/A';
         }
-        for (var key in free_svgs) {
-          delete svg_cache[key];
+        items += ' jpm<br/>\n';
+        items += 'Time running: <strong>';
+        items += workflow.time;
+        items += '</strong><br/>\n';
+        items += 'Started by: <i class="glyphicon glyphicon-user">';
+        items += '<a href="#" class="graceful-overflow"><strong>';
+        items += workflow.user;
+        items += '</strong></a></i></span>\n';
+        items += '</div>\n';
+        items += '</li>\n';
+      });
+      free_svgs = [];
+      for (var key in svg_cache) {
+        if (typeof listed_workflows[key] === "undefined") {
+          free_svgs.push(key);
         }
-        objs = $.parseHTML(items);
-        $("#workflows-list").empty().append(objs);
-        console.log("Finished update");
-        setTimeout(activateListItem, 0, active_workflow_id);
-        updating = false;
       }
+      for (var key in free_svgs) {
+        delete svg_cache[key];
+      }
+      objs = $.parseHTML(items);
+      $("#workflows-list").empty().append(objs);
+      console.log("Finished update");
+      setTimeout(activateListItem, 0, active_workflow_id);
+      updating = false;
+    }
   });
 }
 

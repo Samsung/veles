@@ -95,6 +95,8 @@ class Main(Logger):
 
     DRY_RUN_CHOICES = ["load", "init", "exec", "no"]
 
+    SPECIAL_OPTS = ["--help", "--html-help", "--version", "--frontend"]
+
     @staticmethod
     def init_parser(sphinx=False):
         """
@@ -122,6 +124,9 @@ class Main(Logger):
                             "exit.")
         parser.add_argument("--html-help", action="store_true",
                             help="Open VELES help in your web browser.")
+        parser.add_argument("--frontend", action="store_true",
+                            help="Open VELES command line frontend in the "
+                            "default web browser and run the composed line.")
         parser.add_argument("-v", "--verbose", type=str, default="info",
                             choices=Main.LOG_LEVEL_MAP.keys(),
                             help="Set the logging verbosity level.")
@@ -206,6 +211,81 @@ class Main(Logger):
             return
         self._optimization = "no"
 
+    @property
+    def opencl_is_enabled(self):
+        return not (self.launcher.is_master or self.optimization or
+                    self._disable_opencl)
+
+    def _process_special_args(self):
+        if "--frontend" in sys.argv:
+            try:
+                self._open_frontend()
+            except KeyboardInterrupt:
+                return Main.EXIT_FAILURE
+            return self._process_special_args()
+        if "--version" in sys.argv:
+            self._print_version()
+            return Main.EXIT_SUCCESS
+        if "--html-help" in sys.argv:
+            veles.__html__()
+            return Main.EXIT_SUCCESS
+        return None
+
+    def _open_frontend(self):
+        if not os.path.exists(os.path.join(root.common.web.root,
+                                           "frontend.html")):
+            self.info("frontend.html was not found, generating it...")
+            from .generate_frontend import main
+            main()
+            gc.collect()
+
+        from random import randint
+        port = randint(1024, 65535)
+        self.info("Launching the web server on localhost:%d...", port)
+
+        from tornado.escape import json_decode
+        from tornado.ioloop import IOLoop
+        import tornado.web as web
+
+        cmdline = [""]
+
+        class CmdlineHandler(web.RequestHandler):
+            def post(self):
+                try:
+                    data = json_decode(self.request.body)
+                    cmdline[0] = data.get("cmdline")
+                    IOLoop.instance().add_callback(IOLoop.instance().stop)
+                except:
+                    self.exception("Frontend cmdline POST")
+
+        app = web.Application([
+            ("/cmdline", CmdlineHandler),
+            (r"/(js/.*)",
+             web.StaticFileHandler, {'path': root.common.web.root}),
+            (r"/(css/.*)",
+             web.StaticFileHandler, {'path': root.common.web.root}),
+            (r"/(fonts/.*)",
+             web.StaticFileHandler, {'path': root.common.web.root}),
+            (r"/(img/.*)",
+             web.StaticFileHandler, {'path': root.common.web.root}),
+            (r"/(frontend\.html)",
+             web.StaticFileHandler, {'path': root.common.web.root}),
+            ("/", web.RedirectHandler, {"url": "/frontend.html",
+                                        "permanent": True}),
+            ("", web.RedirectHandler, {"url": "/frontend.html",
+                                       "permanent": True})
+        ])
+        app.listen(port)
+
+        def open_browser():
+            from veles.portable import show_file
+            show_file("http://localhost:%d" % port)
+
+        IOLoop.instance().add_callback(open_browser)
+        IOLoop.instance().start()
+        print("Running with the following command line: " + cmdline[0])
+        sys.argv = cmdline[0].split()
+
     def _parse_optimization(self, args):
         optparsed = args.optimize.split(':')
         if len(optparsed) > 2:
@@ -220,11 +300,6 @@ class Main(Logger):
                                  optparsed[1])
         else:
             self._population_size = 0
-
-    @property
-    def opencl_is_enabled(self):
-        return not (self.launcher.is_master or self.optimization or
-                    self._disable_opencl)
 
     def _daemonize(self):
         daemon_context = daemon.DaemonContext()
@@ -513,12 +588,9 @@ class Main(Logger):
     def run(self):
         """VELES Machine Learning Platform Command Line Interface
         """
-        if "--version" in sys.argv:
-            self._print_version()
-            return Main.EXIT_SUCCESS
-        if "--html-help" in sys.argv:
-            veles.__html__()
-            return Main.EXIT_SUCCESS
+        ret = self._process_special_args()
+        if ret is not None:
+            return ret
         parser = Main.init_parser()
         args = parser.parse_args()
         fname_config = args.config

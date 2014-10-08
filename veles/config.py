@@ -10,6 +10,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 import os
 import pprint
 
+import veles
 
 # : Global config
 root = None
@@ -72,7 +73,7 @@ def get(value, default_value=None):
     return value
 
 
-__path__ = os.path.dirname(os.path.dirname(__file__))
+__path__ = veles.__root__
 
 root.common.update({
     "graphics_multicast_address": "239.192.1.1",

@@ -17,6 +17,8 @@ from sys import version_info, modules
 from types import ModuleType
 from warnings import warn
 
+__root__ = path.dirname(path.dirname(__file__))
+
 from veles.logger import Logger
 from veles.units import Unit, IUnit
 from veles.workflow import Workflow
@@ -60,8 +62,6 @@ if "sphinx" in modules:
                             "\n      * ".join(__authors__))
 else:
     __doc__ = __logo__.replace(" ", "_", 2)  # nopep8
-
-__root__ = path.dirname(path.dirname(__file__))
 
 if version_info.major == 3 and version_info.minor == 4 and \
    version_info.micro < 1:
