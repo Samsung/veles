@@ -1,12 +1,12 @@
 [submodule "Znicz"]
   path = veles/znicz
   branch = master
-  url = ssh://alserver.rnd.samsung.ru:29418/Znicz.git
+  url = ssh://alserver.rnd.samsung.ru:29418/Znicz
   ignore = dirty
 [submodule "libSoundFeatureExtraction"]
   path = libSoundFeatureExtraction
   branch = master
-  url = ssh://alserver.rnd.samsung.ru:29418/SoundFeatureExtraction.git
+  url = ssh://alserver.rnd.samsung.ru:29418/SoundFeatureExtraction
   ignore = dirty
 [submodule "libVeles/libarchive"]
   path = libVeles/libarchive

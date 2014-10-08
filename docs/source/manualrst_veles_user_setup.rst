@@ -11,6 +11,11 @@ Via Git
 ::
 
     git clone http://alserver.rnd.samsung.ru/gerrit/Veles
+    cd Veles
+    ./init
+
+Execution of ``init`` script is neccessary, because Veles submodules require
+special processing.
     
 Via the redistributable package
 :::::::::::::::::::::::::::::::

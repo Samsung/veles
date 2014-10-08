@@ -12,8 +12,12 @@ Clone
 ::
 
     git clone ssh://<user name>@alserver.rnd.samsung.ru:29418/Veles
+    cd Veles
+    ./init
     
 If you don't have a user name, please contact the administator: v.markovtsev@samsung.com.
+Execution of ``init`` script is neccessary, because Veles submodules require
+special processing.
 
 Repositories
 ::::::::::::
