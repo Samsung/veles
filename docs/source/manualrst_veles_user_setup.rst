@@ -15,7 +15,8 @@ Via Git
     ./init
 
 Execution of ``init`` script is neccessary, because Veles submodules require
-special processing.
+special processing. Substitute ``alserver.rnd.samsung.ru/gerrit`` with your
+local mirror, if neccessary.
     
 Via the redistributable package
 :::::::::::::::::::::::::::::::
