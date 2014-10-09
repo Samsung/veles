@@ -1,6 +1,6 @@
-=================
-Setting up OpenCL
-=================
+============
+OpenCL setup
+============
 
 In order to run Veles in OpenCL mode, there must be an OpenCL driver properly
 installed on your system.
@@ -8,12 +8,12 @@ installed on your system.
 Nvidia OpenCL Driver installation
 :::::::::::::::::::::::::::::::::
 
-Change to tty1 terminal (CTRL+ALT+F1) and stop X server (this will terminate all your running applications!):::
+Change to tty1 terminal (CTRL+ALT+F1) and stop X server (this will terminate all your running applications!)::
 
     sudo service lightdm stop
 
 Copy the installation .run file from /data/veles/packages/binary and execute it
-or use the following shell script:::
+or use the following shell script::
 
     #!/bin/bash -e
     
@@ -35,7 +35,7 @@ answers "yes" on all questions. "--no-opengl-files" is strictly necessary
 because by default Nvidia's installer writes OpenGL libs which conflict with integrated
 video OpenGL libs and Unity fails to start.
 
-Start the X server:::
+Start the X server::
 
    sudo service lightdm start
 
@@ -49,16 +49,16 @@ Nvidia drivers troubleshooting
 nouveau
 ^^^^^^^
 
-In case of drivers problem check that there is no conflicts with `nouveau` driver:::
+In case of drivers problem check that there is no conflicts with `nouveau` driver::
 
    sudo modprobe nvidia
 
 If an error appears , e.g. "modprobe: ERROR: could not insert 'nvidia': No such device"
-check `nouveau` driver presence:::
+check `nouveau` driver presence::
 
    lsmod | grep nouveau
 
-If nouveau is found, add it to the black list:::
+If nouveau is found, add it to the black list::
 
    echo "blacklist nouveau" | sudo tee -a /etc/modprobe.d/blacklist-framebuffer.conf
 
@@ -68,6 +68,6 @@ Then reinstall Nvidia drivers package.
 driver unloading
 ^^^^^^^^^^^^^^^^
 
-Looped ``nvidia-smi`` prevents from driver unloading:::
+Looped ``nvidia-smi`` prevents from driver unloading::
 
    nohup nvidia-smi -l

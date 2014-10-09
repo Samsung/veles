@@ -192,7 +192,7 @@ class Logger(object):
         Parameters:
             name: the name of the event, for example, "Work".
             etype: the type of the event, can be either "begin", "end" or
-                   "single".
+            "single".
             info: any extra event attributes.
         """
         if etype not in ("begin", "end", "single"):

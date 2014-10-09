@@ -1,5 +1,5 @@
-Developer's setup
-=================
+Developer's setup (level 2 and 3)
+=================================
 
 The following procedure works only if your OS is Ubuntu and you have local
 administrator's rights (that is, ``sudo``).
@@ -40,18 +40,18 @@ Setting up a local mirror
 
 This step is neede only if smaug.rnd.samsung.ru is inaccessible. Suppose that
 you received the archive with the repository named, e.g., "veles-repo.tar.xz".
-At first, make sure that you have ``reprepro`` installed. Execute the following:::
+At first, make sure that you have ``reprepro`` installed. Execute the following::
 
     mkdir veles-repo && cd veles-repo && tar -xf ../veles-repo.tar.xz
  
 Then you need to setp a new GnuPG key which is used to sign all packages,
 Please refer to `Debian wiki <https://wiki.debian.org/SettingUpSignedAptRepositoryWithReprepro>`_.
-Finally, add the packages:::
+Finally, add the packages::
 
     sudo reprepro -Vb . includedeb trusty deb/*
     
 Depending on which web server you are running, you will have to add the corresponding
-proxy rule. Here is the nginx's rule on Smaug:::
+proxy rule. Here is the nginx's rule on Smaug::
 
     location ~ "^/apt/(.*)$" {
         alias /data/veles/packages/binary/$1;
@@ -63,7 +63,7 @@ Matplotlib repository
 ^^^^^^^^^^^^^^^^^^^^^
 
 If your matplotlib's version is older than 1.4 (this is likely to be on Ubuntu
-14.04), you should add this private Matplotlib ppa: ``ppa:takluyver/matplotlib-daily``:::
+14.04), you should add this private Matplotlib ppa: ``ppa:takluyver/matplotlib-daily``::
 
     sudo add-apt-repository ppa:takluyver/matplotlib-daily
 
@@ -72,7 +72,7 @@ If your matplotlib's version is older than 1.4 (this is likely to be on Ubuntu
 Upgrading existing packages
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Ensure that your current packages are up to date:::
+Ensure that your current packages are up to date::
 
     sudo apt-get update
     sudo apt-get upgrade
@@ -82,7 +82,7 @@ Packages installation
 
 .. include:: manualrst_veles_developer_setup_packages.rst
 
-Check that the patched twisted and pyzmq are installed:::
+Check that the patched twisted and pyzmq are installed::
 
    python3
    >>> import twisted.web.client
@@ -102,29 +102,37 @@ If not (can be with Ubuntu 14.04), double check that you successfully passed `Ve
 Install required pip packages
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Invoke pip install on requirements.txt:::
+Invoke pip install on requirements.txt::
 
    sudo pip3 install -r requirements.txt
    
 Looks like your Veles is ready to run! The last steps are :doc:`manualrst_veles_ocl`
-and :doc:`manualrst_veles_eclipse`. Optionally, you can install documentation build support.
+and :doc:`manualrst_veles_eclipse`.
+
+Importing project
+:::::::::::::::::
+
+Open Eclipse and select **Main Menu -> File -> Import...**. Click
+**General/Existing Projects into Workspace**. Click "Browse" to the right
+of root directory and specify the directory with Veles. Click "Finish".
 
 Installing Sphinx (generator of this document)
 ::::::::::::::::::::::::::::::::::::::::::::::
 
-Make sure that "python2" version of Sphinx is NOT installed:::
+Optionally, you can install documentation build support.
+Make sure that "python2" version of Sphinx is NOT installed::
 
-    sudo apt-get purge sphinx*
+    sudo apt-get remove python-sphinx
 
-Then install "python3" Sphinx-doc:::
+Then install "python3" Sphinx::
 
-    sudo apt-get install sphinx3-doc
+    sudo apt-get install python3-sphinx3
 
-and ensure all Sphinx plugins are installed:::
+and ensure all Sphinx plugins are installed::
 
     sudo pip3 install -r docs/requirements.txt
 
-Go to the `docs` folder and try to generate the documentation:::
+Go to the `docs` folder and try to generate the documentation::
 
    ./generate_docs.py
 
@@ -134,7 +142,7 @@ Periodical system update
 ::::::::::::::::::::::::
 
 In case of new packages and modules are released you can perform the update with
-the following commands:::
+the following commands::
 
    sudo apt-get update && sudo apt-get upgrade
    sudo pip3 install -r requirements.txt --upgrade
