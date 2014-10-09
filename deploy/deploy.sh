@@ -34,7 +34,34 @@ do_pre() {
   echo "$path/Veles.tar.$COMPRESSION is ready"
 }
 
+setup_distribution() {
+  if [ ! -e /etc/lsb-release ]; then
+    echo "/etc/lsb-release was not found => unable to determine your Linux distribution" 1>&2
+    return
+  fi
+  . /etc/lsb-release
+  case "$DISTRIB_ID" in
+  "Ubuntu"):
+      major=$(echo $DISTRIB_RELEASE | cut -d . -f 1)
+      if [ $major -lt 14 ]; then
+        echo "Ubuntu older than 14.04 is not supported" 1>&2
+        exit 1
+      fi
+      packages=$(cat ../ubuntu-apt-get-install-me.txt | tail -n +7 | sed -r -e 's/^\s+//g' -e 's/\\//g' | tr '\n' ' ')
+      sudo apt-get install -y $packages
+      ;;
+  "CentOS"):
+      echo "CentOS"
+      ;;
+  "Fedora"):
+      echo "Fedora"
+      ;;
+  *) echo "Did not recognize your distribution \"$DISTRIB_ID\"" 1>&2 ;;
+  esac
+}
+
 do_post() {
+  setup_distribution
   cd $path
   . ./init-pyenv
   versions=$(pyenv versions | grep $PYVER || true)
