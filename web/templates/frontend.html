@@ -18,6 +18,7 @@
     <![endif]-->
     </head>
     <body>
+        <div id="whiteout"></div>
         <div id="command-line-container" class="input-group">
             <span class="input-group-btn">
             <button type="button" class="btn btn-success" onclick="run()">RUN</button>
@@ -25,7 +26,7 @@
             <input type="text" class="form-control standalone master slave" id="command-line">
         </div>
         <div class="alert alert-danger" id="error-message" role="alert">
-          <strong>Warning!</strong> Better check yourself, you're not looking too good.
+            <strong>Warning!</strong> Better check yourself, you're not looking too good.
         </div>
         <div id="arguments">
             <div class="panel panel-primary argument master slave standalone">
@@ -70,6 +71,6 @@
           var special_opts = {% raw special_opts %};
         </script>
 
-        <script src="js/frontend.js"></script>
+        <script src="js/frontend.min.js"></script>
     </body>
 </html>

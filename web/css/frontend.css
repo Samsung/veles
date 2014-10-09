@@ -8,8 +8,7 @@ p {
   margin-bottom: 0;
 }
 #arguments {
-  margin-left: auto;
-  margin-right: auto;
+  margin: calc(2em + 34px) auto 0 auto;
   display: block;
   width: 50%;
   height: 100%;
@@ -49,14 +48,33 @@ p {
   background: linear-gradient(to left, rgba(77, 144, 203, 1) 0%, rgba(14, 94, 165, 1) 30%, rgba(31, 107, 174, 1) 100%);
   width: 100%;
 }
+#whiteout {
+  position: fixed;
+  z-index: 1;
+  margin-top: -2em;
+  width: calc(100% - 4em);
+  height: calc(4em + 34px + 36px);
+  background: linear-gradient(to bottom, rgba(255,255,255,1) 0%,
+      rgba(255,255,255,1) calc(2em + 34px),
+      rgba(255,255,255,0.9) calc(3em + 34px),
+      rgba(255,255,255,0) 100%);
+}
 #command-line-container {
+  position: fixed;
+  z-index: 2;
   padding: 0em 2em 2em 2em;
-  margin-right: 0 !Important;
+  width: calc(100% - 4em);
 }
 #command-line {
   margin: 0;
 }
 #error-message {
-  display: none;
-  margin: 0 2em 2em 2em;
+  position: fixed;
+  z-index: 2;
+  display: block;
+  opacity: 0;
+  margin: calc(2em + 34px) 2em auto;
+  width: calc(100% - 8em);
+  box-shadow: 0 0 10px #ebccd1;
+  transition: opacity 0.5s linear;
 }

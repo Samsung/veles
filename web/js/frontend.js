@@ -218,7 +218,7 @@ function change_cl_by_input(cl, prev_value, value, id) {
 }
 
 function set_error_test(text) {
-  $("#error-message").text(test);
+  $("#error-message").text(text);
 }
 
 // This function modified command line for each change of value of widgets: input, switch, typeahead.
@@ -313,6 +313,8 @@ $(function() {
       });
       cmdline_states = from_args_to_states(args, cmdline_states);
       var diff = get_diff(prev_cmdline_states, cmdline_states);
+      invalid = false;
+      mode = 'Standalone';
       for (var option in diff) {
         var status_arg = diff[option];
         var arg = cmdline_states[option];
@@ -320,8 +322,6 @@ $(function() {
         if (status_arg == "unchanged" || status_arg == "deleted") {
           continue;
         }
-        invalid = false
-        mode = 'Standalone'
         if (status_arg == "created" || status_arg == "updated") {
           switch (option) {
           case "--master-address":
@@ -352,6 +352,7 @@ $(function() {
               !(elem_opt.hasClass("dropdown-menu")) && $.inArray(option, special_opts) == -1) {
             set_error_test("Wrong option " + option);
             invalid = true;
+            delete cmdline_states[option];
           }
           for (var key in opts.alias) {
             if (command_line.match(build_switch_regexp("-" + key)) &&
@@ -361,10 +362,10 @@ $(function() {
             }
           }
         }
-
-        activate_mode(mode);
-        $("#error-message").css("display", invalid? "block" : "none");
       }
+      activate_mode(mode);
+      console.log(invalid, prev_cmdline_states, cmdline_states);
+      $("#error-message").css("opacity", invalid? "1" : "0");
     });
 });
 

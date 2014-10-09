@@ -173,17 +173,19 @@ class Main(Logger):
                             "initialization, excluding large numpy arrays if "
                             "\"pretty\" is chosen.",
                             choices=['no', 'pretty', 'all'])
-        parser.add_argument('workflow',
-                            help='Path to the Python script with workflow.')
-        parser.add_argument('config', default="-",
-                            help='Path to the configuration file\
-                            (write "-" to search in as <WORKFLOW>_config.py).')
-        parser.add_argument('config_list',
-                            help="Configuration overrides separated by a "
-                            "whitespace, for example: \n"
-                            "root.global_alpha=0.006\n"
-                            "root.snapshot_prefix='test_pr'",
-                            nargs='*', metavar="key=value")
+        parser.add_argument(
+            'workflow', help='Path to Python script with the VELES model.'
+            ).pretty_name = "workflow file"
+        parser.add_argument(
+            'config', default="-", help="Path to the configuration file"
+            "(pass \"-\" to set as <workflow>_config.py)."
+            ).pretty_name = "configuration file"
+        arg = parser.add_argument(
+            'config_list', help="Configuration overrides separated by a "
+            "whitespace, for example: \nroot.global_alpha=0.006\n"
+            "root.snapshot_prefix='test_pr'", nargs='*', metavar="key=value")
+        arg.pretty_name = "override configuration"
+        arg.important = True
         parser.add_argument("-b", "--background", default=False,
                             help="Run in background as a daemon.",
                             action='store_true')
