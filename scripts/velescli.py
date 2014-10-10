@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # encoding: utf-8
+# PYTHON_ARGCOMPLETE_OK
 '''
 This script starts the Veles platform and executes the user's model (workflow).
 
