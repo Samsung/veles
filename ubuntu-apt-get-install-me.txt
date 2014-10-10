@@ -1,1 +1,1 @@
-docs/source/manualrst_veles_developer_setup_packages.rst
+docs/source/manualrst_veles_developer_ubuntu_packages.rst

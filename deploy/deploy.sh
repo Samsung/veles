@@ -47,8 +47,18 @@ setup_distribution() {
         echo "Ubuntu older than 14.04 is not supported" 1>&2
         exit 1
       fi
-      packages=$(cat ../ubuntu-apt-get-install-me.txt | tail -n +7 | sed -r -e 's/^\s+//g' -e 's/\\//g' | tr '\n' ' ')
-      sudo apt-get install -y $packages
+      packages=$(cat "$root/ubuntu-apt-get-install-me.txt" | tail -n +7 | sed -r -e 's/^\s+//g' -e 's/\\//g' | tr '\n' ' ')
+      need_install=""
+      for package in $packages; do
+        if ! dpkg -l | grep "ii  $package " -q; then
+          echo "$package is not installed"
+          need_install="yes"
+        fi
+      done
+      if [ ! -z $need_install ]; then
+        echo "One or more packages are not installed, running sudo apt-get install..."
+        sudo apt-get install -y $packages
+      fi
       ;;
   "CentOS"):
       echo "CentOS"
@@ -62,6 +72,7 @@ setup_distribution() {
 
 do_post() {
   setup_distribution
+  exit 1
   cd $path
   . ./init-pyenv
   versions=$(pyenv versions | grep $PYVER || true)

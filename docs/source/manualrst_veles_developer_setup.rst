@@ -80,7 +80,7 @@ Ensure that your current packages are up to date::
 Packages installation
 :::::::::::::::::::::
 
-.. include:: manualrst_veles_developer_setup_packages.rst
+.. include:: manualrst_veles_developer_ubuntu_packages.rst
 
 Check that the patched twisted and pyzmq are installed::
 
