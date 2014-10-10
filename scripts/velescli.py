@@ -67,6 +67,10 @@ def create_args_parser_sphinx():
 
 
 class Main(Logger):
+    """
+    Start point of any VELES engine executions.
+    """
+
     EXIT_SUCCESS = 0
     EXIT_FAILURE = 1
     LOGO_PLAIN = veles.__logo__
@@ -128,7 +132,7 @@ class Main(Logger):
         parser.add_argument("--frontend", action="store_true",
                             help="Open VELES command line frontend in the "
                             "default web browser and run the composed line.")
-        parser.add_argument("-v", "--verbose", type=str, default="info",
+        parser.add_argument("-v", "--verbosity", type=str, default="info",
                             choices=Main.LOG_LEVEL_MAP.keys(),
                             help="Set the logging verbosity level.")
         parser.add_argument("--debug", type=str, default="",
@@ -603,11 +607,12 @@ class Main(Logger):
         self._main(**kwargs_main)
 
     def run(self):
-        """VELES Machine Learning Platform Command Line Interface
+        """Entry point method.
         """
         ret = self._process_special_args()
         if ret is not None:
             return ret
+
         parser = Main.init_parser()
         args = parser.parse_args()
         fname_config = args.config
@@ -635,6 +640,7 @@ class Main(Logger):
         self._apply_config(fname_config, args.config_list)
         if args.dump_config:
             root.print_config()
+
         self._run_core(wm, args.background)
         self.info("End of job")
         return Main.EXIT_SUCCESS

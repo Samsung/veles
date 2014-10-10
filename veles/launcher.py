@@ -369,6 +369,8 @@ class Launcher(logger.Logger):
         reactor.callFromThread(self.stop)
 
     def run(self):
+        """starts Twisted reactor, Workflow.run() and periodic status updates.
+        """
         self._pre_run()
         reactor.callLater(0, self.info, "Reactor is running")
         self.event("work", "begin", height=0.1)
@@ -383,6 +385,8 @@ class Launcher(logger.Logger):
                 self._running = False
 
     def stop(self):
+        """Stops Twisted reactor and Workflow execution.
+        """
         with self._lock:
             if not self._initialized:
                 return

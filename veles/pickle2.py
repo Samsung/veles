@@ -12,6 +12,7 @@ from pickle import PicklingError, UnpicklingError
 import warnings
 
 
+# : The best protocol value for pickle().
 best_protocol = 4 if sys.version_info > (3, 4) else sys.version_info[0]
 
 

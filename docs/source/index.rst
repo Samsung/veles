@@ -12,11 +12,13 @@ Veles Machine Learning Platform
     manualrst_veles_eclipse
     manualrst_veles_ocl
     manualrst_veles_distributed_setup
-    manualrst_veles_basics
-    manualrst_veles_examples
-    manualrst_veles_launcher
-    manualrst_veles_units
     manualrst_veles_mongo
+    
+    manualrst_veles_examples
+    manualrst_veles_basics
+    manualrst_veles_snapshotting
+    manualrst_veles_genetic_optimization
+    manualrst_veles_advanced    
     
     modules
 

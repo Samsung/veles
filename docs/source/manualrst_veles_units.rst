@@ -1,5 +1,5 @@
-Veles Units
-===========
+Units
+:::::
 
 Feed-forward units
 ******************
