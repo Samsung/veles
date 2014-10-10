@@ -191,8 +191,8 @@ class Launcher(logger.Logger):
         parser.add_argument("-g", "--log-mongo", type=str, nargs='?',
                             const="",
                             default=kwargs.get("log_mongo", "no"),
-                            help="Mongo ZMQ endpoint where logs will be "
-                                 "copied.")
+                            help="MongoDB server address where logs will be "
+                                 "sent.")
         parser.add_argument("-i", "--log-id", type=str,
                             default=kwargs.get("log_id", ""),
                             help="Log identifier (used my Mongo logger).")
