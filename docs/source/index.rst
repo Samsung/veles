@@ -16,6 +16,7 @@ Veles Machine Learning Platform
     manualrst_veles_examples
     manualrst_veles_launcher
     manualrst_veles_units
+    manualrst_veles_mongo
     
     modules
 

@@ -146,3 +146,5 @@ the following commands::
 
    sudo apt-get update && sudo apt-get upgrade
    sudo pip3 install -r requirements.txt --upgrade
+   
+.. include:: manualrst_veles_cmdline_autocomplete.rst

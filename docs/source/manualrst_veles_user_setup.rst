@@ -66,3 +66,5 @@ This allows running ``python3 -m veles`` from any directory other than Veles
 root.
 
 Proceed to :doc:`manualrst_veles_ocl`.
+
+.. include:: manualrst_veles_cmdline_autocomplete.rst
