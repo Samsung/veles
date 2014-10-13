@@ -114,8 +114,8 @@ do_post() {
    pip3 install git+https://github.com/vmarkovtsev/twisted.git
 
    # install patched matplotlib v1.4.0 or above
-   mpl_ver=$(pip3 freeze | grep matplotlib || true | cut -d "=" -f 3)
-   if [ "$mpl_ver" < "1.4.0" ]; then
+   mpl_ver=$(pip3 freeze | grep matplotlib | cut -d "=" -f 3)
+   if [ "$mpl_ver" -lt "1.4.0" ]; then
      git clone https://github.com/matplotlib/matplotlib.git -b v1.4.0
      cd matplotlib
      patch setupext.py < ../matplotlib.patch
