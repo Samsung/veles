@@ -1,0 +1,11 @@
+--- setupext.py.orig	2014-10-08 20:21:38.001792097 +0400
++++ setupext.py	2014-10-08 20:21:49.149791853 +0400
+@@ -942,7 +942,7 @@
+ 
+         return self._check_for_pkg_config(
+             'freetype2', 'ft2build.h',
+-            min_version='2.4', version=version)
++            min_version='2.3', version=version)
+ 
+     def version_from_header(self):
+         version = 'Failed to identify version.'

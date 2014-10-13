@@ -35,14 +35,13 @@ do_pre() {
 }
 
 setup_distribution() {
-  if [ ! -e /etc/lsb-release ]; then
-    echo "/etc/lsb-release was not found => unable to determine your Linux distribution" 1>&2
-    return
-  fi
-  . /etc/lsb-release
-  case "$DISTRIB_ID" in
+  which lsb_release > /dev/null || \
+    { echo "lsb_release was not found => unable to determine your Linux distribution" 1>&2 ; exit 1; }
+
+  dist_id=$(lsb_release -a | grep "Distributor ID" | cut -d " " -f 3)
+  case "$dist_id" in
   "Ubuntu"):
-      major=$(echo $DISTRIB_RELEASE | cut -d . -f 1)
+      major=$(lsb_release -r | cut -d : -f 2 | tr -d '\t' | cut -d . -f 1)
       if [ $major -lt 14 ]; then
         echo "Ubuntu older than 14.04 is not supported" 1>&2
         exit 1
@@ -66,7 +65,7 @@ setup_distribution() {
   "Fedora"):
       echo "Fedora"
       ;;
-  *) echo "Did not recognize your distribution \"$DISTRIB_ID\"" 1>&2 ;;
+  *) echo "Did not recognize your distribution \"$dist_id\"" 1>&2 ;;
   esac
 }
 
@@ -83,8 +82,9 @@ do_post() {
 
   vroot=$path/pyenv/versions/$PYVER
   if [ ! -e $vroot/lib/libsodium.so ]; then
-    git clone https://github.com/jedisct1/libsodium
+    git clone https://github.com/jedisct1/libsodium -b 1.0.0
     cd libsodium && mkdir build
+    patch configure.ac < ../libsodium.patch
     ./autogen.sh && cd build
     ../configure --prefix=$vroot --disable-static
     make -j$cpus && make install
@@ -93,7 +93,7 @@ do_post() {
 
   if [ ! -e $vroot/lib/libpgm.so ]; then
     svn checkout http://openpgm.googlecode.com/svn/trunk/ openpgm
-    cd openpgm/openpgm/pgm && mkdir build
+    cd openpgm/openpgm/pgm && mkdir build && mkdir m4
     patch if.c < ../../../openpgm.patch
     autoreconf -i -f && cd build
     ../configure --prefix=$vroot --disable-static
@@ -112,6 +112,17 @@ do_post() {
 
    pip3 install cython
    pip3 install git+https://github.com/vmarkovtsev/twisted.git
+
+   # install patched matplotlib v1.4.0 or above
+   mpl_ver=$(pip3 freeze | grep matplotlib || true | cut -d "=" -f 3)
+   if [ "$mpl_ver" < "1.4.0" ]; then
+     git clone https://github.com/matplotlib/matplotlib.git -b v1.4.0
+     cd matplotlib
+     patch setupext.py < ../matplotlib.patch
+     cd ../
+     pip3 install -e ./matplotlib
+   fi
+
    PKG_CONFIG_PATH=$vroot/lib/pkgconfig pip3 install -r $root/requirements.txt
 }
 
