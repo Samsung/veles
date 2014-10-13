@@ -628,7 +628,7 @@ class Main(Logger):
         self._parse_optimization(args)
 
         self._print_logo(args)
-        Logger.setup(level=Main.LOG_LEVEL_MAP[args.verbose])
+        Logger.setup(level=Main.LOG_LEVEL_MAP[args.verbosity])
         for name in filter(str.strip, args.debug.split(',')):
             logging.getLogger(name).setLevel(logging.DEBUG)
         self._seed_random(args.random_seed)
