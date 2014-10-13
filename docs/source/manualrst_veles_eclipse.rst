@@ -120,3 +120,11 @@ Other
 
 Go to **Main Menu -> Window -> Preferences -> PyDev -> Editor -> Overview Ruler Minimap**
 and check "Show minimap".
+
+ReST
+::::
+
+Finally, in order to easily write documentation, install Eclipse ReST Editor plugin.
+Go to **Main Menu -> Help -> Eclipse Marketplace**. In "Find:" line, type in "rest editor".
+
+After installation, \*.rst files will be opened in special editor with (kind of) autocompletion.
