@@ -8,3 +8,10 @@ and the workflow. Besides, it starts :class:`GraphicsServer <veles.graphics_serv
 (empty Matplotlib backend) was specified in the command line and :class:`GraphicsClient <veles.graphics_client.GraphicsClient>`,
 unless ``--no-graphics-client`` was specified. See :doc:`manualrst_veles_graphics` for more information about
 how plotting subsystem works.
+
+Your workflow instance's workflow property always points to :class:`Launcher` object,
+even in :meth:`__init__()` (after :meth:`super()` call).
+
+Launcher defines three modes of execution: standalone (default), master and slave.
+Each mode can be tested with corresponding properties: :meth:`is_standalone`,
+:meth:`is_master` and :meth:`is_slave`, which are mutually exclusive.

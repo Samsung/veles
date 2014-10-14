@@ -49,5 +49,6 @@ Here is the description of what happens after you execute velescli.py:
        passing in the created OpenCL device. If ``--dry-run`` was set to "exec", returns.
        Finally, it calls :meth:`launcher's run() <veles.launcher.Launcher.run>`.
 
+.. include:: manualrst_veles_launcher.rst
 .. include:: manualrst_veles_cmdline_system.rst
 .. include:: manualrst_veles_pickles.rst
