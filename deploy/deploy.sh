@@ -78,7 +78,7 @@ do_post() {
   if [ -z "$versions" ]; then
     pyenv install $PYVER
   fi
-  pyenv local $PYVER
+  pyenv global $PYVER
 
   vroot=$path/pyenv/versions/$PYVER
   if [ ! -e $vroot/lib/libsodium.so ]; then
