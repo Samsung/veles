@@ -19,7 +19,7 @@ if __name__ == "__main__":
     sys.path.append(docs_path)
 
     subprocess.call(["sphinx-apidoc", "-e", "-f", "-H",
-                    "Veles Machine Learning Platform", "-o", docs_source_path,
+                    "Source Code", "-o", docs_source_path,
                     project_path, os.path.join(project_path, "veles/external"),
                     os.path.join(project_path, "veles/znicz/external"),
                     os.path.join(project_path, "veles/tests"),
