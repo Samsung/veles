@@ -1,6 +1,9 @@
 Units
 :::::
 
+*Unit* is a core concept of VELES. Basically, it is class inherited from :class:`Unit <veles.units.Unit>`
+and satisfying :class:`IUnit <veles.units.IUnit>` interface. 
+
 Service units
 *************
 
