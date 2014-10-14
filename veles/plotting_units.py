@@ -14,9 +14,10 @@ from zope.interface import implementer
 
 import veles.error as error
 import veles.formats as formats
-from veles.mutable import Bool
-from veles.plotter import Plotter, IPlotter
-from veles.distributable import IDistributable
+from .compat import from_none
+from .distributable import IDistributable
+from .mutable import Bool
+from .plotter import Plotter, IPlotter
 
 
 @implementer(IPlotter)
@@ -135,8 +136,8 @@ class AccumulatingPlotter(Plotter):
             try:
                 value = float(self.input)
             except TypeError:
-                raise TypeError("input has a wrong type %s - must be "
-                                "float" % self.input.__class__) from None
+                raise from_none(TypeError("input has a wrong type %s - must be"
+                                          " float" % self.input.__class__))
         elif isinstance(self.input_field, int):
             if self.input_field < 0 or self.input_field >= len(self.input):
                 return

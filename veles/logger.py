@@ -12,6 +12,7 @@ import logging.handlers
 import os
 from pymongo import MongoClient
 import re
+from six import PY3
 import sys
 import time
 
@@ -84,9 +85,13 @@ class Logger(object):
         Logger.SET_UP = True
 
         # Ensure UTF-8 on stdout and stderr; in some crazy environments,
-        # they use 'ascii' encoding by default.
-        sys.stdout, sys.stderr = (codecs.getwriter("utf-8")(s.buffer)
-                                  for s in (sys.stdout, sys.stderr))
+        # they use 'ascii' encoding by default
+        if PY3:
+            sys.stdout, sys.stderr = (codecs.getwriter("utf-8")(s.buffer)
+                                      for s in (sys.stdout, sys.stderr))
+        else:
+            sys.stdout, sys.stderr = (codecs.getwriter("utf-8")(s)
+                                      for s in (sys.stdout, sys.stderr))
         sys.stdout.encoding = sys.stderr.encoding = "utf-8"
         # Set basic log level
         logging.basicConfig(level=level, stream=sys.stdout)

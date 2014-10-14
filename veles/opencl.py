@@ -17,13 +17,14 @@ import time
 import traceback
 import opencl4py as cl
 
-from veles.cmdline import CommandLineArgumentsRegistry
-from veles.config import root, get
-from veles.distributable import Pickleable
+from .cmdline import CommandLineArgumentsRegistry
+from .compat import from_none
+from .config import root, get
+from .distributable import Pickleable
+from .units import TrivialUnit
 import veles.formats as formats
 import veles.opencl_types as opencl_types
 import veles.prng as rnd
-from veles.units import TrivialUnit
 import veles.external.prettytable as prettytable
 
 
@@ -233,8 +234,9 @@ class Device(Pickleable):
             try:
                 platform = platforms.platforms[int(platfnum)]
             except IndexError:
-                raise DeviceNotFoundError("Device %s was not found." %
-                                          args.device) from None
+                raise from_none(
+                    DeviceNotFoundError("Device %s was not found." %
+                                        args.device))
             context = platform.create_context(
                 [platform.devices[int(devnum)]
                  for devnum in devnums.split(',')])

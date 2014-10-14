@@ -677,14 +677,14 @@ class Workflow(Unit):
                 table.add_row(i, int(stats[i - 1][1] * 100 / time_all),
                               datetime.timedelta(seconds=stats[i - 1][1]),
                               stats[i - 1][0])
-            table.add_row("Σ", int(top_time * 100 / time_all),
+            table.add_row(u"Σ", int(top_time * 100 / time_all),
                           datetime.timedelta(seconds=top_time), "Top 5")
-            self.info("Unit run time statistics top:\n%s", table)
-            table = PrettyTable("units", "real", "η,%")
+            self.info(u"Unit run time statistics top:\n%s", table)
+            table = PrettyTable("units", "real", u"η,%")
             table.add_row(datetime.timedelta(seconds=time_all),
                           datetime.timedelta(seconds=self._run_time_),
                           int(time_all * 100 / (self._run_time_ or 1)))
-            self.info("Total run time:\n%s", table)
+            self.info(u"Total run time:\n%s", table)
             table = PrettyTable("method", "%", "time")
             table.align["method"] = "l"
             time_all = 0
@@ -695,10 +695,10 @@ class Workflow(Unit):
                 table.add_row(k, int(v * 100 / self._run_time_),
                               datetime.timedelta(seconds=v))
             if self.is_slave:
-                table.add_row("Σ", int(time_all * 100 / self._run_time_),
+                table.add_row(u"Σ", int(time_all * 100 / self._run_time_),
                               datetime.timedelta(seconds=time_all))
             if time_all > 0:
-                self.info("Workflow methods run time:\n%s", table)
+                self.info(u"Workflow methods run time:\n%s", table)
 
     def print_history(self):
         table = PrettyTable("operation", "time", "slave")

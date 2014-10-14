@@ -5,7 +5,11 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
 
 
-from time import perf_counter
+from six import PY3
+if PY3:
+    from time import perf_counter
+else:
+    from time import time as perf_counter
 
 
 def timeit(function, *args, **kwargs):

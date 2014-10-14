@@ -26,7 +26,9 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 import veles
 
-__doc__ += "       " + "\n       ".join(veles.__logo__.split('\n')) + u"\u200B\n"  # nopep8
+__doc__ += (" " * 7 +  # pylint: disable=W0622
+            ("\n" + " " * 7).join(veles.__logo__.split('\n')) +
+            u"\u200B\n")
 
 try:
     import argcomplete
@@ -41,6 +43,7 @@ import logging
 import numpy
 import resource
 import runpy
+from six import print_
 
 from veles.cmdline import CommandLineArgumentsRegistry
 from veles.config import root
@@ -393,7 +396,7 @@ class Main(Logger):
                     numpy.frombuffer(binvle, dtype=numpy.uint8),
                     dtype=numpy.uint8)
                 continue
-            except binascii.Error:
+            except (binascii.Error, TypeError):
                 pass
             vals = rndval.split(':')
             fname = vals[0]
@@ -548,7 +551,7 @@ class Main(Logger):
         self.launcher.graphics_client.send_signal(signal.SIGUSR2)
         from twisted.internet import reactor
         reactor.callWhenRunning(self._run_workflow_plotters)
-        reactor.callWhenRunning(print, "Press Ctrl-C when you are done...")
+        reactor.callWhenRunning(print_, "Press Ctrl-C when you are done...")
         reactor.run()
 
     def _run_workflow_plotters(self):
@@ -602,7 +605,13 @@ class Main(Logger):
     """
     Basically, this is what each workflow module's run() should do.
     """
-    def run_workflow(self, Workflow, kwargs_load={}, kwargs_main={}):
+    def run_workflow(self, Workflow, kwargs_load=None, kwargs_main=None):
+        # we should not set "{}" as default values because of the way
+        # default values work: the dicts will be reused, not recreated
+        if kwargs_load is None:
+            kwargs_load = {}
+        if kwargs_main is None:
+            kwargs_main = {}
         self._load(Workflow, **kwargs_load)
         self._main(**kwargs_main)
 
