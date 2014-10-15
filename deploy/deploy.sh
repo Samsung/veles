@@ -81,15 +81,20 @@ setup_distribution() {
   dist_id=$(lsb_release -i | cut -d : -f 2 | tr -d "\t")
   case "$dist_id" in
   "Ubuntu"):
-      debian_based_setup "Ubuntu" 14 "ubuntu-apt-get-install-me.txt"
+      debian_based_setup "Ubuntu" 14 "docs/source/manualrst_veles_user_ubuntu_packages.rst"
       ;;
   "CentOS"):
-      redhat_based_setup "CentOS" 6 "centos-yum-install-me.txt"
+      redhat_based_setup "CentOS" 6 "docs/source/manualrst_veles_user_centos_packages.rst"
       ;;
   "Fedora"):
-      redhat_based_setup "Fedora" 20 "fedora-yum-install-me.txt"
+      redhat_based_setup "Fedora" 20 "docs/source/manualrst_veles_user_fedora_packages.rst"
       ;;
-  *) echo "Did not recognize your distribution \"$dist_id\"" 1>&2 ;;
+  *) echo "Did not recognize your distribution \"$dist_id\"" 1>&2
+     echo "This is possibly because LSB package is not installed on your system."
+     echo "On Debian/Ubuntu: sudo apt-get install lsb-core"
+     echo "On CentOS/RHEL/Fedora: su -c yum install redhat-lsb-core"
+     exit 1
+     ;;
   esac
 }
 
