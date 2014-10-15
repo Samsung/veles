@@ -71,8 +71,8 @@ setup_distribution() {
 
 do_post() {
   setup_distribution
-  exit 1
   cd $path
+  export PYENV_ROOT=$path/pyenv
   . ./init-pyenv
   versions=$(pyenv versions | grep $PYVER || true)
   if [ -z "$versions" ]; then
