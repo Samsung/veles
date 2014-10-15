@@ -47,13 +47,13 @@ debian_based_setup() {
   packages=$(cat "$root/$3" | tail -n +7 | sed -r -e 's/^\s+//g' -e 's/\\//g' | tr '\n' ' ')
   need_install=""
   for package in $packages; do
-    if ! dpkg -l | grep "ii  $package " -q; then
+    if ! dpkg -l | grep -qG "ii  $package[: ]"; then
       echo "$package is not installed"
       need_install="yes"
     fi
   done
   if [ ! -z $need_install ]; then
-    echo "One or more packages are not installed, running sudo apt-get install package0 package1 ..."
+    echo "One or more packages are not installed, running sudo apt-get install..."
     sudo apt-get install -y $packages
   fi
 }
@@ -102,7 +102,7 @@ do_post() {
   setup_distribution
   cd $path
   export PYENV_ROOT=$path/pyenv
-  . ./init-pyenv $root
+  . ./init-pyenv
   versions=$(pyenv versions | grep $PYVER || true)
   if [ -z "$versions" ]; then
     pyenv install $PYVER
@@ -142,17 +142,20 @@ do_post() {
   fi
 
   pip3 install cython
-  pip3 install git+https://github.com/vmarkovtsev/twisted.git
+  twisted_ver="0.0.0"
+  pip3 freeze | grep Twisted > /dev/null && twisted_ver=$(pip3 freeze | grep Twisted | cut -d "=" -f 3)
+  if [ "$twisted_ver" \< "14.0.0" ]; then
+    pip3 install git+https://github.com/vmarkovtsev/twisted.git
+  fi
 
   # install patched matplotlib v1.4.0
   mpl_ver="0.0.0"
   pip3 freeze | grep matplotlib > /dev/null && mpl_ver=$(pip3 freeze | grep matplotlib | cut -d "=" -f 3)
   if [ "$mpl_ver" \< "1.4.0" ]; then
-    git clone https://github.com/matplotlib/matplotlib.git
-    cd matplotlib
-    git checkout v1.4.0
-    patch setupext.py < ../matplotlib.patch
-    cd ../
+    if [ ! -e "matplotlib" ]; then      
+      git clone -b v1.4.1rc1 https://github.com/matplotlib/matplotlib.git      
+    fi
+    pip3 install numpy==1.8.2
     pip3 install -e ./matplotlib
   fi
 

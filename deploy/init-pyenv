@@ -1,9 +1,7 @@
 #!/bin/sh
 
-if [ -z "$1" ]; then
-  export PYENV_ROOT=$(dirname $(readlink -f $0))/deploy/pyenv
-else
-  export PYENV_ROOT="$1"
+if [ -z "$PYENV_ROOT" ]; then
+  export PYENV_ROOT=$(dirname $(readlink -f $0))/pyenv
 fi
 export PATH="$PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH"
 export PYENV_SHELL=bash

@@ -1,1 +1,0 @@
-docs/source/manualrst_veles_developer_fedora_packages.rst

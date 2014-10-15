@@ -31,6 +31,13 @@ through running::
     deploy/deploy.sh pre
     
 
+Prerequisites
+:::::::::::::
+
+.. include:: manualrst_veles_user_ubuntu_packages.rst
+.. include:: manualrst_veles_user_centos_packages.rst
+.. include:: manualrst_veles_user_fedora_packages.rst
+
 Bootstrapping
 :::::::::::::
 
