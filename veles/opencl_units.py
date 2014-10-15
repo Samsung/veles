@@ -59,7 +59,7 @@ class OpenCLUnit(Unit):
     def __init__(self, workflow, **kwargs):
         super(OpenCLUnit, self).__init__(workflow, **kwargs)
         self.verify_interface(IOpenCLUnit)
-        self.device = None
+        self._device = None
         self._cache = kwargs.get("cache", True)
         # Yup, this is right - self._force_cpu is initialized in init_unpickled
         self._force_cpu = kwargs.get("force_cpu", self._force_cpu)
@@ -73,6 +73,19 @@ class OpenCLUnit(Unit):
         self._force_cpu = self.__class__.__name__ in args.force_cpu.split(',')
         self._sync = args.sync_ocl
         self._kernel_ = None
+
+    @property
+    def device(self):
+        return self._device
+
+    @device.setter
+    def device(self, value):
+        from .opencl import Device
+
+        if not isinstance(value, Device) and value is not None:
+            raise TypeError("device must be of type veles.opencl.Device (%s "
+                            "was specified)" % value.__class__)
+        self._device = value
 
     @property
     def cache(self):
@@ -413,7 +426,7 @@ class OpenCLWorkflow(Workflow):
                 self._power_measure_time_interval):
             self._last_power_measurement_time = now
             bench = OpenCLBenchmark(self)
-            bench.initialize(self)
+            bench.initialize(self.device)
             self._power_ = bench.estimate()
             self.del_ref(bench)
             self.info("Computing power is %.2f", self._power_)
