@@ -1,0 +1,1 @@
+docs/source/manualrst_veles_developer_centos_packages.rst

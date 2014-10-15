@@ -34,36 +34,60 @@ do_pre() {
   echo "$path/Veles.tar.$COMPRESSION is ready"
 }
 
+check_dist() {
+  major=$(lsb_release -r | cut -d : -f 2 | tr -d '\t' | cut -d . -f 1)
+  if [ $major -lt $2 ]; then
+    echo "$1 older than $2.x is not supported" 1>&2
+    exit 1
+  fi
+}
+
+debian_based_setup() {
+  check_dist "$1" "$2"
+  packages=$(cat "$root/$3" | tail -n +7 | sed -r -e 's/^\s+//g' -e 's/\\//g' | tr '\n' ' ')
+  need_install=""
+  for package in $packages; do
+    if ! dpkg -l | grep "ii  $package " -q; then
+      echo "$package is not installed"
+      need_install="yes"
+    fi
+  done
+  if [ ! -z $need_install ]; then
+    echo "One or more packages are not installed, running sudo apt-get install package0 package1 ..."
+    sudo apt-get install -y $packages
+  fi
+}
+
+redhat_based_setup() {
+  check_dist "$1" "$2"
+  packages=$(cat "$root/$3" | tail -n +7 | sed -r -e 's/^\s+//g' -e 's/\\//g' | tr '\n' ' ')
+  need_install=""
+  for package in $packages; do
+    if ! yum list installed | grep "^$package\." > /dev/null; then
+      echo "$package is not installed"
+      need_install="yes"
+    fi
+  done
+  if [ ! -z $need_install ]; then
+    echo "One or more packages are not installed, running su -c \"yum install package0 package1 ...\""
+    su -c "yum install -y $packages"
+  fi
+}
+
 setup_distribution() {
   which lsb_release > /dev/null || \
     { echo "lsb_release was not found => unable to determine your Linux distribution" 1>&2 ; exit 1; }
 
-  dist_id=$(lsb_release -a | grep "Distributor ID" | cut -d " " -f 3)
+  dist_id=$(lsb_release -i | cut -d : -f 2 | tr -d "\t")
   case "$dist_id" in
   "Ubuntu"):
-      major=$(lsb_release -r | cut -d : -f 2 | tr -d '\t' | cut -d . -f 1)
-      if [ $major -lt 14 ]; then
-        echo "Ubuntu older than 14.04 is not supported" 1>&2
-        exit 1
-      fi
-      packages=$(cat "$root/ubuntu-apt-get-install-me.txt" | tail -n +7 | sed -r -e 's/^\s+//g' -e 's/\\//g' | tr '\n' ' ')
-      need_install=""
-      for package in $packages; do
-        if ! dpkg -l | grep "ii  $package " -q; then
-          echo "$package is not installed"
-          need_install="yes"
-        fi
-      done
-      if [ ! -z $need_install ]; then
-        echo "One or more packages are not installed, running sudo apt-get install..."
-        sudo apt-get install -y $packages
-      fi
+      debian_based_setup "Ubuntu" 14 "ubuntu-apt-get-install-me.txt"
       ;;
   "CentOS"):
-      echo "CentOS"
+      redhat_based_setup "CentOS" 6 "centos-yum-install-me.txt"
       ;;
   "Fedora"):
-      echo "Fedora"
+      redhat_based_setup "Fedora" 20 "fedora-yum-install-me.txt"
       ;;
   *) echo "Did not recognize your distribution \"$dist_id\"" 1>&2 ;;
   esac
@@ -73,7 +97,7 @@ do_post() {
   setup_distribution
   cd $path
   export PYENV_ROOT=$path/pyenv
-  . ./init-pyenv
+  . ./init-pyenv $root
   versions=$(pyenv versions | grep $PYVER || true)
   if [ -z "$versions" ]; then
     pyenv install $PYVER
@@ -82,8 +106,10 @@ do_post() {
 
   vroot=$path/pyenv/versions/$PYVER
   if [ ! -e $vroot/lib/libsodium.so ]; then
-    git clone https://github.com/jedisct1/libsodium -b 1.0.0
-    cd libsodium && mkdir build
+    git clone https://github.com/jedisct1/libsodium
+    cd libsodium
+    git checkout 1.0.0
+    mkdir build
     patch configure.ac < ../libsodium.patch
     ./autogen.sh && cd build
     ../configure --prefix=$vroot --disable-static
@@ -110,20 +136,22 @@ do_post() {
     cd ../.. && rm -rf libzmq
   fi
 
-   pip3 install cython
-   pip3 install git+https://github.com/vmarkovtsev/twisted.git
+  pip3 install cython
+  pip3 install git+https://github.com/vmarkovtsev/twisted.git
 
-   # install patched matplotlib v1.4.0 or above
-   mpl_ver=$(pip3 freeze | grep matplotlib | cut -d "=" -f 3)
-   if [ "$mpl_ver" < "1.4.0" ]; then
-     git clone https://github.com/matplotlib/matplotlib.git -b v1.4.0
-     cd matplotlib
-     patch setupext.py < ../matplotlib.patch
-     cd ../
-     pip3 install -e ./matplotlib
-   fi
+  # install patched matplotlib v1.4.0
+  mpl_ver="0.0.0"
+  pip3 freeze | grep matplotlib > /dev/null && mpl_ver=$(pip3 freeze | grep matplotlib | cut -d "=" -f 3)
+  if [ "$mpl_ver" \< "1.4.0" ]; then
+    git clone https://github.com/matplotlib/matplotlib.git
+    cd matplotlib
+    git checkout v1.4.0
+    patch setupext.py < ../matplotlib.patch
+    cd ../
+    pip3 install -e ./matplotlib
+  fi
 
-   PKG_CONFIG_PATH=$vroot/lib/pkgconfig pip3 install -r $root/requirements.txt
+  PKG_CONFIG_PATH=$vroot/lib/pkgconfig pip3 install -r $root/requirements.txt
 }
 
 case "$1" in
