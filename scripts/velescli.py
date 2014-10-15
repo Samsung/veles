@@ -239,6 +239,9 @@ class Main(Logger):
         if "--html-help" in sys.argv:
             veles.__html__()
             return Main.EXIT_SUCCESS
+        if "--help" in sys.argv:
+            # help text requires UTF-8, but the default codec is ascii over ssh
+            Logger.ensure_utf8_streams()
         return None
 
     def _open_frontend(self):

@@ -83,15 +83,7 @@ class Logger(object):
         if Logger.SET_UP:
             raise Logger.LoggerHasBeenAlreadySetUp()
         Logger.SET_UP = True
-
-        # Ensure UTF-8 on stdout and stderr; in some crazy environments,
-        # they use 'ascii' encoding by default
-        if PY3:
-            sys.stdout, sys.stderr = (codecs.getwriter("utf-8")(s.buffer)
-                                      for s in (sys.stdout, sys.stderr))
-        else:
-            sys.stdout, sys.stderr = (codecs.getwriter("utf-8")(s)
-                                      for s in (sys.stdout, sys.stderr))
+        Logger.ensure_utf8_streams()
         sys.stdout.encoding = sys.stderr.encoding = "utf-8"
         # Set basic log level
         logging.basicConfig(level=level, stream=sys.stdout)
@@ -101,6 +93,18 @@ class Logger(object):
             root = logging.getLogger()
             handler = root.handlers[0]
             handler.setFormatter(Logger.ColorFormatter())
+
+    @staticmethod
+    def ensure_utf8_streams():
+        """Forces UTF-8 on stdout and stderr; in some crazy environments,
+        they use 'ascii' encoding by default
+        """
+        if PY3:
+            sys.stdout, sys.stderr = (codecs.getwriter("utf-8")(s.buffer)
+                                      for s in (sys.stdout, sys.stderr))
+        else:
+            sys.stdout, sys.stderr = (codecs.getwriter("utf-8")(s)
+                                      for s in (sys.stdout, sys.stderr))
 
     def __init__(self, **kwargs):
         super(Logger, self).__init__()
