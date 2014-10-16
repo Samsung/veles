@@ -313,6 +313,8 @@ class Unit(Distributable):
     def run_was_called(self, value):
         if value:
             self._run_calls += 1
+        else:
+            raise ValueError("You can not reset run_was_called flag.")
 
     @property
     def total_run_time(self):
