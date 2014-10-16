@@ -1,3 +1,5 @@
+:orphan:
+
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Install required Fedora packages
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

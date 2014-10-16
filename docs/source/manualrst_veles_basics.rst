@@ -17,8 +17,6 @@ You can run Veles in either of these two ways:
 The second method executes :mod:`veles.__main__`, which in turn calls
 ``scripts/velescli.py``, so they are totally equivalent.
 
-.. include:: manualrst_veles_units.rst
-
 Three execution modes
 :::::::::::::::::::::
 
@@ -49,3 +47,7 @@ number of client can draw plots of what's going on. Besides, it sends periodic
 status information to the web status server via HTTP and listens to commands on
 the same raw TCP socket which is used for talking to slaves. The special communication protocol
 is used based on JSON.
+
+.. include:: manualrst_veles_units.rst
+.. include:: manualrst_veles_workflow.rst
+.. include:: manualrst_veles_distributed_units.rst

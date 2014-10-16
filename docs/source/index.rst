@@ -19,7 +19,7 @@ Veles Machine Learning Platform
     manualrst_veles_snapshotting
     manualrst_veles_graphics
     manualrst_veles_genetic_optimization
-    manualrst_veles_advanced    
+    manualrst_veles_advanced
     
     modules
 

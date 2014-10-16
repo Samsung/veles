@@ -29,10 +29,10 @@ class AccumulatingPlotter(Plotter):
 
     Must be assigned before initialize():
         input
-        input_field *
+        input_field ^
 
-    * If input_field is not assigned, input is treated as a single floating
-    point value.
+    ^ If input_field is not assigned, input is treated as a single floating
+      point value.
 
     Updates after run():
 

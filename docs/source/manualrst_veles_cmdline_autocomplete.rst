@@ -1,3 +1,4 @@
+:orphan:
 
 Enable command line autocomplete
 ::::::::::::::::::::::::::::::::
