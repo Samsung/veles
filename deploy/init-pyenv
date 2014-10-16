@@ -1,8 +1,20 @@
 #!/bin/sh
 
 if [ -z "$PYENV_ROOT" ]; then
-  export PYENV_ROOT=$(dirname $(readlink -f $0))/pyenv
+  if [ -n "$BASH" ]; then
+    # $0 = "bash", try to use pwd
+    if [ -e $(pwd)/pyenv ]; then
+      export PYENV_ROOT=$(pwd)/pyenv
+    else
+      export PYENV_ROOT=""
+      echo "Bash users must export PYENV_ROOT manually." 1>&2
+    fi
+  else
+    export PYENV_ROOT=$(dirname $(readlink -f $0))/pyenv
+  fi
 fi
+if [ -n "$PYENV_ROOT" ]; then
+
 export PATH="$PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH"
 export PYENV_SHELL=bash
 if [ -n "$BASH" ]; then
@@ -24,3 +36,5 @@ pyenv() {
     command pyenv "$command" "$@";;
   esac
 }
+
+fi  # -n "$PYENV_ROOT"
