@@ -26,7 +26,7 @@ from veles.opencl_units import OpenCLUnit, OpenCLWorkflow
 
 
 __project__ = "Veles Machine Learning Platform"
-__version__ = "0.4.3"
+__version__ = "0.5.0"
 __license__ = "Samsung Proprietary License"
 __copyright__ = u"© 2013 Samsung Electronics Co., Ltd."
 __authors__ = ["Gennady Kuznetsov", "Vadim Markovtsev", "Alexey Kazantsev",
