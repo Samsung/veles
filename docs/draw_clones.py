@@ -60,4 +60,4 @@ if __name__ == "__main__":
 
     fig.set_size_inches(16, 16)
     plt.savefig(sys.argv[2], bbox_inches='tight', transparent=False, dpi=100,
-                pad_inches=0)
+                pad_inches=0.1)
