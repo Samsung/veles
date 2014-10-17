@@ -49,7 +49,7 @@ check_dist() {
 
 debian_based_setup() {
   check_dist "$1" "$2"
-  packages=$(cat "$root/$3" | tail -n +7 | sed -r -e 's/^\s+//g' -e 's/\\//g' | tr '\n' ' ')
+  packages=$(cat "$root/$3" | tail -n +9 | sed -r -e 's/^\s+//g' -e 's/\\//g' | tr '\n' ' ')
   need_install=""
   for package in $packages; do
     if ! dpkg -l | grep -qG "ii  $package[: ]"; then
@@ -65,7 +65,7 @@ debian_based_setup() {
 
 redhat_based_setup() {
   check_dist "$1" "$2"
-  packages=$(cat "$root/$3" | tail -n +7 | sed -r -e 's/^\s+//g' -e 's/\\//g' | tr '\n' ' ')
+  packages=$(cat "$root/$3" | tail -n +9 | sed -r -e 's/^\s+//g' -e 's/\\//g' | tr '\n' ' ')
   need_install=""
   for package in $packages; do
     if ! yum list installed | grep "^$package\." > /dev/null; then
