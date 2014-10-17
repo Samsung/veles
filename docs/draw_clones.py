@@ -1,5 +1,7 @@
 import os
 import sys
+import matplotlib
+matplotlib.use('cairo')
 from matplotlib import pyplot as plt, cm
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.patches import Rectangle
@@ -57,5 +59,5 @@ if __name__ == "__main__":
         t.tick2On = False
 
     fig.set_size_inches(16, 16)
-    plt.savefig(sys.argv[2], bbox_inches='tight', transparent=True, dpi=100,
+    plt.savefig(sys.argv[2], bbox_inches='tight', transparent=False, dpi=100,
                 pad_inches=0)
