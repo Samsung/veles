@@ -15,6 +15,11 @@ cpus=$(getconf _NPROCESSORS_ONLN)
 do_pre() {
   echo "Running git archive..."
   cd $root
+  rm veles/__init__.py
+  git checkout veles/__init__.py
+  cd veles/znicz
+  git checkout __init__.py
+  cd ../..
   git archive --format=tar HEAD -o $path/Veles.tar
   cd $root/veles/znicz
   git archive --format=tar --prefix veles/znicz/ HEAD -o $path/Znicz.tar
@@ -152,8 +157,8 @@ do_post() {
   mpl_ver="0.0.0"
   pip3 freeze | grep matplotlib > /dev/null && mpl_ver=$(pip3 freeze | grep matplotlib | cut -d "=" -f 3)
   if [ "$mpl_ver" \< "1.4.0" ]; then
-    if [ ! -e "matplotlib" ]; then      
-      git clone -b v1.4.1rc1 https://github.com/matplotlib/matplotlib.git      
+    if [ ! -e "matplotlib" ]; then
+      git clone -b v1.4.1rc1 https://github.com/matplotlib/matplotlib.git
     fi
     pip3 install numpy==1.8.2
     pip3 install -e ./matplotlib
