@@ -1,0 +1,10 @@
+veles/tests
+veles/external
+veles/znicz/tests
+veles/znicz/samples
+veles/znicz/external
+veles/znicz
+veles
+matplotlib
+mpl_toolkits
+IPython

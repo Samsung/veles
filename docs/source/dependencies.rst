@@ -1,0 +1,4 @@
+Dependencies
+============
+
+.. image:: ../deps.svg

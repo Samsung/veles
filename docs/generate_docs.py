@@ -17,7 +17,9 @@ if __name__ == "__main__":
     project_path = os.path.realpath(os.path.join(docs_path, ".."))
 
     sys.path.append(docs_path)
+    os.chdir(docs_path)
 
+    subprocess.call(["./deps.sh"])
     subprocess.call(["sphinx-apidoc", "-e", "-f", "-H",
                     "Source Code", "-o", docs_source_path,
                     project_path, os.path.join(project_path, "veles/external"),

@@ -22,4 +22,5 @@ Veles Machine Learning Platform
     manualrst_veles_advanced
     
     modules
+    dependencies
 
