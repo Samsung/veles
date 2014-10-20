@@ -57,12 +57,10 @@ Going to the virtual environment
 To work with Veles, you will need to execute the following command every time
 you open a new console session::
 
-    deploy/init-pyenv
-    pyenv local 3.4.1
+    cd <veles root>/deploy
+    . ./init-pyenv
     
-You may include these two lines into your ``.bashrc``. "3.4.1" is the version
-of Python interpreter installed into the virtual environment and may change in
-the future.
+You may include these two lines into your ``.bashrc``.
 
 PYTHONPATH
 ::::::::::
