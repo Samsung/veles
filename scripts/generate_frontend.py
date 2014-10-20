@@ -247,5 +247,5 @@ def convert_choices(arg, arg_mode, option_strings):
     return arg_line
 
 if __name__ == "__main__":
-    retcode = main()
+    retcode = main(bool(sys.argv[1]) if len(sys.argv) > 1 else False)
     sys.exit(retcode)
