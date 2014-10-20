@@ -368,8 +368,6 @@ class Vector(Pickleable):
             if bufpool is not None:
                 self._bufpool = bufpool
             self._bufpool.add(unit, self)
-        else:
-            logging.error("Failed to initialize Vector object")
 
     def _map(self, flags):
         if self.device is None:
