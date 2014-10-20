@@ -481,7 +481,7 @@ class Population(Pickleable):
             for i in range(self.crossing_attempts):
                 sons = f_attempt(parents)
                 if any(not son.valid for son in sons):
-                    self.warning("Invalid chrossing result detected, "
+                    self.warning("Invalid crossing result detected, "
                                  "will retry (attempt number %d)", i + 1)
                     continue
                 break
