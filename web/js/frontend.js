@@ -95,7 +95,6 @@ function select(choice, id) {
      cl = id + ' ' + value + ' ' + cl;
   }
   elem.val(cl);
-  $("#command-line").trigger("input");
 }
 
 function get_diff(obj1, obj2) {
@@ -119,6 +118,9 @@ function get_diff(obj1, obj2) {
 }
 
 function parse_cl(cl) {
+  if (cl.match(/(^|[^-])-\w\w+/)) {
+    return null;
+  }
   var args = minimist_parse(cl.split(/\s+/), opts);
   var positional = args["_"];
   var config_list = [];
@@ -238,7 +240,6 @@ $(function() {
       cl = cl.replace(reg, " ");
       cl = change_cl_by_input(cl, prev_value, value, id);
       elem.val(cl);
-      $("#command-line").trigger("input");
     });
     // This event changes value of option and value of command line if switch has been switched.
     $(".switch").bootstrapSwitch().on('switchChange.bootstrapSwitch', function(event, state) {
@@ -263,7 +264,6 @@ $(function() {
         }
       }
       elem.val(cl);
-      $("#command-line").trigger("input");
     });
     // This event changes value of option and value of command line if workflow was chosen.
     $('.typeahead').on('typeahead:selected', function(event, value) {
@@ -297,12 +297,15 @@ $(function() {
         }
       }
       elem.val(cl);
-      $("#command-line").trigger("input");
     });
     // This event changes value of widgets for each change of command line.
     $("#command-line").on("input", function() {
       var command_line = $("#command-line").val();
       var args = parse_cl(command_line);
+      // There is a potential parsing error
+      if (args === null) {
+        return;
+      }
       var prev_cmdline_states = {};
       $.each(cmdline_states, function(opt, arg) {
         prev_cmdline_states[opt] = arg;
@@ -312,6 +315,7 @@ $(function() {
         }
       });
       cmdline_states = from_args_to_states(args, cmdline_states);
+      console.log(args);
       var diff = get_diff(prev_cmdline_states, cmdline_states);
       invalid = false;
       mode = 'Standalone';
@@ -364,7 +368,6 @@ $(function() {
         }
       }
       activate_mode(mode);
-      console.log(invalid, prev_cmdline_states, cmdline_states);
       $("#error-message").css("opacity", invalid? "1" : "0");
     });
 });
