@@ -106,7 +106,7 @@ class Chromosome(Pickleable):
         numeric: list of numeric genes.
     """
     def __init__(self, size, minvles, maxvles, accuracy, codes,
-                 binary=None, numeric=None):
+                 binary=None, numeric=None, **kwargs):
         """Constructs the chromosome and computes it's fitness.
 
         Parameters:
@@ -162,6 +162,10 @@ class Chromosome(Pickleable):
             "gaussian": self.mutation_gaussian,
             "uniform": self.mutation_uniform,
             "altering": self.mutation_altering}
+
+    @property
+    def valid(self):
+        return True
 
     def copy(self):
         return pickle.loads(pickle.dumps(self))
@@ -326,6 +330,11 @@ class Population(Pickleable):
         self.best_fit = None
         self.worst_fit = None
         self.median_fit = None
+        self.prev_fitness = -1.0e30
+        self.prev_average_fit = -1.0e30
+        self.prev_best_fit = -1.0e30
+        self.prev_worst_fit = -1.0e30
+        self.prev_median_fit = -1.0e30
 
         self.roulette_select_size = 0.75
         self.random_select_size = 0.5
@@ -374,6 +383,7 @@ class Population(Pickleable):
         self.generation = 0
 
         self.prev_state_fnme = None
+        self.crossing_attempts = 10
 
     def __repr__(self):
         return "%s with %d chromosomes" % (
@@ -466,174 +476,194 @@ class Population(Pickleable):
             tournament_pool.insert(j, self[rand])
         return tournament_pool[:int(len(self) * self.tournament_select_size)]
 
+    def _cross_with_attempts(self, parents, crossings, f_attempt):
+        for _ in range(int(len(self) * crossings)):
+            for i in range(self.crossing_attempts):
+                sons = f_attempt(parents)
+                if any(not son.valid for son in sons):
+                    self.warning("Invalid chrossing result detected, "
+                                 "will retry (attempt number %d)", i + 1)
+                    continue
+                break
+            else:
+                self.warning("Unsuccessfull crossing, but will still use "
+                             "the result of the last attempt")
+            for son in sons:
+                self.add(son)
+
     def cross_pointed(self, parents):
         """Genetic operator.
         """
-        for _cross_num in range(int(len(self) *
-                                    self.crossing.pointed_crossings)):
+        self._cross_with_attempts(parents, self.crossing.pointed_crossings,
+                                  self._cross_pointed_attempt)
+
+    def _cross_pointed_attempt(self, parents):
+        rand1 = numpy.random.randint(len(parents))
+        parent1 = parents[rand1].binary
+        rand2 = numpy.random.randint(len(parents))
+        parent2 = parents[rand2].binary
+        cross_points = [0, ]
+        l = 0
+        for _ in range(int(len(self) * self.crossing.pointed_points)):
+            while l in cross_points:
+                l = numpy.random.randint(1, len(parent1) - 1)
+            j = 0
+            while j < len(cross_points) and cross_points[j] < l:
+                j += 1
+            cross_points.insert(j, l)
+        cross_points.append(len(parent1))
+        cross1 = ""
+        cross2 = ""
+        i = 1
+        while i <= self.crossing.pointed_points + 1:
+            if i % 2 == 0:
+                cross1 += parent1[cross_points[i - 1]:cross_points[i]]
+                cross2 += parent2[cross_points[i - 1]:cross_points[i]]
+            else:
+                cross1 += parent2[cross_points[i - 1]:cross_points[i]]
+                cross2 += parent1[cross_points[i - 1]:cross_points[i]]
+            i += 1
+        (num1, num2) = bin_to_num([cross1, cross2], self.dl,
+                                  self.optimization.accuracy, self.codes)
+        chromo_son1 = self.new(
+            0, self.minvles, self.maxvles,
+            1.0 / self.optimization.accuracy, self.codes, cross1, num1)
+        chromo_son2 = self.new(
+            0, self.minvles, self.maxvles,
+            1.0 / self.optimization.accuracy, self.codes, cross2, num2)
+        chromo_son1.size = len(chromo_son1.numeric)
+        chromo_son2.size = len(chromo_son2.numeric)
+        return chromo_son1, chromo_son2
+
+    def cross_uniform(self, parents):
+        self._cross_with_attempts(parents, self.crossing.uniform_crossings,
+                                  self._cross_uniform_attempt)
+
+    def _cross_uniform_attempt(self, parents):
+        if self.optimization.code == "gray":
             rand1 = numpy.random.randint(len(parents))
             parent1 = parents[rand1].binary
             rand2 = numpy.random.randint(len(parents))
             parent2 = parents[rand2].binary
-            cross_points = [0, ]
-            l = 0
-            for _cross_point in range(int(len(self) *
-                                          self.crossing.pointed_points)):
-                while l in cross_points:
-                    l = numpy.random.randint(1, len(parent1) - 1)
-                j = 0
-                while j < len(cross_points) and cross_points[j] < l:
-                    j += 1
-                cross_points.insert(j, l)
-            cross_points.append(len(parent1))
-            cross1 = ""
-            cross2 = ""
-            i = 1
-            while i <= self.crossing.pointed_points + 1:
-                if i % 2 == 0:
-                    cross1 += parent1[cross_points[i - 1]:cross_points[i]]
-                    cross2 += parent2[cross_points[i - 1]:cross_points[i]]
-                else:
-                    cross1 += parent2[cross_points[i - 1]:cross_points[i]]
-                    cross2 += parent1[cross_points[i - 1]:cross_points[i]]
-                i += 1
-            (num1, num2) = bin_to_num([cross1, cross2], self.dl,
-                                      self.optimization.accuracy, self.codes)
-            chromo_son1 = self.new(
-                0, self.minvles, self.maxvles,
-                1.0 / self.optimization.accuracy, self.codes, cross1, num1)
-            chromo_son2 = self.new(
-                0, self.minvles, self.maxvles,
-                1.0 / self.optimization.accuracy, self.codes, cross2, num2)
-            chromo_son1.size = len(chromo_son1.numeric)
-            chromo_son2.size = len(chromo_son2.numeric)
-            self.add(chromo_son1)
-            self.add(chromo_son2)
-
-    def cross_uniform(self, parents):
-        for _cross_num in range(int(len(self) *
-                                    self.crossing.uniform_crossings)):
-            if self.optimization.code == "gray":
-                rand1 = numpy.random.randint(len(parents))
-                parent1 = parents[rand1].binary
-                rand2 = numpy.random.randint(len(parents))
-                parent2 = parents[rand2].binary
-                cross = ""
-                for i in range(len(parent1)):
-                    rand = numpy.random.uniform(0, 2)
-                    if rand < 1:
-                        cross += parent1[i]
-                    else:
-                        cross += parent2[i]
-                numeric = bin_to_num([cross], self.dl,
-                                     self.optimization.accuracy, self.codes)[0]
-                chromo_son = self.new(
-                    0, self.minvles, self.maxvles,
-                    1.0 / self.optimization.accuracy, self.codes, cross,
-                    numeric)
-            else:
-                rand1 = numpy.random.randint(len(parents))
-                parent1 = parents[rand1].numeric
-                rand2 = numpy.random.randint(len(parents))
-                parent2 = parents[rand2].numeric
-                cross = []
-                for i in range(len(parent1)):
-                    rand = numpy.random.uniform(0, 2)
-                    if rand < 1:
-                        cross.append(parent1[i])
-                    else:
-                        cross.append(parent2[i])
-                chromo_son = self.new(
-                    0, self.optimization.min_values,
-                    self.optimization.max_values,
-                    1.0 / self.optimization.accuracy, self.codes, None, cross)
-            self.add(chromo_son)
-
-    def cross_arithmetic(self, parents):
-        """Arithmetical crossingover.
-        """
-        for _cross_num in range(int(len(self) *
-                                    self.crossing.arithmetic_crossings)):
-            rand1 = numpy.random.randint(0, len(parents))
-            parent1 = parents[rand1].numeric
-            rand2 = numpy.random.randint(0, len(parents))
-            parent2 = parents[rand2].numeric
-            cross1 = []
-            cross2 = []
+            cross = ""
             for i in range(len(parent1)):
-                a = numpy.random.random()
-                if self.optimization.choice == "or":
-                    if a > 0.5:
-                        cross1.append(parent1[i])
-                        cross2.append(parent2[i])
-                    else:
-                        cross1.append(parent2[i])
-                        cross2.append(parent1[i])
-                elif type(parent1[i]) == int:
-                    k = int(a * parent1[i] + (1 - a) * parent2[i])
-                    cross1.append(k)
-                    cross2.append(parent1[i] + parent2[i] - k)
+                rand = numpy.random.uniform(0, 2)
+                if rand < 1:
+                    cross += parent1[i]
                 else:
-                    cross1.append(a * parent1[i] + (1 - a) * parent2[i])
-                    cross2.append((1 - a) * parent1[i] + a * parent2[i])
-            if self.optimization.code == "gray":
-                (bin1, bin2) = (num_to_bin(cross1, self.optimization.accuracy,
-                                           self.codes),
-                                num_to_bin(cross2, self.optimization.accuracy,
-                                           self.codes))
-            else:
-                (bin1, bin2) = ("", "")
-            chromo1 = self.new(0, self.optimization.min_values,
-                               self.optimization.max_values,
-                               1.0 / self.optimization.accuracy,
-                               self.codes, bin1, cross1)
-            chromo2 = self.new(0, self.optimization.min_values,
-                               self.optimization.max_values,
-                               1.0 / self.optimization.accuracy,
-                               self.codes, bin2, cross2)
-            self.add(chromo1)
-            self.add(chromo2)
-
-    def cross_geometric(self, parents):
-        """Geometrical crossingover.
-        """
-        for _cross_num in range(int(len(self) *
-                                    self.crossing.geometric_crossings)):
-            cross = []
+                    cross += parent2[i]
+            numeric = bin_to_num([cross], self.dl,
+                                 self.optimization.accuracy, self.codes)[0]
+            chromo_son = self.new(
+                0, self.minvles, self.maxvles,
+                1.0 / self.optimization.accuracy, self.codes, cross,
+                numeric)
+        else:
             rand1 = numpy.random.randint(len(parents))
             parent1 = parents[rand1].numeric
             rand2 = numpy.random.randint(len(parents))
             parent2 = parents[rand2].numeric
+            cross = []
             for i in range(len(parent1)):
-                if self.optimization.choice == "or":
-                    if numpy.random.random() > 0.5:
-                        cross.append(parent1[i])
-                    else:
-                        cross.append(parent2[i])
+                rand = numpy.random.uniform(0, 2)
+                if rand < 1:
+                    cross.append(parent1[i])
                 else:
-                    # correct1 is used to invert [-x1; -x2] to [x2; x1]
-                    correct1 = -1 if self.optimization.max_values[i] < 0 else 1
-                    # correct2 is used to alter [-x1; x2] to [0; x2+x1]
-                    if self.optimization.min_values[i] > 0 or correct1 == -1:
-                        correct2 = 0
-                    else:
-                        correct2 = -self.optimization.min_values[i]
-                    a = numpy.random.rand()
-                    gene = (correct1 * (numpy.power(
-                        correct1 * parent1[i] + correct2, a) * numpy.power(
-                        correct1 * parent2[i] + correct2, (1 - a)) - correct2))
-                    if type(parent1[i]) == int:
-                        gene = int(gene)
-                    cross.append(gene)
-            binary = ""
-            if self.optimization.code == "gray":
-                binary = num_to_bin(cross, self.optimization.accuracy,
-                                    self.codes)
-            chromo_son = self.new(0, self.optimization.min_values,
-                                  self.optimization.max_values,
-                                  1.0 / self.optimization.accuracy,
-                                  self.codes, binary, cross)
-            self.add(chromo_son)
+                    cross.append(parent2[i])
+            chromo_son = self.new(
+                0, self.optimization.min_values,
+                self.optimization.max_values,
+                1.0 / self.optimization.accuracy, self.codes, None, cross)
+        return (chromo_son,)
+
+    def cross_arithmetic(self, parents):
+        """Arithmetical crossingover.
+        """
+        self._cross_with_attempts(parents, self.crossing.arithmetic_crossings,
+                                  self._cross_arithmetic_attempt)
+
+    def _cross_arithmetic_attempt(self, parents):
+        rand1 = numpy.random.randint(0, len(parents))
+        parent1 = parents[rand1].numeric
+        rand2 = numpy.random.randint(0, len(parents))
+        parent2 = parents[rand2].numeric
+        cross1 = []
+        cross2 = []
+        for i in range(len(parent1)):
+            a = numpy.random.random()
+            if self.optimization.choice == "or":
+                if a > 0.5:
+                    cross1.append(parent1[i])
+                    cross2.append(parent2[i])
+                else:
+                    cross1.append(parent2[i])
+                    cross2.append(parent1[i])
+            elif type(parent1[i]) == int:
+                k = int(a * parent1[i] + (1 - a) * parent2[i])
+                cross1.append(k)
+                cross2.append(parent1[i] + parent2[i] - k)
+            else:
+                cross1.append(a * parent1[i] + (1 - a) * parent2[i])
+                cross2.append((1 - a) * parent1[i] + a * parent2[i])
+        if self.optimization.code == "gray":
+            (bin1, bin2) = (num_to_bin(cross1, self.optimization.accuracy,
+                                       self.codes),
+                            num_to_bin(cross2, self.optimization.accuracy,
+                                       self.codes))
+        else:
+            (bin1, bin2) = ("", "")
+        chromo1 = self.new(0, self.optimization.min_values,
+                           self.optimization.max_values,
+                           1.0 / self.optimization.accuracy,
+                           self.codes, bin1, cross1)
+        chromo2 = self.new(0, self.optimization.min_values,
+                           self.optimization.max_values,
+                           1.0 / self.optimization.accuracy,
+                           self.codes, bin2, cross2)
+        return (chromo1, chromo2)
+
+    def cross_geometric(self, parents):
+        """Geometrical crossingover.
+        """
+        self._cross_with_attempts(parents, self.crossing.geometric_crossings,
+                                  self._cross_geometric_attempt)
+
+    def _cross_geometric_attempt(self, parents):
+        cross = []
+        rand1 = numpy.random.randint(len(parents))
+        parent1 = parents[rand1].numeric
+        rand2 = numpy.random.randint(len(parents))
+        parent2 = parents[rand2].numeric
+        for i in range(len(parent1)):
+            if self.optimization.choice == "or":
+                if numpy.random.random() > 0.5:
+                    cross.append(parent1[i])
+                else:
+                    cross.append(parent2[i])
+            else:
+                # correct1 is used to invert [-x1; -x2] to [x2; x1]
+                correct1 = -1 if self.optimization.max_values[i] < 0 else 1
+                # correct2 is used to alter [-x1; x2] to [0; x2+x1]
+                if self.optimization.min_values[i] > 0 or correct1 == -1:
+                    correct2 = 0
+                else:
+                    correct2 = -self.optimization.min_values[i]
+                a = numpy.random.rand()
+                gene = (correct1 * (numpy.power(
+                    correct1 * parent1[i] + correct2, a) * numpy.power(
+                    correct1 * parent2[i] + correct2, (1 - a)) - correct2))
+                if type(parent1[i]) == int:
+                    gene = int(gene)
+                cross.append(gene)
+        binary = ""
+        if self.optimization.code == "gray":
+            binary = num_to_bin(cross, self.optimization.accuracy,
+                                self.codes)
+        chromo_son = self.new(0, self.optimization.min_values,
+                              self.optimization.max_values,
+                              1.0 / self.optimization.accuracy,
+                              self.codes, binary, cross)
+        return (chromo_son,)
 
     def compute_gray_codes(self):
         max_abs_x = 0
@@ -659,15 +689,16 @@ class Population(Pickleable):
             self.chromosomes = pickle.load(fin)
             fin.close()
 
-        chromo_count = max(self.population_size - len(self.chromosomes), 0)
-        self.info("Creating %d chromosomes...", chromo_count)
-        for _ in ProgressBar(term_width=20)(range(chromo_count)):
-            chromo = self.new(self.optimization.size,
-                              self.optimization.min_values,
-                              self.optimization.max_values,
-                              1.0 / self.optimization.accuracy,
-                              self.codes)
-            self.add(chromo)
+        chromo_count = self.population_size - len(self.chromosomes)
+        if chromo_count > 0:
+            self.info("Creating %d chromosomes...", chromo_count)
+            for _ in ProgressBar(term_width=20)(range(chromo_count)):
+                chromo = self.new(self.optimization.size,
+                                  self.optimization.min_values,
+                                  self.optimization.max_values,
+                                  1.0 / self.optimization.accuracy,
+                                  self.codes)
+                self.add(chromo)
 
         if self.optimization.code == "gray":
             self.compute_gray_codes()
@@ -763,6 +794,18 @@ class Population(Pickleable):
             True to stop evolution.
         """
         self.log_statistics()
+        # Conservative stop condition
+        if (self.prev_fitness >= self.fitness and
+                self.prev_average_fit >= self.average_fit and
+                self.prev_best_fit >= self.best_fit and
+                self.prev_worst_fit >= self.worst_fit and
+                self.prev_median_fit >= self.median_fit):
+            return True
+        self.prev_fitness = self.fitness
+        self.prev_average_fit = self.average_fit
+        self.prev_best_fit = self.best_fit
+        self.prev_worst_fit = self.worst_fit
+        self.prev_median_fit = self.median_fit
         return False
 
     def log_statistics(self):
