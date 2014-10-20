@@ -185,7 +185,7 @@ class Main(Logger):
             'workflow', help='Path to Python script with the VELES model.'
             ).pretty_name = "workflow file"
         parser.add_argument(
-            'config', default="-", help="Path to the configuration file"
+            'config', help="Path to the configuration file"
             "(pass \"-\" to set as <workflow>_config.py)."
             ).pretty_name = "configuration file"
         arg = parser.add_argument(
