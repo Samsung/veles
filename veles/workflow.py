@@ -119,13 +119,13 @@ class Workflow(Unit):
     def __init__(self, workflow, **kwargs):
         self._plotters_are_enabled = kwargs.get(
             "enable_plotters", not root.common.plotters_disabled)
-        self._sync = kwargs.get("sync", True)
-        self.bufpool = kwargs.get("bufpool")
+        self._sync = kwargs.get("sync", True)  # do not move down
+        self._units = None  # do not move down
         super(Workflow, self).__init__(workflow,
                                        generate_data_for_slave_threadsafe=True,
                                        apply_data_from_slave_threadsafe=True,
                                        **kwargs)
-        self._units = MultiMap()
+        self.bufpool = kwargs.get("bufpool")
         self.start_point = StartPoint(self)
         self.end_point = EndPoint(self)
         self.negotiates_on_connect = True
@@ -144,6 +144,17 @@ class Workflow(Unit):
         self._run_time_ = 0
         self._method_time_ = {"run": 0}
         del Unit.timers[self.id]
+        units = self._units
+        self._units = MultiMap()
+        if units is not None:
+            for unit in units:
+                self.add_ref(unit)
+
+    def __getstate__(self):
+        state = super(Workflow, self).__getstate__()
+        # workaround for Python 2.7 MultiMap pickle incompatibility
+        state["_units"] = list(self)
+        return state
 
     def __repr__(self):
         return super(Workflow, self).__repr__() + \

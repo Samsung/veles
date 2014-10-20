@@ -170,7 +170,7 @@ class Unit(Distributable):
         return state
 
     def __repr__(self):
-        if self._name is not None:
+        if getattr(self, "_name", None) is not None:
             return "%s.%s \"%s\"" % (self.__class__.__module__,
                                      self.__class__.__name__,
                                      self.name)
@@ -249,7 +249,7 @@ class Unit(Distributable):
 
     @property
     def name(self):
-        if self._name is not None:
+        if getattr(self, "_name", None) is not None:
             return self._name
         return self.__class__.__name__
 

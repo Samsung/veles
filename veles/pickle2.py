@@ -6,7 +6,7 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 
 
 import six
-from six.moves import cPickle as pickle
+import pickle
 import sys
 from pickle import PicklingError, UnpicklingError
 import warnings
