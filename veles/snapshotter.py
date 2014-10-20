@@ -68,7 +68,9 @@ class SnapshotterBase(Unit):
         self._skipped_counter += 1
         if self._skipped_counter < self.interval:
             return
-        if time.time() - self.time < self.time_interval:
+        delta = time.time() - self.time
+        if delta < self.time_interval:
+            self.debug("%f < %f, dropped", delta, self.time_interval)
             return
         self.export()
         self.time = time.time()
