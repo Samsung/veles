@@ -218,8 +218,7 @@ class OpenCLUnit(Unit):
         if "PRECISION_LEVEL" not in my_defines:
             my_defines["PRECISION_LEVEL"] = root.common.precision_level
         if "VECTOR_OPT" not in my_defines:
-            my_defines["VECTOR_OPT"] = self.device.device_info.vector_opt[
-                dtype]
+            my_defines["VECTOR_OPT"] = self.device.device_info.vector_opt
         if "GPU_FORCE_64BIT_PTR" not in my_defines:  # for AMD
             my_defines["GPU_FORCE_64BIT_PTR"] = os.getenv(
                 "GPU_FORCE_64BIT_PTR", 0)
