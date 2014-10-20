@@ -2,10 +2,10 @@ import os
 import sys
 import matplotlib
 matplotlib.use('cairo')
-from matplotlib import pyplot as plt, cm
+from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
-from matplotlib.patches import Rectangle
 import numpy
+from scipy.cluster.hierarchy import linkage, leaves_list
 import xmltodict
 
 
@@ -13,20 +13,24 @@ if __name__ == "__main__":
     with open(sys.argv[1], 'r') as fin:
         data = xmltodict.parse(fin.read())
 
-    files = set((dup['file'][0]['@path']
-                 for dup in data['pmd-cpd']['duplication']))
-    files = files.union(set((dup['file'][1]['@path']
-                             for dup in data['pmd-cpd']['duplication'])))
-    files = list(sorted(files))
+    files = list(sorted(set.union({dup['file'][i]['@path']
+                                   for dup in data['pmd-cpd']['duplication']
+                                   for i in (0, 1)})))
     findex = {f: i for i, f in enumerate(files)}
     mat = numpy.zeros((len(files), len(files)))
     for dup in data['pmd-cpd']['duplication']:
-        lines = dup['@lines']
-        i1 = findex[dup['file'][0]['@path']]
-        i2 = findex[dup['file'][1]['@path']]
-        mat[i1, i2] += int(lines)
-        mat[i2, i1] += int(lines)
+        mat[tuple(findex[dup['file'][i]['@path']] for i in (0, 1))] += \
+            int(dup['@lines'])
+    mat += mat.transpose()
 
+    mat[mat == 0] = 0.001  # any value << 1
+    # cluster the distances matrix and get the expressive indices order
+    order = leaves_list(linkage(1 / mat))
+    # apply the new order
+    mat = mat[numpy.ix_(order, order)]
+    files = [files[i] for i in order]
+
+    # construct the linear gradient map white -> red
     cdict = {'red':   ((0.0, 1.0, 1.0),
                        (1.0, 1.0, 1.0)),
              'green': ((0.0, 1.0, 1.0),
@@ -35,9 +39,11 @@ if __name__ == "__main__":
                        (1.0, 0.0, 0.0))}
     reds = LinearSegmentedColormap('Reds', cdict)
 
+    # draw the map
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.pcolor(mat, cmap=reds)
+    # uncomment the following to remove the frame around the map
     # ax.set_frame_on(False)
     ax.set_xlim((0, len(files)))
     ax.set_ylim((0, len(files)))
@@ -53,11 +59,10 @@ if __name__ == "__main__":
     for t in ax.xaxis.get_major_ticks():
         t.tick1On = False
         t.tick2On = False
-
     for t in ax.yaxis.get_major_ticks():
         t.tick1On = False
         t.tick2On = False
-
-    fig.set_size_inches(16, 16)
+    fig_size = 16 * len(files) / 55
+    fig.set_size_inches(fig_size, fig_size)
     plt.savefig(sys.argv[2], bbox_inches='tight', transparent=False, dpi=100,
                 pad_inches=0.1)
