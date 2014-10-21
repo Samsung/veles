@@ -9,7 +9,6 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 import argparse
 import json
-import logging
 import numpy
 import os
 from six import add_metaclass
@@ -86,43 +85,22 @@ class DeviceInfo(object):
         krnnme = kwargs.get("kernel", "matrix_multiplication")
         krninfo = self.device_info.get(krnnme)
         if krninfo is None:
-            logging.warning(
-                "krnnme = %s was not found, "
-                "rolling back to block sizes for matrix_multiplication",
-                krnnme)
-            krnnme = "matrix_multiplication"
-            krninfo = self.device_info.get(krnnme)
+            krninfo = self.device_info.get("matrix_multiplication")
             if krninfo is None:
-                logging.warning(
-                    "krnnme = %s was not found, "
-                    "rolling back to the default block sizes",
-                    krnnme)
                 return self.get_default_block_sizes()
         accessinfo = krninfo.get(access_type)
         if accessinfo is None:
             accessinfo = krninfo.get("row_x_row")
             if accessinfo is None:
-                logging.warning(
-                    "access_type = %s was not found with krnnme = %s, "
-                    "rolling back to the default block sizes",
-                    access_type, krnnme)
                 return self.get_default_block_sizes()
         typeinfo = accessinfo.get(dtype)
         if typeinfo is None:
-            logging.warning(
-                "dtype = %s was not found with krnnme = %s and "
-                "access_type = %s, rolling back to the default block sizes",
-                dtype, krnnme, access_type)
             return self.get_default_block_sizes()
-        abcdt = typeinfo.get(str(precision))
+        abcdt = typeinfo.get(precision)
         while abcdt is None and precision > 0:
             precision -= 1
             abcdt = typeinfo.get(str(precision))
         if abcdt is None:
-            logging.warning(
-                "precision = 0 was not found with krnnme = %s and "
-                "access_type = %s and dtype = %s, rolling back to the "
-                "default block sizes", krnnme, access_type, dtype)
             return self.get_default_block_sizes()
         a = abcdt[0][0]
         b = abcdt[0][1]
