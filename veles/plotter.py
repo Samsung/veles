@@ -41,6 +41,7 @@ class Plotter(Unit, TriviallyDistributable):
         kwargs["view_group"] = view_group
         super(Plotter, self).__init__(workflow, **kwargs)
         self.redraw_threshold = 0.5
+        self._last_run_ = 0
 
     def __getstate__(self):
         state = super(Plotter, self).__getstate__()
