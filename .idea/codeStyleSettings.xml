@@ -4,6 +4,9 @@
     <option name="PER_PROJECT_SETTINGS">
       <value>
         <option name="ALIGN_MULTILINE_PARAMETERS_IN_CALLS" value="true" />
+        <XML>
+          <option name="XML_LEGACY_SETTINGS_IMPORTED" value="true" />
+        </XML>
         <codeStyleSettings language="CoffeeScript">
           <option name="ALIGN_MULTILINE_PARAMETERS_IN_CALLS" value="true" />
           <option name="PARENT_SETTINGS_INSTALLED" value="true" />
