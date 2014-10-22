@@ -84,6 +84,13 @@ class EndPoint(UttermostPoint):
     def run(self):
         self.workflow.on_workflow_finished()
 
+    def generate_data_for_master(self):
+        return True
+
+    def apply_data_from_slave(self, data, slave):
+        if not self.gate_block:
+            self.workflow.on_workflow_finished()
+
 
 class MultiMap(OrderedDict, defaultdict):
     def __init__(self, default_factory=list, *items, **kwargs):

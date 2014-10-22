@@ -273,8 +273,8 @@ class VelesProtocol(StringLineReceiver, IDLogger):
             d = threads.deferToThreadPool(
                 reactor, self.host.workflow.thread_pool,
                 self.host.workflow.drop_slave,
-                SlaveDescription.make(self.nodes[self.id])).addErrback(
-                errback)
+                SlaveDescription.make(self.nodes[self.id])) \
+                .addErrback(errback)
             d.addCallback(self._retryJobRequests)
             self._erase_self()
 
@@ -461,8 +461,8 @@ class VelesProtocol(StringLineReceiver, IDLogger):
             threads.deferToThreadPool(
                 reactor, self.host.workflow.thread_pool,
                 self.host.workflow.apply_initial_data_from_slave,
-                data, SlaveDescription.make(self.nodes[self.id])).addErrback(
-                errback)
+                data, SlaveDescription.make(self.nodes[self.id])) \
+                .addErrback(errback)
             self.nodes[self.id]['data'] = [d for d in data if d is not None]
         self.state.identify()
 

@@ -391,6 +391,10 @@ class Launcher(logger.Logger):
             if not self._initialized:
                 return
             running = self._running and reactor.running
+        if self.is_master and len(self.agent.nodes) > 0:
+            self.info("Waiting for the slaves to finish (%d left)...",
+                      len(self.agent.nodes))
+            return
         self.info("Stopping everything (%s mode)", self.mode)
         if not running:
             self._on_stop()
