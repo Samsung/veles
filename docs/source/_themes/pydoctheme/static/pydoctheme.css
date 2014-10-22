@@ -157,6 +157,10 @@ table.footnote, table.footnote td {
     border: 0 !important;
 }
 
+table.docutils.field-list {
+  display: none;
+}
+
 div.footer {
     line-height: 150%;
     margin-top: -2em;
