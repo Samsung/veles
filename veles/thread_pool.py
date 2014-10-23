@@ -161,7 +161,11 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         self.debug("Running shutdown-ers")
         for on_shutdown, ind in zip(self.on_shutdowns, range(sdl)):
             self.debug("%d/%d - %s", ind, sdl, str(on_shutdown))
-            on_shutdown()
+            try:
+                on_shutdown()
+            except:
+                self.exception("Ignored the following exception in shutdowner "
+                               "%s:", on_shutdown)
         self.debug("Requesting threads to quit")
         del self.on_shutdowns[:]
         self.joined = True
