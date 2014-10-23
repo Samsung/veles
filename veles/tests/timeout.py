@@ -50,6 +50,9 @@ sys.exit = shutdown
 
 
 def timeout(value=60):
+    if value > 1800:
+        raise ValueError("Timeouts bigger than half an hour are useless")
+
     if not thread.is_alive():
         thread.start()
 
