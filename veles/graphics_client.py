@@ -97,10 +97,20 @@ class GraphicsClient(Logger):
             import matplotlib
             if self.backend:
                 matplotlib.use(self.backend)
+            try:
+                import matplotlib.pyplot as pp
+            except ImportError:
+                self.warning("%s backend is not loadable, falling back to "
+                             "WebAgg")
+                matplotlib.use("WebAgg", force=True)
+                try:
+                    import matplotlib.pyplot as pp
+                except ImportError:
+                    self.exception("Failed to load WebAgg matplotlib backend")
+                    return
             import matplotlib.cm as cm
             import matplotlib.lines as lines
             import matplotlib.patches as patches
-            import matplotlib.pyplot as pp
             pp.ion()
             self.matplotlib = matplotlib
             self.cm = cm
@@ -218,7 +228,10 @@ class GraphicsClient(Logger):
                 self.root.ExitMainLoop()
             elif self.pp.get_backend() == "WebAgg":
                 ioloop.IOLoop.instance().stop()
-            reactor.stop()
+            try:
+                reactor.stop()
+            except ReactorNotRunning:
+                pass
             # Not strictly necessary, but prevents from DoS
             self.zmq_connection.shutdown()
 
