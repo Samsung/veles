@@ -19,11 +19,12 @@ import subprocess
 import sys
 from tempfile import mkdtemp
 from twisted.internet import reactor
-from veles.external.txzmq import ZmqConnection, ZmqEndpoint
 import zmq
 
 from veles.cmdline import CommandLineArgumentsRegistry
+from veles.compat import from_none
 from veles.config import root
+from veles.external.txzmq import ZmqConnection, ZmqEndpoint
 from veles.logger import Logger
 import veles.graphics_client as graphics_client
 
@@ -40,6 +41,10 @@ class GraphicsServer(Logger):
     """
     Graphics server which uses ZeroMQ PUB socket to publish updates.
     """
+
+    class InitializationError(Exception):
+        pass
+
     _instance = None
     _pair_fds = {}
 
@@ -56,7 +61,6 @@ class GraphicsServer(Logger):
         assert thread_pool is not None, (
             "GraphicsServer was not previously initialized")
         super(GraphicsServer, self).__init__()
-        thread_pool.register_on_shutdown(self.shutdown)
         parser = GraphicsServer.init_parser()
         args, _ = parser.parse_known_args()
         self._debug_pickle = args.graphics_pickle_debug
@@ -68,7 +72,14 @@ class GraphicsServer(Logger):
             zmq_endpoints.append(ZmqEndpoint(
                 "bind", "rndepgm://%s;%s:1024:65535:1" %
                         (iface, root.common.graphics_multicast_address)))
-        self.zmq_connection = ZmqPublisher(zmq_endpoints)
+        self.debug("Trying to bind to %s...", zmq_endpoints)
+        try:
+            self.zmq_connection = ZmqPublisher(zmq_endpoints)
+        except zmq.error.ZMQError:
+            self.exception("Failed to bind to %s", zmq_endpoints)
+            raise from_none(GraphicsServer.InitializationError())
+
+        thread_pool.register_on_shutdown(self.shutdown)
 
         # tmpfn, *ports = self.zmq_connection.rnd_vals
         tmpfn = self.zmq_connection.rnd_vals[0]
