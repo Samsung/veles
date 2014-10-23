@@ -33,12 +33,27 @@ thread = threading.Thread(target=wait, name='timeout')
 sysexit = sys.exit
 
 
-def shutdown(errcode=0):
+def interrupt_waiter():
     global thread_args
+    event, _ = thread_args
     thread_args = (None, None)
+    if event is not None:
+        event.set()
     new_event.set()
     if thread.is_alive():
         thread.join()
+
+
+def sigint_handler(sign, frame):
+    interrupt_waiter()
+    sigint_initial(sign, frame)
+
+
+sigint_initial = signal.signal(signal.SIGINT, sigint_handler)
+
+
+def shutdown(errcode=0):
+    interrupt_waiter()
     if sysexit == ThreadPool.exit and sys.exit == shutdown:
         print_("timeout sysexit <-> ThreadPool.exit recursion",
                file=sys.stderr)

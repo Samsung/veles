@@ -21,6 +21,7 @@ from twisted.python import threadpool
 
 import veles.logger as logger
 from veles.cmdline import CommandLineArgumentsRegistry
+from veles.compat import from_none
 
 
 sysexit_initial = None
@@ -246,7 +247,13 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         try:
             ThreadPool.sigint_initial(sign, frame)
         except KeyboardInterrupt:
-            logging.getLogger("ThreadPool").critical("KeyboardInterrupt")
+            log = logging.getLogger("ThreadPool")
+            if not reactor.running:
+                log.warning("Raising KeyboardInterrupt since "
+                            "Twisted reactor is not running")
+                raise from_none(KeyboardInterrupt())
+            else:
+                log.critical("KeyboardInterrupt")
 
     @staticmethod
     def sigusr1_handler(sign, frame):
