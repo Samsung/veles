@@ -100,6 +100,9 @@ class Unit(Distributable):
     timers = {}
     visible = True
 
+    class NotInitializedError(Exception):
+        pass
+
     def __init__(self, workflow, **kwargs):
         self.name = kwargs.get("name")
         self.view_group = kwargs.get("view_group")
@@ -526,9 +529,8 @@ class Unit(Distributable):
                 return
             try:
                 if not self._is_initialized:
-                    self.initialize()
-                    self.warning("%s was not initialized, performed the "
-                                 "initialization", self.name)
+                    self.error("%s is not initialized", self.name)
+                    raise Unit.NotInitializedError()
                 self.run()
             finally:
                 self._run_lock_.release()
