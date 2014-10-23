@@ -116,6 +116,7 @@ class Launcher(logger.Logger):
         self._running = False
         self._start_time = None
         self.graphics_client = None
+        self.graphics_server = None
         self._notify_update_interval = kwargs.get(
             "status_update_interval",
             root.common.web.notification_interval)
@@ -345,10 +346,18 @@ class Launcher(logger.Logger):
                 # Launch the status server if it's not been running yet
                 self._launch_status()
             if workflow.plotters_are_enabled:
-                self.graphics_server, self.graphics_client = \
-                    graphics_server.GraphicsServer.launch(
-                        workflow.thread_pool, self.matplotlib_backend,
-                        self._set_webagg_port, self.args.no_graphics_client)
+                try:
+                    self.graphics_server, self.graphics_client = \
+                        graphics_server.GraphicsServer.launch(
+                            workflow.thread_pool,
+                            self.matplotlib_backend,
+                            self._set_webagg_port,
+                            self.args.no_graphics_client)
+                except:
+                    self.error("Failed to create the graphics server and/or "
+                               "client. Try to completely disable plotting "
+                               "with -p ''.")
+                    raise
             elif self.args.no_graphics_client:
                 self.warning("Plotters are disabled. --no-graphics-client has "
                              "no effect.")
