@@ -107,14 +107,24 @@ Invoke pip install on requirements.txt::
    sudo pip3 install -r requirements.txt
    
 Looks like your Veles is ready to run! The last steps are :doc:`manualrst_veles_ocl`
-and :doc:`manualrst_veles_eclipse`.
+and :doc:`manualrst_veles_eclipse` or :doc:`manualrst_veles_pycharm`.
 
 Importing project
 :::::::::::::::::
 
-Open Eclipse and select **Main Menu -> File -> Import...**. Click
+^^^^^^^
+Eclipse
+^^^^^^^
+
+Select **Main Menu -> File -> Import...**. Click
 **General/Existing Projects into Workspace**. Click "Browse" to the right
 of root directory and specify the directory with Veles. Click "Finish".
+
+^^^^^^^
+PyCharm
+^^^^^^^
+
+Select **Open Directory** and specify the directory with Veles.
 
 Installing Sphinx (generator of this document)
 ::::::::::::::::::::::::::::::::::::::::::::::

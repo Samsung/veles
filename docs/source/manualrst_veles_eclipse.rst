@@ -31,8 +31,8 @@ Eclipse setup
    Open Dash and type "eclipse". Drag and drop the appeared icon to the sidebar.
     
 
-VELES is being (but not strictly has to be) developed in Eclipse PyDev IDE.
-So to start developing VELES, the first step is downloading and running Eclipse.
+VELES can be developed in either Eclipse PyDev IDE or PyCharm IDE.
+If you choose Eclipse, the first step is downloading and running it.
 
 VELES team mebers should already have it in /opt/eclipse, others can go to
 http://eclipse.org/downloads. Using Eclipse CDT (C/C++ IDE) as the base is recommended.
