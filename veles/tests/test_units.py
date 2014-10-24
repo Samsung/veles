@@ -8,6 +8,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 import unittest
 
 from veles.units import TrivialUnit
+from veles.pickle2 import pickle
 from veles.tests.dummy_workflow import DummyWorkflow
 
 
@@ -29,11 +30,18 @@ class CalculatorTester(TrivialUnit):
         self.a = self.b ** 2
 
 
+class TestUnit(TrivialUnit):
+    def __init__(self, workflow):
+        super(TestUnit, self).__init__(workflow)
+        self.a = 1
+        self.b = "test"
+        self.c = [1, 2, 3]
+
+
 class Test(unittest.TestCase):
 
     def testCalculate(self):
-        w = DummyWorkflow()
-        calc = CalculatorTester(w)
+        calc = CalculatorTester(DummyWorkflow())
         u1 = UnitMock()
         u1.A = 56
         u2 = UnitMock()
@@ -51,6 +59,13 @@ class Test(unittest.TestCase):
         self.assertEqual(56, calc.a)
         self.assertEqual(-4, calc.b)
         self.assertEqual(52, calc.c)
+
+    def testSerialization(self):
+        unit = TestUnit(DummyWorkflow())
+        unit2 = pickle.loads(pickle.dumps(unit))
+        self.assertEqual(unit.name, unit2.name)
+        for an in ("a", "b", "c"):
+            self.assertEqual(getattr(unit, an), getattr(unit2, an))
 
 
 if __name__ == "__main__":
