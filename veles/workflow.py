@@ -13,6 +13,7 @@ import datetime
 import hashlib
 from itertools import chain
 import os
+import six
 import sys
 import tempfile
 import time
@@ -579,6 +580,8 @@ class Workflow(Unit):
             node = pydot.Node(hex(id(unit)))
             unit_file_name = os.path.relpath(inspect.getfile(unit.__class__),
                                              root.common.veles_dir)
+            if six.PY2 and unit_file_name.endswith('.pyc'):
+                unit_file_name = unit_file_name[:-1]
             node.set("label",
                      '<<b><font point-size=\"18\">%s</font></b><br/>'
                      '<font point-size=\"14\">%s</font>>'
