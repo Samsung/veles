@@ -15,7 +15,6 @@ from libSoundFeatureExtraction.python.sound_feature_extraction import library
 class Test(unittest.TestCase):
 
     def setUp(self):
-        logging.basicConfig(level=logging.DEBUG)
         library.Library(
             "/home/markhor/Development/SoundFeatureExtraction/build/src/"
             ".libs/libSoundFeatureExtraction.so")
@@ -37,5 +36,6 @@ class Test(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
     # import sys;sys.argv = ['', 'Test.testSoundFeatures']
     unittest.main()

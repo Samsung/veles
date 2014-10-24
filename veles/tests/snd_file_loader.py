@@ -12,9 +12,6 @@ from veles.snd_file_loader import SndFileLoader
 
 class Test(unittest.TestCase):
 
-    def setUp(self):
-        logging.basicConfig(level=logging.DEBUG)
-
     def tearDown(self):
         pass
 
@@ -27,5 +24,6 @@ class Test(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
     # import sys;sys.argv = ['', 'Test.testSndFileLoader']
     unittest.main()

@@ -17,7 +17,6 @@ from veles.tests import timeout
 class Test(unittest.TestCase):
 
     def setUp(self):
-        logging.basicConfig(level=logging.INFO)
         root.common.web.log_file = "/tmp/veles_web.test.log"
         root.common.web.port = 8071
         self.ws = WebServer()
@@ -37,5 +36,6 @@ class Test(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     # import sys;sys.argv = ['', 'Test.testStop']
     unittest.main()

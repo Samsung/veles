@@ -15,11 +15,11 @@ class Test(unittest.TestCase):
         pass
 
     def testBenchmark(self):
-        logging.basicConfig(level=logging.DEBUG)
         self.bench = opencl_units.OpenCLBenchmark(self)
         self.bench.initialize(device=opencl.Device())
         logging.info("Result: %d points", self.bench.estimate())
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
     unittest.main()
