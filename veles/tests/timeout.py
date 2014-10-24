@@ -10,6 +10,8 @@ import signal
 from six import print_
 import sys
 import threading
+import unittest
+
 from veles.thread_pool import ThreadPool
 
 
@@ -24,9 +26,9 @@ def wait():
         if event is None:
             return
         if not event.wait(seconds):
-            print_("Timeout %.1f sec - sending SIGTERM" % seconds,
+            print_("Timeout %.1f sec - sending SIGINT" % seconds,
                    file=sys.stderr)
-            os.kill(os.getpid(), signal.SIGTERM)
+            os.kill(os.getpid(), signal.SIGINT)
 
 
 thread = threading.Thread(target=wait, name='timeout')
@@ -77,14 +79,17 @@ def timeout(value=60):
 
         name = getattr(fn, '__name__', getattr(fn, 'func', unknown).__name__)
 
-        def wrapped(*args, **kwargs):
+        def wrapped(self, *args, **kwargs):
+            assert isinstance(self, unittest.TestCase)
             event = threading.Event()
             global thread_args
             thread_args = (event, value)
             thread.name = 'timeout@%s' % name
             new_event.set()
             try:
-                res = fn(*args, **kwargs)
+                res = fn(self, *args, **kwargs)
+            except KeyboardInterrupt:
+                self.fail("Interrupted")
             finally:
                 event.set()
             return res
