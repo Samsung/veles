@@ -49,6 +49,10 @@ class Config(object):
         print('-' * width)
         print("Current configuration:")
 
+        pprint.pprint(self.__getstate__(), indent=indent, width=width)
+        print('-' * width)
+
+    def __getstate__(self):
         def fix_contents(contents):
             fixed_contents = dict(contents)
             for k, v in contents.items():
@@ -56,9 +60,10 @@ class Config(object):
                     fixed_contents[k] = fix_contents(v.__dict__)
             return fixed_contents
 
-        contents = fix_contents(self.__dict__)
-        pprint.pprint(contents, indent=1, width=width)
-        print('-' * width)
+        return fix_contents(self.__dict__)
+
+    def __setstate__(self, state):
+        self.__update__(state)
 
 
 root = Config()
