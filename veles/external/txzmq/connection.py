@@ -10,7 +10,6 @@ from six.moves import cPickle as pickle
 import os
 import snappy
 import time
-import lzma
 
 from zmq import constants, error
 from zmq import Socket
@@ -29,6 +28,7 @@ ZMQ3 = zmq_version_info()[0] >= 3
 from .manager import ZmqContextManager
 from .sharedio import SharedIO
 
+from veles.compat import lzma
 from veles.logger import Logger
 
 

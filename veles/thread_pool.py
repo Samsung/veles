@@ -226,6 +226,8 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         Private method to shut down all the pools.
         """
         pools = copy.copy(ThreadPool.pools)
+        logging.getLogger("ThreadPool").debug("Shutting down %d pools...",
+                                              len(pools))
         for pool in pools:
             pool.shutdown(execute_remaining, force, timeout)
 

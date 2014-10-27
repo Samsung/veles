@@ -7,7 +7,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 import logging
 import numpy
-from six import BytesIO
+from six import BytesIO, PY3
 import threading
 from twisted.internet import reactor
 import unittest
@@ -112,7 +112,7 @@ class TestZmqConnection(unittest.TestCase):
 
             @property
             def data(self):
-                return self._bio.getbuffer()
+                return self._bio.getbuffer() if PY3 else self._bio.getvalue()
 
             def send(self, data, *args, **kwargs):
                 self._bio.write(data)
@@ -121,7 +121,8 @@ class TestZmqConnection(unittest.TestCase):
         bufsize = 4096
         for codec in range(4):
             socket = FakeSocket(BytesIO())
-            pickler = ZmqConnection.Pickler(socket, codec)
+            pickler = ZmqConnection.Pickler(socket,
+                                            codec if PY3 else chr(codec))
             offset = 0
             while (offset < len(idata)):
                 pickler.write(idata[offset:offset + bufsize])
@@ -129,7 +130,7 @@ class TestZmqConnection(unittest.TestCase):
             pickler.flush()
             print("Codec %d results %d bytes" % (codec, pickler.size))
             unpickler = ZmqConnection.Unpickler()
-            unpickler.codec = codec
+            unpickler.codec = codec if PY3 else chr(codec)
             odata = socket.data
             self.assertEqual(len(odata), pickler.size)
             offset = 0

@@ -7,6 +7,17 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 
 import six
 
+if six.PY3:
+    import lzma
+else:
+    try:
+        from backports import lzma
+    except ImportError:
+        import warnings
+
+        warnings.warn("Failed to import backports.lzma - LZMA/XZ compression "
+                      "will be unavailable.\npip install backports.lzma")
+
 
 def from_none(exc):
     """Emulates raise ... from None (PEP 409) on older Python-s
