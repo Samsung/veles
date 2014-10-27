@@ -37,7 +37,7 @@ def setup_pickle_debug():
         except PicklingError:
             import traceback
             import pdb
-            print("\033[1;31mPickling failure\033[0m")
+            six.print_("\033[1;31mPickling failure\033[0m", file=sys.stderr)
             traceback.print_exc()
             # look at obj
             pdb.set_trace()
@@ -48,7 +48,7 @@ def setup_pickle_debug():
         except (UnpicklingError, ImportError):
             import traceback
             import pdb
-            print("\033[1;31mUnpickling failure\033[0m")
+            six.print_("\033[1;31mUnpickling failure\033[0m", file=sys.stderr)
             traceback.print_exc()
             # examine the exception
             pdb.post_mortem()
