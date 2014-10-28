@@ -2,11 +2,11 @@
 
 if [ ! -e "veles/znicz/__init__.py" -o ! -e libSoundFeatureExtraction/.project -o ! -e mastodon/pom.xml ]; then
   if git remote -v | grep ssh:// >/dev/null; then
-    host=$(git remote -v|head -n 1|cut -f 2|cut -d ' ' -f 1|sed -e 's/ssh:\/\///' -e 's/Veles$//' -e 's/\//\\\//g')
+    host=$(git remote -v|head -n 1|cut -f 2|cut -d ' ' -f 1|sed -e 's/ssh:\/\///' -e 's/Veles.git$\|Veles$//' -e 's/\//\\\//g')
     sed -i "s/alserver.rnd.samsung.ru:29418\//$host/g" .gitmodules
   else
     # assuming http://
-    host=$(git remote -v|head -n 1|cut -f 2|cut -d ' ' -f 1|sed -e 's/http:\/\///' -e 's/Veles$//' -e 's/\//\\\//g')
+    host=$(git remote -v|head -n 1|cut -f 2|cut -d ' ' -f 1|sed -e 's/http:\/\///' -e 's/Veles.git$\|Veles$//' -e 's/\//\\\//g')
     sed -i "s/ssh:\/\/alserver.rnd.samsung.ru:29418\//http:\/\/$host/g" .gitmodules
   fi
   while ! git submodule update --init; do
