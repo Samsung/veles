@@ -7,7 +7,9 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 import os
 import six
+import sys
 import pdb
+import tempfile
 import threading
 import unittest
 import warnings
@@ -63,6 +65,8 @@ class TestPickle(unittest.TestCase):
                 self.assertEqual(1, len(w))
                 return
 
+        stderr = sys.stderr
+        sys.stderr = six.StringIO()
         flag = [False]
 
         def set_trace():
@@ -87,6 +91,10 @@ class TestPickle(unittest.TestCase):
         pickle.dumps = dumps
         pickle.load = load
         pickle.loads = loads
+
+        err = sys.stderr.getvalue()
+        sys.stderr = stderr
+        self.assertTrue(err.find("Pickling failure") >= 0)
 
 
 if __name__ == "__main__":
