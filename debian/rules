@@ -1,0 +1,20 @@
+#!/usr/bin/make -f
+
+
+export DH_VERBOSE=1
+export PYBUILD_NAME=veles
+export PYBUILD_DISABLE=test
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+override_dh_install:
+	dh_install
+	rm -rf debian/python3-veles/usr/lib/python*/dist-packages/veles/tests
+	rm -rf debian/python3-veles/usr/lib/python*/dist-packages/veles/znicz/tests
+	rm debian/python3-veles/usr/lib/python*/dist-packages/veles/siteconfig.py
+	mkdir -p debian/python3-veles/usr/share/veles
+	cp -rL docs/html debian/python3-veles/usr/share/veles/doc
+	cp -r ocl debian/python3-veles/usr/share/veles/
+	cp -r devices debian/python3-veles/usr/share/veles/
+	cp requirements.txt debian/python3-veles/usr/share/veles/

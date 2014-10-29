@@ -1,0 +1,3 @@
+#!/bin/sh
+
+pip3 install -r /usr/share/veles/requirements.txt

@@ -57,6 +57,9 @@ if __name__ == "__main__":
         download_url="http://alserver.rnd.samsung.ru/gerrit/Veles",
         packages=find_packages(),
         include_package_data=True,
+        entry_points={
+            'console_scripts': ['veles=veles.scripts.velescli:__run__']
+        },
         keywords=["Samsung", "Veles", "Znicz"],
         classifiers=[
             "Development Status :: 4 - Beta",
