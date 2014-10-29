@@ -524,7 +524,7 @@ class Main(Logger):
 
     def _dump_unit_attributes(self, arrays=True):
         import veles.external.prettytable as prettytable
-        from veles import Workflow
+        from veles.workflow import Workflow
         self.debug("Dumping unit attributes of %s...", str(self.workflow))
         table = prettytable.PrettyTable("#", "unit", "attr", "value")
         table.align["#"] = "r"

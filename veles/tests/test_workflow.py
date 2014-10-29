@@ -8,7 +8,7 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 import unittest
 from zope.interface.verify import verifyObject
 
-from veles import Workflow
+from veles.workflow import Workflow
 from veles.distributable import IDistributable
 from veles.units import TrivialUnit
 from veles.tests import DummyLauncher

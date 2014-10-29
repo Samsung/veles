@@ -18,13 +18,6 @@ from types import ModuleType
 from warnings import warn
 
 __root__ = path.dirname(path.dirname(__file__))
-
-from veles.logger import Logger
-from veles.units import Unit, IUnit
-from veles.workflow import Workflow
-from veles.opencl_units import OpenCLUnit, OpenCLWorkflow
-
-
 __project__ = "Veles Machine Learning Platform"
 __version__ = "0.5.0"
 __license__ = "Samsung Proprietary License"
@@ -32,6 +25,7 @@ __copyright__ = u"© 2013 Samsung Electronics Co., Ltd."
 __authors__ = ["Gennady Kuznetsov", "Vadim Markovtsev", "Alexey Kazantsev",
                "Lyubov Podoynitsina", "Denis Seresov", "Dmitry Senin",
                "Alexey Golovizin", "Egor Bulychev", "Ernesto Sanches"]
+__contact__ = "Gennady Kuznetsov <g.kuznetsov@samsung.com>"
 
 try:
     __git__ = "$Commit$"

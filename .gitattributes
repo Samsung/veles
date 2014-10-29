@@ -1,5 +1,6 @@
 .gitmodules merge=ours
 veles/znicz merge=ours
+package.sh export-ignore
 veles/__init__.py filter=package
 veles/tests export-ignore
 libVeles export-ignore
@@ -11,5 +12,7 @@ libSoundFeatureExtraction export-ignore
 .coveragerc export-ignore
 .project export-ignore
 .pydevproject export-ignore
+.idea export-ignore
 init export-ignore
-package.sh export-ignore
+gource export-ignore
+debian export-ignore
