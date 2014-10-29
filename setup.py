@@ -32,20 +32,21 @@ def write_exclusions(gitattrfile):
         fout.writelines(exclusions)
 
 if __name__ == "__main__":
-    print("processing .gitattributes")
-    if os.path.exists(MANIFEST):
-        os.remove(MANIFEST)
-    for root, dirs, files in os.walk(__root__):
-        if ".gitattributes" in files:
-            write_exclusions(os.path.join(root, ".gitattributes"))
-    with open(MANIFEST, "a") as fout:
-        fout.write("recursive-exclude deploy *\n")
-        fout.write("exclude ubuntu-apt-get-install-me.txt\n")
-        fout.write("exclude MANIFEST.in\n")
-        fout.write("recursive-include docs/build/html *\n")
+    if not os.path.exists(MANIFEST):
+        print("processing .gitattributes")
+        if os.path.exists(MANIFEST):
+            os.remove(MANIFEST)
+        for root, dirs, files in os.walk(__root__):
+            if ".gitattributes" in files:
+                write_exclusions(os.path.join(root, ".gitattributes"))
+        with open(MANIFEST, "a") as fout:
+            fout.write("recursive-exclude deploy *\n")
+            fout.write("exclude ubuntu-apt-get-install-me.txt\n")
+            fout.write("exclude MANIFEST.in\n")
+            fout.write("recursive-include docs/build/html *\n")
 
     setup(
-        setup_requires=["setuptools_git >= 1.1", ],
+        setup_requires=["setuptools_git", ],
         name="Veles",
         description=__project__,
         version=__version__,

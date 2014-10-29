@@ -2,6 +2,7 @@
 veles/znicz merge=ours
 package.sh export-ignore
 veles/__init__.py filter=package
+veles/siteconfig.py export-ignore
 veles/tests export-ignore
 libVeles export-ignore
 libSoundFeatureExtraction export-ignore

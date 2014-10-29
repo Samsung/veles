@@ -84,26 +84,26 @@ root.common.update({
     "graphics_multicast_address": "239.192.1.1",
     "matplotlib_backend": "Qt4Agg",
     "matplotlib_webagg_port": 8081,
-    "mongodb_logging_address": "smaug:27017",
+    "mongodb_logging_address": "0.0.0.0:27017",
     "plotters_disabled": False,
     "precision_type": "double",  # float or double
     "precision_level": 1,  # 0 - use simple summation
                            # 1 - use Kahan summation (9% slower)
                            # 2 - use multipartials summation (90% slower)
-    "test_dataset_root": "/data/veles",
+    "test_dataset_root": os.path.join(os.environ.get("HOME", "./"), "data"),
     "test_known_device": False,
     "test_unknown_device": True,
     "disable_snapshots": False,
     "unit_test": False,
     "veles_dir": __path__,
-    "veles_user_dir": os.path.join(os.environ.get("HOME", "./"), "velesuser"),
-    "device_dir": os.path.join(__path__, "devices"),
+    "veles_user_dir": os.path.join(os.environ.get("HOME", "./"), ".veles"),
+    "device_dir": "/usr/share/veles/devices",
     "ocl_dirs": (os.environ.get("VELES_OPENCL_DIRS", "").split(":") +
-                 [os.path.join(__path__, "ocl")]),
-    "opencl_dir": os.path.join(__path__, "veles"),
+                 ["/usr/share/veles/ocl"]),
+    "help_dir": "/usr/share/doc/veles/html",
     "web": {
-        "host": "smaug",
-        "port": 8090,
+        "host": "0.0.0.0",
+        "port": 80,
         "log_file": "/var/log/veles/web_status.log",
         "log_backups": 9,
         "notification_interval": 1,
@@ -117,18 +117,17 @@ root.common.update({
     }
 })
 
-root.common.cache_dir = os.path.join(root.common.veles_user_dir, "cache")
-
+# Allow to override the settings above
 try:
-    os.makedirs(root.common.cache_dir)
-except OSError:
+    import veles.siteconfig
+except ImportError:
     pass
+
+root.common.cache_dir = os.path.join(root.common.veles_user_dir, "cache")
+if not os.path.exists(root.common.cache_dir):
+    os.makedirs(root.common.cache_dir)
 
 root.common.snapshot_dir = os.path.join(root.common.veles_user_dir,
                                         "snapshots")
-try:
+if not os.path.exists(root.common.snapshot_dir):
     os.makedirs(root.common.snapshot_dir)
-except OSError:
-    pass
-
-root.common.test_dataset_root = "/data/veles/datasets"

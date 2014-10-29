@@ -69,14 +69,15 @@ def __html__():
     if it does not exist.
     """
     import os
+    from veles.config import root
     from veles.portable import show_file
 
-    root = os.path.dirname(__file__)
-    page = os.path.join(root, "../docs/build/html/index.html")
+    page = os.path.join(root.common.help_dir, "index.html")
     if not os.path.exists(page):
         from runpy import run_path
         print("Building the documentation...")
-        run_path(os.path.join(root, "../docs/generate_docs.py"))
+        run_path(os.path.join(os.path.dirname(__file__),
+                              "scripts/generate_docs.py"))
     if os.path.exists(page):
         show_file(page)
 
