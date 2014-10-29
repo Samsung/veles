@@ -127,15 +127,15 @@ USAGE
         parser.add_argument("-r", "--recursive", dest="recurse",
                             action="store_true", default=True,
                             help="recurse into subfolders [default: "
-                                "%(default)s]")
+                                 "%(default)s]")
         parser.add_argument("-1", "--single-threaded", dest="single",
                             action="store_true", default=False,
                             help="single-threaded extraction [default: "
-                                "%(default)s]")
+                                 "%(default)s]")
         parser.add_argument("-ns", "--no-simd", dest="nosimd",
                             action="store_true", default=False,
                             help="disable SIMD acceleration [default: "
-                                "%(default)s]")
+                                 "%(default)s]")
         parser.add_argument("-v", "--verbose", dest="verbose",
                             action="count", default=0,
                             help="set verbosity level [default: %(default)s]")
@@ -198,7 +198,7 @@ USAGE
                                                     root[len(inpath):],
                                                     inpat, expat))
             else:
-                files = [f for f in os.listdir(inpath) \
+                files = [f for f in os.listdir(inpath)
                          if os.path.isfile(os.path.join(inpath, f))]
                 found_files.extend(filter_files(files, root,
                                                 "", inpat, expat))
@@ -220,9 +220,9 @@ USAGE
         splitted_found_files = [found_files[i::pcount] for i in range(pcount)]
         if not single:
             with mp.Pool(pcount) as pool:
-                results_async = [pool.apply_async(
-                    mp_run, (splitted_found_files[i], extr)) \
-                                 for i in range(0, pcount)]
+                results_async = [
+                    pool.apply_async(mp_run, (splitted_found_files[i], extr))
+                    for i in range(0, pcount)]
                 pool.close()
                 pool.join()
                 extr.outputs = list(chain(*[r.get() for r in results_async]))

@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 # encoding: utf-8
 '''
-This scripts generates the HTML page with all velescli's command line arguments,
- allowing for fast command line composition
+This scripts generates the HTML page with all velescli's command line
+arguments, allowing for fast command line composition
 
 '''
 
@@ -16,10 +16,8 @@ import sys
 import tornado.template as template
 import warnings
 
-
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from veles.config import root
-from scripts.velescli import Main
+from veles.scripts.velescli import Main
 
 
 WEB_FOLDER = root.common.web.root

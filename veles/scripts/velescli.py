@@ -22,8 +22,6 @@ Contact:
 from email.utils import formatdate
 import os
 import sys
-
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 import veles
 
 __doc__ += (" " * 7 +  # pylint: disable=W0622
@@ -47,12 +45,12 @@ from six import print_
 
 from veles.cmdline import CommandLineArgumentsRegistry
 from veles.config import root
-import veles.external.daemon as daemon
+from veles.external import daemon
 from veles.logger import Logger
 from veles.launcher import Launcher
 from veles.opencl import Device
 from veles.pickle2 import setup_pickle_debug
-import veles.prng as rnd
+from veles import prng
 from veles.snapshotter import Snapshotter
 from veles.thread_pool import ThreadPool
 
@@ -395,7 +393,7 @@ class Main(Logger):
         for rndval, index in zip(rndvals_split, range(len(rndvals_split))):
             try:
                 binvle = binascii.unhexlify(rndval)
-                rnd.get(index + 1).seed(
+                prng.get(index + 1).seed(
                     numpy.frombuffer(binvle, dtype=numpy.uint8),
                     dtype=numpy.uint8)
                 continue
@@ -411,7 +409,7 @@ class Main(Logger):
                     sys.exit(errno.ENOENT)
             if fname == "-":
                 try:
-                    rnd.get(index + 1).seed(None)
+                    prng.get(index + 1).seed(None)
                 except:
                     self.exception("Failed to seed the random generator %d "
                                    "with the last used seed.", index + 1)
@@ -434,9 +432,8 @@ class Main(Logger):
             self.debug("Seeding with %d samples of type %s from %s to %d",
                        count, str(dtype), fname, index + 1)
             try:
-                rnd.get(index + 1).seed(numpy.fromfile(fname, dtype=dtype,
-                                                       count=count),
-                                        dtype=dtype)
+                prng.get(index + 1).seed(numpy.fromfile(
+                    fname, dtype=dtype, count=count), dtype=dtype)
             except:
                 self.exception("Failed to seed the random generator with %s",
                                fname)
