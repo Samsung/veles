@@ -67,7 +67,7 @@ class GraphicsServer(Logger):
         zmq_endpoints = [ZmqEndpoint("bind", "inproc://veles-plots"),
                          ZmqEndpoint("bind", "rndipc://veles-ipc-plots-:")]
         interfaces = []
-        for iface, _ in self.interfaces():
+        for iface, _ in GraphicsServer.interfaces():
             interfaces.append(iface)
             zmq_endpoints.append(ZmqEndpoint(
                 "bind", "rndepgm://%s;%s:1024:65535:1" %
@@ -105,7 +105,8 @@ class GraphicsServer(Logger):
                             "send.")
         return parser
 
-    def interfaces(self):
+    @staticmethod
+    def interfaces():
         max_possible = 128
         max_bytes = max_possible * 32
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

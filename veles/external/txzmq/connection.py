@@ -28,7 +28,7 @@ ZMQ3 = zmq_version_info()[0] >= 3
 from .manager import ZmqContextManager
 from .sharedio import SharedIO
 
-from veles.compat import lzma
+from veles.compat import lzma, from_none
 from veles.logger import Logger
 
 
@@ -557,10 +557,15 @@ class ZmqConnection(Logger):
                 self.debug("Binding to %s...", endpoint)
                 if endpoint.address.startswith("rndtcp://") or \
                    endpoint.address.startswith("rndepgm://"):
-                    endpos = endpoint.address.find("://") + 3
-                    proto = endpoint.address[3:endpos]
-                    addr, min_port, max_port, max_tries = \
-                        endpoint.address[endpos:].split(':')
+                    try:
+                        endpos = endpoint.address.find("://") + 3
+                        proto = endpoint.address[3:endpos]
+                        splitted = endpoint.address[endpos:].split(':')
+                        min_port, max_port, max_tries = splitted[-3:]
+                        addr = ":".join(splitted[:-3])
+                    except ValueError:
+                        raise from_none(ValueError("Failed to parse %s" %
+                                                   endpoint.address))
                     rnd_vals.append(self.socket.bind_to_random_port(
                         proto + addr, int(min_port), int(max_port),
                         int(max_tries)))
