@@ -8,7 +8,9 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import os
-import pprint
+from pprint import pprint
+from six import print_
+import sys
 
 import veles
 
@@ -45,12 +47,12 @@ class Config(object):
     def __repr__(self):
         return str(self.__dict__)
 
-    def print_config(self, indent=1, width=80):
-        print('-' * width)
-        print("Current configuration:")
+    def print_(self, indent=1, width=80, file=sys.stdout):
+        print_('-' * width, file=file)
+        print_("Current configuration:", file=file)
 
-        pprint.pprint(self.__getstate__(), indent=indent, width=width)
-        print('-' * width)
+        pprint(self.__getstate__(), indent=indent, width=width, stream=file)
+        print_('-' * width, file=file)
 
     def __getstate__(self):
         def fix_contents(contents):

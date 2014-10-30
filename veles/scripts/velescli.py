@@ -648,7 +648,7 @@ class Main(Logger):
         wm = self._load_model(fname_workflow, args.snapshot)
         self._apply_config(fname_config, args.config_list)
         if args.dump_config:
-            root.print_config()
+            root.print_()
 
         self._run_core(wm, args.background)
         self.info("End of job")

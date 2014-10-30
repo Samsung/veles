@@ -299,7 +299,7 @@ class ConfigChromosome(Chromosome):
 
     def run_workflow(self, fitness):
         self.info("Will evaluate the following config:")
-        self.population_.root_.print_config()
+        self.population_.root_.print_()
         if self.population_.multi:
             self.population_.fix_argv_to_run_standalone()
         root.common.disable_snapshots = True
@@ -354,7 +354,7 @@ class ConfigPopulation(Population):
             numpy.argmax(x.fitness for x in self.chromosomes)]
         for i, tune in enumerate(self.registered_tunes_):
             set_config_or_array(tune.root, tune.name, best.numeric[i])
-        self.root_.print_config()
+        self.root_.print_()
         self.info("#" * 80)
         super(ConfigPopulation, self).log_statistics()
         self.info("#" * 80)

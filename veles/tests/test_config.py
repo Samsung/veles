@@ -9,6 +9,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import logging
+from six import StringIO
 import unittest
 
 from veles.config import root, Config, get
@@ -76,6 +77,12 @@ class TestConfig(unittest.TestCase):
         test.test_value2 = get(test.test_value2, 0.5)
         self.assertEqual(test.test_value2, 0.5,
                          "No right defolt value in get")
+
+    def test_print(self):
+        f = StringIO()
+        root.print_(file=f)
+        self.assertGreater(len(f.getvalue()), 0)
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)

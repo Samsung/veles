@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="PYTHON_MODULE" version="4">
   <component name="NewModuleRootManager">
-    <content url="file://$MODULE_DIR$" />
+    <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/.externalToolBuilders" />
+      <excludeFolder url="file://$MODULE_DIR$/.pybuild" />
+      <excludeFolder url="file://$MODULE_DIR$/.settings" />
+      <excludeFolder url="file://$MODULE_DIR$/Veles.egg-info" />
+      <excludeFolder url="file://$MODULE_DIR$/debian" />
+    </content>
     <orderEntry type="jdk" jdkName="Python 3.4.1 (/usr/bin/python3.4)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
