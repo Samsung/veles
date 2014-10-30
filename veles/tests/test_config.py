@@ -12,17 +12,18 @@ import logging
 from six import StringIO
 import unittest
 
-from veles.config import root, Config, get
+from veles.config import root, Config, get, validate_kwargs
 
 
 class TestConfig(unittest.TestCase):
     def setUp(self):
         root.common.unit_test = True
+        self.was_warning = False
 
     def test_temp_config(self):
         logging.info("Will test automatic appearance of an"
                      " intermediate Config object")
-        test = Config()
+        test = Config("")
         test.test_.test_value = 5
         self.assertEqual(test.test_.test_value, 5,
                          "Not equal values on second level")
@@ -30,7 +31,7 @@ class TestConfig(unittest.TestCase):
 
     def test_update_multi_line(self):
         logging.info("Will test multi-line update function")
-        test = Config()
+        test = Config("")
 
         test.test_value = 0.01
         test.test_.test_value = 5
@@ -49,7 +50,7 @@ class TestConfig(unittest.TestCase):
 
     def test_update_one_line(self):
         logging.info("Will test one-line update function")
-        test = Config()
+        test = Config("")
 
         test.update({"test_value": 0.5,
                      "test_": {"test_value": 12,
@@ -69,7 +70,7 @@ class TestConfig(unittest.TestCase):
 
     def test_get_config(self):
         logging.info("Will test get function")
-        test = Config()
+        test = Config("")
         test.test_value = 0.01
         test.test_value = get(test.test_value, 0.5)
         self.assertEqual(test.test_value, 0.01,
@@ -78,10 +79,17 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(test.test_value2, 0.5,
                          "No right defolt value in get")
 
+    def warning(self, *args, **kwargs):
+        self.was_warning = True
+
     def test_print(self):
         f = StringIO()
         root.print_(file=f)
         self.assertGreater(len(f.getvalue()), 0)
+
+    def test_validate(self):
+        validate_kwargs(self, first=root.unit_test, second=root.nonexistnt)
+        self.assertTrue(self.was_warning)
 
 
 if __name__ == "__main__":

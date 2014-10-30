@@ -14,7 +14,7 @@ from zope.interface import Interface, implementer
 from zope.interface.verify import verifyObject, verifyClass
 
 from veles.cmdline import CommandLineArgumentsRegistry
-from veles.config import root, get
+from veles.config import root, get, validate_kwargs
 from veles.distributable import Distributable, TriviallyDistributable, \
     IDistributable
 import veles.error as error
@@ -109,6 +109,7 @@ class Unit(Distributable):
         self._demanded = []
         self._id = str(uuid.uuid4())
         super(Unit, self).__init__(**kwargs)
+        validate_kwargs(self, **kwargs)
         self.verify_interface(IUnit)
         self._links_from = {}
         self._links_to = {}
@@ -563,6 +564,7 @@ class Unit(Distributable):
 
     def _check_attrs(self, fn, attrs):
         def wrapped_check_attrs(*args, **kwargs):
+            validate_kwargs(self, **kwargs)
             for attr in attrs:
                 val = getattr(self, attr, None)
                 if val is None:

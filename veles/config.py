@@ -21,6 +21,8 @@ root = None
 class Config(object):
     """Config service class.
     """
+    def __init__(self, path):
+        self.__path__ = path
 
     def update(self, value):
         if self == root:
@@ -37,7 +39,7 @@ class Config(object):
                 setattr(self, k, v)
 
     def __getattr__(self, name):
-        temp = Config()
+        temp = Config("%s.%s" % (self.__path__, name))
         setattr(self, name, temp)
         return temp
 
@@ -68,8 +70,8 @@ class Config(object):
         self.__update__(state)
 
 
-root = Config()
-root.common = Config()
+root = Config("root")
+root.common
 
 
 def get(value, default_value=None):
@@ -78,6 +80,13 @@ def get(value, default_value=None):
     if isinstance(value, Config):
         return default_value
     return value
+
+
+def validate_kwargs(caller, **kwargs):
+    for k, v in kwargs.items():
+        if isinstance(v, Config):
+            caller.warning("Argument '%s' seems to be undefined at %s",
+                           k, v.__path__)
 
 
 __path__ = veles.__root__

@@ -7,6 +7,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 import unittest
 
+from veles.config import root
 from veles.units import TrivialUnit
 from veles.pickle2 import pickle
 from veles.tests.dummy_workflow import DummyWorkflow
@@ -31,11 +32,15 @@ class CalculatorTester(TrivialUnit):
 
 
 class TestUnit(TrivialUnit):
-    def __init__(self, workflow):
-        super(TestUnit, self).__init__(workflow)
+    def __init__(self, workflow, **kwargs):
+        self.was_warning = False
+        super(TestUnit, self).__init__(workflow, **kwargs)
         self.a = 1
         self.b = "test"
         self.c = [1, 2, 3]
+
+    def warning(self, *args, **kwargs):
+        self.was_warning = True
 
 
 class Test(unittest.TestCase):
@@ -66,6 +71,15 @@ class Test(unittest.TestCase):
         self.assertEqual(unit.name, unit2.name)
         for an in ("a", "b", "c"):
             self.assertEqual(getattr(unit, an), getattr(unit2, an))
+
+    def testValidateKwargs(self):
+        bad_kwargs = {"first": root.unit_test,
+                      "second": root.nonexistent_shit}
+        u = TestUnit(DummyWorkflow(), **bad_kwargs)
+        self.assertTrue(u.was_warning)
+        u.was_warning = False
+        u.initialize(**bad_kwargs)
+        self.assertTrue(u.was_warning)
 
 
 if __name__ == "__main__":
