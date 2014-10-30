@@ -38,7 +38,7 @@ latter requires you to have the archive with Smaug's repository beforehand and
 
 Add the repository public key::
 
-    wget -O - http://smaug.rnd.samsung.ru/apt/smaug.rnd.samsung.ru.gpg.ke y| sudo apt-key add -
+    wget -O - http://smaug.rnd.samsung.ru/apt/smaug.rnd.samsung.ru.gpg.key | sudo apt-key add -
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 Setting up a local mirror
