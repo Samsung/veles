@@ -14,7 +14,12 @@ override_dh_install:
 	rm -rf debian/python3-veles/usr/lib/python*/dist-packages/veles/znicz/tests
 	rm debian/python3-veles/usr/lib/python*/dist-packages/veles/siteconfig.py
 	mkdir -p debian/python3-veles/usr/share/veles
-	cp -rL docs/html debian/python3-veles/usr/share/veles/doc
+	mkdir -p debian/python3-veles/usr/share/doc/python3-veles
+	cp -rL docs/html/* debian/python3-veles/usr/share/doc/python3-veles
 	cp -r ocl debian/python3-veles/usr/share/veles/
 	cp -r devices debian/python3-veles/usr/share/veles/
 	cp requirements.txt debian/python3-veles/usr/share/veles/
+	ver=$$(ls debian/python3-veles/usr/lib) && mkdir debian/python3-veles/usr/lib/$$ver/dist-packages/veles/znicz/samples/kohonen && \
+	mkdir debian/python3-veles/usr/lib/$$ver/dist-packages/veles/znicz/samples/wine
+	cp veles/znicz/samples/kohonen/* debian/python3-veles/usr/lib/python*/dist-packages/veles/znicz/samples/kohonen
+	cp veles/znicz/samples/wine/* debian/python3-veles/usr/lib/python*/dist-packages/veles/znicz/samples/wine

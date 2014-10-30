@@ -22,3 +22,4 @@ pycrypto>=2.6.1
 ecdsa>=0.11
 pyzmq>=14.3.1
 wget>=2.2
+service_identity>=0.2
