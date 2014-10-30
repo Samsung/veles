@@ -10,7 +10,7 @@ import xmltodict
 
 
 if __name__ == "__main__":
-    with open(sys.argv[1], 'r') as fin:
+    with open(sys.argv[1], 'r', encoding="utf-8") as fin:
         data = xmltodict.parse(fin.read())
 
     files = list(sorted(set.union({dup['file'][i]['@path']
