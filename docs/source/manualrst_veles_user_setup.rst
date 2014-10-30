@@ -1,9 +1,10 @@
 User's setup (level 1)
 ======================
 
-Normal users should setup Veles via ``deploy.sh`` script. This method should
-also work on systems other than Ubuntu. The first step depends on how one gets
-the Veles sources.
+Cluster deployers and users of GNU/Linux other than Ubuntu should setup Veles
+via ``deploy.sh`` script. If you are using Ubuntu, it is better to follow
+:doc:`manualrst_veles_ubuntu_user_setup`. The first step depends on how one
+gets the Veles sources.
 
 Via Git
 :::::::

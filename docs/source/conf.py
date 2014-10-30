@@ -309,14 +309,15 @@ class Mock(object):
         else:
             return Mock()
 
-MOCK_MODULES = ['pygtk', 'gtk', 'gobject', "numpy", "numpy.random", "cv2",
+MOCK_MODULES = ['pygtk', 'gtk', 'gobject', "numpy", "numpy.random",
+                "numpy.linalg", "cv2",
                 "scipy", "scipy.signal", "scipy.io", "scipy.misc",
                 "scipy.interpolate", "scipy.stats",
                 "scipy.ndimage", "freetype", "matplotlib", "matplotlib.pyplot",
                 "matplotlib.cm", "matplotlib.patches", "matplotlib.lines",
                 "caffe",
 
-                "scripts.music_features", "sound_feature_extraction",
+                "veles.scripts.music_features", "sound_feature_extraction",
                 "sound_feature_extraction.library"  # deprecated
                 ]
 for mod_name in MOCK_MODULES:

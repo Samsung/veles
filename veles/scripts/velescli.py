@@ -9,7 +9,7 @@ Contact:
     v.markovtsev@samsung.com
 
 .. argparse::
-   :module: scripts.velescli
+   :module: veles.scripts.velescli
    :func: create_args_parser_sphinx
    :prog: velescli
 

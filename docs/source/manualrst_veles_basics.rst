@@ -6,16 +6,18 @@ Workflow consists of units. That's it.
 
 .. _two_ways_of_running_veles:
 
-Two ways of running Veles
-:::::::::::::::::::::::::
+Three ways of running Veles
+:::::::::::::::::::::::::::
 
 You can run Veles in either of these two ways:
 
-    * ``scripts/velescli.py ...``
+    * ``veles/scripts/velescli.py ...``
     * ``python3 -m veles ...``
+    * ``veles ...`` (**only** in case of :doc:`manualrst_veles_ubuntu_user_setup`)
     
 The second method executes :mod:`veles.__main__`, which in turn calls
-``scripts/velescli.py``, so they are totally equivalent.
+``scripts/velescli.py``, and so basically does the third (it is an easy_install entry point)
+so all these methods are totally equivalent.
 
 Three execution modes
 :::::::::::::::::::::

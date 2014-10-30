@@ -26,6 +26,8 @@ if __name__ == "__main__":
                     os.path.join(project_path, "veles/znicz/external"),
                     os.path.join(project_path, "veles/tests"),
                     os.path.join(project_path, "veles/znicz/tests")])
+    os.remove("source/modules.rst")
+    os.remove("source/setup.rst")
     subprocess.call(["sphinx-build", "-b", "html", "-d",
                      os.path.join(docs_path, "build/doctrees"),
                      docs_source_path, os.path.join(docs_path, "build/html")])

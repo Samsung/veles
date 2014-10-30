@@ -76,8 +76,7 @@ def __html__():
     if not os.path.exists(page):
         from runpy import run_path
         print("Building the documentation...")
-        run_path(os.path.join(os.path.dirname(__file__),
-                              "scripts/generate_docs.py"))
+        run_path(os.path.join(__root__, "docs/generate_docs.py"))
     if os.path.exists(page):
         show_file(page)
 

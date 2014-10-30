@@ -19,6 +19,8 @@ If you don't have a user name, please contact the administator: v.markovtsev@sam
 Execution of ``init`` script is neccessary, because Veles submodules require
 special processing.
 
+.. _debian-repo:
+
 Repositories
 ::::::::::::
 
@@ -33,6 +35,10 @@ If Smaug is not accessible from your point, there are two options left: either
 fall back to :doc:`manualrst_veles_user_setup` or obtain a mirror server. The
 latter requires you to have the archive with Smaug's repository beforehand and
 ``reprepro`` utility, see `Setting up a local mirror`_.
+
+Add the repository public key::
+
+    wget -O - http://smaug.rnd.samsung.ru/apt/smaug.rnd.samsung.ru.gpg.ke y| sudo apt-key add -
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 Setting up a local mirror

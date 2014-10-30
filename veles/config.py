@@ -111,7 +111,7 @@ root.common.update({
     "device_dir": "/usr/share/veles/devices",
     "ocl_dirs": (os.environ.get("VELES_OPENCL_DIRS", "").split(":") +
                  ["/usr/share/veles/ocl"]),
-    "help_dir": "/usr/share/doc/veles/html",
+    "help_dir": "/usr/share/doc/veles",
     "web": {
         "host": "0.0.0.0",
         "port": 80,
