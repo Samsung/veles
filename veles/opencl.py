@@ -45,100 +45,69 @@ class DeviceInfo(object):
         self.memsize = kwargs["memsize"]
         self.memalign = kwargs["memalign"]
         self.version = kwargs["version"]
+        self.device_type = kwargs["device_type"]
+        self.max_block_size = kwargs["max_block_size"]
         self.rating = {}
         self.device_info = {}
 
-    def get_block_sizes(self, **kwargs):
-        """Gets optimal block sizes for matrix multiplication.
+    def get_block_size(self, **kwargs):
+        """Gets optimal block size for matrix multiplication.
 
         Parameters:
+            dtype: numeric data type as string (float or double).
             kernel: hint for the name of the kernel for which the optimal
                     block sizes will be returned:
                     conv: convolutional forward propagation,
                     deconv: convolutional back propagation,
                     all other: simple matrix multiplication.
-            dtype: numeric data type (defaults to root.common.precision_type).
-            precision: precision levwel for summation (0, 1, 2)
+            precision: precision level for summation (0, 1, 2)
                        (defaults to root.common.precision_level).
-            a_col: True if matrix A will be accessed by columns.
-            b_col: True if matrix B will be accessed by columns.
-            a_width: hint of width of matrix A.
-            b_width: hint of width of matrix B.
-            ab_common: hint of common side width.
-            kx: hint of kernel width for convolution.
-            ky: hint of kernel height for convolution.
-            n_kernels: hint of number of convolutional kernels.
-            sx: hint of width of the input image for convolution.
-            sy: hint of height of the input image for convolution.
-            n_channels: hint of number of channels in the input
-                        for convolution.
 
         Returns:
-            a_block_size, b_block_size, common_block_size
+            BLOCK_SIZE
         """
-        dtype = kwargs.get("dtype", root.common.precision_type)
-        precision = kwargs.get("precision", root.common.precision_level)
-        a_col = kwargs.get("a_col", False)
-        b_col = kwargs.get("b_col", False)
-        access_type = "%s_x_%s" % ("col" if a_col else "row",
-                                   "col" if b_col else "row")
-
+        dtype = kwargs["dtype"]
+        if type(dtype) != str:
+            dtype = opencl_types.numpy_dtype_to_opencl(dtype)
         krnnme = kwargs.get("kernel", "matrix_multiplication")
+        precision = kwargs.get("precision", root.common.precision_level)
         krninfo = self.device_info.get(krnnme)
         if krninfo is None:
             logging.warning(
                 "krnnme = %s was not found, "
-                "rolling back to block sizes for matrix_multiplication",
+                "rolling back to block size for matrix_multiplication",
                 krnnme)
             krnnme = "matrix_multiplication"
             krninfo = self.device_info.get(krnnme)
             if krninfo is None:
                 logging.warning(
                     "krnnme = %s was not found, "
-                    "rolling back to the default block sizes",
-                    krnnme)
-                return self.get_default_block_sizes()
-        accessinfo = krninfo.get(access_type)
-        if accessinfo is None:
-            accessinfo = krninfo.get("row_x_row")
-            if accessinfo is None:
-                logging.warning(
-                    "access_type = %s was not found with krnnme = %s, "
-                    "rolling back to the default block sizes",
-                    access_type, krnnme)
-                return self.get_default_block_sizes()
-        typeinfo = accessinfo.get(dtype)
+                    "rolling back to the default block size", krnnme)
+                return self.default_block_size
+        typeinfo = krninfo.get(dtype)
         if typeinfo is None:
             logging.warning(
                 "dtype = %s was not found with krnnme = %s and "
-                "access_type = %s, rolling back to the default block sizes",
-                dtype, krnnme, access_type)
-            return self.get_default_block_sizes()
-        abcdt = typeinfo.get(str(precision))
-        while abcdt is None and precision > 0:
+                "rolling back to the default block size", dtype, krnnme)
+            return self.default_block_size
+        bs_dt = typeinfo.get(str(precision))
+        while bs_dt is None and precision > 0:
             precision -= 1
-            abcdt = typeinfo.get(str(precision))
-        if abcdt is None:
+            bs_dt = typeinfo.get(str(precision))
+        if bs_dt is None:
             logging.warning(
-                "precision = 0 was not found with krnnme = %s and "
-                "access_type = %s and dtype = %s, rolling back to the "
-                "default block sizes", krnnme, access_type, dtype)
-            return self.get_default_block_sizes()
-        a = abcdt[0][0]
-        b = abcdt[0][1]
-        c = abcdt[0][2]
+                "precision = 0 was not found with krnnme = %s and dtype = %s, "
+                "rolling back to the default block size", krnnme, dtype)
+            return self.default_block_size
+        return bs_dt[0]
 
-        a_width = kwargs.get("a_width", a)
-        b_width = kwargs.get("b_width", b)
-        ab_common = kwargs.get("ab_common", c)
-        return (min(a, a_width), min(b, b_width), min(c, ab_common))
-
-    def get_default_block_sizes(self):
-        return 16, 16, 32
+    @property
+    def default_block_size(self):
+        return self.max_block_size
 
     @property
     def vector_opt(self):
-        return False
+        return self.device_type == cl.CL_DEVICE_TYPE_CPU
 
 
 class DeviceNotFoundError(Exception):
@@ -187,7 +156,7 @@ class Device(Pickleable):
         self._fill_device_info_performance_values()
         log_configs = "Selected the following OpenCL configurations:\n"
         table = prettytable.PrettyTable("device", " dtype", "rating",
-                                        "BLOCK_SIZES", "version")
+                                        "BLOCK_SIZE", "version")
         table.align["device"] = "l"
         table.align[" dtype"] = "l"
         table.align["BLOCK_SIZES"] = "l"
@@ -198,7 +167,7 @@ class Device(Pickleable):
             else:
                 rating = "%.3f" % rating
             table.add_row(self.device_info.desc, dtype, rating,
-                          self.device_info.get_block_sizes(dtype=dtype),
+                          self.device_info.get_block_size(dtype=dtype),
                           self.device_info.version)
         self.info(log_configs + str(table))
 
@@ -283,10 +252,11 @@ class Device(Pickleable):
         device = context.devices[0]
         desc = "%s/%s/%d" % (device.vendor.strip(), device.name.strip(),
                              device.vendor_id)
+        self.queue_ = context.create_queue(device)
         self.device_info = DeviceInfo(
             desc=desc, memsize=device.memsize,
-            memalign=device.memalign, version=device.version)
-        self.queue_ = context.create_queue(device)
+            memalign=device.memalign, version=device.version,
+            device_type=device.type, max_block_size=self.max_block_size)
         return True
 
     def _fill_device_info_performance_values(self):
@@ -313,16 +283,13 @@ class Device(Pickleable):
             krninfo = device_info.get("matrix_multiplication")
             if krninfo is None:
                 continue
-            accessinfo = krninfo.get("row_x_row")
-            if accessinfo is None:
-                continue
             devdt[desc] = {}
-            for dtype, typeinfo in accessinfo.items():
-                abcdt = typeinfo.get("0")
-                if abcdt is None:
+            for dtype, typeinfo in krninfo.items():
+                bsdt = typeinfo.get("0")
+                if bsdt is None:
                     continue
-                devdt[desc][dtype] = abcdt[1]
-                min_dt[dtype] = min(min_dt.get(dtype, 1.0e30), abcdt[1])
+                devdt[desc][dtype] = bsdt[1]
+                min_dt[dtype] = min(min_dt.get(dtype, 1.0e30), bsdt[1])
 
         table = prettytable.PrettyTable("device", " dtype", "rating")
         table.align["device"] = "l"
