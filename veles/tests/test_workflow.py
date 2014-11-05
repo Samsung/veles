@@ -4,8 +4,9 @@ Created on Jun 16, 2014
 Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 """
 
-
+import gc
 import unittest
+import weakref
 from zope.interface.verify import verifyObject
 
 from veles.workflow import Workflow
@@ -183,6 +184,68 @@ class Test(unittest.TestCase):
         verifyObject(IDistributable, sp)
         sp = pickle.loads(pickle.dumps(sp))
         verifyObject(IDistributable, sp)
+        self.assertIsInstance(sp.workflow, DummyWorkflow)
+
+    def testWithDestruction(self):
+        flag = [False, False]
+
+        class MyUnit(TrivialUnit):
+            def __del__(self):
+                flag[0] = True
+
+        class MyWorkflow(Workflow):
+            def __del__(self):
+                flag[1] = True
+
+        with MyWorkflow(DummyLauncher()) as wf:
+            u = MyUnit(wf)
+            self.assertEqual(len(wf), 3)
+            self.assertEqual(u.workflow, wf)
+
+        self.assertEqual(len(wf), 2)
+        self.assertEqual(u.workflow, wf)
+        self.assertIsInstance(u.workflow, weakref.ProxyTypes)
+        del wf
+        gc.collect()
+        self.assertTrue(flag[1])
+        del u
+        gc.collect()
+        self.assertTrue(flag[0])
+
+    def testDestruction(self):
+        flag = [False, False]
+
+        class MyUnit(TrivialUnit):
+            def __del__(self):
+                flag[0] = True
+
+        class MyWorkflow(Workflow):
+            def __del__(self):
+                flag[1] = True
+
+        wf = MyWorkflow(DummyLauncher())
+        u = MyUnit(wf)
+        self.assertEqual(len(wf), 3)
+        self.assertEqual(u.workflow, wf)
+        del u
+        del wf
+        gc.collect()
+        self.assertTrue(flag[0])
+        self.assertTrue(flag[1])
+
+    def testPicklingWeak(self):
+        with Workflow(DummyLauncher()) as wf:
+            u = TrivialUnit(wf)
+
+        warned = [False]
+
+        def warning(self, *args, **kwargs):
+            warned[0] = True
+
+        u.warning = warning
+        pickle.loads(pickle.dumps(u))
+        self.assertTrue(warned[0])
+
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'Test.testItarator']

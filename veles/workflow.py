@@ -11,6 +11,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 from collections import OrderedDict, defaultdict
 import datetime
 import hashlib
+import inspect
 from itertools import chain
 import os
 import six
@@ -18,7 +19,6 @@ import sys
 import tempfile
 import time
 import threading
-import inspect
 from zope.interface import implementer
 
 from veles.config import root
@@ -133,7 +133,7 @@ class Workflow(Unit):
                                        generate_data_for_slave_threadsafe=True,
                                        apply_data_from_slave_threadsafe=True,
                                        **kwargs)
-        self.bufpool = kwargs.get("bufpool")
+        self._context_units = None
         self.start_point = StartPoint(self)
         self.end_point = EndPoint(self)
         self.negotiates_on_connect = True
@@ -163,6 +163,15 @@ class Workflow(Unit):
         # workaround for Python 2.7 MultiMap pickle incompatibility
         state["_units"] = list(self)
         return state
+
+    def __enter__(self):
+        self._context_units = []
+        return self
+
+    def __exit__(self, type, value, traceback):
+        for unit in list(self._context_units):
+            self.del_ref(unit)
+        self._context_units = None
 
     def __repr__(self):
         return super(Workflow, self).__repr__() + \
@@ -349,6 +358,8 @@ class Workflow(Unit):
         if unit is self:
             raise ValueError("Attempted to add self to self")
         self._units[unit.name].append(unit)
+        if self._context_units is not None:
+            self._context_units.append(unit)
 
     def del_ref(self, unit):
         """Removes a unit from this workflow. This is needed for complete unit
@@ -356,6 +367,9 @@ class Workflow(Unit):
         """
         if unit.name in self._units.keys():
             self._units[unit.name].remove(unit)
+        if self._context_units is not None and unit in self._context_units:
+            self._context_units.remove(unit)
+        unit.detach()
 
     def index_of(self, unit):
         for index, child in enumerate(self):

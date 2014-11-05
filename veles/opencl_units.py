@@ -397,6 +397,7 @@ class OpenCLWorkflow(Workflow):
 
     def __init__(self, workflow, **kwargs):
         super(OpenCLWorkflow, self).__init__(workflow, **kwargs)
+        self.bufpool = kwargs.get("bufpool")
         self._power_measure_time_interval = kwargs.get(
             'power_measure_time_interval', 120)
 

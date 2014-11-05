@@ -10,6 +10,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 import six
 import threading
 import uuid
+import weakref
 from zope.interface import Interface, implementer
 from zope.interface.verify import verifyObject, verifyClass
 
@@ -167,6 +168,11 @@ class Unit(Distributable):
 
     def __getstate__(self):
         state = super(Unit, self).__getstate__()
+        if isinstance(self.workflow, weakref.ProxyTypes):
+            self.warning("Parent workflow %s was discarded during pickling "
+                         "because it was weakly referenced (did you call "
+                         "detach()?)", self.workflow)
+            state["_workflow"] = None
         if self.stripped_pickle:
             state["_links_from"] = {}
             state["_links_to"] = {}
@@ -250,6 +256,9 @@ class Unit(Distributable):
             self._workflow.del_ref(self)
         self._workflow = value
         self._workflow.add_ref(self)
+
+    def detach(self):
+        self._workflow = weakref.proxy(self._workflow)
 
     @property
     def name(self):
