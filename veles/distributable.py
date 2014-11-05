@@ -7,12 +7,12 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 
 import functools
 import six
-from six.moves import cPickle as pickle
 import threading
 from zope.interface import Interface, Attribute, implementer
 
 import veles.logger as logger
 from veles.mutable import LinkableAttribute
+from veles.pickle2 import pickle, best_protocol
 
 
 class Pickleable(logger.Logger):
@@ -178,7 +178,7 @@ class Distributable(Pickleable):
         Stores object's current state in the specified file.
         """
         data = self.generate_data_for_slave()
-        pickle.dump(data, file_name)
+        pickle.dump(data, file_name, protocol=best_protocol)
 
     def load(self, file_name):
         """
