@@ -341,28 +341,33 @@ class OpenCLBenchmark(OpenCLUnit):
         self.repeats = kwargs.get("repeats", 10)
         self.input_A_ = formats.Vector()
         self.input_B_ = formats.Vector()
-        msize = [self.size, self.size]
-        self.input_A_.mem = numpy.zeros(msize, dtype=dtype)
-        self.input_B_.mem = numpy.zeros(msize, dtype=dtype)
-        self.block_size = 16
+        msize = self.size * self.size
+        self.input_A_.mem = numpy.random.rand(msize).astype(dtype) - 0.5
+        self.input_B_.mem = numpy.random.rand(msize).astype(dtype) - 0.5
+        self.block_size = kwargs.get("block_size")
+        self.precision_level = kwargs.get("precision_level",
+                                          root.common.precision_level)
 
     def initialize(self, device, **kwargs):
         """Compiles the benchmarking kernel.
         """
         super(OpenCLBenchmark, self).initialize(device=device, **kwargs)
-        self.block_size = device.device_info.get_block_size(
-            kernel="matrix_multiplication", dtype=self.dtype)
-        self.cl_sources_ = {
-            "benchmark.cl": {
-                "BLOCK_SIZE": self.block_size,
-                'SIZE': self.size}}
-        self.build_program({}, dtype=self.dtype)
+        if self.block_size is None:
+            self.block_size = device.device_info.get_block_size(
+                kernel="matrix_multiplication", dtype=self.dtype)
+        self.cl_sources_["benchmark.cl"] = {}
+        defines = {
+            "BLOCK_SIZE": self.block_size,
+            "SIZE": self.size,
+            "PRECISION_LEVEL": self.precision_level
+        }
+        self.build_program(defines, dtype=self.dtype)
         self.assign_kernel("benchmark")
         self.input_A_.initialize(self)
         self.input_B_.initialize(self)
         self.set_args(self.input_A_, self.input_A_, self.input_B_)
 
-    def estimate(self):
+    def estimate(self, return_time=False, dry_run_first=False):
         """
         Launches and waits for the benchmark to finish.
         """
@@ -374,14 +379,22 @@ class OpenCLBenchmark(OpenCLUnit):
         self.device.queue_.flush()
         self.device.queue_.finish()
 
-        def execute():
-            for _ in range(self.repeats):
+        def execute(repeats):
+            for _ in range(repeats):
                 self.execute_kernel(global_size, local_size)
             self.device.queue_.flush()
             self.device.queue_.finish()
 
-        res = 1000 / timeit(execute)[1]
-        self.debug("Result is %.2f", res)
+        if dry_run_first:
+            execute(1)
+
+        dt = timeit(execute, self.repeats)[1]
+        if return_time:
+            res = dt / self.repeats
+            self.debug("Avg time is %.6f", res)
+        else:
+            res = 1000 / dt
+            self.debug("Result is %.2f", res)
         return res
 
     def cpu_run(self):

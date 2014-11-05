@@ -8,6 +8,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import argparse
+import gc
 import json
 import logging
 import numpy
@@ -20,7 +21,9 @@ from .cmdline import CommandLineArgumentsRegistry
 from .compat import from_none
 from .config import root
 from .distributable import Pickleable
+from veles.dummy import DummyWorkflow
 import veles.opencl_types as opencl_types
+from veles.opencl_units import OpenCLBenchmark
 import veles.external.prettytable as prettytable
 
 
@@ -46,7 +49,9 @@ class DeviceInfo(object):
         self.memalign = kwargs["memalign"]
         self.version = kwargs["version"]
         self.device_type = kwargs["device_type"]
-        self.max_block_size = kwargs["max_block_size"]
+        self.max_work_group_size = kwargs["max_work_group_size"]
+        self.max_work_item_sizes = kwargs["max_work_item_sizes"]
+        self.local_memsize = kwargs["local_memsize"]
         self.rating = {}
         self.device_info = {}
 
@@ -73,37 +78,51 @@ class DeviceInfo(object):
         precision = kwargs.get("precision", root.common.precision_level)
         krninfo = self.device_info.get(krnnme)
         if krninfo is None:
-            logging.warning(
+            # Benchmark for other kernel types is not implemented,
+            # so only debug level here
+            # TODO(a.kazantsev): implement benchmark for conv and deconv.
+            logging.debug(
                 "krnnme = %s was not found, "
                 "rolling back to block size for matrix_multiplication",
                 krnnme)
             krnnme = "matrix_multiplication"
             krninfo = self.device_info.get(krnnme)
             if krninfo is None:
+                bs = self.get_max_block_size(dtype)
                 logging.warning(
                     "krnnme = %s was not found, "
-                    "rolling back to the default block size", krnnme)
-                return self.default_block_size
+                    "will use max block size %d", krnnme, bs)
+                return bs
         typeinfo = krninfo.get(dtype)
         if typeinfo is None:
+            bs = self.get_max_block_size(dtype)
             logging.warning(
-                "dtype = %s was not found with krnnme = %s and "
-                "rolling back to the default block size", dtype, krnnme)
-            return self.default_block_size
+                "dtype = %s was not found with krnnme = %s, "
+                "will use max block size %d", dtype, krnnme, bs)
+            return bs
         bs_dt = typeinfo.get(str(precision))
         while bs_dt is None and precision > 0:
             precision -= 1
             bs_dt = typeinfo.get(str(precision))
         if bs_dt is None:
+            bs = self.get_max_block_size(dtype)
             logging.warning(
                 "precision = 0 was not found with krnnme = %s and dtype = %s, "
-                "rolling back to the default block size", krnnme, dtype)
-            return self.default_block_size
+                "will use max block size %d", krnnme, dtype, bs)
+            return bs
         return bs_dt[0]
 
-    @property
-    def default_block_size(self):
-        return self.max_block_size
+    def get_max_block_size(self, dtype):
+        itemsize = {"float": 4, "double": 8}[dtype]
+        sz = int(numpy.sqrt(self.max_work_group_size))
+        sh = self.max_work_item_sizes
+        bs = min(sz, sh[0], sh[1])
+        while bs * bs * 2 * itemsize > self.local_memsize:
+            bs -= 1
+        if self.vector_opt:  # round down to 4
+            bs >>= 2
+            bs <<= 2
+        return bs
 
     @property
     def vector_opt(self):
@@ -154,7 +173,7 @@ class Device(Pickleable):
             return
 
         self._fill_device_info_performance_values()
-        log_configs = "Selected the following OpenCL configurations:\n"
+        log_configs = "Selected the following OpenCL configuration:\n"
         table = prettytable.PrettyTable("device", " dtype", "rating",
                                         "BLOCK_SIZE", "version")
         table.align["device"] = "l"
@@ -170,12 +189,6 @@ class Device(Pickleable):
                           self.device_info.get_block_size(dtype=dtype),
                           self.device_info.version)
         self.info(log_configs + str(table))
-
-    @property
-    def max_block_size(self):
-        sz = int(numpy.sqrt(self.queue_.device.max_work_group_size))
-        sh = self.queue_.device.max_work_item_sizes
-        return min(sz, sh[0], sh[1])
 
     @property
     def exists(self):
@@ -256,27 +269,84 @@ class Device(Pickleable):
         self.device_info = DeviceInfo(
             desc=desc, memsize=device.memsize,
             memalign=device.memalign, version=device.version,
-            device_type=device.type, max_block_size=self.max_block_size)
+            device_type=device.type,
+            max_work_group_size=self.queue_.device.max_work_group_size,
+            max_work_item_sizes=self.queue_.device.max_work_item_sizes,
+            local_memsize=self.queue_.device.local_memsize)
         return True
 
     def _fill_device_info_performance_values(self):
         device_infos = {}
+        device_infos_fnme = os.path.join(root.common.device_dir,
+                                         "device_infos.json")
         try:
-            with open(os.path.join(root.common.device_dir,
-                                   "device_infos.json"), "r") as fin:
+            with open(device_infos_fnme, "r") as fin:
                 device_infos = json.load(fin)
         except IOError:
-            self.warning("%s was not found",
-                         os.path.join(root.common.device_dir,
-                                      "device_infos.json"))
-        self.compute_rating(device_infos)
+            self.warning("%s was not found", device_infos_fnme)
         if self.device_info.desc not in device_infos:
             self.warning("Device is not in a database, "
-                         "will use the default block sizes")
-            return
+                         "will perform a quick test now")
+            self._find_optimal_block_size(device_infos)
+            try:
+                with open(device_infos_fnme, "w") as fout:
+                    json.dump(device_infos, fout, indent=2, sort_keys=True)
+            except IOError:
+                self.warning("Could not save %s", device_infos_fnme)
+        self.compute_ratings(device_infos)
         self.device_info.device_info = device_infos[self.device_info.desc]
 
-    def compute_rating(self, device_infos):
+    def _find_optimal_block_size(self, device_infos):
+        device_info = {}
+        krnnme = "matrix_multiplication"
+        device_info[krnnme] = {}
+        for dtype in sorted(opencl_types.dtypes.keys()):
+            device_info[krnnme][dtype] = {}
+            for precision_level in ("0", "1", "2"):  # json wants strings
+                min_dt = 1.0e30
+                max_block_size = self.device_info.get_max_block_size(dtype)
+                min_block_size = 8
+                if self.device_info.vector_opt:
+                    min_block_size >>= 2
+                    min_block_size <<= 2
+                    bs_inc = 4
+                else:
+                    bs_inc = 1
+                for block_size in range(min_block_size, max_block_size + 1,
+                                        bs_inc):
+                    self.info(
+                        "Testing %s dtype=%s precision_level=%s block_size=%d",
+                        krnnme, dtype, precision_level, block_size)
+                    gc.collect()
+                    wf = DummyWorkflow()
+                    u = OpenCLBenchmark(
+                        wf, size=3001, repeats=3,
+                        dtype=dtype, precision_level=precision_level,
+                        block_size=block_size)
+                    u.initialize(self)
+                    try:
+                        dt = u.estimate(True, True)
+                    except cl.CLRuntimeError as e:
+                        self.warning("OpenCL error: %s", str(e))
+                        if e.code == -5:
+                            break
+                        else:
+                            continue
+                    finally:
+                        # FIXME(a.kazantsev): the following 3 lines is
+                        # a workaround (without them gc will not work).
+                        wf.del_ref(u)
+                        del u
+                        del wf
+                        gc.collect()
+                    if dt < min_dt:
+                        min_dt = dt
+                        min_block_size = block_size
+                device_info[krnnme][dtype][precision_level] = (
+                    min_block_size, min_dt)
+        device_infos[self.device_info.desc] = device_info
+
+    def compute_ratings(self, device_infos):
         devdt = {}
         min_dt = {}
         for desc, device_info in sorted(device_infos.items()):
@@ -299,8 +369,7 @@ class Device(Pickleable):
             rating[desc] = {}
             for dtype, dt in sorted(dtypedt.items()):
                 rating[desc][dtype] = min_dt[dtype] / dt
-                table.add_row(self.device_info.desc, dtype,
-                              "%.3f" % rating[desc][dtype])
+                table.add_row(desc, dtype, "%.3f" % rating[desc][dtype])
         self.debug("Device ratings:\n%s", str(table))
 
         if self.device_info.desc in rating:
