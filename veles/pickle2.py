@@ -34,7 +34,7 @@ def setup_pickle_debug():
     def save(self, obj):
         try:
             orig_save(self, obj)
-        except PicklingError:
+        except (PicklingError, TypeError):
             import traceback
             import pdb
             six.print_("\033[1;31mPickling failure\033[0m", file=sys.stderr)
