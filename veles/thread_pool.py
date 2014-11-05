@@ -18,6 +18,7 @@ from traceback import print_stack
 import types
 from twisted.internet import reactor
 from twisted.python import threadpool
+import weakref
 
 import veles.logger as logger
 from veles.cmdline import CommandLineArgumentsRegistry
@@ -141,7 +142,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         thread and a graceful shutdown is desired. Then on_shutdown() function
         shall terminate that loop using the corresponding foreign API.
         """
-        self.on_shutdowns.append(func)
+        self.on_shutdowns.append(weakref.ref(func))
 
     @staticmethod
     def _put(self, item):
@@ -161,6 +162,10 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         sdl = len(self.on_shutdowns)
         self.debug("Running shutdown-ers")
         for on_shutdown, ind in zip(self.on_shutdowns, range(sdl)):
+            on_shutdown = on_shutdown()
+            if on_shutdown is None:
+                # The weakly referenced object no longer exists
+                continue
             self.debug("%d/%d - %s", ind, sdl, str(on_shutdown))
             try:
                 on_shutdown()
