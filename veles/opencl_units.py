@@ -7,6 +7,7 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 
 import argparse
 from copy import copy
+import logging
 import numpy
 import opencl4py
 import os
@@ -131,8 +132,7 @@ class OpenCLUnit(Unit):
                             "unit run times.")
         return parser
 
-    def build_program(self, defines=None, cache_file_name=None, dtype=None,
-                      show_ocl_logs=True):
+    def build_program(self, defines=None, cache_file_name=None, dtype=None):
         """Builds the OpenCL program.
 
         `program_` will be initialized to the resulting program object.
@@ -154,6 +154,7 @@ class OpenCLUnit(Unit):
                 self.debug("Used %s.cache", cache_file_name)
                 return my_defines
         source, my_defines = self._generate_source(defines, dtype)
+        show_ocl_logs = self.logger.isEnabledFor(logging.DEBUG)
         self.program_ = self.device.queue_.context.create_program(
             source, root.common.ocl_dirs,
             "-cl-nv-verbose" if show_ocl_logs and "cl_nv_compiler_options" in
@@ -311,11 +312,11 @@ class OpenCLUnit(Unit):
                     with open(dep, "rb") as fr:
                         tar.addfile(ti, fileobj=fr)
                 binaries_io = BytesIO()
-                pickler = pickle.Pickler(binaries_io)
+                pickler = pickle.Pickler(binaries_io, protocol=best_protocol)
                 binaries = {"binaries": self.program_.binaries,
                             "devices": [(d.name, d.platform.name)
                                         for d in self.program_.devices]}
-                pickler.dump(binaries, protocol=best_protocol)
+                pickler.dump(binaries)
                 ti = tarfile.TarInfo("binaries.pickle")
                 ti.size = binaries_io.tell()
                 ti.mode = int("666", 8)
