@@ -117,6 +117,16 @@ class Logger(object):
         """
         return self._logger_
 
+    def __getstate__(self):
+        parent = super(Logger, self)
+        state = getattr(parent, "__getstate__", lambda: {})()
+        state["_logger_"] = self.logger.name
+        return state
+
+    def __setstate__(self, state):
+        state["_logger_"] = logging.getLogger(state["_logger_"])
+        getattr(super(Logger, self), "__setstate__", lambda _: None)(state)
+
     @staticmethod
     def redirect_all_logging_to_file(file_name, max_bytes=1024 * 1024,
                                      backups=1):
