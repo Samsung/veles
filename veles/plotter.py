@@ -51,7 +51,7 @@ class Plotter(Unit, TriviallyDistributable):
 
     @graphics_server.setter
     def graphics_server(self, value):
-        if not isinstance(value, GraphicsServer):
+        if value is not None and not isinstance(value, GraphicsServer):
             raise TypeError("value must be of type veles.graphics_server."
                             "GraphicsServer (%s was specified)" % type(value))
         self._server_ = value
