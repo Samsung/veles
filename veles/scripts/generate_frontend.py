@@ -17,7 +17,7 @@ import tornado.template as template
 import warnings
 
 from veles.config import root
-from veles.scripts.velescli import Main
+from veles.cmdline import CommandLineBase
 
 
 WEB_FOLDER = root.common.web.root
@@ -25,7 +25,7 @@ BLACKLISTED_DIRS = {'.', 'gource', 'docs', 'web', 'deploy'}
 
 
 def main(debug_imports=False):
-    parser = Main.init_parser()
+    parser = CommandLineBase.init_parser()
     arguments = parser._actions
     path_to_out = os.path.join(WEB_FOLDER, "frontend.html")
     print("Scanning for workflow files...")
@@ -46,9 +46,10 @@ def main(debug_imports=False):
         cmdline_states=json.dumps(defaults),
         opts=json.dumps(opts), positional_opts=json.dumps(positional_opts),
         choices=json.dumps(choices), defaults_opt=json.dumps(defaults_opt),
-        special_opts=json.dumps(Main.SPECIAL_OPTS))
+        special_opts=json.dumps(CommandLineBase.SPECIAL_OPTS))
     with open(path_to_out, "wb") as fout:
         fout.write(sout)
+    return 0
 
 
 def scan_workflows(debug_imports):
@@ -227,23 +228,22 @@ def convert_choices(arg, arg_mode, option_strings):
             href="javascript:select('%s', '%s')">%s</a></li>""" % (
             choice, option_strings, choice))
         choices_lines += line_ch
-        arg_line = ("""
-                    <div class="dropdown">
-                      <button class="btn btn-default dropdown-toggle %s"
-                      type="button" id="dropdown_menu%s" data-toggle="dropdown"
-                      >
-                        %s
-                        <span class="caret"></span>
-                      </button>
-                      <ul class="dropdown-menu %s" role="menu"
-                      aria-labelledby="dropdown_menu" id="%s">
-                        %s
-                      </ul>
-                    </div>""" % (" ".join(arg_mode), option_strings, default,
-                                 " ".join(arg_mode),
-                                 option_strings, choices_lines))
+    arg_line = ("""
+                <div class="dropdown">
+                  <button class="btn btn-default dropdown-toggle %s"
+                  type="button" id="dropdown_menu%s" data-toggle="dropdown"
+                  >
+                    %s
+                    <span class="caret"></span>
+                  </button>
+                  <ul class="dropdown-menu %s" role="menu"
+                  aria-labelledby="dropdown_menu" id="%s">
+                    %s
+                  </ul>
+                </div>""" % (" ".join(arg_mode), option_strings, default,
+                             " ".join(arg_mode),
+                             option_strings, choices_lines))
     return arg_line
 
 if __name__ == "__main__":
-    retcode = main(bool(sys.argv[1]) if len(sys.argv) > 1 else False)
-    sys.exit(retcode)
+    sys.exit(main(bool(sys.argv[1]) if len(sys.argv) > 1 else False))

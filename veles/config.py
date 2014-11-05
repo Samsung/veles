@@ -12,7 +12,7 @@ from pprint import pprint
 from six import print_
 import sys
 
-import veles
+from .paths import __root__
 
 # : Global config
 root = None
@@ -47,18 +47,20 @@ class Config(object):
         super(Config, self).__setattr__(name, value)
 
     def __repr__(self):
-        return str(self.__dict__)
+        cnt = dict(self.__dict__)
+        del cnt["__path__"]
+        return '<Config "%s": %s>' % (self.__path__, repr(cnt))
 
     def print_(self, indent=1, width=80, file=sys.stdout):
         print_('-' * width, file=file)
-        print_("Current configuration:", file=file)
-
+        print_('Configuration "%s":' % self.__path__, file=file)
         pprint(self.__getstate__(), indent=indent, width=width, stream=file)
         print_('-' * width, file=file)
 
     def __getstate__(self):
         def fix_contents(contents):
             fixed_contents = dict(contents)
+            del fixed_contents["__path__"]
             for k, v in contents.items():
                 if isinstance(v, Config):
                     fixed_contents[k] = fix_contents(v.__dict__)
@@ -89,8 +91,6 @@ def validate_kwargs(caller, **kwargs):
                            k, v.__path__)
 
 
-__path__ = veles.__root__
-
 root.common.update({
     "graphics_multicast_address": "239.192.1.1",
     "matplotlib_backend": "Qt4Agg",
@@ -106,7 +106,7 @@ root.common.update({
     "test_unknown_device": True,
     "disable_snapshots": False,
     "unit_test": False,
-    "veles_dir": __path__,
+    "veles_dir": __root__,
     "veles_user_dir": os.path.join(os.environ.get("HOME", "./"), ".veles"),
     "device_dir": "/usr/share/veles/devices",
     "ocl_dirs": (os.environ.get("VELES_OPENCL_DIRS", "").split(":") +
@@ -119,7 +119,7 @@ root.common.update({
         "log_backups": 9,
         "notification_interval": 1,
         "pidfile": "/var/run/veles/web_status",
-        "root": os.path.join(__path__, "web"),
+        "root": os.path.join(__root__, "web"),
         "drop_time": 30 * 24 * 3600,
     },
     "ThreadPool": {
@@ -130,7 +130,9 @@ root.common.update({
 
 # Allow to override the settings above
 try:
-    import veles.siteconfig
+    from .siteconfig import update
+    update(root)
+    del update
 except ImportError:
     pass
 

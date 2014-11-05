@@ -14,16 +14,15 @@ import os
 import signal
 import snappy
 import socket
-import sys
 import threading
 import tornado.ioloop as ioloop
 from twisted.internet.error import ReactorNotRunning
 from twisted.internet import reactor
 import zmq
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from veles.external.txzmq import ZmqConnection, ZmqEndpoint
 
 from veles.config import root
+from veles.external.txzmq import ZmqConnection, ZmqEndpoint
+from veles.iplotter import IPlotter
 from veles.logger import Logger
 from veles.pickle2 import pickle, setup_pickle_debug
 
@@ -77,8 +76,6 @@ class GraphicsClient(Logger):
                                              self._sigint_handler)
         self._sigusr2_initial = signal.signal(signal.SIGUSR2,
                                               self._sigusr2_handler)
-        from veles.plotter import IPlotter
-        self.IPlotter = IPlotter
 
     def __del__(self):
         signal.signal(signal.SIGINT, self._sigint_initial)
@@ -189,15 +186,14 @@ class GraphicsClient(Logger):
             plotter.patches = self.patches
             plotter.pp = self.pp
             plotter.show_figure = self.show_figure
-            if not self.IPlotter.providedBy(plotter):
-                self.warning("%s does not provide IPlotter interface",
-                             str(plotter))
+            if not IPlotter.providedBy(plotter):
+                self.warning("%s does not provide IPlotter interface", plotter)
                 return
             try:
-                plotter.verify_interface(self.IPlotter)
+                plotter.verify_interface(IPlotter)
             except:
                 self.exception("Plotter %s is not fully implemented, skipped",
-                               plotter.name)
+                               plotter)
                 return
             if self._pdf_trigger or self.backend == "pdf":
                 reactor.callFromThread(self._save_pdf, plotter)

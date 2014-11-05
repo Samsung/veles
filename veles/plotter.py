@@ -6,28 +6,13 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import time
-from zope.interface import Interface, Attribute, implementer
+from zope.interface import implementer
 
 from veles.distributable import TriviallyDistributable
 from veles.formats import Vector
+from veles.iplotter import IPlotter  # pylint: disable=W0611
 from veles.graphics_server import GraphicsServer
 from veles.units import Unit, IUnit
-
-
-class IPlotter(Interface):
-    """Plots stuff in GraphicsClient environment.
-    """
-
-    matplotlib = Attribute("""matplotlib module reference""")
-    cm = Attribute("""matplotlib.cm (colormap) module reference""")
-    lines = Attribute("""matplotlib.lines module reference""")
-    patches = Attribute("""matplotlib.patches module reference""")
-    pp = Attribute("""matplotlib.pyplot module reference""")
-
-    def redraw():
-        """Updates the plot using the changed object's state.
-        Should be implemented by the class providing this interface.
-        """
 
 
 @implementer(IUnit)
@@ -42,6 +27,7 @@ class Plotter(Unit, TriviallyDistributable):
         super(Plotter, self).__init__(workflow, **kwargs)
         self.redraw_threshold = 0.5
         self._last_run_ = 0
+        self._server_ = None
 
     def __getstate__(self):
         state = super(Plotter, self).__getstate__()
@@ -59,15 +45,27 @@ class Plotter(Unit, TriviallyDistributable):
     def last_run_time(self, value):
         self._last_run_ = value
 
+    @property
+    def graphics_server(self):
+        return self._server_
+
+    @graphics_server.setter
+    def graphics_server(self, value):
+        if not isinstance(value, GraphicsServer):
+            raise TypeError("value must be of type veles.graphics_server."
+                            "GraphicsServer (%s was specified)" % type(value))
+        self._server_ = value
+
     def initialize(self, **kwargs):
         self._last_run_ = 0
+        self._server_ = kwargs.get("graphics_server", self.graphics_server)
 
     def run(self):
         if self.workflow.plotters_are_enabled and \
            (time.time() - self._last_run_) > self.redraw_threshold:
             self._last_run_ = time.time()
             self.stripped_pickle = True
-            GraphicsServer().enqueue(self)
+            self.graphics_server.enqueue(self)
             self.stripped_pickle = False
 
     def generate_data_for_master(self):

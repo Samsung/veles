@@ -58,7 +58,7 @@ if __name__ == "__main__":
         packages=find_packages(),
         include_package_data=True,
         entry_points={
-            'console_scripts': ['veles=veles.scripts.velescli:__run__']
+            'console_scripts': ['veles=veles.__main__:__run__']
         },
         keywords=["Samsung", "Veles", "Znicz"],
         classifiers=[

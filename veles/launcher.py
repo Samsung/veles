@@ -30,6 +30,7 @@ import veles.client as client
 from veles.cmdline import CommandLineArgumentsRegistry
 from veles.config import root
 import veles.graphics_server as graphics_server
+from veles.plotter import Plotter
 import veles.logger as logger
 import veles.server as server
 from veles.error import MasterSlaveCommunicationError
@@ -325,7 +326,7 @@ class Launcher(logger.Logger):
             reactor.callLater(0, reactor.sigInt)
 
         # Ensure reactor stops in some rare cases when it does not normally
-        self.workflow.thread_pool.register_on_shutdown(shutdown)
+        self.workflow.thread_pool.register_on_shutdown(shutdown, weak=False)
         if self.is_slave:
             self._agent = client.Client(self.args.master_address, workflow)
 
@@ -426,6 +427,9 @@ class Launcher(logger.Logger):
         reactor.addSystemEventTrigger('after', 'shutdown', self._print_stats)
         reactor.addSystemEventTrigger('after', 'shutdown', self.event,
                                       "work", "end", height=0.1)
+        for unit in self.workflow:
+            if isinstance(unit, Plotter):
+                unit.graphics_server = self.graphics_server
         self._start_time = time.time()
         if not self.is_slave and self.reports_web_status:
             self.workflow_graph, _ = self.workflow.generate_graph(

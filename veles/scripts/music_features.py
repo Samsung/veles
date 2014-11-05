@@ -57,7 +57,7 @@ def mp_run(files, extr):
     try:
         sizestr = str(len(files))
         logging.debug("Reading " + sizestr + " files...")
-        loader = AudioFileLoader()
+        loader = AudioFileLoader(None)
         loader.files_list = files
         loader.initialize()
         logging.debug("Decoding " + sizestr + " files...")
@@ -209,7 +209,7 @@ USAGE
         logging.info("Found %d files", len(found_files))
 
         timer = time.time()
-        extr = SoundFeatures(report)
+        extr = SoundFeatures(report, None)
         logging.debug("Parsing the supplied features...")
         extr.add_features(features)
         extr.initialize()

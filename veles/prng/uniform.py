@@ -13,7 +13,7 @@ from zope.interface import implementer
 import veles.error as error
 from veles.formats import Vector, roundup
 from veles.opencl_units import OpenCLUnit, IOpenCLUnit
-from veles.prng import get
+from veles.prng.random_generator import get
 
 
 @implementer(IOpenCLUnit)

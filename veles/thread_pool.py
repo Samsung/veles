@@ -10,8 +10,8 @@ import functools
 import logging
 import signal
 import six
-from six.moves import queue, zip
-from six import add_metaclass
+from six.moves import queue
+from six import add_metaclass, print_
 import sys
 import threading
 from traceback import print_stack
@@ -134,7 +134,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     def paused(self):
         return not self._not_paused.is_set()
 
-    def register_on_shutdown(self, func):
+    def register_on_shutdown(self, func, weak=True):
         """
         Adds the specified function to the list of callbacks which are
         executed before shutting down the thread pool.
@@ -142,7 +142,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         thread and a graceful shutdown is desired. Then on_shutdown() function
         shall terminate that loop using the corresponding foreign API.
         """
-        self.on_shutdowns.append(weakref.ref(func))
+        self.on_shutdowns.append(weakref.ref(func) if weak else func)
 
     @staticmethod
     def _put(self, item):
@@ -160,19 +160,22 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             self._shutting_down = True
         self._not_paused.set()
         sdl = len(self.on_shutdowns)
-        self.debug("Running shutdown-ers")
-        for on_shutdown, ind in zip(self.on_shutdowns, range(sdl)):
-            on_shutdown = on_shutdown()
-            if on_shutdown is None:
-                # The weakly referenced object no longer exists
-                continue
+        self.debug("Running %d shutdown-ers", sdl)
+        skipped = 0
+        for ind, on_shutdown in enumerate(self.on_shutdowns):
+            if isinstance(on_shutdown, weakref.ReferenceType):
+                on_shutdown = on_shutdown()
+                if on_shutdown is None:
+                    # The weakly referenced object no longer exists
+                    skipped += 1
+                    continue
             self.debug("%d/%d - %s", ind, sdl, str(on_shutdown))
             try:
                 on_shutdown()
             except:
                 self.exception("Ignored the following exception in shutdowner "
                                "%s:", on_shutdown)
-        self.debug("Requesting threads to quit")
+        self.debug("Skipped %d dead refs. Requesting threads to quit", skipped)
         del self.on_shutdowns[:]
         self.joined = True
         self.started = False
@@ -273,14 +276,15 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     @staticmethod
     def print_thread_stacks():
         if not hasattr(sys, "_current_frames"):
-            print("Threads' stacks printing is not implemented for this "
-                  "Python interpreter")
+            print_("Threads' stacks printing is not implemented for this "
+                   "Python interpreter", file=sys.stderr)
             return
         tmap = {thr.ident: thr.name for thr in threading.enumerate()}
         for tid, stack in sys._current_frames().items():
             print("-" * 80)
             print("Thread #%d (%s):" % (tid, tmap.get(tid, "<unknown>")))
             print_stack(stack, file=sys.stdout)
+        sys.stdout.flush()
 
     @staticmethod
     def debug_deadlocks():

@@ -8,7 +8,7 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 import six
 
 if six.PY3:
-    import lzma
+    import lzma  # pylint: disable=W0611
 else:
     try:
         from backports import lzma

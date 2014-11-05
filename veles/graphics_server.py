@@ -27,6 +27,7 @@ from veles.config import root
 from veles.external.txzmq import ZmqConnection, ZmqEndpoint
 from veles.logger import Logger
 import veles.graphics_client as graphics_client
+from veles.paths import __root__
 
 
 class ZmqPublisher(ZmqConnection):
@@ -165,8 +166,13 @@ class GraphicsServer(Logger):
                               fifo, tmpfn, tmpdir, webagg_callback)
             args.append("--webagg-discovery-fifo")
             args.append(tmpfn)
-        client = subprocess.Popen(args, stdout=sys.stdout,
-                                  stderr=sys.stderr)
+        env = dict(os.environ)
+        if 'PYTHONPATH' not in env:
+            env['PYTHONPATH'] = __root__
+        else:
+            env['PYTHONPATH'] += ':' + __root__
+        client = subprocess.Popen(args, stdout=sys.stdout, stderr=sys.stderr,
+                                  env=env)
         return server, client
 
     @staticmethod

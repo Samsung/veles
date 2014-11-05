@@ -15,7 +15,7 @@ from zope.interface import implementer
 
 from veles.config import Config, root
 from veles.distributable import IDistributable
-from veles.genetics import Chromosome, Population
+from veles.genetics.simple import Chromosome, Population
 from veles.mutable import Bool
 from veles.units import IUnit, Unit
 from veles.workflow import Workflow, Repeater
@@ -195,7 +195,7 @@ class GeneticsContainer(Unit):
         if self._generation_evolved:
             self.info("Evaluated everything, breeding season approaches...")
             self.generation_evolved <<= True
-            self.on_evaluation_finished()
+            self.on_evaluation_finished()  # pylint: disable=E1102
 
     def drop_slave(self, slave):
         try:

@@ -16,10 +16,10 @@ from six import PY3
 import sys
 import time
 
-from veles.config import __path__
 from veles.error import Bug
 from veles.external.daemon import redirect_stream
 from veles.external.progressbar import ProgressBar
+from .paths import __root__
 
 
 class Logger(object):
@@ -257,7 +257,7 @@ class MongoLogHandler(logging.Handler):
         data["node"] = self.node_id
         data["pathname"] = os.path.normpath(data["pathname"])
         if os.path.isabs(data["pathname"]):
-            data["pathname"] = os.path.relpath(data["pathname"], __path__)
+            data["pathname"] = os.path.relpath(data["pathname"], __root__)
         if data["exc_info"] is not None:
             data["exc_info"] = repr(data["exc_info"])
         try:

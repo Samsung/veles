@@ -23,7 +23,7 @@ class Test(unittest.TestCase):
         pass
 
     def testSoundFeatures(self):
-        sf = SoundFeatures()
+        sf = SoundFeatures("", None)
         sf.inputs = [{"data": numpy.ones(100000, dtype=numpy.short) * 1000,
                       "sampling_rate": 16000}]
         sf.add_feature("WPP[Window(length=512, type=rectangular), DWPT, "

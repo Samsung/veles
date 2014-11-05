@@ -12,12 +12,11 @@
 
 
 from email.utils import parsedate_tz, mktime_tz, formatdate
-from os import path
 from sys import version_info, modules
 from types import ModuleType
 from warnings import warn
+from .paths import __root__
 
-__root__ = path.dirname(path.dirname(__file__))
 __project__ = "Veles Machine Learning Platform"
 __version__ = "0.5.0"
 __license__ = "Samsung Proprietary License"
@@ -118,7 +117,7 @@ class VelesModule(ModuleType):
                     except:
                         pass
         sys.stdout = stdout
-        from veles.units import UnitRegistry
+        from veles.unit_registry import UnitRegistry
         self.__units_cache__ = UnitRegistry.units
         return self.__units_cache__
 

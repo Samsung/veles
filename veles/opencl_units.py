@@ -164,7 +164,7 @@ class OpenCLUnit(Unit):
                 s = s.strip()
                 if not s:
                     continue
-                self.info("Non-empty OpenCL build log encountered: %s", s)
+                self.debug("Non-empty OpenCL build log encountered: %s", s)
         self._save_to_cache(cache_file_name)
         return my_defines
 
@@ -432,10 +432,10 @@ class OpenCLWorkflow(Workflow):
         if (now - self._last_power_measurement_time >
                 self._power_measure_time_interval):
             self._last_power_measurement_time = now
-            bench = OpenCLBenchmark(self)
-            bench.initialize(self.device)
-            self._power_ = bench.estimate()
-            self.del_ref(bench)
+            with self:
+                bench = OpenCLBenchmark(self)
+                bench.initialize(self.device)
+                self._power_ = bench.estimate()
             self.info("Computing power is %.2f", self._power_)
         return self._power_
 

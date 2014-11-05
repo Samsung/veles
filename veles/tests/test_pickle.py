@@ -9,7 +9,6 @@ import os
 import six
 import sys
 import pdb
-import tempfile
 import threading
 import unittest
 import warnings
