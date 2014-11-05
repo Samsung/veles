@@ -10,7 +10,6 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 import argparse
 import gc
 import json
-import logging
 import numpy
 import os
 from six import add_metaclass
@@ -21,16 +20,16 @@ from .cmdline import CommandLineArgumentsRegistry
 from .compat import from_none
 from .config import root
 from .distributable import Pickleable
-from veles.dummy import DummyWorkflow
+from .dummy import DummyWorkflow
+from .logger import Logger
 import veles.opencl_types as opencl_types
-from veles.opencl_units import OpenCLBenchmark
 import veles.external.prettytable as prettytable
 
 
 PYVER = sys.version_info[0]
 
 
-class DeviceInfo(object):
+class DeviceInfo(Logger):
     """Info about device.
 
     Attributes:
@@ -81,7 +80,7 @@ class DeviceInfo(object):
             # Benchmark for other kernel types is not implemented,
             # so only debug level here
             # TODO(a.kazantsev): implement benchmark for conv and deconv.
-            logging.debug(
+            self.debug(
                 "krnnme = %s was not found, "
                 "rolling back to block size for matrix_multiplication",
                 krnnme)
@@ -89,14 +88,14 @@ class DeviceInfo(object):
             krninfo = self.device_info.get(krnnme)
             if krninfo is None:
                 bs = self.get_max_block_size(dtype)
-                logging.warning(
+                self.warning(
                     "krnnme = %s was not found, "
                     "will use max block size %d", krnnme, bs)
                 return bs
         typeinfo = krninfo.get(dtype)
         if typeinfo is None:
             bs = self.get_max_block_size(dtype)
-            logging.warning(
+            self.warning(
                 "dtype = %s was not found with krnnme = %s, "
                 "will use max block size %d", dtype, krnnme, bs)
             return bs
@@ -106,7 +105,7 @@ class DeviceInfo(object):
             bs_dt = typeinfo.get(str(precision))
         if bs_dt is None:
             bs = self.get_max_block_size(dtype)
-            logging.warning(
+            self.warning(
                 "precision = 0 was not found with krnnme = %s and dtype = %s, "
                 "will use max block size %d", krnnme, dtype, bs)
             return bs
@@ -143,6 +142,9 @@ class Device(Pickleable):
         queue_: OpenCL device queue.
         pid_: process id.
     """
+
+    DEVICE_INFOES_JSON = "device_infos.json"
+
     def __init__(self):
         super(Device, self).__init__()
 
@@ -277,22 +279,35 @@ class Device(Pickleable):
 
     def _fill_device_info_performance_values(self):
         device_infos = {}
-        device_infos_fnme = os.path.join(root.common.device_dir,
-                                         "device_infos.json")
-        try:
-            with open(device_infos_fnme, "r") as fin:
-                device_infos = json.load(fin)
-        except IOError:
-            self.warning("%s was not found", device_infos_fnme)
+        found_any = False
+        for devdir in root.common.device_dirs:
+            device_infos_fnme = os.path.join(devdir, Device.DEVICE_INFOES_JSON)
+            if os.access(device_infos_fnme, os.R_OK):
+                try:
+                    with open(device_infos_fnme, "r") as fin:
+                        device_infos.update(json.load(fin))
+                    found_any = True
+                except:
+                    self.exception("Failed to load %s", device_infos_fnme)
+        if not found_any:
+            self.warning("Did not find %s in any of the configured paths: %s",
+                         Device.DEVICE_INFOES_JSON, root.common.device_dirs)
         if self.device_info.desc not in device_infos:
-            self.warning("Device is not in a database, "
-                         "will perform a quick test now")
+            self.warning("Device has not been analyzed yet, will perform a "
+                         "quick test now.")
             self._find_optimal_block_size(device_infos)
-            try:
-                with open(device_infos_fnme, "w") as fout:
-                    json.dump(device_infos, fout, indent=2, sort_keys=True)
-            except IOError:
-                self.warning("Could not save %s", device_infos_fnme)
+            found_any = False
+            for devdir in root.common.device_dirs:
+                device_infos_fnme = os.path.join(devdir,
+                                                 Device.DEVICE_INFOES_JSON)
+                if os.access(device_infos_fnme, os.W_OK):
+                    with open(device_infos_fnme, "w") as fout:
+                        json.dump(device_infos, fout, indent=2, sort_keys=True)
+                    found_any = True
+            if not found_any:
+                self.warning("Unable to save the analysis results to any of "
+                             "the configured paths: %s",
+                             root.common.device_dirs)
         self.compute_ratings(device_infos)
         self.device_info.device_info = device_infos[self.device_info.desc]
 
@@ -300,6 +315,11 @@ class Device(Pickleable):
         device_info = {}
         krnnme = "matrix_multiplication"
         device_info[krnnme] = {}
+        # FIXME(v.markovtsev): disable R0401 locally when pylint issue is fixed
+        # https://bitbucket.org/logilab/pylint/issue/61
+        # pylint: disable=R0401
+        opencl_units = __import__("veles.opencl_units").opencl_units
+        OpenCLBenchmark = opencl_units.OpenCLBenchmark
         for dtype in sorted(opencl_types.dtypes.keys()):
             device_info[krnnme][dtype] = {}
             for precision_level in ("0", "1", "2"):  # json wants strings
@@ -317,27 +337,22 @@ class Device(Pickleable):
                     self.info(
                         "Testing %s dtype=%s precision_level=%s block_size=%d",
                         krnnme, dtype, precision_level, block_size)
-                    gc.collect()
-                    wf = DummyWorkflow()
-                    u = OpenCLBenchmark(
-                        wf, size=3001, repeats=3,
-                        dtype=dtype, precision_level=precision_level,
-                        block_size=block_size)
-                    u.initialize(self)
                     try:
-                        dt = u.estimate(True, True)
+                        with DummyWorkflow() as wf:
+                            u = OpenCLBenchmark(
+                                wf, size=3001, repeats=3,
+                                dtype=dtype, precision_level=precision_level,
+                                block_size=block_size)
+                            u.initialize(self)
+                            dt = u.estimate(True, True)
                     except cl.CLRuntimeError as e:
-                        self.warning("OpenCL error: %s", str(e))
-                        if e.code == -5:
+                        self.exception("Failed to evaluate block size %d",
+                                       block_size)
+                        if e.code == -5:  # CL_OUT_OF_RESOURCES
                             break
                         else:
                             continue
                     finally:
-                        # FIXME(a.kazantsev): the following 3 lines is
-                        # a workaround (without them gc will not work).
-                        wf.del_ref(u)
-                        del u
-                        del wf
                         gc.collect()
                     if dt < min_dt:
                         min_dt = dt

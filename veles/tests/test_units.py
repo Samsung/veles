@@ -10,7 +10,7 @@ import unittest
 from veles.config import root
 from veles.units import TrivialUnit
 from veles.pickle2 import pickle
-from veles.tests.dummy_workflow import DummyWorkflow
+from veles.dummy import DummyWorkflow
 
 
 class UnitMock(object):

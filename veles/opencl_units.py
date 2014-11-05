@@ -12,7 +12,6 @@ import opencl4py
 import os
 import re
 from six import BytesIO, add_metaclass, PY3
-from six.moves import cPickle as pickle
 import tarfile
 import time
 import veles.bufpool as bufpool
@@ -21,6 +20,8 @@ from zope.interface import implementer, Interface
 from veles.config import root
 import veles.formats as formats
 import veles.opencl_types as opencl_types
+from veles.opencl import Device
+from veles.pickle2 import pickle, best_protocol
 from veles.timeit import timeit
 from veles.units import Unit, IUnit, UnitCommandLineArgumentsRegistry
 from veles.workflow import Workflow
@@ -80,8 +81,6 @@ class OpenCLUnit(Unit):
 
     @device.setter
     def device(self, value):
-        from .opencl import Device
-
         if not isinstance(value, Device) and value is not None:
             raise TypeError("device must be of type veles.opencl.Device (%s "
                             "was specified)" % value.__class__)
@@ -316,7 +315,7 @@ class OpenCLUnit(Unit):
                 binaries = {"binaries": self.program_.binaries,
                             "devices": [(d.name, d.platform.name)
                                         for d in self.program_.devices]}
-                pickler.dump(binaries)
+                pickler.dump(binaries, protocol=best_protocol)
                 ti = tarfile.TarInfo("binaries.pickle")
                 ti.size = binaries_io.tell()
                 ti.mode = int("666", 8)
@@ -325,6 +324,15 @@ class OpenCLUnit(Unit):
         except:
             self.exception("Failed to save the cache file %s:",
                            cache_file_name)
+
+
+@implementer(IOpenCLUnit)
+class TrivialOpenCLUnit(OpenCLUnit):
+    def cpu_run(self):
+        pass
+
+    def ocl_run(self):
+        pass
 
 
 @implementer(IOpenCLUnit)
@@ -446,3 +454,7 @@ class OpenCLWorkflow(Workflow):
                 isinstance(self.bufpool, bufpool.OclBufPool)):
             strategy = bufpool.TrivialStrategy(device.device_info.memalign)
             self.bufpool.make_partitioning(self.start_point, strategy)
+
+    def filter_unit_graph_attrs(self, val):
+        return (not isinstance(val, Device) and
+                super(OpenCLWorkflow, self).filter_unit_graph_attrs(val))

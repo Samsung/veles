@@ -573,6 +573,9 @@ class Workflow(Unit):
         """
         return 0
 
+    def filter_unit_graph_attrs(self, val):
+        return True
+
     def generate_graph(self, filename=None, write_on_disk=True,
                        with_data_links=False, background="transparent"):
         """Produces a Graphviz PNG image of the unit control flow. Returns the
@@ -628,15 +631,14 @@ class Workflow(Unit):
 
             attrs = defaultdict(list)
             refs = []
-            from veles.opencl import Device
             for unit in self:
                 for key, val in unit.__dict__.items():
                     if key.startswith('__') and hasattr(unit, key[2:]) and \
                        LinkableAttribute.__is_reference__(val):
                         refs.append((unit, key[2:]) + val)
                     if (val is not None and not Unit.is_immutable(val) and
-                            not isinstance(val, Device) and
-                            key not in Workflow.HIDDEN_UNIT_ATTRS):
+                            key not in Workflow.HIDDEN_UNIT_ATTRS and
+                            self.filter_unit_graph_attrs(val)):
                         if key[0] == '_' and hasattr(unit, key[1:]):
                             key = key[1:]
                         attrs[id(val)].append((unit, key))

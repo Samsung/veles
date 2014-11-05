@@ -7,9 +7,6 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
-from zope.interface import implementer
-
-from veles.opencl_units import OpenCLUnit, IOpenCLUnit
 from veles.workflow import Workflow
 
 
@@ -50,12 +47,3 @@ class DummyWorkflow(Workflow):
         Passes DummyLauncher as workflow parameter value.
         """
         super(DummyWorkflow, self).__init__(DummyLauncher())
-
-
-@implementer(IOpenCLUnit)
-class TrivialOpenCLUnit(OpenCLUnit):
-    def cpu_run(self):
-        pass
-
-    def ocl_run(self):
-        pass

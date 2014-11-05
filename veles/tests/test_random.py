@@ -11,23 +11,13 @@ import logging
 import numpy
 import os
 import unittest
-from zope.interface import implementer
 
 from veles.config import root
 import veles.formats as formats
 import veles.opencl as opencl
-from veles.opencl_units import OpenCLUnit, IOpenCLUnit
+from veles.opencl_units import TrivialOpenCLUnit
 import veles.prng as rnd
-from veles.tests.dummy_workflow import DummyWorkflow
-
-
-@implementer(IOpenCLUnit)
-class TrivialOpenCLUnit(OpenCLUnit):
-    def cpu_run(self):
-        pass
-
-    def ocl_run(self):
-        pass
+from veles.dummy import DummyWorkflow
 
 
 class TestRandom1024(unittest.TestCase):

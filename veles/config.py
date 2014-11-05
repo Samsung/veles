@@ -91,6 +91,8 @@ def validate_kwargs(caller, **kwargs):
                            k, v.__path__)
 
 
+__home__ = os.path.join(os.environ.get("HOME", "./"), ".veles")
+
 root.common.update({
     "graphics_multicast_address": "239.192.1.1",
     "matplotlib_backend": "Qt4Agg",
@@ -107,8 +109,10 @@ root.common.update({
     "disable_snapshots": False,
     "unit_test": False,
     "veles_dir": __root__,
-    "veles_user_dir": os.path.join(os.environ.get("HOME", "./"), ".veles"),
-    "device_dir": "/usr/share/veles/devices",
+    "veles_user_dir": __home__,
+    "device_dirs": ["/usr/share/veles/devices",
+                    os.path.join(__home__, "devices"),
+                    os.environ.get("VELES_OPENCL_DEVICES", "./")],
     "ocl_dirs": (os.environ.get("VELES_OPENCL_DIRS", "").split(":") +
                  ["/usr/share/veles/ocl"]),
     "help_dir": "/usr/share/doc/python3-veles",

@@ -11,7 +11,7 @@ import struct
 import tempfile
 import unittest
 
-from veles.scripts.velescli import Main
+from veles.__main__ import Main
 import veles.prng as rnd
 
 
