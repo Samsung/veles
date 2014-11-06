@@ -5,6 +5,7 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 """
 
 import gc
+import six
 import unittest
 import weakref
 from zope.interface.verify import verifyObject
@@ -186,52 +187,53 @@ class Test(unittest.TestCase):
         verifyObject(IDistributable, sp)
         self.assertIsInstance(sp.workflow, DummyWorkflow)
 
-    def testWithDestruction(self):
-        flag = [False, False]
+    if six.PY3:
+        def testWithDestruction(self):
+            flag = [False, False]
 
-        class MyUnit(TrivialUnit):
-            def __del__(self):
-                flag[0] = True
+            class MyUnit(TrivialUnit):
+                def __del__(self):
+                    flag[0] = True
 
-        class MyWorkflow(Workflow):
-            def __del__(self):
-                flag[1] = True
+            class MyWorkflow(Workflow):
+                def __del__(self):
+                    flag[1] = True
 
-        with MyWorkflow(DummyLauncher()) as wf:
+            with MyWorkflow(DummyLauncher()) as wf:
+                u = MyUnit(wf)
+                self.assertEqual(len(wf), 3)
+                self.assertEqual(u.workflow, wf)
+
+            self.assertEqual(len(wf), 2)
+            self.assertEqual(u.workflow, wf)
+            self.assertIsInstance(u.workflow, weakref.ProxyTypes)
+            del wf
+            gc.collect()
+            self.assertTrue(flag[1])
+            del u
+            gc.collect()
+            self.assertTrue(flag[0])
+
+        def testDestruction(self):
+            flag = [False, False]
+
+            class MyUnit(TrivialUnit):
+                def __del__(self):
+                    flag[0] = True
+
+            class MyWorkflow(Workflow):
+                def __del__(self):
+                    flag[1] = True
+
+            wf = MyWorkflow(DummyLauncher())
             u = MyUnit(wf)
             self.assertEqual(len(wf), 3)
             self.assertEqual(u.workflow, wf)
-
-        self.assertEqual(len(wf), 2)
-        self.assertEqual(u.workflow, wf)
-        self.assertIsInstance(u.workflow, weakref.ProxyTypes)
-        del wf
-        gc.collect()
-        self.assertTrue(flag[1])
-        del u
-        gc.collect()
-        self.assertTrue(flag[0])
-
-    def testDestruction(self):
-        flag = [False, False]
-
-        class MyUnit(TrivialUnit):
-            def __del__(self):
-                flag[0] = True
-
-        class MyWorkflow(Workflow):
-            def __del__(self):
-                flag[1] = True
-
-        wf = MyWorkflow(DummyLauncher())
-        u = MyUnit(wf)
-        self.assertEqual(len(wf), 3)
-        self.assertEqual(u.workflow, wf)
-        del u
-        del wf
-        gc.collect()
-        self.assertTrue(flag[0])
-        self.assertTrue(flag[1])
+            del u
+            del wf
+            gc.collect()
+            self.assertTrue(flag[0])
+            self.assertTrue(flag[1])
 
     def testPicklingWeak(self):
         with Workflow(DummyLauncher()) as wf:

@@ -80,7 +80,10 @@ class GraphicsServer(Logger):
             self.exception("Failed to bind to %s", zmq_endpoints)
             raise from_none(GraphicsServer.InitializationError())
 
-        thread_pool.register_on_shutdown(self.shutdown)
+        # Important! Save the bound method to variable to avoid dead weak refs
+        # See http://stackoverflow.com/questions/19443440/weak-reference-to-python-class-method  # nopep8
+        self._shutdown_ = self.shutdown
+        thread_pool.register_on_shutdown(self._shutdown_)
 
         # tmpfn, *ports = self.zmq_connection.rnd_vals
         tmpfn = self.zmq_connection.rnd_vals[0]

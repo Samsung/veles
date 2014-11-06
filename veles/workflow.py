@@ -144,7 +144,10 @@ class Workflow(Unit):
 
     def init_unpickled(self):
         super(Workflow, self).init_unpickled()
-        self.thread_pool.register_on_shutdown(self.stop)
+        # Important! Save the bound method to variable to avoid dead weak refs
+        # See http://stackoverflow.com/questions/19443440/weak-reference-to-python-class-method  # nopep8
+        self._stop_ = self.stop
+        self.thread_pool.register_on_shutdown(self._stop_)
         self._is_running = False
         self._run_time_started_ = time.time()
         self._sync_event_ = threading.Event()

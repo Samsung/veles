@@ -58,6 +58,10 @@ class UnitCommandLineArgumentsRegistry(UnitRegistry,
     pass
 
 
+def nothing(*args, **kwargs):
+    return {}
+
+
 @six.add_metaclass(UnitRegistry)
 class Unit(Distributable):
     """General unit in data stream model.
@@ -120,7 +124,7 @@ class Unit(Distributable):
             if func is not None:
                 setattr(self, name, self._measure_time(func, Unit.timers))
 
-        # Important: these four decorator applications must stand before
+        # Important: these 4 decorator applications must stand before
         # super(...).init_unpickled since it will call
         # Distributable.init_unpickled which finally makes them thread safe.
         wrap_to_measure_time("generate_data_for_slave")
@@ -143,6 +147,16 @@ class Unit(Distributable):
     def __del__(self):
         if self.id in Unit.timers:
             del Unit.timers[self.id]
+
+    if six.PY2:
+        def remove_refs_to_self(self):
+            """Python 2.7 GC is dumb, see
+            https://docs.python.org/2/library/gc.html#gc.garbage
+            Units are never collected since they hold cyclic references to self
+            """
+            self.run = self.initialize = self.apply_data_from_slave = \
+                self.apply_data_from_master = self.generate_data_for_slave = \
+                self.generate_data_for_master = self.drop_slave = nothing
 
     def __getstate__(self):
         state = super(Unit, self).__getstate__()

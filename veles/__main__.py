@@ -522,7 +522,11 @@ class Main(Logger, CommandLineBase):
 
 
 def __run__():
-    sys.exit(Main().run())
+    # Important: do not make these a one-liner! sys.exit is changed by
+    # ThreadPool and in the case with merged call the original sys.exit will
+    # be used instead, resulting in hanging on joining threads.
+    retcode = Main().run()
+    sys.exit(retcode)
 
 if __name__ == "__main__":
     __run__()
