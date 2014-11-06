@@ -26,6 +26,8 @@ from veles.compat import from_none
 
 
 sysexit_initial = None
+exit_initial = None
+quit_initial = None
 
 
 class classproperty(object):
@@ -75,6 +77,23 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             global sysexit_initial
             sysexit_initial = sys.exit
             sys.exit = ThreadPool.exit
+            if not sys.__stdin__.closed and sys.__stdin__.isatty():
+                global exit_initial
+                global quit_initial
+                try:
+                    __IPYTHON__  # pylint: disable=E0602
+                    from IPython.core.autocall import ExitAutocall
+                    exit_initial = ExitAutocall.__call__
+                    ExitAutocall.__call__ = ThreadPool.builtin_exit
+                except NameError:
+                    try:
+                        import builtins
+                        exit_initial = builtins.exit
+                        quit_initial = builtins.quit
+                        builtins.exit = ThreadPool.builtin_exit
+                        builtins.quit = ThreadPool.builtin_quit
+                    except:
+                        pass
             ThreadPool.sigint_initial = \
                 signal.signal(signal.SIGINT, ThreadPool.sigint_handler)
             if not ThreadPool.manhole:
@@ -210,8 +229,21 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         if not len(ThreadPool.pools):
             global sysexit_initial
             sys.exit = sysexit_initial
-            # if ThreadPool.manhole:
-            #    manhole.
+
+        if not sys.__stdin__.closed and sys.__stdin__.isatty():
+            global exit_initial
+            global quit_initial
+            try:
+                __IPYTHON__  # pylint: disable=E0602
+                from IPython.core.autocall import ExitAutocall
+                ExitAutocall.__call__ = exit_initial
+            except NameError:
+                try:
+                    import builtins
+                    builtins.exit = exit_initial
+                    builtins.quit = quit_initial
+                except:
+                    pass
         self.debug("%s was shutted down", repr(self))
         self._shutting_down = False
 
@@ -240,13 +272,33 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             pool.shutdown(execute_remaining, force, timeout)
 
     @staticmethod
+    def _exit():
+        ThreadPool.shutdown_pools()
+        ThreadPool.debug_deadlocks()
+
+    @staticmethod
     def exit(retcode=0):
         """
         Terminates the running program safely.
         """
-        ThreadPool.shutdown_pools()
-        ThreadPool.debug_deadlocks()
+        ThreadPool._exit()
         sys.exit(retcode)
+
+    @staticmethod
+    def builtin_exit(*args, **kwargs):
+        """
+        Terminates the interactive shell safely.
+        """
+        ThreadPool._exit()
+        exit_initial(*args, **kwargs)
+
+    @staticmethod
+    def builtin_quit(*args, **kwargs):
+        """
+        Terminates the interactive shell safely.
+        """
+        ThreadPool._exit()
+        quit_initial(*args, **kwargs)
 
     @staticmethod
     def sigint_handler(sign, frame):
@@ -291,7 +343,8 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         if threading.active_count() > 1:
             if threading.active_count() == 2:
                 for thread in threading.enumerate():
-                    if thread.name.startswith('timeout'):
+                    if (thread.name.startswith('timeout') or
+                            thread.name == "IPythonHistorySavingThread"):
                         # veles.tests.timeout registers atexit
                         return
             logging.warning("There are currently more than 1 threads still "
