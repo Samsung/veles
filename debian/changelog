@@ -1,3 +1,10 @@
+veles (0.5.0-1) trusty; urgency=high
+
+  * 0.5.0 RTM
+
+ -- Markovtsev Vadim <v.markovtsev@samsung.com>  Thu, 06 Nov 2014 15:35:39 +0300
+
+
 veles (0.5.0-0) trusty; urgency=high
 
   * Initial release
