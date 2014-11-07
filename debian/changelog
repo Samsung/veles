@@ -1,3 +1,9 @@
+veles (0.5.0-2) trusty; urgency=high
+
+  * Added missed OpenCL files from Znicz
+
+ -- Markovtsev Vadim <v.markovtsev@samsung.com>  Fri, 07 Nov 2014 09:26:53 +0300
+
 veles (0.5.0-1) trusty; urgency=high
 
   * 0.5.0 RTM

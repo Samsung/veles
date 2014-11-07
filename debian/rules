@@ -17,6 +17,7 @@ override_dh_install:
 	mkdir -p debian/python3-veles/usr/share/doc/python3-veles
 	cp -rL docs/html/* debian/python3-veles/usr/share/doc/python3-veles
 	cp -r ocl debian/python3-veles/usr/share/veles/
+	cp -r veles/znicz/ocl debian/python3-veles/usr/share/veles/ocl/znicz
 	cp -r devices debian/python3-veles/usr/share/veles/
 	cp requirements.txt debian/python3-veles/usr/share/veles/
 	ver=$$(ls debian/python3-veles/usr/lib) && mkdir debian/python3-veles/usr/lib/$$ver/dist-packages/veles/znicz/samples/kohonen && \
