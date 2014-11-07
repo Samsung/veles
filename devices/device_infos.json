@@ -1,4 +1,36 @@
 {
+  "Intel(R) Corporation/Intel(R) Xeon(R) CPU E5-2670 0 @ 2.60GHz/32902": {
+    "matrix_multiplication": {
+      "double": {
+        "0": [
+          8,
+          2.193699364977268
+        ],
+        "1": [
+          8,
+          2.3191032800047346
+        ],
+        "2": [
+          24,
+          4.575664475016917
+        ]
+      },
+      "float": {
+        "0": [
+          8,
+          2.266673742987526
+        ],
+        "1": [
+          8,
+          2.264079134329222
+        ],
+        "2": [
+          24,
+          4.255413332333167
+        ]
+      }
+    }
+  },
   "NVIDIA Corporation/GeForce GTX TITAN/4318": {
     "matrix_multiplication": {
       "double": {
