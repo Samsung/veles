@@ -285,6 +285,11 @@ class Device(Pickleable):
         device_infos = {}
         found_any = False
         for devdir in root.common.device_dirs:
+            if not os.path.exists(devdir):
+                try:
+                    os.makedirs(devdir, 0o755)
+                except:
+                    pass
             device_infos_fnme = os.path.join(devdir, Device.DEVICE_INFOES_JSON)
             if os.access(device_infos_fnme, os.R_OK):
                 try:
