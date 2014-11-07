@@ -65,6 +65,7 @@ class OpenCLUnit(Unit):
         self._cache = kwargs.get("cache", True)
         # Yup, this is right - self._force_cpu is initialized in init_unpickled
         self._force_cpu = kwargs.get("force_cpu", self._force_cpu)
+        self.prefer_numpy = root.common.prefer_numpy_on_cpu
 
     def init_unpickled(self):
         super(OpenCLUnit, self).init_unpickled()
@@ -111,6 +112,8 @@ class OpenCLUnit(Unit):
             raise ValueError()
         if self._force_cpu:
             self.device = None
+        self.prefer_numpy = (self.prefer_numpy and self.device is not None and
+                             device.device_info.is_cpu)
 
     def run(self):
         if self.device is None or self._force_cpu:

@@ -106,6 +106,7 @@ root.common.update({
     "test_dataset_root": os.path.join(os.environ.get("HOME", "./"), "data"),
     "test_known_device": False,
     "test_unknown_device": True,
+    "prefer_numpy_on_cpu": True,
     "disable_snapshots": False,
     "unit_test": False,
     "veles_dir": __root__,

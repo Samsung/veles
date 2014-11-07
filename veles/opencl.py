@@ -124,8 +124,12 @@ class DeviceInfo(Logger):
         return bs
 
     @property
-    def vector_opt(self):
+    def is_cpu(self):
         return self.device_type == cl.CL_DEVICE_TYPE_CPU
+
+    @property
+    def vector_opt(self):
+        return self.is_cpu
 
 
 class DeviceNotFoundError(Exception):
@@ -292,9 +296,14 @@ class Device(Pickleable):
         if not found_any:
             self.warning("Did not find %s in any of the configured paths: %s",
                          Device.DEVICE_INFOES_JSON, root.common.device_dirs)
-        if self.device_info.desc not in device_infos:
-            self.warning("Device has not been analyzed yet, will perform a "
-                         "quick test now.")
+        if ((self.device_info.desc not in device_infos and
+             root.common.test_unknown_device) or
+            (self.device_info.desc in device_infos and
+             root.common.test_known_device)):
+            self.warning("%s, will perform a "
+                         "quick test now.", "Forced device retest"
+                         if self.device_info.desc in device_infos
+                         else "Device has not been analyzed yet")
             self._find_optimal_block_size(device_infos)
             found_any = False
             for devdir in root.common.device_dirs:
