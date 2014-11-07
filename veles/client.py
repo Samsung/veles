@@ -20,6 +20,7 @@ from twisted.python.failure import Failure
 import zmq
 
 from veles.cmdline import CommandLineArgumentsRegistry
+from veles.config import root
 import veles.error as error
 import veles.external.fysom as fysom
 from veles.external.prettytable import PrettyTable
@@ -49,7 +50,8 @@ class ZmqDealer(ZmqConnection):
         self.host = host
         self.is_ipc = endpoint.address.startswith('ipc://')
         self.shmem = None
-        self.pickles_compression = "snappy" if not self.is_ipc else None
+        self.pickles_compression = root.common.pickles_compression \
+            if not self.is_ipc else None
         self._request_timings = {}
         self._command = None
         self._command_str = None

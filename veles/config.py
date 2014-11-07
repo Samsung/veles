@@ -8,6 +8,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import os
+import platform
 from pprint import pprint
 from six import print_
 import sys
@@ -103,6 +104,9 @@ root.common.update({
     "precision_level": 1,  # 0 - use simple summation
                            # 1 - use Kahan summation (9% slower)
                            # 2 - use multipartials summation (90% slower)
+    "pickles_compression": (None if
+                            platform.python_implementation() == "CPython"
+                            else "snappy"),
     "test_dataset_root": os.path.join(os.environ.get("HOME", "./"), "data"),
     "test_known_device": False,
     "test_unknown_device": True,

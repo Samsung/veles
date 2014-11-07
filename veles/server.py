@@ -19,6 +19,7 @@ import uuid
 import zmq
 
 from veles.cmdline import CommandLineArgumentsRegistry
+from veles.config import root
 import veles.external.fysom as fysom
 from veles.external.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
 from veles.logger import Logger
@@ -47,6 +48,7 @@ class ZmqRouter(ZmqConnection, Logger):
         self._command = None
         self._command_str = None
         self.ignore_unknown_commands = ignore_unknown_commands
+        self.pickles_compression = root.common.pickles_compression
 
     def change_log_message(self, msg):
         return "zmq: " + msg
@@ -110,7 +112,8 @@ class ZmqRouter(ZmqConnection, Logger):
         try:
             pickles_size = self.send(
                 self.routing[channel].pop(node_id), channel, message,
-                io=shmem, pickles_compression="snappy" if not is_ipc else None)
+                io=shmem, pickles_compression=self.pickles_compression
+                if not is_ipc else None)
         except ZmqConnection.IOOverflow:
             self.shmem[node_id] = None
             io_overflow = True
