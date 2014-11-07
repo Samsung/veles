@@ -554,6 +554,12 @@ class Launcher(logger.Logger):
         self.info("Launching %d instance(s) on %s", len(progs), host)
         cwd = os.getcwd()
         self.debug("cwd: %s", os.getcwd())
+        PYTHONPATH = os.getenv("PYTHONPATH")
+        if PYTHONPATH is not None:
+            self.debug("PYTHONPATH: %s", PYTHONPATH)
+            ppenv = "export PYTHONPATH='%s' && " % PYTHONPATH
+        else:
+            ppenv = ""
         pc = paramiko.SSHClient()
         try:
             pc.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -567,8 +573,8 @@ class Launcher(logger.Logger):
             channel.get_pty()
             for prog in progs:
                 prog = prog.replace(r'"', r'\"').replace(r"'", r"\'")
-                cmd = self._slave_launch_transform % ("cd '%s' && %s" %
-                                                      (cwd, prog))
+                cmd = self._slave_launch_transform % ("cd '%s' && %s%s" %
+                                                      (cwd, ppenv, prog))
                 self.debug("Executing %s", cmd)
                 channel.exec_command(cmd)
                 answer = channel.recv(buf_size)
