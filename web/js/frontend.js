@@ -118,7 +118,7 @@ function get_diff(obj1, obj2) {
 }
 
 function parse_cl(cl) {
-  if (cl.match(/(^|[^-])-\w\w+/)) {
+  if (cl.match(/(^|\s+)-\w\w+/)) {
     return null;
   }
   var args = minimist_parse(cl.split(/\s+/), opts);
@@ -315,7 +315,6 @@ $(function() {
         }
       });
       cmdline_states = from_args_to_states(args, cmdline_states);
-      console.log(args);
       var diff = get_diff(prev_cmdline_states, cmdline_states);
       invalid = false;
       mode = 'Standalone';
