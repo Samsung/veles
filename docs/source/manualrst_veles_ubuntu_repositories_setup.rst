@@ -23,35 +23,17 @@ Add the repository public key::
 Setting up a local mirror
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This step is neede only if smaug.rnd.samsung.ru is inaccessible. Suppose that
-you received the archive with the repository named, e.g., "veles-repo.tar.xz".
-At first, make sure that you have ``reprepro`` installed. Execute the following::
+This step is needed only if smaug.rnd.samsung.ru is inaccessible from your site.
+The easiest way to build a mirror is to install and use `aptly <http://www.aptly.info>`_.
+Besides, you must obtain the  \*.deb files belonging to the repository from some other source,
+e.g. via email or file sharing though 3-rd party. Execute and  carefully read the output::
 
-    mkdir veles-repo && cd veles-repo && tar -xf ../veles-repo.tar.xz
- 
-Then you need to setp a new GnuPG key which is used to sign all packages,
-Please refer to `Debian wiki <https://wiki.debian.org/SettingUpSignedAptRepositoryWithReprepro>`_.
-Finally, add the packages::
+    aptly repo create veles
+    aptly repo add veles /path/to/deb/files
+    aptly publish repo -distribution=trusty veles
+    aptly serve
 
-    sudo reprepro -Vb . includedeb trusty deb/*
-    
-Depending on which web server you are running, you will have to add the corresponding
-proxy rule. Here is the nginx's rule on Smaug::
-
-    location ~ "^/apt/(.*)$" {
-        alias /data/veles/packages/binary/$1;
-    }
-
-
-^^^^^^^^^^^^^^^^^^^^^
-Matplotlib repository
-^^^^^^^^^^^^^^^^^^^^^
-
-If your matplotlib's version is older than 1.4 (this is likely to be on Ubuntu
-14.04), you should add this private Matplotlib ppa: ``ppa:takluyver/matplotlib-daily``::
-
-    sudo add-apt-repository ppa:takluyver/matplotlib-daily
-
+Replace "trusty" with the proper distribution codename (see ``lsb_release -c``).
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Upgrading existing packages
