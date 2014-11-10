@@ -8,11 +8,13 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 import numpy
 import os
 import struct
+import sys
 import tempfile
 import unittest
 
 from veles.__main__ import Main
 import veles.prng as rnd
+from veles.workflow import Workflow
 
 
 class Test(unittest.TestCase):
@@ -39,6 +41,18 @@ class Test(unittest.TestCase):
             os.remove(fname)
             raise
 
+    def testRun(self):
+        argv = sys.argv
+        sys.argv = [argv[0], "-s", "-p", "", __file__, __file__]
+        self.main.run()
+        self.assertTrue(Workflow.run_was_called)
+
+
+def run(load, main):
+    wf, _ = load(Workflow)
+    wf.end_point.link_from(wf.start_point)
+    main()
+    Workflow.run_was_called = True
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'Test.testSeeding']

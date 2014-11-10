@@ -47,3 +47,4 @@ class DummyWorkflow(Workflow):
         Passes DummyLauncher as workflow parameter value.
         """
         super(DummyWorkflow, self).__init__(DummyLauncher())
+        self.end_point.link_from(self.start_point)
