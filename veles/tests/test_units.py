@@ -7,6 +7,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 import unittest
 
+import veles
 from veles.config import root
 from veles.units import TrivialUnit
 from veles.pickle2 import pickle
@@ -80,6 +81,10 @@ class Test(unittest.TestCase):
         u.was_warning = False
         u.initialize(**bad_kwargs)
         self.assertTrue(u.was_warning)
+
+    def testUnitsList(self):
+        units = veles.__units__
+        self.assertGreater(len(units), 0)
 
 
 if __name__ == "__main__":
