@@ -53,3 +53,4 @@ Here is the description of what happens after you execute velescli.py:
 .. include:: manualrst_veles_cmdline_system.rst
 .. include:: manualrst_veles_pickles.rst
 .. include:: manualrst_veles_vector.rst
+.. include:: manualrst_veles_config.rst
