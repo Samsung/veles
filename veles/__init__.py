@@ -104,7 +104,7 @@ class VelesModule(ModuleType):
         stdout = sys.stdout
         with open(os.devnull, 'w') as null:
             sys.stdout = null
-        for root, _, files in os.walk(os.path.dirname(__file__)):
+        for root, _, files in os.walk(os.path.dirname(self.__file__)):
             if root.find('tests') >= 0:
                 continue
             for file in files:
