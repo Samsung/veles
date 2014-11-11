@@ -44,28 +44,33 @@ In order to use it:
     root.mnist.loader.on_device = True
     root.mnist.layers = [364, 10]
 
-4. After setting value of config object, you can use it. For example::
+4. ``root.common`` is a common parameters. User can see all common parameters in :class:`veles.config.Config`, but changing should be in workflow (samples/mnist.py), configuration files (samples/mnist_config.py) or from command line::
+
+    root.common.update({"precision_type": "float",
+                        "precision_level": 0}) # mnist_config.py
+
+5. You can set parameters in workflow file, configuration file and from command line.
+
+  Parameters in configuration file (samples/mnist_config.py) update parameters in workflow file (samples/mnist.py). And parameters from command line update parameters from configuration file (samples/mnist_config.py)::
+
+    root.mnist.loader.minibatch_size = 40 # mnist_config.py
+    root.mnist.loader.minibatch_size = 88 # mnist.py
+
+  minibatch_size will be 40. You can set the parameters from command line after workflow and configuration files::
+
+    python3 -m veles -s veles/znicz/samples/mnist.py - root.mnist.minibatch_size=20 root.common.plotters_disabled=True
+
+6. After setting value of config object, you can use it. For example::
 
     from veles.config import root
-    import veles.znicz.decision as decision
-    
+    from veles.znicz.decision import DecisionGD
+
     root.mnist.update({
         "decision": {"fail_iterations": 20,
                      "max_epochs": 300})
-    
+
     class MnistWorkflow(nn_units.NNWorkflow):
         def __init__(self, workflow, layers, **kwargs):
-            self.decision = decision.DecisionGD(
+            self.decision = DecisionGD(
                 self, fail_iterations=root.mnist.decision.fail_iterations,
                 max_epochs=root.mnist.decision.max_epochs)
-
-5. You can set parameters in workflow file, config file and from command line
-
-  Parameters in config file (mnist_config.py) update parameters in workflow file (mnist.py). And parameters from command line update parameters from config file.::
-
-    root.mnist.loader.minibatch_size = 88 # mnist.py
-    root.mnist.loader.minibatch_size = 40 # mnist_config.py
-
-  minibatch_size will be 40. You can set the parameters from command line after workflow and config files::
-
-    python3 -m veles -s veles/znicz/samples/mnist.py - root.mnist.minibatch_size=20
