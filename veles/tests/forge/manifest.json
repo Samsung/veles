@@ -1,0 +1,9 @@
+{
+    "name": "Second",
+    "workflow": "second.py",
+    "configuration": "config.py",
+    "short_description": "Second test model",
+    "long_description": "Second test model LOOONG textz",
+    "author": "Dreadful VELES Team",
+    "version": "2.0.0"
+}

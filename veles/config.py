@@ -131,6 +131,12 @@ root.common.update({
         "root": os.path.join(__root__, "web"),
         "drop_time": 30 * 24 * 3600,
     },
+    "forge": {
+        "service_name": "service",
+        "upload_name": "upload",
+        "fetch_name": "fetch",
+        "manifest": "manifest.json",
+    },
     "ThreadPool": {
         "minthreads": 2,
         "maxthreads": 2,
