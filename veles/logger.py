@@ -112,6 +112,12 @@ class Logger(object):
         """
         return self._logger_
 
+    @logger.setter
+    def logger(self, value):
+        if not isinstance(value, logging.Logger):
+            raise TypeError("value must be an instance of type logging.Logger")
+        self._logger_ = value
+
     def __getstate__(self):
         parent = super(Logger, self)
         state = getattr(parent, "__getstate__", lambda: {})()
