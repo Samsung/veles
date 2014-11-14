@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 """
 Created on Nov 11, 2014
 
@@ -60,7 +61,7 @@ class ServiceHandler(HandlerBase):
         except web.MissingArgumentError:
             self.error("No 'name' argument was specified")
             raise
-        self.finish(json_encode(self.server.get_details(name)))
+        self.finish(json_encode(self.server.details(name)))
 
     def handle_list(self):
         self.write('[')
@@ -356,7 +357,7 @@ class ForgeServer(Logger):
             item.append(str(datetime.utcfromtimestamp(head.commit_time)))
             yield item
 
-    def get_details(self, name):
+    def details(self, name):
         rep = self.repos[name]
         head = rep.head.get_object()
         return {"name": name,
