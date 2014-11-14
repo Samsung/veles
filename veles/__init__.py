@@ -15,7 +15,7 @@ from email.utils import parsedate_tz, mktime_tz, formatdate
 from sys import version_info, modules
 from types import ModuleType
 from warnings import warn
-from .paths import __root__
+from veles.paths import __root__
 
 __project__ = "Veles Machine Learning Platform"
 __version__ = "0.5.0"
@@ -102,10 +102,10 @@ class VelesModule(ModuleType):
         # Temporarily disable standard output since some modules produce spam
         # during import
         stdout = sys.stdout
-        with open(os.devnull, 'w') as null:
-            sys.stdout = null
-        for root, _, files in os.walk(os.path.dirname(self.__file__)):
-            if root.find('tests') >= 0:
+        sys.stdout = open(os.devnull, 'w')
+        for root, dirs, files in os.walk(os.path.dirname(self.__file__)):
+            if 'tests' in root or 'external' in root:
+                dirs.clear()
                 continue
             for file in files:
                 modname, ext = os.path.splitext(file)
@@ -114,8 +114,12 @@ class VelesModule(ModuleType):
                         sys.path.insert(0, root)
                         __import__(modname)
                         del sys.path[0]
-                    except:
-                        pass
+                    except Exception as e:
+                        stdout.write("%s: %s\n" % (
+                            os.path.relpath(os.path.join(root, file),
+                                            self.__root__),
+                            e))
+        sys.stdout.close()
         sys.stdout = stdout
         from veles.unit_registry import UnitRegistry
         self.__units_cache__ = UnitRegistry.units

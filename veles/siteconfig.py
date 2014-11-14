@@ -1,6 +1,6 @@
 import os
 
-from .paths import __root__
+from veles.paths import __root__
 
 
 def update(root):

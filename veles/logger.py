@@ -18,7 +18,7 @@ import time
 from veles.error import Bug
 from veles.external.daemon import redirect_stream
 from veles.external.progressbar import ProgressBar
-from .paths import __root__
+from veles.paths import __root__
 
 
 class Logger(object):

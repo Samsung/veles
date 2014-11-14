@@ -84,7 +84,9 @@ class Test(unittest.TestCase):
 
     def testUnitsList(self):
         units = veles.__units__
+        self.assertIsInstance(units, set)
         self.assertGreater(len(units), 0)
+        print("Number of units:", len(units))
 
 
 if __name__ == "__main__":

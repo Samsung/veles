@@ -13,7 +13,7 @@ from pprint import pprint
 from six import print_
 import sys
 
-from .paths import __root__
+from veles.paths import __root__
 
 # : Global config
 root = None
@@ -145,7 +145,7 @@ root.common.update({
 
 # Allow to override the settings above
 try:
-    from .siteconfig import update
+    from veles.siteconfig import update
     update(root)
     del update
 except ImportError:

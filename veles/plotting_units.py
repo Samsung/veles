@@ -14,10 +14,10 @@ from zope.interface import implementer
 
 import veles.error as error
 import veles.formats as formats
-from .compat import from_none
-from .distributable import IDistributable
-from .mutable import Bool
-from .plotter import Plotter, IPlotter
+from veles.compat import from_none
+from veles.distributable import IDistributable
+from veles.mutable import Bool
+from veles.plotter import Plotter, IPlotter
 
 
 @implementer(IPlotter)

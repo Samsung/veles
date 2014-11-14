@@ -16,12 +16,12 @@ from six import add_metaclass
 import sys
 import opencl4py as cl
 
-from .cmdline import CommandLineArgumentsRegistry
-from .compat import from_none
-from .config import root
-from .distributable import Pickleable
-from .dummy import DummyWorkflow
-from .logger import Logger
+from veles.cmdline import CommandLineArgumentsRegistry
+from veles.compat import from_none
+from veles.config import root
+from veles.distributable import Pickleable
+from veles.dummy import DummyWorkflow
+from veles.logger import Logger
 import veles.opencl_types as opencl_types
 import veles.external.prettytable as prettytable
 
