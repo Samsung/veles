@@ -364,7 +364,7 @@ class OpenCLBenchmark(OpenCLUnit):
         """Compiles the benchmarking kernel.
         """
         super(OpenCLBenchmark, self).initialize(device=device, **kwargs)
-        if self.block_size is None:
+        if self.block_size is None and device is not None:
             self.block_size = device.device_info.get_block_size(
                 kernel="matrix_multiplication", dtype=self.dtype)
         self.cl_sources_["benchmark.cl"] = {}
