@@ -235,6 +235,7 @@ class ForgeClient(Logger):
             self.stop()
 
         def failed(failure):
+            self.return_code = 1
             try:
                 failure.raiseException()
             except:
@@ -340,8 +341,10 @@ class ForgeClient(Logger):
         d = task.deferLater(reactor, 0, self.action)
         d.addErrback(self.stop)
         if self.own_reactor:
+            self.return_code = 0
             reactor.callWhenRunning(self.debug, "Reactor is running")
             reactor.run()
+            return self.return_code
         else:
             self.run_deferred = Deferred()
             return self.run_deferred

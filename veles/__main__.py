@@ -70,7 +70,10 @@ class Main(Logger, CommandLineBase):
         if sys.argv[1] == "forge":
             from veles.forge_client import __run__ as forge_run
             del sys.argv[1]
-            return forge_run()
+            try:
+                return forge_run()
+            except:
+                return Main.EXIT_FAILURE
         if "--frontend" in sys.argv:
             try:
                 self._open_frontend()
