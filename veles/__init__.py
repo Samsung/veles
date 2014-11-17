@@ -61,6 +61,8 @@ if version_info.major == 3 and version_info.minor == 4 and \
     warn("Python 3.4.0 has a bug which is critical to Veles OpenCL subsystem ("
          "see issue #21435). It is recommended to upgrade to 3.4.1.")
 
+__plugins__ = set()
+
 
 def __html__():
     """

@@ -4,5 +4,6 @@
     "configuration": "config.py",
     "short_description": "Second test model",
     "long_description": "Second test model LOOONG textz",
-    "author": "Dreadful VELES Team"
+    "author": "Dreadful VELES Team",
+    "requires": ["veles>=0.5.0", "glymur"]
 }

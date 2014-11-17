@@ -6,10 +6,13 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
 
 
+from __future__ import print_function
 from argparse import ArgumentParser
 import json
 import logging
 import os
+from pkg_resources import working_set, Requirement, Distribution, \
+    VersionConflict, SOURCE_DIST
 import shutil
 from six.moves.urllib.parse import urlparse, urlencode
 import struct
@@ -25,9 +28,11 @@ from twisted.web.http_headers import Headers
 import wget
 from zope.interface import implementer
 
+from veles import __plugins__, __name__, __version__
 from veles.cmdline import CommandLineBase
 from veles.config import root
 from veles.external.prettytable import PrettyTable
+from veles.forge_common import REQUIRED_MANIFEST_FIELDS, validate_requires
 from veles.logger import Logger
 
 
@@ -74,7 +79,9 @@ class ForgeClient(Logger):
             tar.extractall(self.path)
         os.remove(fn)
         self.info("Put %s to %s", os.listdir(self.path), self.path)
-        return self.path, self._parse_metadata(self.path)
+        metadata = self._parse_metadata(self.path)
+        self._check_deps(metadata)
+        return self.path, metadata
 
     @action
     def upload(self):
@@ -85,11 +92,22 @@ class ForgeClient(Logger):
             self.stop(Failure(e), False)
             return
 
-        for key in ("name", "workflow", "configuration", "short_description",
-                    "long_description", "author"):
+        for key in REQUIRED_MANIFEST_FIELDS:
             if not key in metadata:
                 raise ValueError("No \"%s\" in %s" %
                                  (key, root.common.forge.manifest))
+        requires = metadata["requires"]
+        validate_requires(requires)
+        vreqfound = False
+        for req in requires:
+            if Requirement.parse(req).project_name == __name__:
+                vreqfound = True
+                break
+        if not vreqfound:
+            velreq = __name__ + ">=" + __version__
+            self.warning("No VELES core requirement was specified. "
+                         "Appended %s", velreq)
+            requires.append(velreq)
         metadata["version"] = self.version
         name = metadata["name"]
         workflow = metadata["workflow"]
@@ -338,6 +356,29 @@ class ForgeClient(Logger):
                 self.run_deferred.callback(None)
         if failure is not None and throw:
             failure.raiseException()
+
+    def _check_deps(self, metadata):
+        plugins = {k.__name__.replace('_', '-'): Distribution(
+            os.path.dirname(k.__file__), None, k.__name__, k.__version__,
+            None, SOURCE_DIST) for k in __plugins__}
+        failed_general = set()
+        failed_veles = set()
+        for rreq in metadata["requires"]:
+            req = Requirement.parse(rreq)
+            if req.project_name in plugins:
+                if plugins[req.project_name] not in req:
+                    failed_veles.add(req)
+            else:
+                try:
+                    working_set.find(req).project_name
+                except (AttributeError, VersionConflict):
+                    failed_general.add(req)
+        if len(failed_general) > 0:
+            print("Unsatisfied package requirements:", file=sys.stderr)
+            print(", ".join((str(f) for f in failed_general)), file=sys.stderr)
+        if len(failed_veles):
+            print("Unsatisfied VELES requirements:", file=sys.stderr)
+            print(", ".join((str(f) for f in failed_veles)), file=sys.stderr)
 
     def _validate_base(self):
         pres = urlparse(self.base)

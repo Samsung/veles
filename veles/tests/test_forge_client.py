@@ -11,6 +11,7 @@ import logging
 import os
 import shutil
 from six import StringIO
+import struct
 import sys
 import tarfile
 import tempfile
@@ -20,7 +21,8 @@ from twisted.web.server import Site
 from twisted.web.resource import Resource
 import unittest
 
-from veles import __root__
+from veles import __root__, __plugins__
+from veles.config import root
 from veles.forge_client import ForgeClient, ForgeClientArgs
 
 
@@ -64,8 +66,11 @@ class TestForgeClient(unittest.TestCase):
         self.sync.set()
 
     def fail(self, msg=None):
-        self.sync.success = False
-        self.sync.set()
+        if msg is not None:
+            super().fail(msg)
+        else:
+            self.sync.success = False
+            self.sync.set()
 
     def sync(fn):
         def wrapped_sync(self, *args, **kwargs):
@@ -277,19 +282,26 @@ Really long text telling about how this model is awesome.
     @sync
     def test_upload_good(self):
         this = self
+        manifest_size = os.path.getsize(
+            os.path.join(__root__, "veles/tests/forge/First/%s" %
+                         root.common.forge.manifest)) + 1
+        # "+ 1" is present because of the UTF-8 signature, see
+        # metabytes = json.dumps(metadata, sort_keys = True).encode('UTF-8')
+        # inside ForgeClient.upload.ForgeBodyProducer.startProducing
 
         class UploadPage(Resource):
             def render_POST(self, request):
                 input = request.content.read()
-                this.assertEqual(input[:4], b'\x00\x00\x00\xda')
+                this.assertEqual(input[:4], struct.pack('!I', manifest_size))
                 this.assertEqual(
-                    input[4:218+4],
+                    input[4:manifest_size+4],
                     b'{"author": "VELES Team", "configuration": '
                     b'"workflow_config.py", "long_description": "First test '
                     b'model LOOONG text", "name": "First", '
+                    b'"requires": ["veles>=0.5.0"], '
                     b'"short_description": "First test model", '
                     b'"version": "2.4", "workflow": "workflow.py"}')
-                this.assertEqual(len(input) - 218 - 4, 175)
+                this.assertEqual(len(input) - manifest_size - 4, 175)
                 return b"!"
 
         def check_name(name, request):
@@ -301,6 +313,32 @@ Really long text telling about how this model is awesome.
         args.path = os.path.join(__root__, "veles/tests/forge/First")
         args.version = "2.4"
         self.client = ForgeClient(args, False)
+
+    def test_fetch_bad_deps(self):
+        buf = StringIO()
+        stderr = sys.stderr
+        sys.stderr = buf
+        self.client = ForgeClient(
+            ForgeClientArgs("list", "http://localhost:%d" % PORT, False),
+            False)
+        self.client._check_deps({"requires": ["abrakadabra>=0.1.2"]})
+        sys.stderr = stderr
+        self.assertGreaterEqual(
+            buf.getvalue().find("Unsatisfied package requirements"), 0)
+        self.assertGreaterEqual(
+            buf.getvalue().find("abrakadabra>=0.1.2"), 0)
+        import numpy
+        __plugins__.add(numpy)
+        numpy.__version__ = "1.0"
+        buf = StringIO()
+        sys.stderr = buf
+        self.client._check_deps({"requires": [
+            "numpy>=1000.1", "twisted>=14.0"]})
+        sys.stderr = stderr
+        self.assertGreaterEqual(
+            buf.getvalue().find("Unsatisfied VELES requirements"), 0)
+        self.assertGreaterEqual(
+            buf.getvalue().find("numpy>=1000.1"), 0)
 
     sync = staticmethod(sync)
 

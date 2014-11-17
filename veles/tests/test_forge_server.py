@@ -35,10 +35,10 @@ class TestForgeServer(unittest.TestCase):
             target=IOLoop.instance().start)
         base = os.path.join(__root__, "veles/tests/forge")
         for name in ("First", "Second"):
-            if not os.path.exists(os.path.join(base, "%s/.git" % name)):
-                with TarFile.open(os.path.join(base,
-                                               "%s.git.tar.gz" % name)) as tar:
-                    tar.extractall(os.path.join(base, name))
+            shutil.rmtree(os.path.join(base, os.path.join(name, ".git")))
+            with TarFile.open(
+                    os.path.join(base, "%s.git.tar.gz" % name)) as tar:
+                tar.extractall(os.path.join(base, name))
         cls.server = ForgeServer(ForgeServerArgs(base, PORT))
         cls.server.run(loop=False)
         cls.ioloop_thread.start()
@@ -57,15 +57,15 @@ class TestForgeServer(unittest.TestCase):
         self.assertEqual(
             response.body,
             b'[["First", "First test model", "Vadim Markovtsev", "master",'
-            b' "2014-11-13 07:42:39"],["Second", "Second test model", '
-            b'"Vadim Markovtsev", "1.0.0", "2014-11-13 16:47:33"]]')
+            b' "2014-11-17 11:02:24"],["Second", "Second test model", '
+            b'"Vadim Markovtsev", "1.0.0", "2014-11-17 11:00:46"]]')
 
     def test_details(self):
         response = self.client.fetch(
             "http://localhost:%d/service?query=details&name=Second" % PORT)
         self.assertEqual(
             response.body,
-            b'{"date": "2014-11-13 16:47:33", "description": "Second test '
+            b'{"date": "2014-11-17 11:00:46", "description": "Second test '
             b'model LOOONG textz", "name": "Second", "version": "1.0.0"}')
 
     def _test_fetch_case(self, query, files):
@@ -105,8 +105,7 @@ class TestForgeServer(unittest.TestCase):
                     body=self._compose_upload("second_bad.tar.gz")))
                 self.fail("HTTPError was not thrown")
             except HTTPError as e:
-                self.assertEqual(e.response.body,
-                                 b'<html><body>No changes</body></html>')
+                self.assertGreaterEqual(e.response.body.find(b'No changes'), 0)
             response = self.client.fetch(HTTPRequest(
                 method='POST', url="http://localhost:%d/upload" % PORT,
                 body=self._compose_upload("second_good.tar.gz")))

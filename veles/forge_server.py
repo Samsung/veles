@@ -19,10 +19,12 @@ import pygit2
 import struct
 from tarfile import TarFile
 from tornado import gen, web
+from tornado.escape import xhtml_escape
 from tornado.ioloop import IOLoop
 
 from veles.cmdline import CommandLineBase
 from veles.config import root
+from veles.forge_common import REQUIRED_MANIFEST_FIELDS, validate_requires
 from veles.logger import Logger
 
 
@@ -37,7 +39,13 @@ def json_encode(value):
 class HandlerBase(web.RequestHandler, Logger):
     def write_error(self, status_code, **kwargs):
         if hasattr(self, "error_message"):
-            self.write("<html><body>%s</body></html>" % self.error_message)
+            if isinstance(self.error_message, BaseException):
+                import traceback
+                self.write("<html><body><pre>%s</pre></body></html>" %
+                           xhtml_escape(''.join(traceback.format_exc())))
+            else:
+                self.write("<html><body>Error: %s</body></html>" %
+                           xhtml_escape(self.error_message))
         else:
             super(HandlerBase, self).write_error(status_code, **kwargs)
 
@@ -216,10 +224,10 @@ class UploadHandler(HandlerBase):
             raise ValueError("Failed to load metadata JSON")
         if not isinstance(self.metadata, dict):
             raise ValueError("Wrong format of metadata")
-        for key in ("name", "workflow", "configuration", "short_description",
-                    "long_description", "author", "version"):
+        for key in REQUIRED_MANIFEST_FIELDS.union({"version"}):
             if not key in self.metadata:
                 raise ValueError("%s not found in metadata" % key)
+        validate_requires(self.metadata['requires'])
 
 
 ForgeServerArgs = namedtuple("ForgeServerArgs", ("root", "port"))
