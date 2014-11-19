@@ -641,6 +641,7 @@ class Workflow(Unit):
                         refs.append((unit, key[2:]) + val)
                     if (val is not None and not Unit.is_immutable(val) and
                             key not in Workflow.HIDDEN_UNIT_ATTRS and
+                            not key.endswith('_') and
                             self.filter_unit_graph_attrs(val)):
                         if key[0] == '_' and hasattr(unit, key[1:]):
                             key = key[1:]
@@ -688,7 +689,7 @@ class Workflow(Unit):
                          "EVALUATOR": "plum",
                          "SERVICE": "lightgrey"}
 
-    HIDDEN_UNIT_ATTRS = {"_logger_", "_workflow"}
+    HIDDEN_UNIT_ATTRS = {"_workflow"}
 
     def print_stats(self, by_name=False, top_number=5):
         """Outputs various time statistics gathered with run_timed and
