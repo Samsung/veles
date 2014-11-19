@@ -154,7 +154,8 @@ footer {
   display: table-cell;
 }
 #workflow-details {
-  margin-bottom: 1em;
+  max-height: 20em;
+  overflow: overlay;
 }
 #workflow-svg-container {
   background-image: url(../img/background.png);
@@ -248,4 +249,8 @@ th, tr {
 .progress-overflow {
   background-color: #F5F5F5;
   color: #000000;
+}
+
+.graph-active {
+    cursor: pointer;
 }

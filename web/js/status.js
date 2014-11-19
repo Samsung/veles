@@ -313,7 +313,16 @@ function activateListItem(item_id) {
   $("#content").show();
   if (full_update) {
     $("#workflow-svg-container-fill").resize();
-    $("#workflow-svg-container").empty().append(workflow.svg.clone().attr("width", "100%").attr("height", "100%"));
+    var svg = workflow.svg.clone().attr("class", "graph-active");
+    $("#workflow-svg-container").empty().append(svg.attr("width", "100%").attr("height", "100%"));
+    svg.click(function () {
+      var svg = $(this).clone().css("position", "absolute").css("left", 0).css("top", 0);
+      var title = svg.children("g").children("title").text();
+      console.log(title);
+      var win = window.open("view.html", title, "width=600px,height=600px,menubar=no,toolbar=no,location=no,status=no");
+      win.document.title = title
+      win.svg = svg;
+    });
   }
   $("#indicator").hide();
 }
@@ -334,3 +343,4 @@ $(window).load(function() {
   setInterval(updateUI, 2000);
   setTimeout(updateUI, 0);
 });
+
