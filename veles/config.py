@@ -96,6 +96,7 @@ __home__ = os.path.join(os.environ.get("HOME", "./"), ".veles")
 
 root.common.update({
     "graphics_multicast_address": "239.192.1.1",
+    "graphics_blacklisted_ifaces": set(),
     "matplotlib_backend": "Qt4Agg",
     "matplotlib_webagg_port": 8081,
     "mongodb_logging_address": "0.0.0.0:27017",

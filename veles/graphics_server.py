@@ -28,6 +28,7 @@ from veles.external.txzmq import ZmqConnection, ZmqEndpoint
 from veles.logger import Logger
 import veles.graphics_client as graphics_client
 from veles.paths import __root__
+from veles.timeit import timeit
 
 
 class ZmqPublisher(ZmqConnection):
@@ -69,13 +70,16 @@ class GraphicsServer(Logger):
                          ZmqEndpoint("bind", "rndipc://veles-ipc-plots-:")]
         interfaces = []
         for iface, _ in GraphicsServer.interfaces():
+            if iface in root.common.graphics_blacklisted_ifaces:
+                continue
             interfaces.append(iface)
             zmq_endpoints.append(ZmqEndpoint(
                 "bind", "rndepgm://%s;%s:1024:65535:1" %
                         (iface, root.common.graphics_multicast_address)))
         self.debug("Trying to bind to %s...", zmq_endpoints)
+
         try:
-            self.zmq_connection = ZmqPublisher(zmq_endpoints)
+            self.zmq_connection, btime = timeit(ZmqPublisher, zmq_endpoints)
         except zmq.error.ZMQError:
             self.exception("Failed to bind to %s", zmq_endpoints)
             raise from_none(GraphicsServer.InitializationError())
@@ -99,6 +103,12 @@ class GraphicsServer(Logger):
         self.info("Publishing to %s", "; ".join([self.endpoints["inproc"],
                                                  self.endpoints["ipc"]] +
                                                 self.endpoints["epgm"]))
+        if btime > 1:
+            self.warning(
+                "EPGM bind took %d seconds - consider adding offending "
+                "interfaces to root.common.graphics_blacklisted_ifaces or "
+                "completely disabling graphics (-p '').",
+                int(btime))
 
     @staticmethod
     def init_parser(parser=None):
