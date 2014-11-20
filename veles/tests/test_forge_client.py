@@ -8,6 +8,7 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 from __future__ import print_function
 import json
 import logging
+from numpy.random import randint
 import os
 import shutil
 from six import StringIO
@@ -26,7 +27,7 @@ from veles.config import root
 from veles.forge_client import ForgeClient, ForgeClientArgs
 
 
-PORT = 8068
+PORT = 8068 + randint(-1000, 1000)
 
 
 class Router(Resource):

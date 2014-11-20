@@ -6,6 +6,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import logging
+from numpy.random import randint
 import os
 import pygit2
 import shutil
@@ -22,7 +23,7 @@ from veles.config import root
 from veles.forge_server import ForgeServer, ForgeServerArgs
 
 
-PORT = 8067
+PORT = 8067 + randint(-1000, 1000)
 
 
 class TestForgeServer(unittest.TestCase):
