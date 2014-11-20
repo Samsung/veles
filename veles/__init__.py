@@ -107,7 +107,7 @@ class VelesModule(ModuleType):
         sys.stdout = open(os.devnull, 'w')
         for root, dirs, files in os.walk(os.path.dirname(self.__file__)):
             if 'tests' in root or 'external' in root:
-                dirs.clear()
+                del dirs[:]
                 continue
             for file in files:
                 modname, ext = os.path.splitext(file)
