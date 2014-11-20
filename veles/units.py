@@ -266,7 +266,7 @@ class Unit(Distributable):
 
     @property
     def id(self):
-        return self._id
+        return getattr(self, "_id", "<unknown>")
 
     @property
     def view_group(self):

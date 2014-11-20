@@ -7,12 +7,13 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 
 import bz2
 import gzip
+import logging
 import os
 import sys
 import time
 from zope.interface import implementer
 
-from veles.compat import lzma
+from veles.compat import lzma, from_none
 from veles.config import root
 from veles.distributable import IDistributable
 from veles.pickle2 import pickle, best_protocol
@@ -173,4 +174,10 @@ class Snapshotter(SnapshotterBase):
         _, ext = os.path.splitext(file_name)
         codec = Snapshotter.READ_CODECS[ext]
         with codec(file_name) as fin:
-            return pickle.load(fin)
+            try:
+                return pickle.load(fin)
+            except ImportError as e:
+                logging.getLogger(Snapshotter.__name__).error(
+                    "Are you trying to import snapshot of a different "
+                    "workflow?")
+                raise from_none(e)
