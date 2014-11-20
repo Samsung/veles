@@ -14,6 +14,7 @@ import socket
 import time
 from twisted.internet import reactor, threads, task
 from twisted.internet.protocol import ServerFactory
+from twisted.names import client as dns
 from twisted.python.failure import Failure
 import uuid
 import zmq
@@ -499,14 +500,26 @@ class VelesProtocol(StringLineReceiver, IDLogger):
                             "message")
         self.nodes[self.id] = {'power': power, 'mid': mid, 'pid': pid,
                                'id': self.id, 'jobs': 0}
-        reactor.callLater(0, self._resolveAddr, self.addr)
+        dns.lookupPointer(
+            '.'.join(reversed(self.addr.host.split('.'))) + '.in-addr.arpa') \
+            .addCallback(self._resolveAddr).addErrback(self._failToResolveAddr)
         return power, mid, pid
 
-    def _resolveAddr(self, addr):
-        host, _, _ = socket.gethostbyaddr(addr.host)
-        if host == "localhost":
-            host = socket.gethostname()
-        self.debug("address %s was resolved to %s", addr.host, host)
+    def _failToResolveAddr(self, failure):
+        self.warning("Failed to resolve %s: %s", self.addr.host,
+                     failure.getErrorMessage())
+        self.nodes[self.id]['host'] = self.addr.host
+
+    def _resolveAddr(self, result):
+        answers = result[0]
+        if answers is None or len(answers) == 0:
+            self._failToResolveAddr(Failure(ValueError(
+                "no DNS records were found")))
+            return
+        host = str(answers[0].payload.name)
+        if self.host.domain_name and host.endswith(self.host.domain_name):
+            host = host[:-(len(self.host.domain_name) + 1)]
+        self.debug("Address %s was resolved to %s", self.addr, host)
         self.nodes[self.id]['host'] = host
 
     def _sendError(self, err):
@@ -577,6 +590,11 @@ class Server(NetworkAgent, ServerFactory):
         self.job_requests = set()
         self.blacklist = set()
         self.paused_nodes = {}
+        fqdn = socket.getfqdn()
+        host = socket.gethostname()
+        self.domain_name = fqdn[len(host) + 1:] if fqdn != host else ""
+        if self.domain_name:
+            self.debug("Domain name was resolved to %s", self.domain_name)
         reactor.listenTCP(self.port, self, interface=self.address)
         self.info("Accepting new connections on %s:%d",
                   self.address, self.port)
