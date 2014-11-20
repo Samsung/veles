@@ -64,7 +64,8 @@ class ZmqRouter(ZmqConnection, Logger):
         self.routing[command][node_id] = routing
         protocol = self.host.protocols.get(node_id)
         if protocol is None:
-            self.error("ZeroMQ sent unknown node ID %s", node_id)
+            self.error("ZeroMQ sent unknown node ID %s (unsync during drop?)",
+                       node_id)
             self.reply(node_id, b'error', b'Unknown node ID')
             return
         cmdstr = command.decode('charmap')
@@ -89,6 +90,8 @@ class ZmqRouter(ZmqConnection, Logger):
             return
         self.event("ZeroMQ", "end", dir="receive", id=self.node_id,
                    command=self._command_str, height=0.5)
+        if self._command is None:
+            return
         self._command(self._protocol, payload)
         self._command = None
 
@@ -96,8 +99,11 @@ class ZmqRouter(ZmqConnection, Logger):
         try:
             self.node_id, self._command, self._command_str, self._protocol = \
                 self.parseHeader(header)
-        except:
-            errback(Failure())
+        except TypeError:
+            self.warning("Failed to parse the message header")
+            return
+        except Exception as e:
+            errback(Failure(e))
         self.event("ZeroMQ", "begin", dir="receive", id=self.node_id,
                    command=self._command_str, height=0.5)
 
@@ -118,6 +124,9 @@ class ZmqRouter(ZmqConnection, Logger):
         except ZmqConnection.IOOverflow:
             self.shmem[node_id] = None
             io_overflow = True
+        except KeyError:
+            self.warning("Could not find node %s on channel %s",
+                         node_id, channel)
             return
         if self.use_shmem and is_ipc and channel == b"job":
             if io_overflow or self.shmem.get(node_id) is None:

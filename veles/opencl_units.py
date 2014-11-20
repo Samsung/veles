@@ -354,8 +354,9 @@ class OpenCLBenchmark(OpenCLUnit):
         self.input_A_ = formats.Vector()
         self.input_B_ = formats.Vector()
         msize = self.size * self.size
-        self.input_A_.mem = numpy.random.rand(msize).astype(dtype) - 0.5
-        self.input_B_.mem = numpy.random.rand(msize).astype(dtype) - 0.5
+        genmem = lambda: numpy.random.rand(msize).astype(dtype) - 0.5
+        self.input_A_.mem = genmem()
+        self.input_B_.mem = genmem()
         self.block_size = kwargs.get("block_size")
         self.precision_level = kwargs.get("precision_level",
                                           root.common.precision_level)
@@ -364,6 +365,10 @@ class OpenCLBenchmark(OpenCLUnit):
         """Compiles the benchmarking kernel.
         """
         super(OpenCLBenchmark, self).initialize(device=device, **kwargs)
+        if device is None:
+            self.input_A_.mem = self.input_A_.mem.reshape(self.size, self.size)
+            self.input_B_.mem = self.input_B_.mem.reshape(self.size, self.size)
+            return
         if self.block_size is None and device is not None:
             self.block_size = device.device_info.get_block_size(
                 kernel="matrix_multiplication", dtype=self.dtype)
@@ -383,6 +388,30 @@ class OpenCLBenchmark(OpenCLUnit):
         """
         Launches and waits for the benchmark to finish.
         """
+        if self.device is not None:
+            dt = self._estimate_ocl(dry_run_first)
+        else:
+            dt = self._estimate_cpu(dry_run_first)
+        if return_time:
+            res = dt / self.repeats
+            self.debug("Avg time is %.6f", res)
+        else:
+            res = 1000 / dt
+            self.debug("Result is %.2f", res)
+        return res
+
+    def _estimate_cpu(self, dry_run_first):
+        def execute(repeats):
+            for _ in range(repeats):
+                numpy.dot(self.input_A_.mem, self.input_A_.mem,
+                          self.input_B_.mem)
+
+        if dry_run_first:
+            execute(1)
+
+        return timeit(execute, self.repeats)[1]
+
+    def _estimate_ocl(self, dry_run_first):
         self.debug("Running %d repetitions of size %d on %s...",
                    self.repeats, self.size, self.dtype)
         global_size = [formats.roundup(self.size, self.block_size),
@@ -400,14 +429,7 @@ class OpenCLBenchmark(OpenCLUnit):
         if dry_run_first:
             execute(1)
 
-        dt = timeit(execute, self.repeats)[1]
-        if return_time:
-            res = dt / self.repeats
-            self.debug("Avg time is %.6f", res)
-        else:
-            res = 1000 / dt
-            self.debug("Result is %.2f", res)
-        return res
+        return timeit(execute, self.repeats)[1]
 
     def cpu_run(self):
         self.estimate()

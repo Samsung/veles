@@ -137,7 +137,7 @@ class Launcher(logger.Logger):
                 original_raise(self)
             except:
                 launcher.exception("Error inside Twisted reactor:")
-                launcher.stop()
+                reactor.callFromThread(launcher.stop)
 
         if original_raise != raiseException:
             Failure.raiseException = raiseException
@@ -401,11 +401,11 @@ class Launcher(logger.Logger):
             if not self._initialized:
                 return
             running = self._running and reactor.running
-        if self.is_master and len(self.agent.nodes) > 0:
+            self._running = False
+        if self.is_master and len(self.agent.protocols) > 0:
             self.info("Waiting for the slaves to finish (%d left)...",
-                      len(self.agent.nodes))
+                      len(self.agent.protocols))
             return
-        self.info("Stopping everything (%s mode)", self.mode)
         if not running:
             self._on_stop()
             return
@@ -445,6 +445,7 @@ class Launcher(logger.Logger):
     def _on_stop(self):
         if not self._initialized:
             return
+        self.info("Stopping everything (%s mode)", self.mode)
         self._initialized = False
         self._running = False
         # Wait for the own graphics client to terminate normally
