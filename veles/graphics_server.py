@@ -6,15 +6,11 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import argparse
-import array
 import errno
-import fcntl
 import os
 import six
 from six.moves import cPickle as pickle, zip
 import snappy
-import socket
-import struct
 import subprocess
 import sys
 from tempfile import mkdtemp
@@ -25,8 +21,9 @@ from veles.cmdline import CommandLineArgumentsRegistry
 from veles.compat import from_none
 from veles.config import root
 from veles.external.txzmq import ZmqConnection, ZmqEndpoint
-from veles.logger import Logger
 import veles.graphics_client as graphics_client
+from veles.logger import Logger
+from veles.network_common import interfaces
 from veles.paths import __root__
 from veles.timeit import timeit
 
@@ -68,11 +65,11 @@ class GraphicsServer(Logger):
         self._debug_pickle = args.graphics_pickle_debug
         zmq_endpoints = [ZmqEndpoint("bind", "inproc://veles-plots"),
                          ZmqEndpoint("bind", "rndipc://veles-ipc-plots-:")]
-        interfaces = []
-        for iface, _ in GraphicsServer.interfaces():
+        ifaces = []
+        for iface, _ in interfaces():
             if iface in root.common.graphics_blacklisted_ifaces:
                 continue
-            interfaces.append(iface)
+            ifaces.append(iface)
             zmq_endpoints.append(ZmqEndpoint(
                 "bind", "rndepgm://%s;%s:1024:65535:1" %
                         (iface, root.common.graphics_multicast_address)))
@@ -96,7 +93,7 @@ class GraphicsServer(Logger):
         self.endpoints = {"inproc": "inproc://veles-plots",
                           "ipc": "ipc://" + tmpfn,
                           "epgm": []}
-        for port, iface in zip(ports, interfaces):
+        for port, iface in zip(ports, ifaces):
             self.endpoints["epgm"].append(
                 "epgm://%s;%s:%d" %
                 (iface, root.common.graphics_multicast_address, port))
@@ -118,29 +115,6 @@ class GraphicsServer(Logger):
                             help="Save plotter object trees during server "
                             "send.")
         return parser
-
-    @staticmethod
-    def interfaces():
-        max_possible = 128
-        max_bytes = max_possible * 32
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        names = array.array('B', b'\0' * max_bytes)
-        outbytes = struct.unpack('iL', fcntl.ioctl(
-            sock.fileno(),
-            0x8912,  # SIOCGIFCONF
-            struct.pack('iL', max_bytes, names.buffer_info()[0])
-        ))[0]
-        sock.close()
-        if six.PY3:
-            namestr = names.tobytes()
-        else:
-            namestr = names.tostring()
-        for i in range(0, outbytes, 40):
-            name = namestr[i:i + 16].split(b'\0', 1)[0]
-            if name == b'lo':
-                continue
-            ip = namestr[i + 20:i + 24]
-            yield (name.decode(), ip)
 
     def enqueue(self, obj):
         data = pickle.dumps(obj)

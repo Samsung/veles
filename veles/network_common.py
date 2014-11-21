@@ -5,12 +5,40 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
+import array
+import binascii
+import fcntl
 import os
 import six
+import socket
+import struct
 from twisted.protocols.basic import LineReceiver
 import uuid
 
 from veles.logger import Logger
+
+
+def interfaces():
+    max_possible = 128
+    max_bytes = max_possible * 32
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    names = array.array('B', b'\0' * max_bytes)
+    outbytes = struct.unpack('iL', fcntl.ioctl(
+        sock.fileno(),
+        0x8912,  # SIOCGIFCONF
+        struct.pack('iL', max_bytes, names.buffer_info()[0])
+    ))[0]
+    sock.close()
+    if six.PY3:
+        namestr = names.tobytes()
+    else:
+        namestr = names.tostring()
+    for i in range(0, outbytes, 40):
+        name = namestr[i:i + 16].split(b'\0', 1)[0]
+        if name == b'lo':
+            continue
+        ip = namestr[i + 20:i + 24]
+        yield (name.decode(), ip)
 
 
 class NetworkAgent(Logger):
@@ -47,8 +75,18 @@ class NetworkAgent(Logger):
     @property
     def mid(self):
         if self._mid is None:
-            with open("/var/lib/dbus/machine-id") as midfd:
-                self._mid = "%s-%x" % (midfd.read()[:-1], uuid.getnode())
+            hwpart = ""
+            dbusmidfn = "/var/lib/dbus/machine-id"
+            if os.access(dbusmidfn, os.R_OK):
+                with open(dbusmidfn) as midfd:
+                    hwpart += midfd.read()[:-1]
+            hwpart += "-%x" % uuid.getnode()
+            chksum = 0
+            for iname, iaddr in interfaces():
+                chksum ^= struct.unpack("!L", iaddr)[0]
+            swpart = binascii.hexlify(struct.pack("!L", chksum))
+            self._mid = hwpart + "-" + swpart.decode('charmap')
+            self.debug("My machine ID is %s", self._mid)
         return self._mid
 
     @property

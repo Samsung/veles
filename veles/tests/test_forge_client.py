@@ -6,6 +6,7 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 
 
 from __future__ import print_function
+import io
 import json
 from numpy.random import randint
 import os
@@ -21,7 +22,7 @@ from twisted.web.server import Site
 from twisted.web.resource import Resource
 import unittest
 
-from veles import __root__, __plugins__
+from veles import __root__, __plugins__, __version__
 from veles.config import root
 from veles.forge_client import ForgeClient, ForgeClientArgs
 
@@ -126,7 +127,12 @@ class TestForgeClient(unittest.TestCase):
             ForgeClientArgs("list", "http://localhost:%d" % PORT, True),
             False)
         self.stdout = sys.stdout
+        try:
+            fno = sys.stdout.fileno()
+        except io.UnsupportedOperation:
+            fno = None
         sys.stdout = StringIO()
+        sys.stdout.fileno = lambda: fno
 
     def after_list_good(self):
         out = sys.stdout.getvalue()
@@ -296,12 +302,13 @@ Really long text telling about how this model is awesome.
                 this.assertEqual(input[:4], struct.pack('!I', manifest_size))
                 this.assertEqual(
                     input[4:manifest_size+4],
-                    b'{"author": "VELES Team", "configuration": '
-                    b'"workflow_config.py", "long_description": "First test '
-                    b'model LOOONG text", "name": "First", '
-                    b'"requires": ["veles>=0.5.0"], '
-                    b'"short_description": "First test model", '
-                    b'"version": "2.4", "workflow": "workflow.py"}')
+                    ('{"author": "VELES Team", "configuration": '
+                     '"workflow_config.py", "long_description": "First test '
+                     'model LOOONG text", "name": "First", '
+                     '"requires": ["veles>=%s"], '
+                     '"short_description": "First test model", '
+                     '"version": "2.4", "workflow": "workflow.py"}'
+                     % __version__).encode())
                 this.assertEqual(len(input) - manifest_size - 4, 175)
                 return b"!"
 

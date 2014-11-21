@@ -462,7 +462,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
                 return
             data = self.host.workflow.generate_initial_data_for_slave(
                 SlaveDescription.make(self.nodes[self.id]))
-            endpoint = self.host.choose_endpoint(mid, pid, self.hip)
+            endpoint = self.host.choose_endpoint(self.id, mid, pid, self.hip)
             self.nodes[self.id]['endpoint'] = self._endpoint = endpoint
             retmsg = {'endpoint': endpoint, 'data': data}
             if not msgid:
@@ -639,11 +639,15 @@ class Server(NetworkAgent, ServerFactory):
                             "than this time (in mins) will be dropped.")
         return parser
 
-    def choose_endpoint(self, mid, pid, hip):
+    def choose_endpoint(self, sid, mid, pid, hip):
         if self.mid == mid:
             if self.pid == pid:
+                self.debug("Considering %s to be in the same process, "
+                           "assigned inproc endpoint", sid)
                 return self.zmq_endpoints["inproc"]
             else:
+                self.debug("Considering %s to be on the same machine, "
+                           "assigned ipc endpoint", sid)
                 return self.zmq_endpoints["ipc"]
         else:
             return self.zmq_endpoints["tcp"].replace("*", hip)
