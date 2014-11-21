@@ -22,5 +22,10 @@
     </inspection_tool>
     <inspection_tool class="PyPep8Inspection" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="PyPep8NamingInspection" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="SpellCheckingInspection" enabled="false" level="TYPO" enabled_by_default="false">
+      <option name="processCode" value="true" />
+      <option name="processLiterals" value="true" />
+      <option name="processComments" value="true" />
+    </inspection_tool>
   </profile>
 </component>

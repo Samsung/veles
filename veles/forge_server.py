@@ -16,6 +16,7 @@ import os
 import re
 import shutil
 import pygit2
+from six import PY3
 import struct
 from tarfile import TarFile
 from tornado import gen, web
@@ -50,7 +51,10 @@ class HandlerBase(web.RequestHandler, Logger):
             super(HandlerBase, self).write_error(status_code, **kwargs)
 
     def return_error(self, code, message):
-        self.error("Returning %d with \"%s\"", code, message)
+        if isinstance(message, BaseException):
+            self.exception("Returning %d (see the exception below)", code)
+        else:
+            self.error("Returning %d with \"%s\"", code, message)
         self.error_message = message
         self.send_error(code)
 
@@ -154,7 +158,10 @@ class UploadHandler(HandlerBase):
             used = []
             cur_size = 0
             while cur_size < size and self.pos[0] < len(self.chunks):
-                mv = memoryview(self.chunks[self.pos[0]])
+                if PY3:
+                    mv = memoryview(self.chunks[self.pos[0]])
+                else:
+                    mv = self.chunks[self.pos[0]]
                 delta = cur_size + len(mv) - self.pos[1] - size
                 if delta > 0:
                     end = self.pos[1] + size - cur_size
@@ -177,10 +184,12 @@ class UploadHandler(HandlerBase):
         self.debug("start POST from %s", self.request.remote_ip)
         self.metadata = None
         self.size = 0
+        self.read_counter = 0
         self.cache = []
 
     def post(self):
-        self.debug("finish POST from %s", self.request.remote_ip)
+        self.debug("finish POST from %s, read %d bytes",
+                   self.request.remote_ip, self.read_counter)
         try:
             self.server.upload(self.metadata, UploadHandler.Reader(self.cache))
             self.finish()
@@ -188,6 +197,7 @@ class UploadHandler(HandlerBase):
             self.return_error(400, e)
 
     def data_received(self, chunk):
+        self.read_counter += len(chunk)
         if self.metadata is not None:
             self.consume_chunk(chunk)
         else:
@@ -198,18 +208,27 @@ class UploadHandler(HandlerBase):
                                            self.metadata_size)
                     return
                 self.debug("metadata size is %d", self.metadata_size)
-                chunk = bytes(memoryview(chunk)[4:])
+                if PY3:
+                    chunk = memoryview(chunk)[4:]
+                else:
+                    chunk = chunk[4:]
             if self.size + len(chunk) > self.metadata_size:
                 self.debug("approached a breakpoint")
                 rem = self.metadata_size - self.size
-                self.cache.append(bytes(memoryview(chunk)[:rem]))
+                if PY3:
+                    self.cache.append(memoryview(chunk)[:rem])
+                else:
+                    self.cache.append(chunk[:rem])
                 try:
                     self.read_metadata()
                 except Exception as e:
                     self.return_error(400, e)
                     return
                 self.size = rem
-                self.cache = [bytes(memoryview(chunk)[rem:])]
+                if PY3:
+                    self.cache = [memoryview(chunk)[rem:]]
+                else:
+                    self.cache = [chunk[rem:]]
             else:
                 self.consume_chunk(chunk)
 
@@ -225,7 +244,7 @@ class UploadHandler(HandlerBase):
         if not isinstance(self.metadata, dict):
             raise ValueError("Wrong format of metadata")
         for key in REQUIRED_MANIFEST_FIELDS.union({"version"}):
-            if not key in self.metadata:
+            if key not in self.metadata:
                 raise ValueError("%s not found in metadata" % key)
         validate_requires(self.metadata['requires'])
 
@@ -332,7 +351,7 @@ class ForgeServer(Logger):
         base = dirname(rep.path)
         for path, dirs, files in os.walk(dirname(rep.path)):
             if os.path.basename(path) == ".git":
-                dirs.clear()
+                del dirs[:]
                 continue
             for file in files:
                 rep.index.add(os.path.relpath(os.path.join(path, file), base))

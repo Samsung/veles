@@ -92,6 +92,8 @@ class TestForgeServer(unittest.TestCase):
             body[4:4 + os.path.getsize(mfn)] = fin.read()
         with open(tarfn, 'rb') as fin:
             body[4 + os.path.getsize(mfn):] = fin.read()
+        logging.debug("Will send %d (incl. metadata: 4 + %d) bytes",
+                      len(body), os.path.getsize(mfn))
         return bytes(body)
 
     def test_upload(self):

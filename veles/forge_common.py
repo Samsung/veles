@@ -6,6 +6,7 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 
 
 from pkg_resources import Requirement
+from six import text_type
 
 
 REQUIRED_MANIFEST_FIELDS = {
@@ -19,7 +20,7 @@ def validate_requires(requires):
         raise TypeError("\"requires\" must be an instance of []")
     packages = set()
     for item in requires:
-        if not isinstance(item, str):
+        if not isinstance(item, text_type):
             raise TypeError("Each item in \"requires\" must be "
                             "a requirements.txt style string")
         pn = Requirement.parse(item).project_name
