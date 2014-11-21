@@ -298,6 +298,7 @@ class Workflow(Unit):
             if self.thread_pool.joined:
                 break
             progress.widgets[-1] = unit.name + ' ' * (maxlen - len(unit.name))
+            progress.update()
             if not self.is_standalone:
                 unit.verify_interface(IDistributable)
             try:
