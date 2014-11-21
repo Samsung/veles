@@ -12,6 +12,7 @@ import logging.handlers
 import os
 from pymongo import MongoClient
 import re
+from six import PY2
 import sys
 import time
 
@@ -98,8 +99,12 @@ class Logger(object):
         """Forces UTF-8 on stdout and stderr; in some crazy environments,
         they use 'ascii' encoding by default
         """
+        fnos = [s.fileno() for s in (sys.stdout, sys.stderr)]
         sys.stdout, sys.stderr = (codecs.getwriter("utf-8")(
             getattr(s, "buffer", s)) for s in (sys.stdout, sys.stderr))
+        for ind, stds in enumerate((sys.stdout, sys.stderr)):
+            if not hasattr(stds, "fileno"):
+                stds.fileno = lambda: fnos[ind]
 
     def __init__(self, **kwargs):
         super(Logger, self).__init__()

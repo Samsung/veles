@@ -45,3 +45,41 @@ else:
 
     class IntEnum(object):
         __metaclass__ = EnumMeta
+
+
+if not six.PY3:
+    import os
+    import sys
+
+    DEBUG_BYTECODE_SUFFIXES = ['.pyc']
+    OPTIMIZED_BYTECODE_SUFFIXES = ['.pyo']
+    _PYCACHE = '__pycache__'
+
+    def cache_from_source(path, debug_override=None):
+        """Given the path to a .py file, return the path to its .pyc/.pyo file.
+
+        The .py file does not need to exist; this simply returns the path to
+        the .pyc/.pyo file calculated as if the .py file were imported.  The
+        extension will be .pyc unless sys.flags.optimize is non-zero, then it
+        will be .pyo.
+
+        If debug_override is not None, then it must be a boolean and is used in
+        place of sys.flags.optimize.
+
+        If sys.implementation.cache_tag is None then NotImplementedError is
+        raised.
+
+        """
+        debug = (not sys.flags.optimize if debug_override is None
+                 else debug_override)
+        if debug:
+            suffixes = DEBUG_BYTECODE_SUFFIXES
+        else:
+            suffixes = OPTIMIZED_BYTECODE_SUFFIXES
+        head, tail = os.path.split(path)
+        base_filename, sep, _ = tail.partition('.')
+        tag = sys.implementation.cache_tag
+        if tag is None:
+            raise NotImplementedError('sys.implementation.cache_tag is None')
+        filename = ''.join([base_filename, sep, tag, suffixes[0]])
+        return os.path.join(head, _PYCACHE, filename)

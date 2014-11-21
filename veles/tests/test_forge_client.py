@@ -7,7 +7,6 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 
 from __future__ import print_function
 import json
-import logging
 from numpy.random import randint
 import os
 import shutil
@@ -109,7 +108,7 @@ class TestForgeClient(unittest.TestCase):
         TestForgeClient.router.page_class = BadServicePage
         TestForgeClient.router.callback = check_name
         self.client = ForgeClient(
-            ForgeClientArgs("list", "http://localhost:%d" % PORT, False),
+            ForgeClientArgs("list", "http://localhost:%d" % PORT, True),
             False)
 
     @sync
@@ -124,7 +123,7 @@ class TestForgeClient(unittest.TestCase):
         TestForgeClient.router.page_class = ListPage
         TestForgeClient.router.callback = check_name
         self.client = ForgeClient(
-            ForgeClientArgs("list", "http://localhost:%d" % PORT, False),
+            ForgeClientArgs("list", "http://localhost:%d" % PORT, True),
             False)
         self.stdout = sys.stdout
         sys.stdout = StringIO()
@@ -152,7 +151,7 @@ class TestForgeClient(unittest.TestCase):
 
         TestForgeClient.router.page_class = BadServicePage
         TestForgeClient.router.callback = check_name
-        args = ForgeClientArgs("details", "http://localhost:%d" % PORT, False)
+        args = ForgeClientArgs("details", "http://localhost:%d" % PORT, True)
         args.name = "First"
         self.client = ForgeClient(args, False)
 
@@ -167,7 +166,7 @@ class TestForgeClient(unittest.TestCase):
 
         TestForgeClient.router.page_class = DetailsPage
         TestForgeClient.router.callback = check_name
-        args = ForgeClientArgs("details", "http://localhost:%d" % PORT, False)
+        args = ForgeClientArgs("details", "http://localhost:%d" % PORT, True)
         args.name = "First"
         self.client = ForgeClient(args, False)
 
@@ -188,7 +187,7 @@ class TestForgeClient(unittest.TestCase):
 
         TestForgeClient.router.page_class = DetailsPage
         TestForgeClient.router.callback = check_name
-        args = ForgeClientArgs("details", "http://localhost:%d" % PORT, False)
+        args = ForgeClientArgs("details", "http://localhost:%d" % PORT, True)
         args.name = "First"
         self.client = ForgeClient(args, False)
         self.stdout = sys.stdout
@@ -219,7 +218,7 @@ Really long text telling about how this model is awesome.
 
         TestForgeClient.router.page_class = BadFetchPage
         TestForgeClient.router.callback = check_name
-        args = ForgeClientArgs("fetch", "http://localhost:%d" % PORT, False)
+        args = ForgeClientArgs("fetch", "http://localhost:%d" % PORT, True)
         args.name = "First"
         args.version = "master"
         args.force = True
@@ -247,7 +246,7 @@ Really long text telling about how this model is awesome.
 
         TestForgeClient.router.page_class = FetchPage
         TestForgeClient.router.callback = check_name
-        args = ForgeClientArgs("fetch", "http://localhost:%d" % PORT, False)
+        args = ForgeClientArgs("fetch", "http://localhost:%d" % PORT, True)
         args.name = "First"
         args.version = "master"
         args.force = True
@@ -276,7 +275,7 @@ Really long text telling about how this model is awesome.
 
         TestForgeClient.router.page_class = BadUploadPage
         TestForgeClient.router.callback = check_name
-        args = ForgeClientArgs("upload", "http://localhost:%d" % PORT, False)
+        args = ForgeClientArgs("upload", "http://localhost:%d" % PORT, True)
         args.path = os.path.join(__root__, "veles/tests")
         args.version = "2.4"
         self.client = ForgeClient(args, False)
@@ -311,7 +310,7 @@ Really long text telling about how this model is awesome.
 
         TestForgeClient.router.page_class = UploadPage
         TestForgeClient.router.callback = check_name
-        args = ForgeClientArgs("upload", "http://localhost:%d" % PORT, False)
+        args = ForgeClientArgs("upload", "http://localhost:%d" % PORT, True)
         args.path = os.path.join(__root__, "veles/tests/forge/First")
         args.version = "2.4"
         self.client = ForgeClient(args, False)
@@ -321,7 +320,7 @@ Really long text telling about how this model is awesome.
         stderr = sys.stderr
         sys.stderr = buf
         self.client = ForgeClient(
-            ForgeClientArgs("list", "http://localhost:%d" % PORT, False),
+            ForgeClientArgs("list", "http://localhost:%d" % PORT, True),
             False)
         self.client._check_deps({"requires": ["abrakadabra>=0.1.2"]})
         sys.stderr = stderr
@@ -345,5 +344,4 @@ Really long text telling about how this model is awesome.
     sync = staticmethod(sync)
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
     unittest.main()

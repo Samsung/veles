@@ -70,9 +70,12 @@ class Main(Logger, CommandLineBase):
         if sys.argv[1] == "forge":
             from veles.forge_client import __run__ as forge_run
             del sys.argv[1]
+            action = sys.argv[1]
             try:
-                return forge_run()
+                forge_run()
+                return Main.EXIT_SUCCESS
             except:
+                self.exception("Failed to run forge %s", action)
                 return Main.EXIT_FAILURE
         if "--frontend" in sys.argv:
             try:
@@ -197,11 +200,10 @@ class Main(Logger, CommandLineBase):
         self.snapshot_file_name = fname_snapshot
         self.load_called = False
         self.main_called = False
+        sys.path.insert(0, os.path.dirname(fname_workflow))
         try:
-            sys.path.insert(0, os.path.dirname(fname_workflow))
             module = __import__(
                 os.path.splitext(os.path.basename(fname_workflow))[0])
-            del sys.path[0]
         except FileNotFoundError:
             self.exception("Workflow does not exist: \"%s\"", fname_workflow)
             sys.exit(errno.ENOENT)
@@ -215,6 +217,8 @@ class Main(Logger, CommandLineBase):
             self.exception("Failed to load the workflow \"%s\"",
                            fname_workflow)
             sys.exit(Main.EXIT_FAILURE)
+        finally:
+            del sys.path[0]
         return module
 
     def _apply_config(self, fname_config, config_list):

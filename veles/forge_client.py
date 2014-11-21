@@ -5,16 +5,23 @@ Created on Nov 10, 2014
 Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
 
-
 from __future__ import print_function
 from argparse import ArgumentParser
 import json
 import logging
 import os
+from pip.backwardcompat import uses_pycache
+from pip.util import normalize_path
+from pip import wheel
 from pkg_resources import working_set, Requirement, Distribution, \
-    VersionConflict, SOURCE_DIST
+    VersionConflict, SOURCE_DIST, PY_MAJOR
 import shutil
 from six.moves.urllib.parse import urlparse, urlencode
+from six import PY3
+if PY3:
+    from importlib.util import cache_from_source
+else:
+    from veles.compat import cache_from_source
 import struct
 import sys
 from tarfile import TarFile, TarInfo
@@ -25,10 +32,11 @@ from twisted.python.failure import Failure
 from twisted.web.client import Agent, getPage
 from twisted.web.iweb import IBodyProducer, UNKNOWN_LENGTH
 from twisted.web.http_headers import Headers
+from types import ModuleType
 import wget
 from zope.interface import implementer
 
-from veles import __plugins__, __name__, __version__
+from veles import __plugins__, __name__, __version__, __root__
 from veles.cmdline import CommandLineBase
 from veles.config import root
 from veles.external.prettytable import PrettyTable
@@ -93,7 +101,7 @@ class ForgeClient(Logger):
             return
 
         for key in REQUIRED_MANIFEST_FIELDS:
-            if not key in metadata:
+            if key not in metadata:
                 raise ValueError("No \"%s\" in %s" %
                                  (key, root.common.forge.manifest))
         requires = metadata["requires"]
@@ -287,10 +295,179 @@ class ForgeClient(Logger):
         getPage(url.encode('charmap')).addCallbacks(callback=finished,
                                                     errback=failed)
 
+    def _get_pkg_files(self, dist):
+        """
+        Shamelessly taken from pip/req.py/InstallRequirement.uninstall()
+        """
+        paths = set()
+
+        def add(pth):
+            paths.add(normalize_path(pth))
+            if os.path.splitext(pth)[1] == '.py' and uses_pycache:
+                add(cache_from_source(pth))
+
+        pip_egg_info_path = os.path.join(
+            dist.location, dist.egg_name()) + '.egg-info'
+        dist_info_path = os.path.join(
+            dist.location, '-'.join(dist.egg_name().split('-')[:2])
+        ) + '.dist-info'
+        # workaround http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=618367
+        debian_egg_info_path = pip_egg_info_path.replace('-py' + PY_MAJOR, '')
+        pip_egg_info_exists = os.path.exists(pip_egg_info_path)
+        debian_egg_info_exists = os.path.exists(debian_egg_info_path)
+        dist_info_exists = os.path.exists(dist_info_path)
+        if pip_egg_info_exists or debian_egg_info_exists:
+            # package installed by pip
+            if pip_egg_info_exists:
+                egg_info_path = pip_egg_info_path
+            else:
+                egg_info_path = debian_egg_info_path
+            add(egg_info_path)
+            if dist.has_metadata('installed-files.txt'):
+                for installed_file in dist.get_metadata(
+                        'installed-files.txt').splitlines():
+                    path = os.path.normpath(
+                        os.path.join(egg_info_path, installed_file))
+                    add(path)
+            elif dist.has_metadata('top_level.txt'):
+                if dist.has_metadata('namespace_packages.txt'):
+                    namespaces = dist.get_metadata('namespace_packages.txt')
+                else:
+                    namespaces = []
+                for top_level_pkg in [
+                    p for p in dist.get_metadata('top_level.txt').splitlines()
+                        if p and p not in namespaces]:
+                    path = os.path.join(dist.location, top_level_pkg)
+                    add(path)
+                    add(path + '.py')
+                    add(path + '.pyc')
+        elif dist_info_exists:
+            for path in wheel.uninstallation_paths(dist):
+                add(path)
+        return paths
+
+    def _scan_deps(self, module):
+        print("Scanning for dependencies...")
+        sys.stdout.flush()
+        deps = ["veles >= " + __version__]
+        for plugin in __plugins__:
+            deps.append("%s >= %s" % (plugin.__name__, plugin.__version__))
+        stdlib_paths = {p for p in sys.path
+                        if p.find("dist-packages") < 0 and p}
+        stdlib_paths.add(__root__)
+        pkg_match = {}
+        for dist in working_set:
+            for file in self._get_pkg_files(dist):
+                pkg_match[file] = dist
+
+        for key, val in module.__dict__.items():
+            if not isinstance(val, ModuleType):
+                continue
+            name = val.__name__
+            if name in sys.builtin_module_names:
+                continue
+            is_stdlib = False
+            for stdpath in stdlib_paths:
+                if val.__file__.startswith(stdpath):
+                    is_stdlib = True
+                    break
+            if is_stdlib:
+                continue
+            pkg = pkg_match.get(val.__file__)
+            if pkg is not None:
+                deps.append("%s >= %s" % (pkg.project_name, pkg.version))
+
+        return deps
+
+    @action
+    def assist(self):
+        metadata = {}
+        base = os.path.dirname(self.path)
+        sys.path.insert(0, base)
+        modname = os.path.splitext(os.path.basename(self.path))[0]
+        print("Importing %s..." % modname)
+        sys.stdout.flush()
+        try:
+            module = __import__(modname)
+        except:
+            self.exception("Failed to import %s", self.path)
+            self.return_code = 1
+            return
+        finally:
+            del sys.path[0]
+
+        # Discover the module's dependencies
+        metadata["requires"] = self._scan_deps(module)
+
+        # Discover the workflow class
+        wfcls = [None]
+
+        def fake_load(klass, *args, **kwargs):
+            wfcls[0] = klass
+
+        def fake_run(*args, **kwargs):
+            pass
+
+        module.run(fake_load, fake_run)
+        wfcls = wfcls[0]
+
+        # Fill "name"
+        name = wfcls.__name__.replace("Workflow", "")
+        max_chars = 64
+        inp = '0' * (max_chars + 1)
+        while len(inp) > max_chars:
+            if len(inp) > max_chars:
+                print("Package name may not be longer than %d chars." %
+                      max_chars)
+            inp = input("Please enter the desired package name (%s): " % name)
+        metadata["name"] = inp or name
+
+        # Fill "short_description"
+        max_chars = 140
+        inp = "0" * (max_chars + 1)
+        while len(inp) > max_chars:
+            inp = input("Please enter a *short* description (<= 140 chars): ")
+        metadata["short_description"] = inp
+
+        # Fill "long_description"
+        print("The long description will be taken from %s's docstring." %
+              wfcls.__name__)
+        metadata["long_description"] = wfcls.__doc__.strip()
+
+        inp = input("Please introduce yourself (e.g., "
+                    "\"Ivan Ivanov <i.ivanov@samsung.com>\"): ")
+        metadata["author"] = inp
+        metadata["workflow"] = os.path.basename(self.path)
+
+        # Discover the configuration file
+        wfn, wfext = os.path.splitext(self.path)
+        wfn += "_config"
+        cfgfile = wfn + wfext
+        inp = cfgfile
+        while (inp and not os.path.exists(inp) and
+               not os.path.exists(os.path.join(base, inp))):
+            inp = input("Please enter the path to the configuration file "
+                        "(may be blank) (%s): " % cfgfile)
+        fullcfg = inp or cfgfile
+        metadata["configuration"] = os.path.basename(fullcfg)
+
+        print("Generating %s..." % metadata["name"])
+        os.mkdir(metadata["name"])
+        shutil.copyfile(self.path, os.path.join(metadata["name"],
+                                                metadata["workflow"]))
+        destcfg = os.path.join(metadata["name"], metadata["configuration"])
+        if os.path.exists(fullcfg):
+            shutil.copyfile(fullcfg, destcfg)
+        else:
+            open(destcfg, 'w').close()
+        with open(os.path.join(metadata["name"],
+                               root.common.forge.manifest), "w") as fout:
+            json.dump(metadata, fout, sort_keys=True, indent=4)
+
     action = staticmethod(action)
 
     @staticmethod
-    def init_parser_(sphinx=False):
+    def init_parser(sphinx=False):
         parser = ArgumentParser(
             description=CommandLineBase.LOGO if not sphinx else "")
         parser.add_argument("action", choices=ACTIONS,
@@ -298,7 +475,8 @@ class ForgeClient(Logger):
         parser.add_argument(
             "-d", "--directory", default=".", dest="path",
             help="Destination directory where to save the received package;"
-                 "Source package directory to upload.")
+                 "Source package directory to upload. Path to workflow to "
+                 "assist creating metadata with.")
         parser.add_argument(
             "-n", "--name", default="",
             help="Package name to download/show details about.")
@@ -310,7 +488,8 @@ class ForgeClient(Logger):
             help="Address of VelesForge server, e.g., http://host:8080/forge")
         parser.add_argument(
             "-f", "--force", default=False, action='store_true',
-            help="Force remove destination directory if it exists.")
+            help="Force remove destination directory if it exists, "
+                 "overwrite files.")
         parser.add_argument(
             "--verbose", default=False, action='store_true',
             help="Write debug messages.")
@@ -320,22 +499,33 @@ class ForgeClient(Logger):
         super(ForgeClient, self).__init__()
         self.own_reactor = own_reactor
         if args is None:
-            parser = ForgeClient.init_parser_()
-            args = parser.parse_args()
-        for k, v in args.__dict__.items():
+            if sys.argv[1] == "assist":
+                if len(sys.argv) < 3:
+                    raise ValueError(
+                        "You must specify the path to the workflow file which "
+                        "you want to generate package for.")
+                args = {"action": "assist", "path": sys.argv[2],
+                        "verbose": False}
+            else:
+                parser = ForgeClient.init_parser()
+                args = parser.parse_args()
+        for k, v in getattr(args, "__dict__", args).items():
             setattr(self, k, v)
-        self._validate_base()
-        if not self.base.endswith('/'):
-            self.base += '/'
-        logging.basicConfig(
-            level=logging.DEBUG if self.verbose else logging.INFO)
+        try:
+            Logger.setup(level=logging.DEBUG if self.verbose else logging.INFO)
+        except Logger.LoggerHasBeenAlreadySetUp:
+            pass
+        if self.action not in ("assist",):
+            self._validate_base()
+            if not self.base.endswith('/'):
+                self.base += '/'
         if self.action in ("details", "fetch") and not self.name:
             raise ValueError("Package name may not be empty.")
         self.action = getattr(self, self.action)
 
     def run(self):
         self.debug("Executing %s()", self.action.__name__)
-        if self.action == self.fetch:
+        if self.action in (self.fetch, self.assist):
             # Much simplier
             return self.action()
         d = task.deferLater(reactor, 0, self.action)
