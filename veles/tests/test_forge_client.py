@@ -75,6 +75,7 @@ class TestForgeClient(unittest.TestCase):
 
     def sync(fn):
         def wrapped_sync(self, *args, **kwargs):
+            stdout = sys.stdout
             fn(self, *args, **kwargs)
             d = self.client.run()
             if "_bad" in fn.__name__:
@@ -90,10 +91,10 @@ class TestForgeClient(unittest.TestCase):
                             None)
             if after is not None:
                 print("Continuing in %s()" % after.__name__,
-                      file=sys.stderr)
+                      file=stdout)
                 after()
 
-        wrapped_sync.__name__ = fn.__name__ + '_sync'
+        wrapped_sync.__name__ = fn.__name__
         return wrapped_sync
 
     @sync
