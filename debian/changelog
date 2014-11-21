@@ -1,3 +1,9 @@
+veles (0.5.1-0) trusty; urgency=medium
+
+  * 0.5.1 release
+
+ -- Markovtsev Vadim <v.markovtsev@samsung.com>  Fri, 21 Nov 2014 18:09:03 +0300
+
 veles (0.5.0-2) trusty; urgency=high
 
   * Added missed OpenCL files from Znicz
