@@ -48,6 +48,8 @@ class TestForgeClient(unittest.TestCase):
         reactor.listenTCP(PORT, Site(cls.router))
         cls.thread = threading.Thread(target=reactor.run, args=(False,))
         cls.thread.start()
+        if isinstance(sys.stdout, StringIO):
+            sys.stdout.fileno = lambda: 0
 
     @classmethod
     def tearDownClass(cls):
