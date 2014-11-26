@@ -21,6 +21,7 @@ from twisted.internet import reactor
 from twisted.web.server import Site
 from twisted.web.resource import Resource
 import unittest
+import wget
 
 from veles import __root__, __plugins__, __version__
 from veles.config import root
@@ -48,8 +49,14 @@ class TestForgeClient(unittest.TestCase):
         reactor.listenTCP(PORT, Site(cls.router))
         cls.thread = threading.Thread(target=reactor.run, args=(False,))
         cls.thread.start()
-        if isinstance(sys.stdout, StringIO):
-            sys.stdout.fileno = lambda: 0
+        download = wget.download
+
+        def patched_download(*args, **kwargs):
+            if isinstance(sys.stdout, StringIO):
+                sys.stdout.fileno = lambda: 0
+            download(*args, **kwargs)
+
+        wget.download = download
 
     @classmethod
     def tearDownClass(cls):
