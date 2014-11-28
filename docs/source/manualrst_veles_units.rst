@@ -28,8 +28,35 @@ See :doc:`manualrst_veles_workflow`.
 Distributed calculation is performed using the additional group of methods required
 by :class:`IDistributable <veles.distributable.IDistributable>` (see :doc:`manualrst_veles_distributed_units`).
 
+------------------
+How to link Units?
+------------------
+
+
+Control flow
+~~~~~~~~~~~~
+To make one unit run after another, use :py:meth:`veles.units.Unit.link_from` ::
+
+    second_unit.link_from(first_unit)
+
+To see, after whom is given unit run, use  :py:meth:`veles.units.Unit.links_from` 
+
+To remove control flow link (not data link), use :py:meth:`veles.units.Unit.unlink_from` and :py:meth:`veles.units.Unit.unlink_all`
+
+
+Data flow
+~~~~~~~~~
+For example, if you want to pass convolutional layer output to pooling layer input ::
+
+    # conv_layer.output --> pooling_layer.input
+    pooling_layer.link_attrs(conv_layer, ("input", "output")) 
+
+The passing data will be **shared** between those units.
+
+
+-------------
 Service units
-*************
+-------------
 
 TODO: move Znicz units into znicz docs.
 
