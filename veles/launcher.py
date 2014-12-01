@@ -298,9 +298,9 @@ class Launcher(logger.Logger):
 
     @property
     def plots_endpoints(self):
-        return self.graphics_server.endpoints["epgm"] + \
-            [self.graphics_server.endpoints["ipc"]] \
-            if hasattr(self, "graphics_server") else []
+        return (self.graphics_server.endpoints["epgm"] +
+                [self.graphics_server.endpoints["ipc"]]) \
+            if getattr(self, "graphics_server", None) is not None else []
 
     def threadsafe(fn):
         def wrapped(self, *args, **kwargs):
