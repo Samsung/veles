@@ -677,7 +677,7 @@ class Workflow(Unit):
                     ".png", "workflow_",
                     dir=os.path.join(root.common.cache_dir, "plots"))
             self.debug("Saving the workflow graph to %s", filename)
-            g.write(filename, format='png')
+            g.write(filename, format=os.path.splitext(filename)[1][1:])
             self.info("Saved the workflow graph to %s", filename)
         desc = g.to_string().strip()
         self.debug("Graphviz workflow scheme:\n%s", desc)
