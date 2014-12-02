@@ -383,3 +383,7 @@ function run() {
     }
   });
 }
+
+$(function() {
+  $("#command-line").trigger("input");
+});

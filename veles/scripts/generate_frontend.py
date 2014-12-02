@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # encoding: utf-8
 '''
 This scripts generates the HTML page with all velescli's command line
@@ -21,17 +21,20 @@ from veles.cmdline import CommandLineBase
 
 
 WEB_FOLDER = root.common.web.root
-BLACKLISTED_DIRS = {'.', 'gource', 'docs', 'web', 'deploy'}
+BLACKLISTED_DIRS = {'.', 'gource', 'docs', 'web', 'deploy', "libVeles",
+                    "debian", "libSoundFeatureExtraction", "veles/tests",
+                    "veles/external", "veles/znicz/tests/unit",
+                    "veles/znicz/tests/functional"}
 
 
 def main(debug_imports=False):
-    parser = CommandLineBase.init_parser()
-    arguments = parser._actions
-    path_to_out = os.path.join(WEB_FOLDER, "frontend.html")
     print("Scanning for workflow files...")
     list_workflows = scan_workflows(debug_imports)
 
     print("Processing arguments...")
+    parser = CommandLineBase.init_parser(ignore_conflicts=True)
+    arguments = parser._actions
+    print(len(arguments))
     list_lines = [obj[-1] for obj in sorted(
         [convert_argument(*ia) for ia in enumerate(arguments)])]
 
@@ -40,6 +43,7 @@ def main(debug_imports=False):
     loader = template.Loader(os.path.join(WEB_FOLDER, "templates"))
     opts, positional_opts, choices, defaults_opt = generate_opts(arguments)
 
+    path_to_out = os.path.join(WEB_FOLDER, "frontend.html")
     print("Writing %s..." % path_to_out)
     sout = loader.load("frontend.html").generate(
         arguments=html, workflows=list_workflows,

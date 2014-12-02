@@ -101,15 +101,16 @@ class Main(Logger, CommandLineBase):
         from multiprocessing import Process, SimpleQueue
 
         connection = SimpleQueue()
-        frontend = Process(target=self._open_frontend_process,
-                           args=(connection,))
+        frontend = Process(
+            target=self._open_frontend_process,
+            args=(connection, [k for k in sys.argv[1:] if k != "--frontend"]))
         frontend.start()
         cmdline = connection.get()
         frontend.join()
         sys.argv[1:] = cmdline.split()
         print("Running with the following command line: %s" % sys.argv)
 
-    def _open_frontend_process(self, connection):
+    def _open_frontend_process(self, connection, argv):
         if not os.path.exists(os.path.join(root.common.web.root,
                                            "frontend.html")):
             self.info("frontend.html was not found, generating it...")
@@ -138,23 +139,20 @@ class Main(Logger, CommandLineBase):
                 except:
                     self.exception("Frontend cmdline POST")
 
+        class FrontendHandler(web.RequestHandler):
+            def get(self):
+                self.render("frontend.html", cmdline=" ".join(argv))
+
         app = web.Application([
             ("/cmdline", CmdlineHandler),
-            (r"/(js/.*)",
+            (r"/((js|css|fonts|img)/.*)",
              web.StaticFileHandler, {'path': root.common.web.root}),
-            (r"/(css/.*)",
-             web.StaticFileHandler, {'path': root.common.web.root}),
-            (r"/(fonts/.*)",
-             web.StaticFileHandler, {'path': root.common.web.root}),
-            (r"/(img/.*)",
-             web.StaticFileHandler, {'path': root.common.web.root}),
-            (r"/(frontend\.html)",
-             web.StaticFileHandler, {'path': root.common.web.root}),
+            (r"/frontend\.html", FrontendHandler),
             ("/", web.RedirectHandler, {"url": "/frontend.html",
                                         "permanent": True}),
             ("", web.RedirectHandler, {"url": "/frontend.html",
                                        "permanent": True})
-        ])
+        ], template_path=root.common.web.root)
         app.listen(port)
 
         def open_browser():

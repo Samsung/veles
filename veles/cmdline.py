@@ -9,12 +9,13 @@ try:
     import argcomplete
 except:
     pass
-from argparse import RawDescriptionHelpFormatter, ArgumentParser
+from argparse import RawDescriptionHelpFormatter, ArgumentParser, ArgumentError
 from email.utils import formatdate
 import logging
 import sys
 
 import veles
+from veles.compat import from_none
 
 
 class CommandLineArgumentsRegistry(type):
@@ -69,23 +70,27 @@ class CommandLineBase(object):
     SPECIAL_OPTS = ["--help", "--html-help", "--version", "--frontend",
                     "--dump-config"]
 
+    class SortingRawDescriptionHelpFormatter(RawDescriptionHelpFormatter):
+        def add_arguments(self, actions):
+            actions = sorted(actions, key=lambda x: x.dest)
+            super(CommandLineBase.SortingRawDescriptionHelpFormatter,
+                  self).add_arguments(actions)
+
     @staticmethod
-    def init_parser(sphinx=False):
+    def init_parser(sphinx=False, ignore_conflicts=False):
         """
         Creates the command line argument parser.
         """
 
-        class SortingRawDescriptionHelpFormatter(RawDescriptionHelpFormatter):
-            def add_arguments(self, actions):
-                actions = sorted(actions, key=lambda x: x.dest)
-                super(SortingRawDescriptionHelpFormatter, self).add_arguments(
-                    actions)
-
         parser = ArgumentParser(
             description=CommandLineBase.LOGO if not sphinx else "",
-            formatter_class=SortingRawDescriptionHelpFormatter)
+            formatter_class=CommandLineBase.SortingRawDescriptionHelpFormatter)
         for cls in CommandLineArgumentsRegistry.classes:
-            parser = cls.init_parser(parser=parser)
+            try:
+                parser = cls.init_parser(parser=parser)
+            except ArgumentError as e:
+                if not ignore_conflicts:
+                    raise from_none(e)
         parser.add_argument("--no-logo", default=False,
                             help="Do not print VELES version, copyright and "
                                  "other information on startup.",
