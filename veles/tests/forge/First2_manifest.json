@@ -1,0 +1,11 @@
+{
+    "name": "First2",
+    "workflow": "workflow.py",
+    "configuration": "workflow_config.py",
+    "short_description": "First test model",
+    "long_description": "First test model LOOONG text",
+    "author": "VELES Team",
+    "version": "master",
+    "image": "test.png",
+    "requires": ["veles>=0.5.0"]
+}

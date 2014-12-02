@@ -25,6 +25,7 @@ import sys
 
 import veles
 from veles.cmdline import CommandLineBase
+from veles.compat import from_none
 from veles.config import root
 from veles.external import daemon
 from veles.logger import Logger
@@ -74,7 +75,9 @@ class Main(Logger, CommandLineBase):
             try:
                 forge_run()
                 return Main.EXIT_SUCCESS
-            except:
+            except Exception as e:
+                if isinstance(e, SystemExit):
+                    raise from_none(e)
                 self.exception("Failed to run forge %s", action)
                 return Main.EXIT_FAILURE
         if "--frontend" in sys.argv:

@@ -138,8 +138,8 @@ class TestForgeClient(unittest.TestCase):
         self.stdout = sys.stdout
         try:
             fno = sys.stdout.fileno()
-        except io.UnsupportedOperation:
-            fno = None
+        except (io.UnsupportedOperation, AttributeError):
+            fno = 0
         sys.stdout = StringIO()
         sys.stdout.fileno = lambda: fno
 
@@ -194,6 +194,7 @@ class TestForgeClient(unittest.TestCase):
                     "description": "Really long text telling about how this "
                                    "model is awesome.",
                     "version": "1.0.0",
+                    "author": "VELES team",
                     "date": "<date here>"}).encode()
 
         def check_name(name, request):
@@ -215,8 +216,8 @@ class TestForgeClient(unittest.TestCase):
                          """Test Model
 ==========
 
-
 Version: 1.0.0 (<date here>)
+Author: VELES team
 
 Really long text telling about how this model is awesome.
 """)
@@ -318,7 +319,7 @@ Really long text telling about how this model is awesome.
                      '"short_description": "First test model", '
                      '"version": "2.4", "workflow": "workflow.py"}'
                      % __version__).encode())
-                this.assertEqual(len(input) - manifest_size - 4, 175)
+                this.assertEqual(len(input) - manifest_size - 4, 314)
                 return b"!"
 
         def check_name(name, request):

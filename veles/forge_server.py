@@ -13,17 +13,21 @@ from datetime import datetime
 import json
 import logging
 import os
+from PIL import Image
+import pygit2
 import re
 import shutil
-import pygit2
 from six import PY3
 import struct
+import subprocess
+import sys
 from tarfile import TarFile
 from tornado import gen, web
 from tornado.escape import xhtml_escape
 from tornado.ioloop import IOLoop
 
 from veles.cmdline import CommandLineBase
+from veles.compat import from_none
 from veles.config import root
 from veles.forge_common import REQUIRED_MANIFEST_FIELDS, validate_requires
 from veles.logger import Logger
@@ -183,6 +187,7 @@ class UploadHandler(HandlerBase):
     def prepare(self):
         self.debug("start POST from %s", self.request.remote_ip)
         self.metadata = None
+        self.metadata_size = 0
         self.size = 0
         self.read_counter = 0
         self.cache = []
@@ -201,10 +206,10 @@ class UploadHandler(HandlerBase):
         if self.metadata is not None:
             self.consume_chunk(chunk)
         else:
-            if self.size == 0:
+            if self.metadata_size == 0:
                 self.metadata_size = struct.unpack('!I', chunk[:4])[0]
                 if self.metadata_size > 32 * 1024:
-                    self.return_error(400, "%d is too big metadata size" %
+                    self.return_error(400, "%d is a too big metadata size" %
                                            self.metadata_size)
                     return
                 self.debug("metadata size is %d", self.metadata_size)
@@ -253,10 +258,14 @@ ForgeServerArgs = namedtuple("ForgeServerArgs", ("root", "port"))
 
 
 class ForgeServer(Logger):
+    THUMBNAIL_FILE_NAME = "thumbnail.png"
+    IMAGE_FILE_NAME = "image.%s"
+
     @staticmethod
     def init_parser_(sphinx=False):
         parser = ArgumentParser(
-            description=CommandLineBase.LOGO if not sphinx else "")
+            description=CommandLineBase.LOGO if not sphinx else "",
+            formatter_class=CommandLineBase.SortingRawDescriptionHelpFormatter)
         parser.add_argument("-r", "--root", help="The root directory to "
                                                  "operate on.")
         parser.add_argument("-p", "--port", default=80, type=int,
@@ -268,6 +277,7 @@ class ForgeServer(Logger):
         if args is None:
             parser = ForgeServer.init_parser_()
             args = parser.parse_args()
+        Logger.setup(logging.INFO)
         self.root = args.root
         self.port = args.port
         self.thread_pool = ThreadPoolExecutor(4)
@@ -320,6 +330,57 @@ class ForgeServer(Logger):
             except Exception as e:
                 self.warning("Repository %s looks corrupted and was skipped "
                              "(%s)", dirname(r.path), e)
+        self.info("Discovered %d repos", len(self.repos))
+
+    def _generate_images(self, metadata, rep):
+        where = dirname(rep.path)
+        pic = metadata.get("image")
+        if pic is not None:
+            pic = os.path.join(where, pic)
+        if pic is not None and os.access(pic, os.R_OK):
+            with open(pic, "rb") as fin:
+                img = Image.open(fin)
+                if pic.endswith(".svg"):
+                    shutil.copyfile(pic, os.path.join(
+                        rep.path, ForgeServer.IMAGE_FILE_NAME % "svg"))
+                full_path = os.path.join(
+                    rep.path, ForgeServer.IMAGE_FILE_NAME % "webp")
+                if not pic.endswith(".webp"):
+                    try:
+                        if img.mode not in ("RGB", "RGBA"):
+                            img.convert("RGB").save(full_path, "WEBP")
+                        else:
+                            img.save(full_path, "WEBP")
+                    except IOError:
+                        self.warning(
+                            "Failed to convert %s (mode %s) to WEBP format",
+                            pic, pic.mode)
+                else:
+                    shutil.copyfile(pic, full_path)
+                full_path = os.path.join(
+                    rep.path, ForgeServer.IMAGE_FILE_NAME % "jpg")
+                if os.path.splitext(pic)[1] not in (".jpg", ".jpeg"):
+                    img.save(full_path, "JPEG")
+                else:
+                    shutil.copyfile(pic, full_path)
+                img.thumbnail((256, 256))
+                img.save(os.path.join(rep.path,
+                                      ForgeServer.THUMBNAIL_FILE_NAME), "PNG")
+        else:
+            pic = os.path.join(rep.path, ForgeServer.IMAGE_FILE_NAME % "svg")
+            retcode = subprocess.call([
+                sys.executable, "-m", "veles", "-s", "-p", "",
+                "--dry-run=init", "--workflow-graph=" + pic,
+                os.path.join(where, metadata["workflow"]),
+                os.path.join(where, metadata["configuration"])])
+            if retcode != 0:
+                self.warning("Failed to generate the thumbnail for %s",
+                             metadata["name"])
+            if os.path.exists(pic):
+                img = Image.open(pic)
+                img.thumbnail(256)
+                img.save(os.path.join(rep.path,
+                                      ForgeServer.THUMBNAIL_FILE_NAME), "PNG")
 
     def upload(self, metadata, reader):
         name = metadata["name"]
@@ -341,11 +402,24 @@ class ForgeServer(Logger):
             self.add_version(rep, version)
         else:
             self.repos[name] = rep = pygit2.init_repository(where)
-            self.add_version(rep, version)
+            try:
+                self.add_version(rep, version)
+            except Exception as e:
+                shutil.rmtree(where)
+                del self.repos[name]
+                self.error("Failed to initialize %s", name)
+                raise from_none(e)
+        self._generate_images(metadata, rep)
 
     def add_version(self, rep, version):
         if len(rep.diff()) == 0:
-            raise Exception("No changes")
+            try:
+                _ = rep.head
+                raise Exception("No new changes")
+            except pygit2.GitError:
+                new = True
+        else:
+            new = False
         metadata = self._get_metadata(rep)
         rep.index.read()
         base = dirname(rep.path)
@@ -363,7 +437,7 @@ class ForgeServer(Logger):
         rep.create_commit('HEAD', pygit2.Signature(author, email or ""),
                           pygit2.Signature("VelesForge", ""),
                           version, rep.index.write_tree(),
-                          [rep.head.peel().oid])
+                          [rep.head.peel().oid] if not new else [])
         rep.index.write()
         if version != "master":
             try:

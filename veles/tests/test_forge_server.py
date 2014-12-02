@@ -36,7 +36,9 @@ class TestForgeServer(unittest.TestCase):
             target=IOLoop.instance().start)
         base = os.path.join(__root__, "veles/tests/forge")
         for name in ("First", "Second"):
-            shutil.rmtree(os.path.join(base, os.path.join(name, ".git")))
+            path = os.path.join(base, os.path.join(name, ".git"))
+            if os.path.exists(path):
+                shutil.rmtree(path)
             with TarFile.open(
                     os.path.join(base, "%s.git.tar.gz" % name)) as tar:
                 tar.extractall(os.path.join(base, name))
@@ -84,7 +86,8 @@ class TestForgeServer(unittest.TestCase):
 
     def _compose_upload(self, file):
         base = os.path.join(__root__, "veles/tests/forge")
-        mfn = os.path.join(base, root.common.forge.manifest)
+        name = os.path.splitext(os.path.splitext(file)[0])[0]
+        mfn = os.path.join(base, name + "_" + root.common.forge.manifest)
         tarfn = os.path.join(base, file)
         body = bytearray(4 + os.path.getsize(mfn) + os.path.getsize(tarfn))
         body[:4] = struct.pack('!I', os.path.getsize(mfn))
@@ -108,7 +111,8 @@ class TestForgeServer(unittest.TestCase):
                     body=self._compose_upload("second_bad.tar.gz")))
                 self.fail("HTTPError was not thrown")
             except HTTPError as e:
-                self.assertGreaterEqual(e.response.body.find(b'No changes'), 0)
+                self.assertGreaterEqual(
+                    e.response.body.find(b'No new changes'), 0)
             response = self.client.fetch(HTTPRequest(
                 method='POST', url="http://localhost:%d/upload" % PORT,
                 body=self._compose_upload("second_good.tar.gz")))
@@ -122,6 +126,23 @@ class TestForgeServer(unittest.TestCase):
         finally:
             shutil.rmtree(src_path)
             shutil.move(bak_path, src_path)
+
+    def test_upload_new(self):
+        base = os.path.join(__root__, "veles/tests/forge")
+        try:
+            response = self.client.fetch(HTTPRequest(
+                method='POST', url="http://localhost:%d/upload" % PORT,
+                body=self._compose_upload("First2.tar.gz")))
+            self.assertEqual(response.reason, 'OK')
+            rep = pygit2.Repository(os.path.join(base, "First2"))
+            self.assertEqual("master", rep.head.get_object().message)
+            self.assertEqual(
+                1, len([c for c in rep.walk(
+                    rep.head.target, pygit2.GIT_SORT_TOPOLOGICAL)]))
+        finally:
+            rpath = os.path.join(base, "First2")
+            if os.path.exists(rpath):
+                shutil.rmtree(rpath)
 
 
 if __name__ == "__main__":

@@ -38,6 +38,7 @@ from zope.interface import implementer
 
 from veles import __plugins__, __name__, __version__, __root__
 from veles.cmdline import CommandLineBase
+from veles.compat import from_none
 from veles.config import root
 from veles.external.prettytable import PrettyTable
 from veles.forge_common import REQUIRED_MANIFEST_FIELDS, validate_requires
@@ -121,7 +122,10 @@ class ForgeClient(Logger):
         workflow = metadata["workflow"]
         config = metadata["configuration"]
         extra = metadata.get("files", [])
-        files = [workflow, config] + extra
+        if "image" in metadata:
+            extra.append(metadata["image"])
+        files = sorted({workflow, config,
+                        root.common.forge.manifest}.union(extra))
         self.info("Uploading %s...", name)
         agent = Agent(reactor)
         headers = Headers({b'User-Agent': [b'twisted']})
@@ -145,6 +149,7 @@ class ForgeClient(Logger):
             def startProducing(self, consumer):
                 metabytes = json.dumps(
                     metadata, sort_keys=True).encode('UTF-8')
+                self.owner.debug("Metadata size is %d", len(metabytes))
                 consumer.write(struct.pack("!I", len(metabytes)))
                 consumer.write(metabytes)
                 self.consumer = consumer
@@ -269,15 +274,15 @@ class ForgeClient(Logger):
                 print(response["name"])
                 print("=" * len(response["name"]))
                 print("")
-                print("")
                 print("Version: %s (%s)" % (response["version"],
                                             response["date"]))
+                print("Author: %s" % response["author"])
                 print("")
                 print(response["description"])
             except KeyError as e:
                 self.exception("Response from server is not full: %s",
                                response)
-                self.stop(Failure(e), False)
+                self.stop(Failure(from_none(e)), False)
                 return
             sys.stdout.flush()
             self.stop()
@@ -469,7 +474,8 @@ class ForgeClient(Logger):
     @staticmethod
     def init_parser(sphinx=False):
         parser = ArgumentParser(
-            description=CommandLineBase.LOGO if not sphinx else "")
+            description=CommandLineBase.LOGO if not sphinx else "",
+            formatter_class=CommandLineBase.SortingRawDescriptionHelpFormatter)
         parser.add_argument("action", choices=ACTIONS,
                             help="Command to execute.")
         parser.add_argument(
