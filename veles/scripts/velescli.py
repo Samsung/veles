@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # PYTHON_ARGCOMPLETE_OK
 """
 This script starts VELES engine and executes the specified model (workflow).
