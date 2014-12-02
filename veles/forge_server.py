@@ -254,6 +254,45 @@ class UploadHandler(HandlerBase):
         validate_requires(self.metadata['requires'])
 
 
+class ForgeHandler(web.RequestHandler):
+    def initialize(self, server):
+        self.server = server
+
+    def get(self):
+        self.render("forge.html", items=self.server.list_full())
+
+
+class ImagePageHandler(web.RequestHandler):
+    def get(self):
+        self.render("forge-image.html", name=self.get_argument("name"))
+
+
+class InterceptingStaticFileHandler(web.StaticFileHandler):
+    def initialize(self, path):
+        super(InterceptingStaticFileHandler, self).initialize(path)
+        self.real_root = path
+
+    @gen.coroutine
+    def get(self, path, include_body=True):
+        yield super().get(self.intercepted_get(path), include_body)
+
+    def intercepted_get(self, path):
+        return path
+
+
+class ThumbnailHandler(InterceptingStaticFileHandler):
+    def intercepted_get(self, path):
+        self.root = os.path.join(os.path.join(self.real_root, path), ".git")
+        return ForgeServer.THUMBNAIL_FILE_NAME
+
+
+class ImageStaticHandler(InterceptingStaticFileHandler):
+    def intercepted_get(self, path):
+        name, fmt = os.path.splitext(path)
+        self.root = os.path.join(os.path.join(self.real_root, name), ".git")
+        return ForgeServer.IMAGE_FILE_NAME % fmt[1:]
+
+
 ForgeServerArgs = namedtuple("ForgeServerArgs", ("root", "port"))
 
 
@@ -458,6 +497,16 @@ class ForgeServer(Logger):
             item.append(str(datetime.utcfromtimestamp(head.commit_time)))
             yield item
 
+    def list_full(self):
+        for _, r in sorted(self.repos.items()):
+            item = {}
+            item.update(self._get_metadata(r))
+            head = r.head.get_object()
+            item["version"] = head.message.strip()
+            item["updated"] = str(datetime.utcfromtimestamp(head.commit_time))
+            item["versions"] = [c.message for c in r.walk(r.head.target)]
+            yield item
+
     def details(self, name):
         rep = self.repos[name]
         head = rep.head.get_object()
@@ -472,7 +521,17 @@ class ForgeServer(Logger):
             ("/" + forge.service_name, ServiceHandler, {"server": self}),
             ("/" + forge.upload_name, UploadHandler, {"server": self}),
             ("/" + forge.fetch_name, FetchHandler, {"server": self}),
-        ])
+            ("/forge.html", ForgeHandler, {"server": self}),
+            ("/image.html", ImagePageHandler),
+            ("/thumbnails/(.*)", ThumbnailHandler, {"path": self.root}),
+            ("/images/(.*)", ImageStaticHandler, {"path": self.root}),
+            (r"/((js|css|fonts|img)/.*)",
+             web.StaticFileHandler, {'path': root.common.web.root}),
+            ("/", web.RedirectHandler,
+             {"url": "/forge.html", "permanent": True}),
+            ("", web.RedirectHandler,
+             {"url": "/forge.html", "permanent": True})
+        ], template_path=root.common.web.templates)
         self.application.listen(self.port)
         self.info("Listening on port %d" % self.port)
         if loop:
