@@ -144,6 +144,8 @@ root.common.update({
     }
 })
 
+root.common.web.templates = os.path.join(root.common.web.root, "templates")
+
 # Allow to override the settings above
 try:
     from veles.siteconfig import update

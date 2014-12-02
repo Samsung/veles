@@ -100,13 +100,7 @@ class WebServer(Logger):
             ("/service", ServiceHandler, {"server": self}),
             ("/update", UpdateHandler, {"server": self}),
             ("/logs.html?.*", LogsHandler, {"server": self}),
-            (r"/(js/.*)",
-             web.StaticFileHandler, {'path': root.common.web.root}),
-            (r"/(css/.*)",
-             web.StaticFileHandler, {'path': root.common.web.root}),
-            (r"/(fonts/.*)",
-             web.StaticFileHandler, {'path': root.common.web.root}),
-            (r"/(img/.*)",
+            (r"/((js|css|fonts|img)/.*)",
              web.StaticFileHandler, {'path': root.common.web.root}),
             (r"/(.+\.html)",
              web.StaticFileHandler, {'path': root.common.web.root}),
@@ -114,8 +108,7 @@ class WebServer(Logger):
                                         "permanent": True}),
             ("", web.RedirectHandler, {"url": "/status.html",
                                        "permanent": True})
-        ], template_path=os.path.join(root.common.web.root, "templates"),
-            gzip=not debug_mode)
+        ], template_path=root.common.web.templates, gzip=not debug_mode)
         self._port = kwargs.get("port", root.common.web.port)
         self.application.listen(self._port)
         self.masters = {}
