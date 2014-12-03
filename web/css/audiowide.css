@@ -2,5 +2,5 @@
   font-family: 'Audiowide';
   font-style: normal;
   font-weight: 400;
-  src: local('Audiowide'), local('Audiowide-Regular'), url(../fonts/audiowide.woff) format('woff');
+  src: local('Audiowide'), local('Audiowide-Regular'), url(../fonts/audiowide.woff2) format('woff2');
 }
