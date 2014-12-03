@@ -319,6 +319,8 @@ class ForgeServer(Logger):
                                                  "operate on.")
         parser.add_argument("-p", "--port", default=80, type=int,
                             help="The port to listen on.")
+        parser.add_argument("--suburi", default="/",
+                            help="SubURI to work behind a reverse proxy.")
         return parser
 
     def __init__(self, args=None):
@@ -329,6 +331,9 @@ class ForgeServer(Logger):
         Logger.setup(logging.INFO)
         self.root = args.root
         self.port = args.port
+        self.suburi = getattr(args, "suburi", "/")
+        if not self.suburi.endswith("/"):
+            raise ValueError("--suburi must end with a slash (\"/\")")
         self.thread_pool = ThreadPoolExecutor(4)
         self._stop = IOLoop.instance().stop
         IOLoop.instance().stop = self.stop
@@ -542,25 +547,29 @@ class ForgeServer(Logger):
         shutil.rmtree(path)
         self.info("Deleted %s", name)
 
+    def uri(self, *args):
+        return self.suburi + "".join(args)
+
     def run(self, loop=True):
         forge = root.common.forge
         self.application = web.Application([
-            ("/" + forge.service_name, ServiceHandler, {"server": self}),
-            ("/" + forge.upload_name, UploadHandler, {"server": self}),
-            ("/" + forge.fetch_name, FetchHandler, {"server": self}),
-            ("/forge.html", ForgeHandler, {"server": self}),
-            ("/image.html", ImagePageHandler),
-            ("/thumbnails/(.*)", ThumbnailHandler, {"path": self.root}),
-            ("/images/(.*)", ImageStaticHandler, {"path": self.root}),
-            (r"/((js|css|fonts|img)/.*)",
+            (self.uri(forge.service_name), ServiceHandler, {"server": self}),
+            (self.uri(forge.upload_name), UploadHandler, {"server": self}),
+            (self.uri(forge.fetch_name), FetchHandler, {"server": self}),
+            (self.uri("forge.html"), ForgeHandler, {"server": self}),
+            (self.uri("image.html"), ImagePageHandler),
+            (self.uri("thumbnails/(.*)"), ThumbnailHandler,
+             {"path": self.root}),
+            (self.uri("images/(.*)"), ImageStaticHandler, {"path": self.root}),
+            (self.uri("((js|css|fonts|img)/.*)"),
              web.StaticFileHandler, {'path': root.common.web.root}),
-            ("/", web.RedirectHandler,
-             {"url": "/forge.html", "permanent": True}),
-            ("", web.RedirectHandler,
-             {"url": "/forge.html", "permanent": True})
+            (self.suburi, web.RedirectHandler,
+             {"url": self.uri("forge.html"), "permanent": True}),
+            (self.suburi[:-1], web.RedirectHandler,
+             {"url": self.uri("forge.html"), "permanent": True}),
         ], template_path=root.common.web.templates)
         self.application.listen(self.port)
-        self.info("Listening on port %d" % self.port)
+        self.info("Listening on port %d, suburi %s" % (self.port, self.suburi))
         if loop:
             IOLoop.instance().start()
 
