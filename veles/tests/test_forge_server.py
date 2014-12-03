@@ -48,6 +48,7 @@ class TestForgeServer(unittest.TestCase):
 
     def setUp(self):
         self.client = HTTPClient()
+        self.base = os.path.join(__root__, "veles/tests/forge")
 
     @classmethod
     def tearDownClass(cls):
@@ -85,10 +86,9 @@ class TestForgeServer(unittest.TestCase):
         self._test_fetch_case("name=Second&version=1.0.0", files)
 
     def _compose_upload(self, file):
-        base = os.path.join(__root__, "veles/tests/forge")
         name = os.path.splitext(os.path.splitext(file)[0])[0]
-        mfn = os.path.join(base, name + "_" + root.common.forge.manifest)
-        tarfn = os.path.join(base, file)
+        mfn = os.path.join(self.base, name + "_" + root.common.forge.manifest)
+        tarfn = os.path.join(self.base, file)
         body = bytearray(4 + os.path.getsize(mfn) + os.path.getsize(tarfn))
         body[:4] = struct.pack('!I', os.path.getsize(mfn))
         with open(mfn, 'rb') as fin:
@@ -100,9 +100,8 @@ class TestForgeServer(unittest.TestCase):
         return bytes(body)
 
     def test_upload(self):
-        base = os.path.join(__root__, "veles/tests/forge")
-        src_path = os.path.join(base, "Second")
-        bak_path = os.path.join(base, "Second.bak")
+        src_path = os.path.join(self.base, "Second")
+        bak_path = os.path.join(self.base, "Second.bak")
         shutil.copytree(src_path, bak_path)
         try:
             try:
@@ -117,7 +116,7 @@ class TestForgeServer(unittest.TestCase):
                 method='POST', url="http://localhost:%d/upload" % PORT,
                 body=self._compose_upload("second_good.tar.gz")))
             self.assertEqual(response.reason, 'OK')
-            rep = pygit2.Repository(os.path.join(base, "Second"))
+            rep = pygit2.Repository(os.path.join(self.base, "Second"))
             self.assertEqual("2.0.0", rep.head.get_object().message)
             self.assertEqual(
                 2, len([c for c in rep.walk(rep.head.target,
@@ -128,22 +127,44 @@ class TestForgeServer(unittest.TestCase):
             shutil.move(bak_path, src_path)
 
     def test_upload_new(self):
-        base = os.path.join(__root__, "veles/tests/forge")
         try:
             response = self.client.fetch(HTTPRequest(
                 method='POST', url="http://localhost:%d/upload" % PORT,
                 body=self._compose_upload("First2.tar.gz")))
             self.assertEqual(response.reason, 'OK')
-            rep = pygit2.Repository(os.path.join(base, "First2"))
+            rep = pygit2.Repository(os.path.join(self.base, "First2"))
             self.assertEqual("master", rep.head.get_object().message)
             self.assertEqual(
                 1, len([c for c in rep.walk(
                     rep.head.target, pygit2.GIT_SORT_TOPOLOGICAL)]))
         finally:
-            rpath = os.path.join(base, "First2")
+            rpath = os.path.join(self.base, "First2")
             if os.path.exists(rpath):
                 shutil.rmtree(rpath)
 
+    def test_delete(self):
+        dirname = os.path.join(self.base, "Second")
+        shutil.copytree(dirname, dirname + ".bak")
+        deldir = os.path.join(self.base, ForgeServer.DELETED_DIR)
+        try:
+            response = self.client.fetch(
+                "http://localhost:%d/service?query=delete&name=Second" % PORT)
+            self.assertEqual(response.body, b'OK')
+            self.assertFalse(os.path.exists(dirname))
+            self.assertTrue(os.path.exists(deldir))
+            backup_file = list(os.walk(deldir))[0][2][0]
+            with TarFile.open(os.path.join(deldir, backup_file)) as tar:
+                tar.extractall(deldir)
+            orig_files = set(list(os.walk(dirname + ".bak"))[0][2])
+            extr_files = set(list(os.walk(deldir))[0][2])
+            self.assertEqual(extr_files.difference(orig_files), {backup_file})
+        finally:
+            if os.path.exists(dirname):
+                shutil.rmtree(dirname)
+            shutil.copytree(dirname + ".bak", dirname)
+            shutil.rmtree(dirname + ".bak")
+            if os.path.exists(deldir):
+                shutil.rmtree(deldir)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)

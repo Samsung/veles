@@ -113,6 +113,7 @@ class TestForgeClient(unittest.TestCase):
                 return b"..."
 
         def check_name(name, request):
+            self.assertEqual(request.args[b"query"][0], b"list")
             self.assertEqual(b'service', name)
 
         TestForgeClient.router.page_class = BadServicePage
@@ -128,6 +129,7 @@ class TestForgeClient(unittest.TestCase):
                 return json.dumps([(1, 2, 3, 4, 5), (6, 7, 8, 9, 10)]).encode()
 
         def check_name(name, request):
+            self.assertEqual(request.args[b"query"][0], b"list")
             self.assertEqual(b'service', name)
 
         TestForgeClient.router.page_class = ListPage
@@ -162,6 +164,7 @@ class TestForgeClient(unittest.TestCase):
                 return b"..."
 
         def check_name(name, request):
+            self.assertEqual(request.args[b"query"][0], b"details")
             self.assertEqual(b'service', name)
 
         TestForgeClient.router.page_class = BadServicePage
@@ -177,6 +180,7 @@ class TestForgeClient(unittest.TestCase):
                 return json.dumps({"name": "test"}).encode()
 
         def check_name(name, request):
+            self.assertEqual(request.args[b"query"][0], b"details")
             self.assertEqual(b'service', name)
 
         TestForgeClient.router.page_class = DetailsPage
@@ -198,6 +202,7 @@ class TestForgeClient(unittest.TestCase):
                     "date": "<date here>"}).encode()
 
         def check_name(name, request):
+            self.assertEqual(request.args[b"query"][0], b"details")
             self.assertEqual(request.args[b"name"][0], b"First")
             self.assertEqual(b'service', name)
 
@@ -220,6 +225,39 @@ Version: 1.0.0 (<date here>)
 Author: VELES team
 
 Really long text telling about how this model is awesome.
+""")
+
+    @sync
+    def test_delete_good(self):
+        class DeletePage(Resource):
+            def render_GET(self, request):
+                return b'OK'
+
+        def check_name(name, request):
+            self.assertEqual(request.args[b"query"][0], b"delete")
+            self.assertEqual(request.args[b"name"][0], b"First")
+            self.assertEqual(b'service', name)
+
+        TestForgeClient.router.page_class = DeletePage
+        TestForgeClient.router.callback = check_name
+        args = ForgeClientArgs("delete", "http://localhost:%d" % PORT,
+                               True)
+        args.name = "First"
+        self.client = ForgeClient(args, False)
+        self.stdout = sys.stdout
+        sys.stdout = StringIO()
+        self.stdin = sys.stdin
+        sys.stdin = StringIO()
+        sys.stdin.write("Yes, I am sure!")
+        sys.stdin.seek(0)
+
+    def after_delete_good(self):
+        out = sys.stdout.getvalue()
+        sys.stdout = self.stdout
+        sys.stdin = self.stdin
+        self.assertEqual(
+            out, """Please type "Yes, I am sure!": Deleting First...
+Successfully deleted First
 """)
 
     def test_fetch_bad(self):

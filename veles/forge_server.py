@@ -22,6 +22,7 @@ import struct
 import subprocess
 import sys
 from tarfile import TarFile
+import tempfile
 from tornado import gen, web
 from tornado.escape import xhtml_escape
 from tornado.ioloop import IOLoop
@@ -69,15 +70,19 @@ class ServiceHandler(HandlerBase):
         self.logger = logging.getLogger(
             "%s/%s" % (self.logger.name, root.common.forge.service_name))
         self.handlers = {"details": self.handle_details,
-                         "list": self.handle_list}
+                         "list": self.handle_list,
+                         "delete": self.handle_delete}
+
+    @property
+    def name(self):
+        try:
+            return self.get_argument("name")
+        except web.MissingArgumentError as e:
+            self.error("No 'name' argument was specified")
+            raise from_none(e)
 
     def handle_details(self):
-        try:
-            name = self.get_argument("name")
-        except web.MissingArgumentError:
-            self.error("No 'name' argument was specified")
-            raise
-        self.finish(json_encode(self.server.details(name)))
+        self.finish(json_encode(self.server.details(self.name)))
 
     def handle_list(self):
         self.write('[')
@@ -89,6 +94,10 @@ class ServiceHandler(HandlerBase):
                 first = False
             self.write(json_encode(item))
         self.finish(']')
+
+    def handle_delete(self):
+        self.server.delete(self.name)
+        self.finish("OK")
 
     @web.asynchronous
     def get(self):
@@ -299,6 +308,7 @@ ForgeServerArgs = namedtuple("ForgeServerArgs", ("root", "port"))
 class ForgeServer(Logger):
     THUMBNAIL_FILE_NAME = "thumbnail.png"
     IMAGE_FILE_NAME = "image.%s"
+    DELETED_DIR = ".deleted"
 
     @staticmethod
     def init_parser_(sphinx=False):
@@ -429,7 +439,7 @@ class ForgeServer(Logger):
             where = os.path.join(self.root, name)
             need_init = True
             if os.path.exists(where):
-                self.warning("%s exists - cleared")
+                self.warning("%s exists - cleared", where)
                 shutil.rmtree(where)
                 os.mkdir(where)
         else:
@@ -514,6 +524,23 @@ class ForgeServer(Logger):
                 "description": self._get_metadata(rep)["long_description"],
                 "version": head.message.strip(),
                 "date": str(datetime.utcfromtimestamp(head.commit_time))}
+
+    def delete(self, name):
+        if name not in self.repos:
+            raise ValueError("Package %s was not found" % name)
+        rep = self.repos[name]
+        path = dirname(rep.path)
+        deldir = os.path.join(self.root, ForgeServer.DELETED_DIR)
+        if not os.path.exists(deldir):
+            os.mkdir(deldir)
+        with tempfile.NamedTemporaryFile(
+                suffix=".tar.gz", prefix=name + "_", dir=deldir,
+                delete=False) as fout:
+            with TarFile.open(mode="w|gz", fileobj=fout) as tar:
+                tar.add(path, arcname="")
+            self.info("Archived %s to %s", name, fout.name)
+        shutil.rmtree(path)
+        self.info("Deleted %s", name)
 
     def run(self, loop=True):
         forge = root.common.forge

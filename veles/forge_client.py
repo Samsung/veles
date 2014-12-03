@@ -300,6 +300,36 @@ class ForgeClient(Logger):
         getPage(url.encode('charmap')).addCallbacks(callback=finished,
                                                     errback=failed)
 
+    @action
+    def delete(self):
+        confirmation = "Yes, I am sure!"
+        user = input("Please type \"%s\": " % confirmation)
+        if user != confirmation:
+            print("Refusing to delete %s because this operation was not "
+                  "confirmed" % self.name)
+            self.stop()
+            return
+        print("Deleting %s..." % self.name)
+        sys.stdout.flush()
+
+        def finished(response):
+            print("Successfully deleted %s" % self.name)
+            sys.stdout.flush()
+            self.stop()
+
+        def failed(failure):
+            try:
+                failure.raiseException()
+            except:
+                self.exception("Failed to delete %s:", self.name)
+            self.stop(failure, False)
+
+        url = "%s%s?query=delete&name=%s" % (
+            self.base, root.common.forge.service_name, self.name)
+        self.debug("Requesting %s", url)
+        getPage(url.encode('charmap')).addCallbacks(callback=finished,
+                                                    errback=failed)
+
     def _get_pkg_files(self, dist):
         """
         Shamelessly taken from pip/req.py/InstallRequirement.uninstall()
@@ -409,6 +439,7 @@ class ForgeClient(Logger):
 
         def fake_load(klass, *args, **kwargs):
             wfcls[0] = klass
+            return None, None
 
         def fake_run(*args, **kwargs):
             pass
