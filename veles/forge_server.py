@@ -421,7 +421,7 @@ class ForgeServer(Logger):
                 img.save(os.path.join(rep.path,
                                       ForgeServer.THUMBNAIL_FILE_NAME), "PNG")
         else:
-            pic = os.path.join(rep.path, ForgeServer.IMAGE_FILE_NAME % "svg")
+            pic = os.path.join(rep.path, ForgeServer.IMAGE_FILE_NAME % "png")
             retcode = subprocess.call([
                 sys.executable, "-m", "veles", "-s", "-p", "",
                 "--dry-run=init", "--workflow-graph=" + pic,
@@ -432,7 +432,7 @@ class ForgeServer(Logger):
                              metadata["name"])
             if os.path.exists(pic):
                 img = Image.open(pic)
-                img.thumbnail(256)
+                img.thumbnail((256, 256))
                 img.save(os.path.join(rep.path,
                                       ForgeServer.THUMBNAIL_FILE_NAME), "PNG")
 
@@ -534,6 +534,7 @@ class ForgeServer(Logger):
         if name not in self.repos:
             raise ValueError("Package %s was not found" % name)
         rep = self.repos[name]
+        del self.repos[name]
         path = dirname(rep.path)
         deldir = os.path.join(self.root, ForgeServer.DELETED_DIR)
         if not os.path.exists(deldir):

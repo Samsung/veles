@@ -165,6 +165,7 @@ class TestForgeServer(unittest.TestCase):
             shutil.rmtree(dirname + ".bak")
             if os.path.exists(deldir):
                 shutil.rmtree(deldir)
+            TestForgeServer.server._build_db()
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
