@@ -38,8 +38,16 @@ function search() {
         return false;
       }
     });
+    if (found != null) {
+      return false;
+    }
   });
   if (found == null) {
     query = "";
+    $("#search").css("background-color", "Tomato");
+    location.href = "#";
+  } else {
+    $("#search").css("background-color", "GreenYellow ");
   }
+  $("#search").focus();
 }
