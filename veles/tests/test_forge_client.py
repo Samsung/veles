@@ -11,7 +11,7 @@ import json
 from numpy.random import randint
 import os
 import shutil
-from six import StringIO
+from six import PY2, StringIO
 import struct
 import sys
 import tarfile
@@ -21,7 +21,6 @@ from twisted.internet import reactor
 from twisted.web.server import Site
 from twisted.web.resource import Resource
 import unittest
-import wget
 
 from veles import __root__, __plugins__, __version__
 from veles.config import root
@@ -29,6 +28,10 @@ from veles.forge_client import ForgeClient, ForgeClientArgs
 
 
 PORT = 8068 + randint(-1000, 1000)
+
+
+if PY2:
+    StringIO.fileno = lambda _: 0
 
 
 class Router(Resource):
@@ -49,14 +52,6 @@ class TestForgeClient(unittest.TestCase):
         reactor.listenTCP(PORT, Site(cls.router))
         cls.thread = threading.Thread(target=reactor.run, args=(False,))
         cls.thread.start()
-        download = wget.download
-
-        def patched_download(*args, **kwargs):
-            if isinstance(sys.stdout, StringIO):
-                sys.stdout.fileno = lambda: 0
-            download(*args, **kwargs)
-
-        wget.download = download
 
     @classmethod
     def tearDownClass(cls):
@@ -306,6 +301,8 @@ Successfully deleted First
         args.force = True
         td = tempfile.mkdtemp()
         args.path = td
+        stderr = sys.stderr
+        sys.stderr = sys.stdout
         try:
             self.client = ForgeClient(args, False)
             path, md = self.client.run()
@@ -315,6 +312,7 @@ Successfully deleted First
             self.assertEqual({'config.py', 'manifest.json', 'second.py'},
                              set(os.listdir(td)))
         finally:
+            sys.stderr = stderr
             self.sync.set()
             shutil.rmtree(td)
 
