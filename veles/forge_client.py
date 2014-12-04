@@ -16,6 +16,7 @@ from pip import wheel
 from pkg_resources import working_set, Requirement, Distribution, \
     VersionConflict, SOURCE_DIST, PY_MAJOR
 import shutil
+from six.moves import input
 from six.moves.urllib.parse import urlparse, urlencode
 from six import PY3
 if PY3:
@@ -191,7 +192,8 @@ class ForgeClient(Logger):
 
         def write_package():
             tbs = ForgeClient.UPLOAD_TAR_BUFFER_SIZE
-            with TarFile.open(mode="w|gz", fileobj=body, bufsize=tbs) as tar:
+            with TarFile.open(mode="w|gz", fileobj=body, bufsize=tbs,
+                              dereference=True) as tar:
                 for file in files:
                     self.debug("Sending %s", file)
                     ti = TarInfo(file)
