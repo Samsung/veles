@@ -22,6 +22,7 @@ function search() {
   }
   var skipping = (query == needle);
   query = needle;
+  var regexp = new RegExp(needle, "i");
   $(".flex-row").each(function() {
     if (skipping) {
       if (this === found) {
@@ -32,7 +33,7 @@ function search() {
     found = null;
     var row = $(this);
     ["h2", "h4", ".details-value"].forEach(function(sel) {
-      if (row.find(sel).text().search(needle) >= 0) {
+      if (row.find(sel).text().search(regexp) >= 0) {
         found = row.get(0);
         location.href = "#" + found.id;
         return false;
