@@ -26,6 +26,7 @@ class CommandLineArgumentsRegistry(type):
     classes = []
 
     def __init__(cls, name, bases, clsdict):
+        super(CommandLineArgumentsRegistry, cls).__init__(name, bases, clsdict)
         # if the class does not have it's own init_parser(), no-op
         init_parser = clsdict.get('init_parser', None)
         if init_parser is None:
@@ -35,7 +36,6 @@ class CommandLineArgumentsRegistry(type):
             raise TypeError("init_parser must be a static method since the "
                             "class has CommandLineArgumentsRegistry metaclass")
         CommandLineArgumentsRegistry.classes.append(cls)
-        super(CommandLineArgumentsRegistry, cls).__init__(name, bases, clsdict)
 
 
 class CommandLineBase(object):
