@@ -16,6 +16,7 @@ from six import StringIO
 import sys
 import time
 
+from veles.compat import from_none
 from veles.error import Bug
 from veles.external.daemon import redirect_stream
 from veles.external.progressbar import ProgressBar
@@ -109,9 +110,16 @@ class Logger(object):
                                   for s in (sys.stdout, sys.stderr))
 
     def __init__(self, **kwargs):
-        super(Logger, self).__init__()
-        self._logger_ = kwargs.get("logger",
-                                   logging.getLogger(self.__class__.__name__))
+        self._logger_ = kwargs.get(
+            "logger", logging.getLogger(self.__class__.__name__))
+        try:
+            super(Logger, self).__init__()
+        except TypeError as e:
+            mro = type(self).__mro__
+            mro.index(Logger)
+            self.error("Failed to call __init__ in super() = %s",
+                       mro[mro.index(Logger) + 1])
+            raise from_none(e)
 
     @property
     def logger(self):
