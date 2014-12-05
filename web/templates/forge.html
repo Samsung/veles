@@ -69,7 +69,7 @@
                 </button>
                 <ul class="dropdown-menu dropdown-versions" role="menu">
                   {% for ver in item["versions"] %}
-                  <li><a href="fetch?name={{ item["name"] }}&version={{ ver }}">{{ ver }}</a></li>
+                  <li><a title="{{ ver[1] }}" href="fetch?name={{ item["name"] }}&version={{ ver[0] }}">{{ ver[0] }}</a></li>
                   {% end %}
                 </ul>
               </div>

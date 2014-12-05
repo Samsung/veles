@@ -10,6 +10,7 @@ from argparse import ArgumentParser
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+from itertools import islice
 import json
 import logging
 import os
@@ -121,14 +122,10 @@ class FetchHandler(HandlerBase):
         self.logger = logging.getLogger(
             "%s/%s" % (self.logger.name, root.common.forge.fetch_name))
 
-    @web.asynchronous
-    @gen.coroutine
-    def get(self):
-        name = self.get_argument("name")
-        version = self.get_argument("version", "HEAD")
-        self.debug("GET from %s: %s", self.request.remote_ip,
-                   "&".join(self.request.arguments))
-        rep = self.server.repos[name]
+    def _discover_version(self, rep, version):
+        relative = re.match("(.+)@{(\d+)}", version)
+        if relative is not None:
+            version, relative = relative.groups()
         try:
             treeish = rep.lookup_branch(version).target
         except:
@@ -144,6 +141,19 @@ class FetchHandler(HandlerBase):
             treeish = treeish.hex
         if treeish.startswith("refs/"):
             treeish = rep.lookup_reference(treeish).target
+        if relative is not None:
+            treeish = next(islice(rep.walk(treeish), int(relative), None)).hex
+        return treeish
+
+    @web.asynchronous
+    @gen.coroutine
+    def get(self):
+        name = self.get_argument("name")
+        version = self.get_argument("version", "HEAD")
+        self.debug("GET from %s: %s", self.request.remote_ip,
+                   "&".join(self.request.arguments))
+        rep = self.server.repos[name]
+        treeish = self._discover_version(rep, version)
         self.debug("Resolved %s to %s", version, treeish)
         self.set_header("Content-Type", "application/x-gzip")
         self.set_header("Content-Disposition",
@@ -519,7 +529,13 @@ class ForgeServer(Logger):
             head = r.head.get_object()
             item["version"] = head.message.strip()
             item["updated"] = str(datetime.utcfromtimestamp(head.commit_time))
-            item["versions"] = [c.message for c in r.walk(r.head.target)]
+            item["versions"] = versions = []
+            for i, c in enumerate(r.walk(r.head.target)):
+                commit_time = str(datetime.utcfromtimestamp(c.commit_time))
+                if c.message != "master" or i == 0:
+                    versions.append((c.message, commit_time))
+                else:
+                    versions.append(("HEAD@{%d}" % i, commit_time))
             yield item
 
     def details(self, name):
