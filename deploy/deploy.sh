@@ -21,6 +21,7 @@ do_pre() {
   git checkout __init__.py
   cd ../..
   git archive --format=tar HEAD -o $path/Veles.tar
+  tar -cf $path/package_lists.tar docs/source/manualrst_veles_user_*_packages.rst
   cd $root/veles/znicz
   git archive --format=tar --prefix veles/znicz/ HEAD -o $path/Znicz.tar
   cd $root/deploy/pyenv
@@ -29,10 +30,10 @@ do_pre() {
   git archive --format=tar --prefix mastodon/ HEAD -o $path/Mastodon.tar
   cd $path
   echo "Merging archives..."
-  tar --concatenate --file Veles.tar Znicz.tar
-  tar --concatenate --file Veles.tar pyenv.tar
-  tar --concatenate --file Veles.tar Mastodon.tar
-  rm Znicz.tar pyenv.tar Mastodon.tar
+  for arch in package_lists.tar Znicz.tar pyenv.tar Mastodon.tar; do
+    tar --concatenate --file Veles.tar $arch
+    rm $arch
+  done
   echo "Compressing..."
   rm -f Veles.tar.$COMPRESSION
   $COMPRESSION Veles.tar

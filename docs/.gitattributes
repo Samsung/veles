@@ -5,3 +5,4 @@ Makefile export-ignore
 requirements.txt export-ignore
 sfood_clusters.txt export-ignore
 source export-ignore
+html export-ignore

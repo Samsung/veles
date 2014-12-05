@@ -14,7 +14,8 @@ libSoundFeatureExtraction export-ignore
 .project export-ignore
 .pydevproject export-ignore
 .idea export-ignore
+.pylintrc export-ignore
 init export-ignore
 gource export-ignore
 debian export-ignore
-.pylintrc export-ignore
+setup.py export-ignore
