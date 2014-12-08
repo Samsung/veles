@@ -158,6 +158,26 @@ canvas#main {
   border: 4px solid;
   border-radius: 5px;
   cursor: move;
+  display: flex;
+  align-items: center;
+}
+
+.selection-name {
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+  text-align: center;
+  font-size: large;
+  background: none;
+  border: none;
+  color: inherit;
+  max-width: 100%;
+  min-width: 5.5em;
+}
+
+.selection-name:focus {
+  background: rgba(128, 128, 128, 0.5);
+  outline: none;
 }
 
 .hidden {

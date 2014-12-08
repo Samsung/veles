@@ -63,7 +63,7 @@ $(function() {
   canvas.addEventListener('mousemove', mouseMove, false);
 
   $(document).keypress(function() {
-    if (event.keyCode == 32 && selections.length > 0) {
+    if (event.keyCode == 32 && selections.length > 0 && !$(".selection > input").is(":focus")) {
       selections.pop().remove();
       event.preventDefault();
     }
@@ -245,14 +245,16 @@ function showSelections() {
 }
 
 function addSelection(rect) {
-  selections.push($("<div class=\"selection\"></div>")
+  var color = "rgb({})".$(selection_colors[selections.length].join(", "));
+  return selections.push($("<div class=\"selection\">" +
+                           "<input type=\"text\" class=\"selection-name\" placeholder=\"enter name\">" +
+                           "</div>")
       .appendTo($("#image-container"))
       .css("left", rect.left * 100 / (ratio * canvas.offsetWidth) + "%")
       .css("top", rect.top * 100 / (ratio * canvas.offsetHeight) + "%")
       .css("width", rect.width * 100 / (ratio * canvas.offsetWidth) + "%")
       .css("height", rect.height * 100 / (ratio * canvas.offsetHeight) + "%")
-      .css("border-color",
-           "rgb({})".$(selection_colors[selections.length].join(", ")))
+      .css("border-color", color).css("color", color)
       .css("background-color",
            "rgba({}, 0.15)".$(selection_colors[selections.length].join(", ")))
       .resizable().draggable().bind("contextmenu", function(e) {
@@ -261,7 +263,17 @@ function addSelection(rect) {
         return false;
       })
       .data("rect", rect)
+      .find("input").keyup(resizeSelectionNameInput)
+                    .change(function() { rect.name = $(this).val(); })
+                    .attr('size', 10)
+                    .val(rect.name)
+                    .parent()
   );
+}
+
+function resizeSelectionNameInput() {
+  var length = $(this).val().length;
+  $(this).attr('size', length > 10? length : 10);
 }
 
 function mouseDown(e) {
@@ -316,9 +328,12 @@ function mouseUp() {
     drect.top += drect.height;
     drect.height *= -1;
   }
-  addSelection({left: drect.left * ratio, top: drect.top * ratio,
-                width: drect.width * ratio, height: drect.height * ratio});
+  var index = addSelection(
+    {left: drect.left * ratio, top: drect.top * ratio,
+     width: drect.width * ratio, height: drect.height * ratio,
+     name: ""}) - 1;  
   drect.width = drect.height = 0;
+  selections[index].find("input").focus();
 }
 
 function uploadResult(index, overwrite, result) {
@@ -330,7 +345,7 @@ function uploadResult(index, overwrite, result) {
     if (overwrite == undefined) {
       overwrite = false;
     }
-    overwrite |= $("#force-overwrite").prop("checked");
+    overwrite = overwrite || $("#force-overwrite").prop("checked");
     if (result == undefined) {
       result = selections.map(function(sel) {
         return sel.data("rect");
