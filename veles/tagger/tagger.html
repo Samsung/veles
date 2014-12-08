@@ -17,10 +17,9 @@
         <button id="next" onclick="next();" disabled="disabled">-&gt;</button>
       </div>
       <div id="menu-contents">
-        <input type="search" id="jump-to-file">
-        <label for=jump-to-file>jump to</label>
-        <input type="checkbox" id="retain-selections">
-        <label for="retain-selections">retain selections</label>
+        <input type="search" id="jump-to-file" placeholder="jump to file">
+        <label><input type="checkbox" id="retain-selections"> retain selections</label>
+        <label><input type="checkbox" id="force-overwrite"> force overwrite</label>
       </div>
     </div>
     <div id="list-container">
@@ -37,6 +36,7 @@
             <span>{{ image.name }}</span>
           </header>
           <div>
+            <span class="property">path:</span> <span class="value">{{ image.path }}</span><br />
             <span class="property">size:</span> <span class="value">{{ image.size[0] }}x{{ image.size[1] }}</span><br />
             <span class="property">format:</span> <span class="value">{{ image.format }}</span><br />
             <span class="property">color:</span> <span class="value">{{ image.mode }}</span><br />

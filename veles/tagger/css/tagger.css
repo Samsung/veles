@@ -4,6 +4,7 @@
 
 html {
   height: 100%;
+  font-family: 'Trebuchet MS', Tahoma, Verdana, Arial, sans-serif;
 }
 
 body {
@@ -61,7 +62,7 @@ body {
 
 #menu-contents {
   width: 100%;
-  padding: 0.5em;
+  padding: 0 0.5em 0.5em;
 }
 
 #list-container {
@@ -80,8 +81,7 @@ input[type=radio] + label {
   height: 3em;
   width: 100%;
   cursor: pointer;
-  transition: height 0.3s ease-in-out;
-  font-family: 'Trebuchet MS', Tahoma, Verdana, Arial, sans-serif;
+  transition: height 0.3s ease-in-out;  
 }
 input[type=radio] + label {
   margin-top: 0.2em;
@@ -90,7 +90,7 @@ input[type=radio]:first-child + label {
   margin-top: 0;
 }
 input[type=radio]:checked + label {
-  height: 5.3em;
+  height: 6.1em;
   border: 1px solid #fbd850;
   background: #ffffff url("images/ui-bg_glass_65_ffffff_1x400.png") 50% 50% repeat-x;
   font-weight: bold;
@@ -166,4 +166,24 @@ canvas#main {
 
 .touched {
   background: linear-gradient(to bottom, rgba(205,235,139,1) 0%,rgba(205,235,139,1) 100%);
+}
+
+.ui-autocomplete {
+  max-height: 10em;
+  font-size: small;
+  overflow-y: auto;
+  overflow-x: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+#jump-to-file {
+  width: 100%;
+  margin-bottom: 0.5em;
+}
+
+#menu-contents > label {
+  font-size: small;
+  display: flex;
+  align-items: center;
 }

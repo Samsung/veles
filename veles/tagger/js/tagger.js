@@ -32,6 +32,26 @@ $(function() {
     },
     text: false
   });
+  $( "#jump-to-file" ).autocomplete({
+    source: files.map(function(f) { return f.path; }),
+    delay: 0,
+    autoFocus: true,
+    select: function(event, ui) {
+      if (ui.item == null) {
+        return;
+      }
+      jumpToFile(ui.item.value);
+    }
+  }).data("ui-autocomplete")._renderItem = function (ul, item) {
+      var newText = String(item.value).replace(
+              new RegExp(this.term, "gi"),
+              "<span class='ui-state-highlight'>$&</span>");
+
+      return $("<li></li>")
+          .data("item.autocomplete", item)
+          .append("<a>" + newText + "</a>")
+          .appendTo(ul);
+  };
 
   $("input[type=radio]").change(function(event) {
     uploadResult();
@@ -52,7 +72,11 @@ $(function() {
       event.preventDefault();
     }
     if (event.keyCode == 13) {
-      next();
+      if (!$("#jump-to-file").is(":focus")) {
+        next();
+      } else {
+        jumpToFile($("#jump-to-file").val());
+      }
     }
   });
 
@@ -115,22 +139,42 @@ function updateFileIndicators() {
   }
 }
 
-function removeAllSelections() {
+function removeAllSelections(force) {
+  if ($("#retain-selections").prop("checked") && !force) {
+    return;
+  }
   selections.forEach(function(sel) {
     sel.remove();
   });
   selections.length = 0;
 }
 
+function jumpToFile(path) {
+  for (var i = 0; i < files.length; i++) {
+    if (files[i].path == path) {            
+      loadCanvasImageAsync(i);
+      break;
+    }
+  }
+}
+
+function changeActiveIndex(index) {
+  if (index == active_index) {
+    return;
+  }
+  var input = "input[type=radio]:nth-of-type({})".$(index + 1);  
+  var offset = $("#list").position().top + $(input + " + label").outerHeight() + 1;
+  $(input).prop("checked", true);
+  $("#list-container").scrollTop($(input + " + label").offset().top - offset);
+  active_index = index;
+}
+
 function loadCanvasImageAsync(index) {
+  console.log("Activating index " + index);
   if (index == undefined) {
     index = active_index;
   }
-  if (index != active_index) {
-    $("input[type=radio]:nth-of-type({})".$(index + 1))
-    .prop("checked", true);
-    active_index = index;
-  }
+  changeActiveIndex(index);
   var start_time = new Date();
   var preload = new Image();
   preload.onload = function() {
@@ -154,20 +198,20 @@ function loadCanvasImage(index) {
   $(canvas).css("background", "url({})".$(files[index].url))
            .attr("width", size[0]).attr("height", size[1]);
   calculateRatio();
-  if (index != active_index) {
-    $("input[type=radio]:nth-of-type({})".$(index + 1))
-        .prop("checked", true);
-    active_index = index;
-  }
+  changeActiveIndex(index);
   $.ajax({
       url: "selections",
       type: "POST",
       data: JSON.stringify({file: files[index].path}),
       contentType: "application/json; charset=utf-8",
       success: function(response) {
-        JSON.parse(response).forEach(function(sel) {
-          addSelection(sel);
-        });
+        var sels = JSON.parse(response);
+        if (sels.length  > 0) {
+          removeAllSelections(true);
+          sels.forEach(function(sel) {
+            addSelection(sel);
+          });
+        }
       },
   });
 }
@@ -286,6 +330,7 @@ function uploadResult(index, overwrite, result) {
     if (overwrite == undefined) {
       overwrite = false;
     }
+    overwrite |= $("#force-overwrite").prop("checked");
     if (result == undefined) {
       result = selections.map(function(sel) {
         return sel.data("rect");
@@ -327,8 +372,8 @@ function menu() {
   var toolbar = $("#toolbar");
   var list = $("#list-container");
   if (toolbar.css("height") == toolbar_collapsed_height) {
-    toolbar.css("height", "10em");
-    list.css("margin-top", "10em");
+    toolbar.css("height", "8.5em");
+    list.css("margin-top", "8.5em");
   } else {
     toolbar.css("height", toolbar_collapsed_height);
     list.css("margin-top", toolbar_collapsed_height);
