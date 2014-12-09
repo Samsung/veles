@@ -11,6 +11,8 @@
 #define FLT_MAX 1E+37
 #endif
 
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
 /**
  * @brief CUDA implementation of atomicAdd for double.
  *
