@@ -37,7 +37,7 @@ class Uniform(OpenCLUnit):
 
     def init_unpickled(self):
         super(Uniform, self).init_unpickled()
-        self.cl_sources_["random.cl"] = {}
+        self.cl_sources_["random"] = {}
 
     def initialize(self, device, **kwargs):
         super(Uniform, self).initialize(device, **kwargs)
@@ -57,16 +57,22 @@ class Uniform(OpenCLUnit):
         else:
             self.output_bytes = self.output.nbytes
 
-        self.states.initialize(self)
-        self.output.initialize(self)
+        self.states.initialize(self.device)
+        self.output.initialize(self.device)
 
         if self.device is None:
             return
 
-        self.build_program({}, "uniform_%d.cl" % self.num_states)
+        self.build_program({}, "uniform_%d" % self.num_states)
 
         self.assign_kernel("random_xorshift1024star")
         self.set_args(self.states, self.cl_const, self.output)
+
+    def ocl_init(self):
+        pass
+
+    def cuda_init(self):
+        pass
 
     def fill_ocl(self, nbytes):
         bytes_per_round = self.num_states * 16 * 8
@@ -124,3 +130,6 @@ class Uniform(OpenCLUnit):
 
     def cpu_run(self):
         self.fill_cpu(self.output.nbytes)
+
+    def cuda_run(self):
+        raise NotImplementedError("TODO(a.kazantsev): implement.")

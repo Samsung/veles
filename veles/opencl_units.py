@@ -9,19 +9,17 @@ import argparse
 from copy import copy
 import logging
 import numpy
-import opencl4py
 import os
 import re
 from six import BytesIO, add_metaclass, PY3
 import tarfile
 import time
-import veles.bufpool as bufpool
 from zope.interface import implementer, Interface
 
 from veles.config import root
 import veles.formats as formats
 import veles.opencl_types as opencl_types
-from veles.opencl import Device
+from veles.opencl import Device, OCLDevice
 from veles.pickle2 import pickle, best_protocol
 from veles.timeit import timeit
 from veles.units import Unit, IUnit, UnitCommandLineArgumentsRegistry
@@ -56,6 +54,8 @@ class OpenCLUnit(Unit):
         cl_sources_: OpenCL source files: file => defines.
         cache: whether to cache the compiled OpenCL programs.
     """
+    backend_methods = ("run", "init", "build_program", "get_kernel",
+                       "execute_kernel")
     hide = True
 
     def __init__(self, workflow, **kwargs):
@@ -76,6 +76,7 @@ class OpenCLUnit(Unit):
         self._force_cpu = self.__class__.__name__ in args.force_cpu.split(',')
         self._sync = args.sync_ocl
         self._kernel_ = None
+        self._backend_run_ = None
 
     @property
     def device(self):
@@ -87,6 +88,31 @@ class OpenCLUnit(Unit):
             raise TypeError("device must be of type veles.opencl.Device (%s "
                             "was specified)" % value.__class__)
         self._device = value
+        self.set_backend(value)
+
+    def set_backend(self, device):
+        """Assigns backend functions according to the device type.
+        """
+        if device is None or self.force_cpu:
+            backend = "cpu"
+        else:
+            backend = device.backend_name
+        for suffix in OpenCLUnit.backend_methods:
+            setattr(self, "_backend_" + suffix + "_",
+                    getattr(self, backend + "_" + suffix))
+        if self._sync and device is not None:
+            self._original_run_ = self._backend_run_
+            self._backend_run_ = self._run_with_sync
+
+    def _run_with_sync(self):
+        self._original_run_()
+        self.device.sync()
+
+    def backend_init(self):
+        """Should be called at the end of the initialize method
+        in the derived classes.
+        """
+        return self._backend_init_()
 
     @property
     def cache(self):
@@ -112,16 +138,20 @@ class OpenCLUnit(Unit):
             raise ValueError()
         if self._force_cpu:
             self.device = None
+        # TODO(a.kazantsev): remove prefer_numpy.
         self.prefer_numpy = (self.prefer_numpy and self.device is not None and
-                             device.device_info.is_cpu)
+                             (isinstance(device, OCLDevice) and
+                              device.device_info.is_cpu))
+
+    def cpu_init(self):
+        pass
 
     def run(self):
-        if self.device is None or self._force_cpu:
-            self.cpu_run()
-        else:
-            self.ocl_run()
-            if self._sync:
-                self.device.queue_.finish()
+        return self._backend_run_()
+
+    @property
+    def sync(self):
+        return self._sync
 
     @staticmethod
     def init_parser(parser=None):
@@ -136,30 +166,50 @@ class OpenCLUnit(Unit):
         return parser
 
     def build_program(self, defines=None, cache_file_name=None, dtype=None):
-        """Builds the OpenCL program.
-
-        `program_` will be initialized to the resulting program object.
-        """
         if cache_file_name is None:
             cache_file_name = self.name
         if not isinstance(cache_file_name, str):
             raise ValueError("cache_file_name must be a string")
-        cache_file_name = cache_file_name + (".3" if PY3 else ".2")
+        return self._backend_build_program_(defines, cache_file_name, dtype)
+
+    def cpu_build_program(self, defines, cache_file_name, dtype):
+        pass
+
+    def _load_binary(self, defines, cache_file_name, dtype, suffix,
+                     cache_is_valid):
+        cache_file_name = cache_file_name + suffix + (".3" if PY3 else ".2")
         if not os.path.isabs(cache_file_name):
             cache_file_name = os.path.join(root.common.cache_dir,
                                            cache_file_name)
         if self.cache and os.path.exists("%s.cache" % cache_file_name):
-            binaries, my_defines = self._load_from_cache(
-                cache_file_name, defines, dtype)
-            if binaries is not None:
-                self.program_ = self.device.queue_.context.create_program(
-                    binaries, binary=True)
-                self.debug("Used %s.cache", cache_file_name)
-                return my_defines
-        source, my_defines = self._generate_source(defines, dtype)
+            return self._load_from_cache(cache_file_name, defines, dtype,
+                                         suffix, cache_is_valid)
+        else:
+            return None, defines
+
+    def ocl_build_program(self, defines=None, cache_file_name=None,
+                          dtype=None):
+        """Builds the OpenCL program.
+
+        `program_` will be initialized to the resulting program object.
+        """
+        def cache_is_valid(cache):
+            return (self.device.queue_.device.name ==
+                    cache["devices"][0][0] and
+                    self.device.queue_.device.platform.name ==
+                    cache["devices"][0][1])
+
+        binaries, my_defines = self._load_binary(
+            defines, cache_file_name, dtype, ".cl", cache_is_valid)
+        if binaries is not None:
+            self.program_ = self.device.queue_.context.create_program(
+                binaries, binary=True)
+            self.debug("Used %s.cache", cache_file_name)
+            return my_defines
+        source, my_defines = self._generate_source(defines, dtype, ".cl")
         show_ocl_logs = self.logger.isEnabledFor(logging.DEBUG)
         self.program_ = self.device.queue_.context.create_program(
-            source, root.common.ocl_dirs,
+            source, list(x + "/ocl" for x in root.common.compute.dirs),
             "-cl-nv-verbose" if show_ocl_logs and "cl_nv_compiler_options" in
             self.device.queue_.device.extensions else "")
         if show_ocl_logs and len(self.program_.build_logs):
@@ -168,11 +218,51 @@ class OpenCLUnit(Unit):
                 if not s:
                     continue
                 self.debug("Non-empty OpenCL build log encountered: %s", s)
-        self._save_to_cache(cache_file_name)
+        self._save_to_cache(cache_file_name, ".cl", self.program_.source,
+                            self.program_.binaries,
+                            {"devices": [(d.name, d.platform.name)
+                                         for d in self.program_.devices]})
         return my_defines
 
-    def get_kernel(self, name):
+    def cuda_build_program(self, defines=None, cache_file_name=None,
+                           dtype=None):
+        """Builds the OpenCL program.
+
+        `program_` will be initialized to the resulting program object.
+        """
+        def cache_is_valid(cache):
+            return self.device.context.device.name == cache["device"]
+
+        binaries, my_defines = self._load_binary(
+            defines, cache_file_name, dtype, ".cu", cache_is_valid)
+        if binaries is not None:
+            self.program_ = self.device.context.create_module(ptx=binaries)
+            self.debug("Used %s.cache", cache_file_name)
+            return my_defines
+        source, my_defines = self._generate_source(defines, dtype, ".cu")
+        show_logs = self.logger.isEnabledFor(logging.DEBUG)
+        self.program_ = self.device.context.create_module(
+            source=source,
+            include_dirs=list(x + "/cuda" for x in root.common.compute.dirs))
+        if show_logs and len(self.program_.stderr):
+            self.debug("Non-empty CUDA build log encountered: %s",
+                       self.program_.stderr)
+        self._save_to_cache(cache_file_name, ".cu", source.encode("utf-8"),
+                            self.program_.ptx,
+                            {"device": self.device.context.device.name})
+        return my_defines
+
+    def ocl_get_kernel(self, name):
         return self.program_.get_kernel(name)
+
+    def cuda_get_kernel(self, name):
+        return self.program_.create_function(name)
+
+    def cpu_get_kernel(self, name):
+        return None
+
+    def get_kernel(self, name):
+        return self._backend_get_kernel_(name)
 
     def assign_kernel(self, name):
         self._kernel_ = self.get_kernel(name)
@@ -180,31 +270,46 @@ class OpenCLUnit(Unit):
     def execute_kernel(self, global_size, local_size, kernel=None,
                        need_event=False):
         try:
-            return self.device.queue_.execute_kernel(
+            return self._backend_execute_kernel_(
                 kernel or self._kernel_, global_size, local_size,
                 need_event=need_event)
-        except opencl4py.CLRuntimeError:
+        except RuntimeError:
             self.error("execute_kernel(%s) has failed. global_size = %s, "
                        "local_size = %s", (kernel or self._kernel_).name,
                        str(global_size), str(local_size))
             raise
 
-    def set_arg(self, index, arg):
-        if isinstance(arg, formats.Vector):
-            self._kernel_.set_arg(index, arg.devmem)
-        else:
-            self._kernel_.set_arg(index, arg)
+    def cpu_execute_kernel(self, kernel, global_size, local_size, need_event):
+        return None
 
-    def set_args(self, *args):
+    def ocl_execute_kernel(self, kernel, global_size, local_size, need_event):
+        return self.device.queue_.execute_kernel(
+            kernel, global_size, local_size, need_event=need_event)
+
+    def cuda_execute_kernel(self, kernel, global_size, local_size,
+                            need_event):
+        return kernel(global_size,
+                      (1, 1, 1) if local_size is None else local_size)
+
+    def set_arg(self, index, arg, kernel=None):
+        if kernel is None:
+            kernel = self._kernel_
+        if isinstance(arg, formats.Vector):
+            kernel.set_arg(index, arg.devmem)
+        else:
+            kernel.set_arg(index, arg)
+
+    def set_args(self, *args, **kwargs):
+        kernel = kwargs.get("kernel", self._kernel_)
         filtered_args = []
         for arg in args:
             if isinstance(arg, formats.Vector):
                 filtered_args.append(arg.devmem)
             else:
                 filtered_args.append(arg)
-        self._kernel_.set_args(*filtered_args)
+        kernel.set_args(*filtered_args)
 
-    def _generate_source(self, defines, dtype=None):
+    def _generate_source(self, defines, dtype=None, suffix=""):
         if defines and not isinstance(defines, dict):
             raise RuntimeError("defines must be a dictionary")
         lines = []
@@ -212,7 +317,7 @@ class OpenCLUnit(Unit):
         for fnme, defs in self.cl_sources_.items():
             for k, v in sorted(defs.items()):
                 lines.append("#define %s %s" % (k, v))
-            lines.append("#include \"%s\"" % fnme)
+            lines.append("#include \"%s%s\"" % (fnme, suffix))
             for k in sorted(defs.keys()):
                 lines.append("#undef %s" % k)
         if dtype is None:
@@ -222,7 +327,9 @@ class OpenCLUnit(Unit):
         my_defines.update(opencl_types.cl_defines[dtype])
         if "PRECISION_LEVEL" not in my_defines:
             my_defines["PRECISION_LEVEL"] = root.common.precision_level
-        if "VECTOR_OPT" not in my_defines:
+        if ("VECTOR_OPT" not in my_defines and
+                hasattr(self.device, "device_info") and
+                hasattr(self.device.device_info, "vector_opt")):
             my_defines["VECTOR_OPT"] = self.device.device_info.vector_opt
         if "GPU_FORCE_64BIT_PTR" not in my_defines:  # for AMD
             my_defines["GPU_FORCE_64BIT_PTR"] = os.getenv(
@@ -237,14 +344,15 @@ class OpenCLUnit(Unit):
     def _search_include(self, file_name):
         if os.path.exists(file_name):
             return os.path.abspath(file_name)
-        for d in root.common.ocl_dirs:
-            full = os.path.join(d, file_name)
+        for d in root.common.compute.dirs:
+            full = os.path.join(d + "/" + self.device.backend_name, file_name)
             if os.path.exists(full):
                 return os.path.abspath(full)
         return ""
 
-    def _scan_include_dependencies(self):
-        res = [self._search_include(f) for f in self.cl_sources_.keys()]
+    def _scan_include_dependencies(self, suffix):
+        res = [self._search_include(f + suffix)
+               for f in self.cl_sources_.keys()]
         pending = copy(res)
         include_matcher = re.compile(b'#\s*include\s*((")?|(<)?)([\w\.]+)'
                                      b'(?(2)"|>)')
@@ -267,15 +375,16 @@ class OpenCLUnit(Unit):
             pending = pending[1:]
         return res
 
-    def _load_from_cache(self, cache_file_name, defines, dtype):
+    def _load_from_cache(self, cache_file_name, defines, dtype, suffix,
+                         cache_is_valid):
         try:
             with tarfile.open("%s.cache" % cache_file_name, "r:gz") as tar:
-                cached_source = tar.extractfile("source.cl").read()
-                src, my_defines = self._generate_source(defines, dtype)
+                cached_source = tar.extractfile("source" + suffix).read()
+                src, my_defines = self._generate_source(defines, dtype, suffix)
                 real_source = src.encode("utf-8")
                 if cached_source != real_source:
                     return None, None
-                for dep in set(self._scan_include_dependencies()):
+                for dep in set(self._scan_include_dependencies(suffix)):
                     cached_source = tar.extractfile(
                         os.path.basename(dep)).read()
                     with open(dep, "rb") as fr:
@@ -283,32 +392,34 @@ class OpenCLUnit(Unit):
                     if cached_source != real_source:
                         return None, None
                 cache = pickle.loads(tar.extractfile("binaries.pickle").read())
-                if (self.device.queue_.device.name != cache["devices"][0][0] or
-                    self.device.queue_.device.platform.name !=
-                        cache["devices"][0][1]):
+                if not cache_is_valid(cache):
                     return None, None
                 bins = cache["binaries"]
-                if not isinstance(bins, list) or len(bins) == 0 or \
-                   not isinstance(bins[0], bytes):
+                if not isinstance(bins, bytes) and (
+                        not isinstance(bins, list) or len(bins) == 0 or
+                        not isinstance(bins[0], bytes)):
                     self.warning("Cached binaries have an invalid format")
                     return None, None
                 return cache["binaries"], my_defines
         except:
             return None, None
 
-    def _save_to_cache(self, cache_file_name):
-        if not cache_file_name:
-            raise ValueError("Cache file name cannot be empty")
+    def _save_to_cache(self, cache_file_name, suffix, program_source,
+                       program_binaries, device_id_dict):
+        cache_file_name = cache_file_name + suffix + (".3" if PY3 else ".2")
+        if not os.path.isabs(cache_file_name):
+            cache_file_name = os.path.join(root.common.cache_dir,
+                                           cache_file_name)
         try:
             with tarfile.open("%s.cache" % cache_file_name, "w:gz") as tar:
                 source_io = BytesIO()
-                source_io.write(self.program_.source)
-                ti = tarfile.TarInfo("source.cl")
+                source_io.write(program_source)
+                ti = tarfile.TarInfo("source" + suffix)
                 ti.size = source_io.tell()
                 ti.mode = int("666", 8)
                 source_io.seek(0)
                 tar.addfile(ti, fileobj=source_io)
-                for dep in set(self._scan_include_dependencies()):
+                for dep in set(self._scan_include_dependencies(suffix)):
                     ti = tarfile.TarInfo(os.path.basename(dep))
                     ti.size = os.path.getsize(dep)
                     ti.mode = int("666", 8)
@@ -316,9 +427,8 @@ class OpenCLUnit(Unit):
                         tar.addfile(ti, fileobj=fr)
                 binaries_io = BytesIO()
                 pickler = pickle.Pickler(binaries_io, protocol=best_protocol)
-                binaries = {"binaries": self.program_.binaries,
-                            "devices": [(d.name, d.platform.name)
-                                        for d in self.program_.devices]}
+                binaries = {"binaries": program_binaries}
+                binaries.update(device_id_dict)
                 pickler.dump(binaries)
                 ti = tarfile.TarInfo("binaries.pickle")
                 ti.size = binaries_io.tell()
@@ -336,6 +446,15 @@ class TrivialOpenCLUnit(OpenCLUnit):
         pass
 
     def ocl_run(self):
+        pass
+
+    def cuda_run(self):
+        pass
+
+    def ocl_init(self):
+        pass
+
+    def cuda_init(self):
         pass
 
 
@@ -369,10 +488,14 @@ class OpenCLBenchmark(OpenCLUnit):
             self.input_A_.mem = self.input_A_.mem.reshape(self.size, self.size)
             self.input_B_.mem = self.input_B_.mem.reshape(self.size, self.size)
             return
-        if self.block_size is None and device is not None:
-            self.block_size = device.device_info.get_block_size(
+
+        self.backend_init()
+
+    def ocl_init(self):
+        if self.block_size is None and self.device is not None:
+            self.block_size = self.device.device_info.get_block_size(
                 kernel="matrix_multiplication", dtype=self.dtype)
-        self.cl_sources_["benchmark.cl"] = {}
+        self.cl_sources_["benchmark"] = {}
         defines = {
             "BLOCK_SIZE": self.block_size,
             "SIZE": self.size,
@@ -380,8 +503,8 @@ class OpenCLBenchmark(OpenCLUnit):
         }
         self.build_program(defines, dtype=self.dtype)
         self.assign_kernel("benchmark")
-        self.input_A_.initialize(self)
-        self.input_B_.initialize(self)
+        self.input_A_.initialize(self.device)
+        self.input_B_.initialize(self.device)
         self.set_args(self.input_A_, self.input_A_, self.input_B_)
 
     def estimate(self, return_time=False, dry_run_first=False):
@@ -444,7 +567,6 @@ class OpenCLWorkflow(Workflow):
 
     def __init__(self, workflow, **kwargs):
         super(OpenCLWorkflow, self).__init__(workflow, **kwargs)
-        self.bufpool = kwargs.get("bufpool")
         self._power_measure_time_interval = kwargs.get(
             'power_measure_time_interval', 120)
 
@@ -476,10 +598,6 @@ class OpenCLWorkflow(Workflow):
     def initialize(self, device, **kwargs):
         super(OpenCLWorkflow, self).initialize(device=device, **kwargs)
         self.device = device
-        if (self.bufpool is not None and
-                isinstance(self.bufpool, bufpool.OclBufPool)):
-            strategy = bufpool.TrivialStrategy(device.device_info.memalign)
-            self.bufpool.make_partitioning(self.start_point, strategy)
 
     def filter_unit_graph_attrs(self, val):
         return (not isinstance(val, Device) and

@@ -119,8 +119,6 @@ root.common.update({
     "device_dirs": ["/usr/share/veles/devices",
                     os.path.join(__home__, "devices"),
                     os.environ.get("VELES_OPENCL_DEVICES", "./")],
-    "ocl_dirs": (os.environ.get("VELES_OPENCL_DIRS", "").split(":") +
-                 ["/usr/share/veles/ocl"]),
     "help_dir": "/usr/share/doc/python3-veles",
     "web": {
         "host": "0.0.0.0",
@@ -141,6 +139,12 @@ root.common.update({
     "ThreadPool": {
         "minthreads": 2,
         "maxthreads": 2,
+    },
+    "compute": {
+        "backends": ["cuda", "ocl", "cpu"],
+        "backend": "ocl",
+        "dirs": (os.environ.get("VELES_OPENCL_DIRS", "").split(":") +
+                 ["/usr/share/veles"])
     }
 })
 

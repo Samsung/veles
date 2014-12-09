@@ -44,7 +44,7 @@ class MeanDispNormalizer(OpenCLUnit, TriviallyDistributable):
 
     def init_unpickled(self):
         super(MeanDispNormalizer, self).init_unpickled()
-        self.cl_sources_["mean_disp_normalizer.cl"] = {}
+        self.cl_sources_["mean_disp_normalizer"] = {}
 
     def initialize(self, device, **kwargs):
         super(MeanDispNormalizer, self).initialize(device, **kwargs)
@@ -72,7 +72,7 @@ class MeanDispNormalizer(OpenCLUnit, TriviallyDistributable):
                 sh = list(sh)
                 sh[0] <<= 1
                 self.output.mem = numpy.zeros(sh, dtype=dtype)
-                self.output.initialize(self)
+                self.output.initialize(self.device)
                 self.output.map_write()
                 self.output.vv = self.output.mem
                 sh[0] >>= 1
@@ -82,13 +82,16 @@ class MeanDispNormalizer(OpenCLUnit, TriviallyDistributable):
             else:
                 self.output.mem = numpy.zeros(sh, dtype=dtype)
 
-        self.input.initialize(self)
-        self.mean.initialize(self)
-        self.rdisp.initialize(self)
-        self.output.initialize(self)
+        self.input.initialize(self.device)
+        self.mean.initialize(self.device)
+        self.rdisp.initialize(self.device)
+        self.output.initialize(self.device)
 
-        if self.device is None:
-            return
+        self.backend_init()
+
+    def ocl_init(self):
+        dtype = self.rdisp.dtype
+        sample_size = self.mean.size
 
         defines = {
             "input_type": numpy_dtype_to_opencl(self.input.dtype),
@@ -96,8 +99,7 @@ class MeanDispNormalizer(OpenCLUnit, TriviallyDistributable):
             "SAMPLE_SIZE": sample_size
         }
         self.build_program(
-            defines, "%s/mean_disp_normalizer.cl" % root.common.cache_dir,
-            dtype=dtype)
+            defines, "%s" % self.__class__.__name__, dtype=dtype)
 
         self.assign_kernel("normalize_mean_disp")
         self.set_args(self.input, self.mean, self.rdisp, self.output)

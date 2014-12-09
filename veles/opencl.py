@@ -8,6 +8,8 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import argparse
+import cuda4py as cu
+import cuda4py.blas as cublas
 import gc
 import json
 import numpy
@@ -15,6 +17,7 @@ import os
 from six import add_metaclass
 import sys
 import opencl4py as cl
+import threading
 
 from veles.cmdline import CommandLineArgumentsRegistry
 from veles.compat import from_none
@@ -136,8 +139,83 @@ class DeviceNotFoundError(Exception):
     pass
 
 
-@add_metaclass(CommandLineArgumentsRegistry)
 class Device(Pickleable):
+    """Base device class.
+
+    Attributes:
+        _pid: process id.
+    """
+    def __new__(cls, *args, **kwargs):
+        if cls is not Device:
+            return super(Device, cls).__new__(cls, *args, **kwargs)
+        backend = kwargs.get("backend")
+        if backend is None:
+            backend = root.common.compute.backend
+        cls = {"cuda": CUDADevice, "ocl": OCLDevice}.get(backend)
+        return super(Device, cls).__new__(cls, *args, **kwargs)
+
+    def __init__(self):
+        super(Device, self).__init__()
+
+    def init_unpickled(self):
+        super(Device, self).init_unpickled()
+        self._pid = os.getpid()
+
+    @property
+    def backend_name(self):
+        """Returns name of the backend.
+        """
+        raise NotImplementedError()
+
+    @property
+    def pid(self):
+        """Process ID.
+        """
+        return self._pid
+
+    @property
+    def blas(self):
+        """Returns BLAS instance.
+        """
+        return None
+
+    def sync(self):
+        """Synchronizes the device execution queue.
+        """
+        pass
+
+    def thread_pool_attach(self, thread_pool):
+        self.register_thread_pool_callbacks(thread_pool)
+
+    def thread_pool_detach(self):
+        pass
+
+    def register_thread_pool_callbacks(self, pool):
+        """Registers callbacks for the thread pool.
+        """
+        pool.register_on_thread_enter(self._on_thread_enter)
+        pool.register_on_thread_enter(self._on_thread_exit)
+
+    def _on_thread_enter(self):
+        """Called justed after the new thread has been created
+        in the thread pool.
+        """
+        pass
+
+    def _on_thread_exit(self):
+        """Called just before the thread will be terminated.
+        """
+        pass
+
+    @property
+    def exists(self):
+        """Returns True if device is ready for use.
+        """
+        return False
+
+
+@add_metaclass(CommandLineArgumentsRegistry)
+class OCLDevice(Device):
     """OpenCL device helper class.
 
     Attributes:
@@ -150,7 +228,7 @@ class Device(Pickleable):
     DEVICE_INFOES_JSON = "device_infos.json"
 
     def __init__(self):
-        super(Device, self).__init__()
+        super(OCLDevice, self).__init__()
 
         # Workaround for NVIDIA
         # (fixes incorrect behaviour with OpenCL binaries)
@@ -197,11 +275,15 @@ class Device(Pickleable):
         self.info(log_configs + str(table))
 
     @property
+    def backend_name(self):
+        return "ocl"
+
+    @property
     def exists(self):
         return self.queue_ is not None
 
     def init_unpickled(self):
-        super(Device, self).init_unpickled()
+        super(OCLDevice, self).init_unpickled()
         self.queue_ = None
         self.pid_ = os.getpid()
 
@@ -235,7 +317,8 @@ class Device(Pickleable):
         parser = kwargs.get("parser", argparse.ArgumentParser())
         parser.add_argument(
             "-d", "--device", type=str, default="",
-            help="OpenCL device to use.").completer = Device.arg_completer
+            help="OpenCL device to use.").completer = (
+            OCLDevice.arg_completer)
         return parser
 
     @property
@@ -246,14 +329,14 @@ class Device(Pickleable):
         """Gets some device from the available OpenCL devices.
         Returns True if any device was selected, otherwise, False.
         """
-        parser = Device.init_parser(**kwargs)
+        parser = OCLDevice.init_parser(**kwargs)
         args, _ = parser.parse_known_args()
         try:
             platforms = cl.Platforms()
         except cl.CLRuntimeError:
             platforms = None
         if platforms is None or len(platforms.platforms) == 0:
-            self.warning("No OpenCL devices was found")
+            self.warning("No OpenCL devices were found")
             return False
         if args.device == "":
             context = platforms.create_some_context()
@@ -290,7 +373,8 @@ class Device(Pickleable):
                     os.makedirs(devdir, 0o755)
                 except:
                     pass
-            device_infos_fnme = os.path.join(devdir, Device.DEVICE_INFOES_JSON)
+            device_infos_fnme = os.path.join(devdir,
+                                             OCLDevice.DEVICE_INFOES_JSON)
             if os.access(device_infos_fnme, os.R_OK):
                 try:
                     with open(device_infos_fnme, "r") as fin:
@@ -300,7 +384,8 @@ class Device(Pickleable):
                     self.exception("Failed to load %s", device_infos_fnme)
         if not found_any:
             self.warning("Did not find %s in any of the configured paths: %s",
-                         Device.DEVICE_INFOES_JSON, root.common.device_dirs)
+                         OCLDevice.DEVICE_INFOES_JSON,
+                         root.common.device_dirs)
         if ((self.device_info.desc not in device_infos and
              root.common.test_unknown_device) or
             (self.device_info.desc in device_infos and
@@ -312,8 +397,8 @@ class Device(Pickleable):
             self._find_optimal_block_size(device_infos)
             found_any = False
             for devdir in root.common.device_dirs:
-                device_infos_fnme = os.path.join(devdir,
-                                                 Device.DEVICE_INFOES_JSON)
+                device_infos_fnme = os.path.join(
+                    devdir, OCLDevice.DEVICE_INFOES_JSON)
                 if os.access(device_infos_fnme, os.W_OK):
                     with open(device_infos_fnme, "w") as fout:
                         json.dump(device_infos, fout, indent=2, sort_keys=True)
@@ -403,3 +488,124 @@ class Device(Pickleable):
 
         if self.device_info.desc in rating:
             self.device_info.rating = rating[self.device_info.desc]
+
+    def sync(self):
+        self.queue_.flush()
+        self.queue_.finish()
+
+
+@add_metaclass(CommandLineArgumentsRegistry)
+class CUDADevice(Device):
+    """CUDA device helper class.
+
+    Attributes:
+        _context_: CUDA context handle.
+        _blas_: dictionary of thread-id => CUBLAS instances.
+    """
+    def __init__(self):
+        super(CUDADevice, self).__init__()
+        self._context_ = None
+        self._blas_ = {}
+
+        # Get the device
+        self._get_some_device()
+
+        log_configs = "Selected the following CUDA device:\n"
+        table = prettytable.PrettyTable("device", "mem", "compute", "pci")
+        table.align["device"] = "l"
+        table.align["mem"] = "r"
+        table.align["pci"] = "l"
+        table.add_row(
+            self.context.device.name, self.context.device.total_mem // 1048576,
+            "%d.%d" % self.context.device.compute_capability,
+            self.context.device.pci_bus_id)
+        self.info(log_configs + str(table))
+
+    def thread_pool_attach(self, thread_pool):
+        self.context.push_current()
+        super(CUDADevice, self).thread_pool_attach(thread_pool)
+
+    def thread_pool_detach(self):
+        self.context.pop_current()
+
+    @property
+    def backend_name(self):
+        return "cuda"
+
+    @property
+    def context(self):
+        return self._context_
+
+    @property
+    def exists(self):
+        return self._context_ is not None
+
+    def _on_thread_enter(self):
+        self._context_.push_current()
+
+    def _on_thread_exit(self):
+        tid = threading.get_ident()
+        blas = self._blas_.pop(tid)
+        del blas
+        self._context_.pop_current()
+
+    @property
+    def blas(self):
+        tid = threading.get_ident()
+        blas = self._blas_.get(tid)
+        if blas is None:
+            blas = cublas.CUBLAS(self.context)
+            self._blas_[tid] = blas
+        return blas
+
+    @staticmethod
+    def arg_completer(prefix, **kwargs):
+        def format_device(device):
+            return "%d: %s - %s, %dMb, compute_%d%d, pci %s" % ((
+                device.handle, device.name, device.total_mem) +
+                device.compute_capability + (device.pci_bus_id,))
+
+        devices = cu.Devices()
+        if len(devices) == 1:
+            return ["0"]
+        result = []
+        for device in devices:
+            result.append(format_device(device))
+        return result
+
+    @staticmethod
+    def init_parser(**kwargs):
+        parser = kwargs.get("parser", argparse.ArgumentParser())
+        parser.add_argument(
+            "-D", "--cuda-device", type=str, default="",
+            help="CUDA device to use.").completer = CUDADevice.arg_completer
+        return parser
+
+    def _get_some_device(self, **kwargs):
+        """Gets some device from the available CUDA devices.
+        Returns True if any device was selected, otherwise, False.
+        """
+        parser = CUDADevice.init_parser(**kwargs)
+        args, _ = parser.parse_known_args()
+        try:
+            devices = cu.Devices()
+        except (OSError, cu.CUDARuntimeError):
+            devices = None
+        if devices is None or not len(devices):
+            self.warning("No CUDA devices were found")
+            return False
+        if args.cuda_device == "":
+            context = devices.create_some_context()
+        else:
+            try:
+                device = devices[int(args.cuda_device)]
+            except IndexError:
+                raise from_none(
+                    DeviceNotFoundError("CUDA device %s was not found." %
+                                        args.cuda_device))
+            context = device.create_context()
+        self._context_ = context
+        return True
+
+    def sync(self):
+        self.context.synchronize()

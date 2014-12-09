@@ -355,6 +355,8 @@ class Main(Logger, CommandLineBase):
         self.main_called = True
         try:
             self.device = Device() if self.opencl_is_enabled else None
+            if self.device is not None:
+                self.device.thread_pool_attach(self.workflow.thread_pool)
         except:
             self.exception("Failed to create the OpenCL device.")
             self.launcher.stop()
@@ -529,6 +531,12 @@ class Main(Logger, CommandLineBase):
             self._print_config(root)
 
         self._run_core(wm, args.background)
+
+        del wm
+        gc.collect()
+        if self.device is not None:
+            self.device.thread_pool_detach()
+
         self.info("End of job")
         return Main.EXIT_SUCCESS
 

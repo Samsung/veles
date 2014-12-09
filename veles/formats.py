@@ -5,6 +5,7 @@ Data formats for connectors.
 
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
+import cuda4py as cu
 import logging
 import numpy
 import os
@@ -13,7 +14,7 @@ import opencl4py as cl
 
 import veles.error as error
 from veles.distributable import Pickleable
-from veles.bufpool import OclBufPool
+from veles.opencl import Device
 
 
 class MemWatcher(object):
@@ -180,23 +181,23 @@ class NumDiff(object):
 
 
 class Vector(Pickleable):
-    """Container class for numpy array backed by OpenCL buffer.
+    """Container class for numpy array backed by GPU buffer.
 
     Arguments:
         data(:class:`numpy.ndarray`): `mem` attribute will be assigned to this
 
     Attributes:
-        device: OpenCL device.
+        device: Device object.
         mem: property for numpy array.
-        devmem: OpenCL buffer mapped to mem.
+        devmem: GPU buffer mapped to mem.
         _mem: numpy array.
         supposed_maxvle: supposed maximum element value.
-        map_arr_: pyopencl map object.
         map_flags: flags of the current map.
+        map_arr_: address of the mapping if any.
 
     Example of how to use:
         1. Construct an object:
-            a = formats.Vector()
+            a = Vector()
         2. Connect units be data:
             u2.b = u1.a
         3. Initialize numpy array:
@@ -211,12 +212,14 @@ class Vector(Pickleable):
         2. Update a.mem
         3. Call a.unmap() before executing OpenCL kernel
     """
+    backend_methods = ("map_read", "map_write", "map_invalidate", "unmap",
+                       "realign_mem", "create_devmem")
+
     def __init__(self, data=None):
         super(Vector, self).__init__()
         self._mem = data
         self.device = None
         self.supposed_maxvle = 1.0
-        self._bufpool = None
 
     @property
     def mem(self):
@@ -269,6 +272,7 @@ class Vector(Pickleable):
 
     def init_unpickled(self):
         super(Vector, self).init_unpickled()
+        self._unset_device()
         self.devmem = None
         self.map_arr_ = None
         self.map_flags = 0
@@ -322,61 +326,91 @@ class Vector(Pickleable):
         """
         self._mem[key] = value
 
+    def nothing(self, *args, **kwargs):
+        pass
+
+    def _unset_device(self):
+        for suffix in Vector.backend_methods:
+            setattr(self, "_backend_" + suffix + "_", self.nothing)
+
+    def set_backend(self, device):
+        self._reset(False)
+        if device is None:
+            self._unset_device()
+        elif not isinstance(device, Device):
+            raise ValueError("device must be an instance of Device, got %s" %
+                             repr(device))
+        else:
+            self.device = device
+            for suffix in Vector.backend_methods:
+                setattr(self, "_backend_" + suffix + "_",
+                        getattr(self, device.backend_name + "_" + suffix))
+
     @threadsafe
-    def initialize(self, unit, bufpool=True):
-        if (self._mem is None or self.devmem is not None or
-            (unit.device is None and
-             (bufpool is None and self._bufpool is None))):
+    def initialize(self, device):
+        if self._mem is None or self.devmem is not None or device is None:
             return
 
-        if bufpool is not None:
-            if isinstance(bufpool, bool):
-                if (hasattr(unit, 'workflow') and
-                        hasattr(unit.workflow, "bufpool") and
-                        unit.workflow.bufpool is not None):
-                    bufpool = unit.workflow.bufpool if bufpool else None
-                else:
-                    bufpool = None
-            elif not isinstance(bufpool, OclBufPool):
-                raise RuntimeError("Failed to initialize vector: "
-                                   "cannot recognize bufpool type")
+        self.set_backend(device)
 
-        if unit.device is None or unit.device.device_info.memalign <= 4096:
-            memalign = 4096
-        else:
-            memalign = unit.device.device_info.memalign
-        self._mem = cl.realign_array(self._mem, memalign, numpy)
+        self._backend_realign_mem_()
 
-        if (bufpool is None and self._bufpool is None and
-                unit.device is not None):
-            # create standalone ocl buffer
-            self.device = unit.device
-            self.devmem = self.device.queue_.context.create_buffer(
-                cl.CL_MEM_READ_WRITE | cl.CL_MEM_USE_HOST_PTR,
-                ravel(self._mem))
+        self._backend_create_devmem_()
 
-            # account mem in memwatcher
-            if self.devmem is not None:
-                with MemWatcher.mutex:
-                    MemWatcher.mem_in_use += self.devmem.size
-                    MemWatcher.max_mem_in_use = max(MemWatcher.mem_in_use,
-                                                    MemWatcher.max_mem_in_use)
-        elif (unit is not None and
-              (bufpool is not None or self._bufpool is not None)):
-            # planing to create ocl buffer using bufpool
-            self.devmem = None
-            if bufpool is not None:
-                self._bufpool = bufpool
-            self._bufpool.add(unit, self)
+        # Account mem in memwatcher
+        if self.devmem is not None:
+            with MemWatcher.mutex:
+                MemWatcher.mem_in_use += self.devmem.size
+                MemWatcher.max_mem_in_use = max(MemWatcher.mem_in_use,
+                                                MemWatcher.max_mem_in_use)
 
-    def _map(self, flags):
+    @threadsafe
+    def map_read(self):
+        return self._backend_map_read_()
+
+    @threadsafe
+    def map_write(self):
+        return self._backend_map_write_()
+
+    @threadsafe
+    def map_invalidate(self):
+        return self._backend_map_invalidate_()
+
+    @threadsafe
+    def unmap(self):
+        return self._backend_unmap_()
+
+    @threadsafe
+    def reset(self, clear_hostmem=True):
+        """Sets device buffers to None and optionally host buffer.
+        """
+        return self._reset(clear_hostmem)
+
+    def _reset(self, clear_hostmem):
+        self._backend_unmap_()
+        if self.devmem is not None:
+            with MemWatcher.mutex:
+                MemWatcher.mem_in_use -= self.devmem.size
+        self.devmem = None
+        self.map_flags = 0
+        if clear_hostmem:
+            self._mem = None
+
+    threadsafe = staticmethod(threadsafe)
+
+    def ocl_create_devmem(self):
+        self.devmem = self.device.queue_.context.create_buffer(
+            cl.CL_MEM_READ_WRITE | cl.CL_MEM_USE_HOST_PTR,
+            ravel(self._mem))
+
+    def ocl_map(self, flags):
         if self.device is None:
             return
         if self.map_arr_ is not None:
             # already mapped properly, nothing to do
             if self.map_flags != cl.CL_MAP_READ or flags == cl.CL_MAP_READ:
                 return
-            self._unmap()
+            self.ocl_unmap()
         if (flags == cl.CL_MAP_WRITE_INVALIDATE_REGION and
                 self.device.device_info.version < 1.1999):
             # 'cause available only starting with 1.2
@@ -384,6 +418,7 @@ class Vector(Pickleable):
         try:
             ev, self.map_arr_ = self.device.queue_.map_buffer(
                 self.devmem, flags, self._mem.nbytes)
+            del ev
         except cl.CLRuntimeError as err:
             self.error("Failed to map %d OpenCL bytes: %s(%d)",
                        self._mem.nbytes, str(err), err.code)
@@ -391,10 +426,18 @@ class Vector(Pickleable):
         if (int(cl.ffi.cast("size_t", self.map_arr_)) !=
                 self._mem.__array_interface__["data"][0]):
             raise error.OpenCLError("map_buffer returned different pointer")
-        del ev
         self.map_flags = flags
 
-    def _unmap(self):
+    def ocl_map_read(self):
+        self.ocl_map(cl.CL_MAP_READ)
+
+    def ocl_map_write(self):
+        self.ocl_map(cl.CL_MAP_WRITE)
+
+    def ocl_map_invalidate(self):
+        self.ocl_map(cl.CL_MAP_WRITE_INVALIDATE_REGION)
+
+    def ocl_unmap(self):
         map_arr = self.map_arr_
         if map_arr is None:
             return
@@ -409,32 +452,45 @@ class Vector(Pickleable):
         self.map_arr_ = None
         self.map_flags = 0
 
-    @threadsafe
-    def map_read(self):
-        self._map(cl.CL_MAP_READ)
-
-    @threadsafe
-    def map_write(self):
-        self._map(cl.CL_MAP_WRITE)
-
-    @threadsafe
-    def map_invalidate(self):
-        self._map(cl.CL_MAP_WRITE_INVALIDATE_REGION)
-
-    @threadsafe
-    def unmap(self):
-        self._unmap()
-
-    @threadsafe
-    def reset(self):
-        """Sets buffers to None
+    def ocl_realign_mem(self):
+        """We are using CL_MEM_USE_HOST_PTR, so memory should be PAGE-aligned.
         """
-        self._unmap()
-        if self.devmem is not None:
-            with MemWatcher.mutex:
-                MemWatcher.mem_in_use -= self.devmem.size
-        self.devmem = None
-        self._mem = None
+        if self.device is None or self.device.device_info.memalign <= 4096:
+            memalign = 4096
+        else:
+            memalign = self.device.device_info.memalign
+        self._mem = cl.realign_array(self._mem, memalign, numpy)
+
+    def cuda_create_devmem(self):
+        self.devmem = cu.MemAlloc(self.device.context, self.mem.nbytes)
+        self.devmem.to_device(self.mem)
+
+    def cuda_map_read(self):
+        if self.device is None or self.map_flags >= 1:
+            return
+        self.devmem.to_host(self.mem)
+        self.map_flags = 1
+
+    def cuda_map_write(self):
+        if self.device is None or self.map_flags >= 2:
+            return
+        if self.map_flags <= 1:
+            self.devmem.to_host(self.mem)
+        self.map_flags = 2
+
+    def cuda_map_invalidate(self):
+        if self.device is None or self.map_flags >= 1:
+            return
+        self.map_flags = 2
+
+    def cuda_unmap(self):
+        if self.map_flags <= 1:
+            self.map_flags = 0
+            return
+        self.devmem.to_device_async(self.mem)
         self.map_flags = 0
 
-    threadsafe = staticmethod(threadsafe)
+    def cuda_realign_mem(self):
+        """We are using simple cuMemAlloc, so host memory can be unaligned.
+        """
+        pass

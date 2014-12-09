@@ -42,12 +42,12 @@ class TestRandom1024(unittest.TestCase):
 
         obj = TrivialOpenCLUnit(DummyWorkflow())
         obj.initialize(device=self.device)
-        states.initialize(obj)
-        output.initialize(obj)
+        states.initialize(self.device)
+        output.initialize(self.device)
 
-        obj.cl_sources_["random.cl"] = {'LOG_CHUNK': self.chunk}
+        obj.cl_sources_["random"] = {'LOG_CHUNK': self.chunk}
         obj.build_program({}, os.path.join(root.common.cache_dir,
-                                           "test_random.cl"))
+                                           "test_random"))
 
         krn = obj.get_kernel("random_xorshift1024star")
         krn.set_args(states.devmem, n_rounds, output.devmem)
@@ -115,12 +115,12 @@ class TestRandom128(unittest.TestCase):
 
         obj = TrivialOpenCLUnit(DummyWorkflow())
         obj.initialize(device=self.device)
-        states.initialize(obj)
-        output.initialize(obj)
+        states.initialize(self.device)
+        output.initialize(self.device)
 
-        obj.cl_sources_["random.cl"] = {'LOG_CHUNK': self.chunk}
+        obj.cl_sources_["random"] = {'LOG_CHUNK': self.chunk}
         obj.build_program({}, os.path.join(root.common.cache_dir,
-                                           "test_random.cl"))
+                                           "test_random"))
         obj.assign_kernel("random_xorshift128plus")
         obj.set_args(states, output)
         obj.execute_kernel((output.mem.size >> self.chunk,), None,

@@ -57,6 +57,9 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         Creates a new thread pool and starts it.
         """
+        self.on_shutdowns = []
+        self.on_thread_enters = []
+        self.on_thread_exits = []
         if six.PY3:
             super(ThreadPool, self).__init__(
                 minthreads=minthreads, maxthreads=maxthreads, name=name)
@@ -66,7 +69,6 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         logger.Logger.__init__(self)
         self.q = queue.Queue(queue_size)
         self.start()
-        self.on_shutdowns = []
         self.silent = False
         self._shutting_down = False
         self._shutting_down_lock_ = threading.Lock()
@@ -106,6 +108,29 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     def __del__(self):
         if not self.joined:
             self.shutdown(False, True)
+
+    def _worker(self):
+        for on_thread_enter in self.on_thread_enters:
+            if isinstance(on_thread_enter, weakref.ReferenceType):
+                on_thread_enter()
+        super(ThreadPool, self)._worker()
+        for on_thread_exit in self.on_thread_exits:
+            if isinstance(on_thread_exit, weakref.ReferenceType):
+                on_thread_exit()
+
+    def register_on_thread_enter(self, func, weak=True):
+        """
+        Adds the specified function to the list of callbacks which are
+        executed just after the new thread created in the thread pool.
+        """
+        self.on_thread_enters.append(weakref.ref(func) if weak else func)
+
+    def register_on_thread_exit(self, func, weak=True):
+        """
+        Adds the specified function to the list of callbacks which are
+        executed just before the thread terminates.
+        """
+        self.on_thread_exits.append(weakref.ref(func) if weak else func)
 
     @staticmethod
     def init_parser(**kwargs):
