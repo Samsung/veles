@@ -37,9 +37,11 @@ __device__ double atomicAdd(double* address, double val) {
 }
 
 /// @brief Sets all elements of array to zero.
+extern "C"
 __global__ void ClearArray32(float* address) {
   address[threadIdx.x + blockIdx.x * blockDim.x] = 0;
 }
+extern "C"
 __global__ void ClearArray64(double* address) {
   address[threadIdx.x + blockIdx.x * blockDim.x] = 0;
 }
