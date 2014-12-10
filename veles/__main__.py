@@ -30,7 +30,8 @@ from veles.config import root
 from veles.external import daemon
 from veles.logger import Logger
 from veles.launcher import Launcher
-from veles.opencl import Device
+from veles.backends import Device
+from veles.memory import Watcher
 from veles.pickle2 import setup_pickle_debug
 from veles import prng
 from veles.snapshotter import Snapshotter
@@ -361,11 +362,17 @@ class Main(Logger, CommandLineBase):
             self.exception("Failed to create the OpenCL device.")
             self.launcher.stop()
             sys.exit(Main.EXIT_FAILURE)
+
+        def device_thread_pool_detach():
+            if self.device is not None:
+                self.device.thread_pool_detach()
+
         try:
             self.workflow.initialize(device=self.device, **kwargs)
         except:
             self.exception("Failed to initialize the workflow")
             self.launcher.stop()
+            device_thread_pool_detach()
             sys.exit(Main.EXIT_FAILURE)
         self.debug("Workflow initialization has been completed")
         try:
@@ -382,6 +389,8 @@ class Main(Logger, CommandLineBase):
             self.exception("Failed to run the workflow")
             self.launcher.stop()
             sys.exit(Main.EXIT_FAILURE)
+        finally:
+            device_thread_pool_detach()
 
     def _dump_unit_attributes(self, arrays=True):
         import veles.external.prettytable as prettytable
@@ -469,8 +478,18 @@ class Main(Logger, CommandLineBase):
         self.debug("\n%s", io.getvalue().strip())
 
     def print_max_rss(self):
+        def space_group(val):
+            if val < 1000:
+                return "%d" % val
+            d, m = divmod(val, 1000)
+            return space_group(d) + " %d" % m
+
         res = resource.getrusage(resource.RUSAGE_SELF)
-        self.info("Peak resident memory used: %d Kb", res.ru_maxrss)
+        if Watcher.max_mem_in_use > 0:
+            self.info("Peak device memory used: %s Kb",
+                      space_group(Watcher.max_mem_in_use // 1000))
+        self.info("Peak resident memory used: %s Kb",
+                  space_group(res.ru_maxrss))
 
     def run_module(self, module):
         self.debug("Calling %s.run()...", module.__name__)
@@ -531,11 +550,6 @@ class Main(Logger, CommandLineBase):
             self._print_config(root)
 
         self._run_core(wm, args.background)
-
-        del wm
-        gc.collect()
-        if self.device is not None:
-            self.device.thread_pool_detach()
 
         self.info("End of job")
         return Main.EXIT_SUCCESS

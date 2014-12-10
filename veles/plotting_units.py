@@ -13,7 +13,7 @@ import time
 from zope.interface import implementer
 
 import veles.error as error
-import veles.formats as formats
+import veles.memory as formats
 from veles.compat import from_none
 from veles.distributable import IDistributable
 from veles.mutable import Bool

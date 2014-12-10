@@ -13,7 +13,7 @@ import threading
 
 from veles.config import root
 from veles.distributable import Pickleable
-import veles.formats as formats
+import veles.memory as formats
 
 
 class RandomGenerator(Pickleable):

@@ -13,8 +13,8 @@ import numpy
 import unittest
 
 from veles.config import root
-from veles.formats import Vector
-import veles.opencl as opencl
+from veles.memory import Vector
+import veles.backends as opencl
 import veles.opencl_types as opencl_types
 import veles.prng as rnd
 from veles.mean_disp_normalizer import MeanDispNormalizer

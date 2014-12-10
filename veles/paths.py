@@ -7,4 +7,4 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 
 import os
 
-__root__ = os.path.dirname(os.path.dirname(__file__))
+__root__ = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))

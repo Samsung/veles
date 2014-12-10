@@ -12,8 +12,8 @@ def update(root):
             "host": "smaug",
             "port": 8090,
         },
-        "compute": {
-            "dirs": (os.environ.get("VELES_OPENCL_DIRS", "").split(":") +
+        "engine": {
+            "dirs": (os.environ.get("VELES_ENGINE_DIRS", "").split(":") +
                      [__root__])
         }
     })

@@ -4,6 +4,7 @@ Created on Jan 21, 2014
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
+from __future__ import print_function
 import argparse
 import copy
 import functools
@@ -11,7 +12,7 @@ import logging
 import signal
 import six
 from six.moves import queue
-from six import add_metaclass, print_
+from six import add_metaclass
 import sys
 import threading
 from traceback import print_stack
@@ -109,29 +110,6 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         if not self.joined:
             self.shutdown(False, True)
 
-    def _worker(self):
-        for on_thread_enter in self.on_thread_enters:
-            if isinstance(on_thread_enter, weakref.ReferenceType):
-                on_thread_enter()
-        super(ThreadPool, self)._worker()
-        for on_thread_exit in self.on_thread_exits:
-            if isinstance(on_thread_exit, weakref.ReferenceType):
-                on_thread_exit()
-
-    def register_on_thread_enter(self, func, weak=True):
-        """
-        Adds the specified function to the list of callbacks which are
-        executed just after the new thread created in the thread pool.
-        """
-        self.on_thread_enters.append(weakref.ref(func) if weak else func)
-
-    def register_on_thread_exit(self, func, weak=True):
-        """
-        Adds the specified function to the list of callbacks which are
-        executed just before the thread terminates.
-        """
-        self.on_thread_exits.append(weakref.ref(func) if weak else func)
-
     @staticmethod
     def init_parser(**kwargs):
         parser = kwargs.get("parser", argparse.ArgumentParser())
@@ -150,19 +128,16 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         return cls._manhole
 
     def callInThreadWithCallback(self, onResult, func, *args, **kw):
+        """
+        Overrides threadpool.ThreadPool.callInThreadWithCallback().
+        """
         self._not_paused.wait()
         with self._shutting_down_lock_:
             if self._shutting_down or not self.started:
                 return
-            threadpool.ThreadPool.callInThreadWithCallback(
-                self, functools.partial(self._on_result, onResult),
+            super(ThreadPool, self).callInThreadWithCallback(
+                functools.partial(self._on_result, onResult),
                 func, *args, **kw)
-
-    def _on_result(self, original, success, result):
-        if original is not None:
-            return original(success, result)
-        if not success:
-            errback(result)
 
     def pause(self):
         self._not_paused.clear()
@@ -177,6 +152,36 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     @property
     def paused(self):
         return not self._not_paused.is_set()
+
+    def _on_result(self, original, success, result):
+        if original is not None:
+            return original(success, result)
+        if not success:
+            errback(result)
+
+    def _worker(self):
+        """
+        Overrides threadpool.ThreadPool._worker().
+        """
+        for on_thread_enter in self.on_thread_enters:
+            on_thread_enter()
+        super(ThreadPool, self)._worker()
+        for on_thread_exit in self.on_thread_exits:
+            on_thread_exit()
+
+    def register_on_thread_enter(self, func, weak=True):
+        """
+        Adds the specified function to the list of callbacks which are
+        executed just after the new thread created in the thread pool.
+        """
+        self.on_thread_enters.append(weakref.ref(func) if weak else func)
+
+    def register_on_thread_exit(self, func, weak=True):
+        """
+        Adds the specified function to the list of callbacks which are
+        executed just before the thread terminates.
+        """
+        self.on_thread_exits.append(weakref.ref(func) if weak else func)
 
     def register_on_shutdown(self, func, weak=True):
         """
@@ -307,6 +312,12 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         Terminates the running program safely.
         """
         ThreadPool._exit()
+        if sys.exit == ThreadPool.exit:
+            print("Detected an infinite recursion in sys.exit(), "
+                  "restoring %s" % sysexit_initial,
+                  file=sys.stderr)
+            assert sysexit_initial != ThreadPool.exit
+            sys.exit = sysexit_initial
         sys.exit(retcode)
 
     @staticmethod
@@ -348,13 +359,13 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         Private method - handler for SIGUSR1.
         """
         print("SIGUSR1 was received, dumping current frames...")
-        ThreadPool.print_thread_stacks()
+        ThreadPool.printthread_stacks()
 
     @staticmethod
-    def print_thread_stacks():
+    def printthread_stacks():
         if not hasattr(sys, "_current_frames"):
-            print_("Threads' stacks printing is not implemented for this "
-                   "Python interpreter", file=sys.stderr)
+            print("Threads' stacks printing is not implemented for this "
+                  "Python interpreter", file=sys.stderr)
             return
         tmap = {thr.ident: thr.name for thr in threading.enumerate()}
         for tid, stack in sys._current_frames().items():
@@ -377,4 +388,4 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                             str(threading.enumerate())
                             if hasattr(threading, "_active")
                             else "<unable to list active threads>")
-            ThreadPool.print_thread_stacks()
+            ThreadPool.printthread_stacks()

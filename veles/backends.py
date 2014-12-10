@@ -13,11 +13,11 @@ import cuda4py.blas as cublas
 import gc
 import json
 import numpy
+import opencl4py as cl
 import os
 from six import add_metaclass
 import sys
-import opencl4py as cl
-import threading
+from threading import current_thread
 
 from veles.cmdline import CommandLineArgumentsRegistry
 from veles.compat import from_none
@@ -146,16 +146,10 @@ class Device(Pickleable):
         _pid: process id.
     """
     def __new__(cls, *args, **kwargs):
-        if cls is not Device:
-            return super(Device, cls).__new__(cls, *args, **kwargs)
-        backend = kwargs.get("backend")
-        if backend is None:
-            backend = root.common.compute.backend
-        cls = {"cuda": CUDADevice, "ocl": OCLDevice}.get(backend)
+        assert issubclass(cls, Device)
+        backend = kwargs.get("backend", root.common.engine.backend)
+        cls = BackendRegistry.backends[backend]
         return super(Device, cls).__new__(cls, *args, **kwargs)
-
-    def __init__(self):
-        super(Device, self).__init__()
 
     def init_unpickled(self):
         super(Device, self).init_unpickled()
@@ -214,8 +208,16 @@ class Device(Pickleable):
         return False
 
 
-@add_metaclass(CommandLineArgumentsRegistry)
-class OCLDevice(Device):
+class BackendRegistry(CommandLineArgumentsRegistry):
+    backends = {}
+
+    def __init__(cls, name, bases, clsdict):
+        super(BackendRegistry, cls).__init__(name, bases, clsdict)
+        BackendRegistry.backends[clsdict["BACKEND"]] = cls
+
+
+@add_metaclass(BackendRegistry)
+class OpenCLDevice(Device):
     """OpenCL device helper class.
 
     Attributes:
@@ -225,10 +227,11 @@ class OCLDevice(Device):
         pid_: process id.
     """
 
-    DEVICE_INFOES_JSON = "device_infos.json"
+    BACKEND = "ocl"
+    DEVICE_INFOS_JSON = "device_infos.json"
 
     def __init__(self):
-        super(OCLDevice, self).__init__()
+        super(OpenCLDevice, self).__init__()
 
         # Workaround for NVIDIA
         # (fixes incorrect behaviour with OpenCL binaries)
@@ -283,7 +286,7 @@ class OCLDevice(Device):
         return self.queue_ is not None
 
     def init_unpickled(self):
-        super(OCLDevice, self).init_unpickled()
+        super(OpenCLDevice, self).init_unpickled()
         self.queue_ = None
         self.pid_ = os.getpid()
 
@@ -318,7 +321,7 @@ class OCLDevice(Device):
         parser.add_argument(
             "-d", "--device", type=str, default="",
             help="OpenCL device to use.").completer = (
-            OCLDevice.arg_completer)
+            OpenCLDevice.arg_completer)
         return parser
 
     @property
@@ -329,7 +332,7 @@ class OCLDevice(Device):
         """Gets some device from the available OpenCL devices.
         Returns True if any device was selected, otherwise, False.
         """
-        parser = OCLDevice.init_parser(**kwargs)
+        parser = OpenCLDevice.init_parser(**kwargs)
         args, _ = parser.parse_known_args()
         try:
             platforms = cl.Platforms()
@@ -374,7 +377,7 @@ class OCLDevice(Device):
                 except:
                     pass
             device_infos_fnme = os.path.join(devdir,
-                                             OCLDevice.DEVICE_INFOES_JSON)
+                                             OpenCLDevice.DEVICE_INFOS_JSON)
             if os.access(device_infos_fnme, os.R_OK):
                 try:
                     with open(device_infos_fnme, "r") as fin:
@@ -384,7 +387,7 @@ class OCLDevice(Device):
                     self.exception("Failed to load %s", device_infos_fnme)
         if not found_any:
             self.warning("Did not find %s in any of the configured paths: %s",
-                         OCLDevice.DEVICE_INFOES_JSON,
+                         OpenCLDevice.DEVICE_INFOS_JSON,
                          root.common.device_dirs)
         if ((self.device_info.desc not in device_infos and
              root.common.test_unknown_device) or
@@ -398,7 +401,7 @@ class OCLDevice(Device):
             found_any = False
             for devdir in root.common.device_dirs:
                 device_infos_fnme = os.path.join(
-                    devdir, OCLDevice.DEVICE_INFOES_JSON)
+                    devdir, OpenCLDevice.DEVICE_INFOS_JSON)
                 if os.access(device_infos_fnme, os.W_OK):
                     with open(device_infos_fnme, "w") as fout:
                         json.dump(device_infos, fout, indent=2, sort_keys=True)
@@ -494,7 +497,7 @@ class OCLDevice(Device):
         self.queue_.finish()
 
 
-@add_metaclass(CommandLineArgumentsRegistry)
+@add_metaclass(BackendRegistry)
 class CUDADevice(Device):
     """CUDA device helper class.
 
@@ -502,6 +505,9 @@ class CUDADevice(Device):
         _context_: CUDA context handle.
         _blas_: dictionary of thread-id => CUBLAS instances.
     """
+
+    BACKEND = "cuda"
+
     def __init__(self):
         super(CUDADevice, self).__init__()
         self._context_ = None
@@ -544,14 +550,14 @@ class CUDADevice(Device):
         self._context_.push_current()
 
     def _on_thread_exit(self):
-        tid = threading.get_ident()
+        tid = current_thread().ident
         blas = self._blas_.pop(tid)
         del blas
         self._context_.pop_current()
 
     @property
     def blas(self):
-        tid = threading.get_ident()
+        tid = current_thread().ident
         blas = self._blas_.get(tid)
         if blas is None:
             blas = cublas.CUBLAS(self.context)

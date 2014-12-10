@@ -13,9 +13,9 @@ import os
 import unittest
 
 from veles.config import root
-import veles.formats as formats
-import veles.opencl as opencl
-from veles.opencl_units import TrivialOpenCLUnit
+import veles.memory as formats
+import veles.backends as opencl
+from veles.accelerated_units import TrivialOpenCLUnit
 import veles.prng as rnd
 from veles.dummy import DummyWorkflow
 

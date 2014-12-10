@@ -17,9 +17,9 @@ import time
 from zope.interface import implementer, Interface
 
 from veles.config import root
-import veles.formats as formats
+import veles.memory as formats
 import veles.opencl_types as opencl_types
-from veles.opencl import Device, OCLDevice
+from veles.backends import Device, OpenCLDevice
 from veles.pickle2 import pickle, best_protocol
 from veles.timeit import timeit
 from veles.units import Unit, IUnit, UnitCommandLineArgumentsRegistry
@@ -45,7 +45,7 @@ class IOpenCLUnit(Interface):
 
 @implementer(IUnit)
 @add_metaclass(UnitCommandLineArgumentsRegistry)
-class OpenCLUnit(Unit):
+class AcceleratedUnit(Unit):
     """Unit that operates using OpenCL.
 
     Attributes:
@@ -59,7 +59,7 @@ class OpenCLUnit(Unit):
     hide = True
 
     def __init__(self, workflow, **kwargs):
-        super(OpenCLUnit, self).__init__(workflow, **kwargs)
+        super(AcceleratedUnit, self).__init__(workflow, **kwargs)
         self.verify_interface(IOpenCLUnit)
         self._device = None
         self._cache = kwargs.get("cache", True)
@@ -68,10 +68,10 @@ class OpenCLUnit(Unit):
         self.prefer_numpy = root.common.prefer_numpy_on_cpu
 
     def init_unpickled(self):
-        super(OpenCLUnit, self).init_unpickled()
+        super(AcceleratedUnit, self).init_unpickled()
         self.program_ = None
         self.cl_sources_ = {}
-        parser = OpenCLUnit.init_parser()
+        parser = AcceleratedUnit.init_parser()
         args, _ = parser.parse_known_args()
         self._force_cpu = self.__class__.__name__ in args.force_cpu.split(',')
         self._sync = args.sync_ocl
@@ -88,23 +88,18 @@ class OpenCLUnit(Unit):
             raise TypeError("device must be of type veles.opencl.Device (%s "
                             "was specified)" % value.__class__)
         self._device = value
-        self.set_backend(value)
-
-    def set_backend(self, device):
-        """Assigns backend functions according to the device type.
-        """
-        if device is None or self.force_cpu:
+        if value is None or self.force_cpu:
             backend = "cpu"
         else:
-            backend = device.backend_name
-        for suffix in OpenCLUnit.backend_methods:
+            backend = value.backend_name
+        for suffix in AcceleratedUnit.backend_methods:
             setattr(self, "_backend_" + suffix + "_",
                     getattr(self, backend + "_" + suffix))
-        if self._sync and device is not None:
+        if self._sync and value is not None:
             self._original_run_ = self._backend_run_
-            self._backend_run_ = self._run_with_sync
+            self._backend_run_ = self._run_synchronized
 
-    def _run_with_sync(self):
+    def _run_synchronized(self):
         self._original_run_()
         self.device.sync()
 
@@ -140,7 +135,7 @@ class OpenCLUnit(Unit):
             self.device = None
         # TODO(a.kazantsev): remove prefer_numpy.
         self.prefer_numpy = (self.prefer_numpy and self.device is not None and
-                             (isinstance(device, OCLDevice) and
+                             (isinstance(device, OpenCLDevice) and
                               device.device_info.is_cpu))
 
     def cpu_init(self):
@@ -209,7 +204,7 @@ class OpenCLUnit(Unit):
         source, my_defines = self._generate_source(defines, dtype, ".cl")
         show_ocl_logs = self.logger.isEnabledFor(logging.DEBUG)
         self.program_ = self.device.queue_.context.create_program(
-            source, list(x + "/ocl" for x in root.common.compute.dirs),
+            source, [os.path.join(x, "ocl") for x in root.common.engine.dirs],
             "-cl-nv-verbose" if show_ocl_logs and "cl_nv_compiler_options" in
             self.device.queue_.device.extensions else "")
         if show_ocl_logs and len(self.program_.build_logs):
@@ -243,7 +238,7 @@ class OpenCLUnit(Unit):
         show_logs = self.logger.isEnabledFor(logging.DEBUG)
         self.program_ = self.device.context.create_module(
             source=source,
-            include_dirs=list(x + "/cuda" for x in root.common.compute.dirs))
+            include_dirs=list(x + "/cuda" for x in root.common.engine.dirs))
         if show_logs and len(self.program_.stderr):
             self.debug("Non-empty CUDA build log encountered: %s",
                        self.program_.stderr)
@@ -344,7 +339,7 @@ class OpenCLUnit(Unit):
     def _search_include(self, file_name):
         if os.path.exists(file_name):
             return os.path.abspath(file_name)
-        for d in root.common.compute.dirs:
+        for d in root.common.engine.dirs:
             full = os.path.join(d + "/" + self.device.backend_name, file_name)
             if os.path.exists(full):
                 return os.path.abspath(full)
@@ -441,7 +436,7 @@ class OpenCLUnit(Unit):
 
 
 @implementer(IOpenCLUnit)
-class TrivialOpenCLUnit(OpenCLUnit):
+class TrivialOpenCLUnit(AcceleratedUnit):
     def cpu_run(self):
         pass
 
@@ -459,13 +454,13 @@ class TrivialOpenCLUnit(OpenCLUnit):
 
 
 @implementer(IOpenCLUnit)
-class OpenCLBenchmark(OpenCLUnit):
+class DeviceBenchmark(AcceleratedUnit):
     """
     Executes an OpenCL benchmark to estimate the computing power of the device.
     """
 
     def __init__(self, workflow, **kwargs):
-        super(OpenCLBenchmark, self).__init__(workflow, **kwargs)
+        super(DeviceBenchmark, self).__init__(workflow, **kwargs)
         self.dtype = kwargs.get("dtype", root.common.precision_type)
         dtype = opencl_types.dtypes[self.dtype]
         self.size = kwargs.get("size", 1500)
@@ -483,7 +478,7 @@ class OpenCLBenchmark(OpenCLUnit):
     def initialize(self, device, **kwargs):
         """Compiles the benchmarking kernel.
         """
-        super(OpenCLBenchmark, self).initialize(device=device, **kwargs)
+        super(DeviceBenchmark, self).initialize(device=device, **kwargs)
         if device is None:
             self.input_A_.mem = self.input_A_.mem.reshape(self.size, self.size)
             self.input_B_.mem = self.input_B_.mem.reshape(self.size, self.size)
@@ -561,17 +556,17 @@ class OpenCLBenchmark(OpenCLUnit):
         self.estimate()
 
 
-class OpenCLWorkflow(Workflow):
+class AcceleratedWorkflow(Workflow):
     """Base class for OpenCL workflows.
     """
 
     def __init__(self, workflow, **kwargs):
-        super(OpenCLWorkflow, self).__init__(workflow, **kwargs)
+        super(AcceleratedWorkflow, self).__init__(workflow, **kwargs)
         self._power_measure_time_interval = kwargs.get(
             'power_measure_time_interval', 120)
 
     def init_unpickled(self):
-        super(OpenCLWorkflow, self).init_unpickled()
+        super(AcceleratedWorkflow, self).init_unpickled()
         self._power_ = 0
         self._last_power_measurement_time = 0
         self.device = None
@@ -589,16 +584,16 @@ class OpenCLWorkflow(Workflow):
                 self._power_measure_time_interval):
             self._last_power_measurement_time = now
             with self:
-                bench = OpenCLBenchmark(self)
+                bench = DeviceBenchmark(self)
                 bench.initialize(self.device)
                 self._power_ = bench.estimate()
             self.info("Computing power is %.2f", self._power_)
         return self._power_
 
     def initialize(self, device, **kwargs):
-        super(OpenCLWorkflow, self).initialize(device=device, **kwargs)
+        super(AcceleratedWorkflow, self).initialize(device=device, **kwargs)
         self.device = device
 
     def filter_unit_graph_attrs(self, val):
         return (not isinstance(val, Device) and
-                super(OpenCLWorkflow, self).filter_unit_graph_attrs(val))
+                super(AcceleratedWorkflow, self).filter_unit_graph_attrs(val))

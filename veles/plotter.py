@@ -9,7 +9,7 @@ import time
 from zope.interface import implementer
 
 from veles.distributable import TriviallyDistributable
-from veles.formats import Vector
+from veles.memory import Vector
 from veles.iplotter import IPlotter  # pylint: disable=W0611
 from veles.graphics_server import GraphicsServer
 from veles.units import Unit, IUnit

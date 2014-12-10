@@ -50,7 +50,7 @@ class SnapshotterBase(Unit):
         self.compress = kwargs.get("compress", "gz")
         self.compress_level = kwargs.get("compress_level", 9)
         self.interval = kwargs.get("interval", 1)
-        self.time_interval = kwargs.get("time_interval", 1)
+        self.time_interval = kwargs.get("time_interval", 15)
         self.time = 0
         self._skipped_counter = 0
         self.file_name = ""
@@ -62,6 +62,9 @@ class SnapshotterBase(Unit):
 
     def initialize(self, **kwargs):
         self.time = time.time()
+        self.debug("Compression is set to %s", self.compress)
+        self.debug("interval = %d", self.interval)
+        self.debug("time_interval = %f", self.time_interval)
 
     def run(self):
         if self.is_slave or root.common.disable_snapshots:

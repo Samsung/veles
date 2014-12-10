@@ -11,13 +11,13 @@ import numpy
 from zope.interface import implementer
 
 import veles.error as error
-from veles.formats import Vector, roundup
-from veles.opencl_units import OpenCLUnit, IOpenCLUnit
+from veles.memory import Vector, roundup
+from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit
 from veles.prng.random_generator import get
 
 
 @implementer(IOpenCLUnit)
-class Uniform(OpenCLUnit):
+class Uniform(AcceleratedUnit):
     """Generates random numbers from uniform distribution.
 
     Attributes:

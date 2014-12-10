@@ -25,3 +25,4 @@ wget>=2.2
 service_identity>=0.2
 pygit2>=0.21
 pyinotify>=0.9.4
+cuda4py>=1.0

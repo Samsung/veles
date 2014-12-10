@@ -8,24 +8,66 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 import cuda4py as cu
 import logging
 import numpy
+import six
 import os
 import threading
 import opencl4py as cl
 
+from veles.compat import from_none
 import veles.error as error
 from veles.distributable import Pickleable
-from veles.opencl import Device
+from veles.backends import Device
 
 
-class MemWatcher(object):
-    mem_in_use = 0
-    max_mem_in_use = 0
-    mutex = threading.Lock()
+class WatcherMeta(type):
+    def __init__(cls, *args, **kwargs):
+        super(WatcherMeta, cls).__init__(*args, **kwargs)
+        cls._mutex = threading.Lock()
+        cls._mem_in_use = 0
+        cls._max_mem_in_use = 0
 
-    @staticmethod
-    def reset_counter():
-        with MemWatcher.mutex:
-            MemWatcher.max_mem_in_use = MemWatcher.mem_in_use
+    def __enter__(cls):
+        cls._mutex.acquire()
+
+    def __exit__(cls, *args, **kwargs):
+        cls._mutex.release()
+
+    def threadsafe(method):
+        def wrapped(cls, *args, **kwargs):
+            with cls:
+                return method(cls, *args, **kwargs)
+
+        return wrapped
+
+    @property
+    def mem_in_use(cls):
+        return cls._mem_in_use
+
+    @property
+    def max_mem_in_use(cls):
+        return cls._max_mem_in_use
+
+    @threadsafe
+    def reset_counter(cls):
+        cls._max_mem_in_use = cls._mem_in_use
+
+    @threadsafe
+    def __iadd__(cls, other):
+        cls._mem_in_use += other
+        cls._max_mem_in_use = max(cls._mem_in_use, cls._max_mem_in_use)
+        return cls
+
+    @threadsafe
+    def __isub__(cls, other):
+        cls._mem_in_use -= other
+        return cls
+
+    threadsafe = staticmethod(threadsafe)
+
+
+@six.add_metaclass(WatcherMeta)
+class Watcher(object):
+    pass
 
 
 def roundup(num, align):
@@ -188,12 +230,11 @@ class Vector(Pickleable):
 
     Attributes:
         device: Device object.
-        mem: property for numpy array.
+        mem: associated numpy array.
         devmem: GPU buffer mapped to mem.
-        _mem: numpy array.
-        supposed_maxvle: supposed maximum element value.
+        max_supposed: supposed maximum element value.
         map_flags: flags of the current map.
-        map_arr_: address of the mapping if any.
+        map_arr_: address of the mapping if any exists.
 
     Example of how to use:
         1. Construct an object:
@@ -217,9 +258,28 @@ class Vector(Pickleable):
 
     def __init__(self, data=None):
         super(Vector, self).__init__()
+        self._device = None
         self._mem = data
-        self.device = None
-        self.supposed_maxvle = 1.0
+        self._max_value = 1.0
+
+    @property
+    def device(self):
+        return self._device
+
+    @device.setter
+    def device(self, device):
+        self._reset(False)
+        if device is None:
+            self._unset_device()
+            return
+        if not isinstance(device, Device):
+            raise TypeError(
+                "device must be an instance of veles.opencl.Device, got %s" %
+                device)
+        self._device = device
+        for suffix in Vector.backend_methods:
+            setattr(self, "_backend_" + suffix + "_",
+                    getattr(self, device.backend_name + "_" + suffix))
 
     @property
     def mem(self):
@@ -231,6 +291,24 @@ class Vector(Pickleable):
             raise error.AlreadyExistsError("OpenCL buffer already assigned, "
                                            "call reset() beforehand.")
         self._mem = value
+
+    @property
+    def max_supposed(self):
+        """
+        :return: The supposed maximal value in the contained array. It is NOT
+        updated automatically and default to 1. To get the actual maximal
+        value, use max().
+        """
+        return self._max_value
+
+    @max_supposed.setter
+    def max_supposed(self, value):
+        try:
+            1.0 + value
+        except TypeError:
+            raise from_none(TypeError(
+                "max_value must be set to floating point number"))
+        self._max_value = value
 
     @property
     def size(self):
@@ -264,12 +342,6 @@ class Vector(Pickleable):
     def plain(self):
         return ravel(self.mem)
 
-    def min(self, *args, **kwargs):
-        return self.mem.min(*args, **kwargs)
-
-    def max(self, *args, **kwargs):
-        return self.mem.max(*args, **kwargs)
-
     def init_unpickled(self):
         super(Vector, self).init_unpickled()
         self._unset_device()
@@ -277,6 +349,12 @@ class Vector(Pickleable):
         self.map_arr_ = None
         self.map_flags = 0
         self.lock_ = threading.Lock()
+
+    def min(self, *args, **kwargs):
+        return self.mem.min(*args, **kwargs)
+
+    def max(self, *args, **kwargs):
+        return self.mem.max(*args, **kwargs)
 
     def threadsafe(fn):
         def wrapped(self, *args, **kwargs):
@@ -326,43 +404,26 @@ class Vector(Pickleable):
         """
         self._mem[key] = value
 
-    def nothing(self, *args, **kwargs):
-        pass
-
     def _unset_device(self):
-        for suffix in Vector.backend_methods:
-            setattr(self, "_backend_" + suffix + "_", self.nothing)
+        def nothing(*args, **kwargs):
+            pass
 
-    def set_backend(self, device):
-        self._reset(False)
-        if device is None:
-            self._unset_device()
-        elif not isinstance(device, Device):
-            raise ValueError("device must be an instance of Device, got %s" %
-                             repr(device))
-        else:
-            self.device = device
-            for suffix in Vector.backend_methods:
-                setattr(self, "_backend_" + suffix + "_",
-                        getattr(self, device.backend_name + "_" + suffix))
+        for suffix in Vector.backend_methods:
+            setattr(self, "_backend_" + suffix + "_", nothing)
 
     @threadsafe
     def initialize(self, device):
         if self._mem is None or self.devmem is not None or device is None:
             return
 
-        self.set_backend(device)
-
+        self.device = device
         self._backend_realign_mem_()
-
         self._backend_create_devmem_()
 
         # Account mem in memwatcher
         if self.devmem is not None:
-            with MemWatcher.mutex:
-                MemWatcher.mem_in_use += self.devmem.size
-                MemWatcher.max_mem_in_use = max(MemWatcher.mem_in_use,
-                                                MemWatcher.max_mem_in_use)
+            global Watcher  # pylint: disable=W0601
+            Watcher += self.devmem.size
 
     @threadsafe
     def map_read(self):
@@ -389,8 +450,8 @@ class Vector(Pickleable):
     def _reset(self, clear_hostmem):
         self._backend_unmap_()
         if self.devmem is not None:
-            with MemWatcher.mutex:
-                MemWatcher.mem_in_use -= self.devmem.size
+            global Watcher  # pylint: disable=W0601
+            Watcher -= self.devmem.size
         self.devmem = None
         self.map_flags = 0
         if clear_hostmem:

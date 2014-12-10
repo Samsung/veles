@@ -140,10 +140,9 @@ root.common.update({
         "minthreads": 2,
         "maxthreads": 2,
     },
-    "compute": {
-        "backends": ["cuda", "ocl", "cpu"],
+    "engine": {
         "backend": "ocl",
-        "dirs": (os.environ.get("VELES_OPENCL_DIRS", "").split(":") +
+        "dirs": (os.environ.get("VELES_ENGINE_DIRS", "").split(":") +
                  ["/usr/share/veles"])
     }
 })

@@ -13,14 +13,14 @@ from zope.interface import implementer
 
 from veles.config import root
 import veles.error as error
-from veles.formats import Vector, assert_addr
+from veles.memory import Vector, assert_addr
 from veles.distributable import IDistributable, TriviallyDistributable
 from veles.opencl_types import numpy_dtype_to_opencl
-from veles.opencl_units import OpenCLUnit, IOpenCLUnit
+from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit
 
 
 @implementer(IOpenCLUnit, IDistributable)
-class MeanDispNormalizer(OpenCLUnit, TriviallyDistributable):
+class MeanDispNormalizer(AcceleratedUnit, TriviallyDistributable):
     """Normalizes multichannel byte images according to
     dataset mean and dispersion.
 
@@ -98,9 +98,7 @@ class MeanDispNormalizer(OpenCLUnit, TriviallyDistributable):
             "mean_type": numpy_dtype_to_opencl(self.mean.dtype),
             "SAMPLE_SIZE": sample_size
         }
-        self.build_program(
-            defines, "%s" % self.__class__.__name__, dtype=dtype)
-
+        self.build_program(defines, self.__class__.__name__, dtype=dtype)
         self.assign_kernel("normalize_mean_disp")
         self.set_args(self.input, self.mean, self.rdisp, self.output)
 
