@@ -217,10 +217,14 @@ class ForgeClient(Logger):
                 self.stop()
 
         def failed(failure):
-            try:
-                failure.raiseException()
-            except:
-                self.exception("Failed to upload %s:", name)
+            if not hasattr(failure.value, "reasons"):
+                try:
+                    failure.raiseException()
+                except:
+                    self.exception("Failed to upload %s:", name)
+            else:
+                self.error("Failed to upload %s:\n%s", name,
+                           failure.value.reasons[0].getTraceback())
             self.stop(failure, False)
 
         url = self.base + root.common.forge.upload_name
