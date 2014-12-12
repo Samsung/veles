@@ -507,6 +507,10 @@ class Vector(Pickleable):
             logging.getLogger("Vector").warning(
                 "OpenCL device queue is None but Vector devmem was not "
                 "explicitly unmapped.")
+        elif self.devmem.handle is None:
+            logging.getLogger("Vector").warning(
+                "devmem.handle is None but Vector devmem was not "
+                "explicitly unmapped.")
         else:
             self.device.queue_.unmap_buffer(self.devmem, map_arr,
                                             need_event=False)
