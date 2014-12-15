@@ -90,27 +90,27 @@ class DeviceInfo(Logger):
             krnnme = "matrix_multiplication"
             krninfo = self.device_info.get(krnnme)
             if krninfo is None:
-                bs = self.get_max_block_size(dtype)
+                bs = 8
                 self.warning(
                     "krnnme = %s was not found, "
-                    "will use max block size %d", krnnme, bs)
+                    "will use block size %d", krnnme, bs)
                 return bs
         typeinfo = krninfo.get(dtype)
         if typeinfo is None:
-            bs = self.get_max_block_size(dtype)
+            bs = 8
             self.warning(
                 "dtype = %s was not found with krnnme = %s, "
-                "will use max block size %d", dtype, krnnme, bs)
+                "will use block size %d", dtype, krnnme, bs)
             return bs
         bs_dt = typeinfo.get(str(precision))
         while bs_dt is None and precision > 0:
             precision -= 1
             bs_dt = typeinfo.get(str(precision))
         if bs_dt is None:
-            bs = self.get_max_block_size(dtype)
+            bs = 8
             self.warning(
                 "precision = 0 was not found with krnnme = %s and dtype = %s, "
-                "will use max block size %d", krnnme, dtype, bs)
+                "will use block size %d", krnnme, dtype, bs)
             return bs
         return bs_dt[0]
 
@@ -411,7 +411,8 @@ class OpenCLDevice(Device):
                              "the configured paths: %s",
                              root.common.device_dirs)
         self.compute_ratings(device_infos)
-        self.device_info.device_info = device_infos[self.device_info.desc]
+        if self.device_info.desc in device_infos:
+            self.device_info.device_info = device_infos[self.device_info.desc]
 
     def _find_optimal_block_size(self, device_infos):
         device_info = {}
@@ -420,8 +421,8 @@ class OpenCLDevice(Device):
         # FIXME(v.markovtsev): disable R0401 locally when pylint issue is fixed
         # https://bitbucket.org/logilab/pylint/issue/61
         # pylint: disable=R0401
-        opencl_units = __import__("veles.opencl_units").opencl_units
-        OpenCLBenchmark = opencl_units.OpenCLBenchmark
+        opencl_units = __import__("veles.accelerated_units").accelerated_units
+        OpenCLBenchmark = opencl_units.DeviceBenchmark
         for dtype in sorted(opencl_types.dtypes.keys()):
             device_info[krnnme][dtype] = {}
             for precision_level in ("0", "1", "2"):  # json wants strings

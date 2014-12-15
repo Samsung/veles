@@ -102,7 +102,7 @@ root.common.update({
     "mongodb_logging_address": "0.0.0.0:27017",
     "plotters_disabled": False,
     "precision_type": "double",  # float or double
-    "precision_level": 1,  # 0 - use simple summation
+    "precision_level": 0,  # 0 - use simple summation
                            # 1 - use Kahan summation (9% slower)
                            # 2 - use multipartials summation (90% slower)
     "pickles_compression": (None if
