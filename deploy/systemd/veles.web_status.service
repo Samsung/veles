@@ -1,0 +1,18 @@
+[Unit]
+Description=Veles Web Status Server
+
+[Service]
+Type=simple
+Environment="WEB_STATUS_ARGS="
+EnvironmentFile=-/etc/default/veles.web_status
+
+ExecStartPre=-/bin/mkdir -p -m0755 /var/run/veles /var/log/veles
+ConditionFileIsExecutable=/usr/lib/python3/dist-packages/veles/web_status.py
+
+ExecStart=/usr/lib/python3/dist-packages/veles/web_status.py $WEB_STATUS_ARGS
+PIDFile=/var/run/veles/web_status.lock
+
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target
