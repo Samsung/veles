@@ -432,19 +432,24 @@ class ForgeServer(Logger):
                                       ForgeServer.THUMBNAIL_FILE_NAME), "PNG")
         else:
             pic = os.path.join(rep.path, ForgeServer.IMAGE_FILE_NAME % "png")
-            retcode = subprocess.call([
-                sys.executable, "-m", "veles", "-s", "-p", "",
-                "--dry-run=init", "--workflow-graph=" + pic,
-                os.path.join(where, metadata["workflow"]),
-                os.path.join(where, metadata["configuration"])])
+            with tempfile.TemporaryFile() as tmp:
+                retcode = subprocess.call([
+                    sys.executable, "-m", "veles", "-s", "-p", "",
+                    "--dry-run=init", "--workflow-graph=" + pic,
+                    os.path.join(where, metadata["workflow"]),
+                    os.path.join(where, metadata["configuration"])],
+                    stdout=tmp.fileno(), stderr=tmp.fileno())
+                tmp.seek(0)
+                logs = tmp.read()
             if retcode != 0:
                 self.warning("Failed to generate the thumbnail for %s",
                              metadata["name"])
+                self.debug("\n" + logs.decode('charmap') + "\n")
             if os.path.exists(pic):
                 img = Image.open(pic)
                 img.thumbnail((256, 256))
-                img.save(os.path.join(rep.path,
-                                      ForgeServer.THUMBNAIL_FILE_NAME), "PNG")
+                img.save(os.path.join(
+                    rep.path, ForgeServer.THUMBNAIL_FILE_NAME), "PNG")
 
     def upload(self, metadata, reader):
         name = metadata["name"]
