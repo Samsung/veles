@@ -21,3 +21,5 @@ override_dh_install:
 	cp -r devices debian/python3-veles/usr/share/veles/
 	cp requirements.txt debian/python3-veles/usr/share/veles/
 	rm -rf debian/python3-veles/usr/lib/*/dist-packages/veles/znicz/samples
+	mkdir -p debian/python3-veles/etc/init
+	cp deploy/upstart/*.conf debian/python3-veles/etc/init
