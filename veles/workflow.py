@@ -348,7 +348,8 @@ class Workflow(Unit):
         self.is_running = False
         if not self.is_master:
             self.event("run", "end")
-        if self.is_standalone or force_propagate:
+        if (self.is_standalone or force_propagate) and \
+                self.workflow.workflow is self:
             self.workflow.on_workflow_finished()
         elif self.is_slave:
             self._do_job_callback_(self.generate_data_for_master())
