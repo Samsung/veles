@@ -28,7 +28,7 @@ class DummyLauncher(object):
         return "DUMMY"
 
     def add_ref(self, workflow):
-        pass
+        self.workflow = workflow
 
     def on_workflow_finished(self):
         pass
