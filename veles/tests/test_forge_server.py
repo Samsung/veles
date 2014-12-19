@@ -4,7 +4,7 @@ Created on Nov 12, 2014
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
-
+from __future__ import print_function
 import logging
 from numpy.random import randint
 import os
@@ -12,6 +12,7 @@ import pygit2
 import shutil
 from six import BytesIO
 import struct
+import sys
 from tarfile import TarFile
 import threading
 from tornado.httpclient import HTTPClient, HTTPRequest, HTTPError
@@ -42,6 +43,7 @@ class TestForgeServer(unittest.TestCase):
             with TarFile.open(
                     os.path.join(base, "%s.git.tar.gz" % name)) as tar:
                 tar.extractall(os.path.join(base, name))
+        sys.stderr = sys.stdout
         cls.server = ForgeServer(ForgeServerArgs(base, PORT))
         cls.server.run(loop=False)
         cls.ioloop_thread.start()
