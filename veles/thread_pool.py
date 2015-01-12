@@ -104,6 +104,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             else:
                 from veles.external import manhole
                 manhole.install(patch_fork=False)
+            signal.signal(signal.SIGUSR2, ThreadPool.sigusr2_handler)
         ThreadPool.pools.append(self)
 
     def __del__(self):
@@ -360,6 +361,10 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         print("SIGUSR1 was received, dumping current frames...")
         ThreadPool.printthread_stacks()
+
+    @staticmethod
+    def sigusr2_handler(sign, frame):
+        print("SIGUSR2 was received")
 
     @staticmethod
     def printthread_stacks():
