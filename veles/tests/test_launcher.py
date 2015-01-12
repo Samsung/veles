@@ -98,6 +98,9 @@ class TestGlobal(unittest.TestCase):
         f = filter_argv(argv, "--listen", "-k", "--full", "-x")
         self.assertEqual(f, ["-v", "-p", "-e", "other", "--rec"],
                          "filter_argv failed")
+        argv = ["-s", "workflow", "config"]
+        f = filter_argv(argv, "-s")
+        self.assertEqual(f, ["workflow", "config"])
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)

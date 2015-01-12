@@ -11,6 +11,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 import argparse
 import datetime
 import getpass
+from itertools import chain
 import json
 import os
 import paramiko
@@ -27,7 +28,7 @@ from twisted.web.http_headers import Headers
 import uuid
 
 import veles.client as client
-from veles.cmdline import CommandLineArgumentsRegistry
+from veles.cmdline import CommandLineArgumentsRegistry, CommandLineBase
 from veles.config import root
 import veles.graphics_server as graphics_server
 from veles.plotter import Plotter
@@ -45,6 +46,10 @@ def filter_argv(argv, *blacklist):
     ptree = StringTrie({v: i for i, v in enumerate(blacklist)})
     filtered = []
     maybe_value = False
+    boolean_args = set(chain.from_iterable(
+        a.option_strings for a in CommandLineBase.init_parser()._actions
+        if isinstance(a, (argparse._StoreTrueAction,
+                          argparse._StoreFalseAction))))
     for arg in argv:
         if maybe_value:
             maybe_value = False
@@ -53,7 +58,7 @@ def filter_argv(argv, *blacklist):
         if ptree.longest_prefix(arg, None) is None:
             filtered.append(arg)
         else:
-            maybe_value = True
+            maybe_value = arg not in boolean_args
     return filtered
 
 
