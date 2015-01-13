@@ -13,6 +13,8 @@
 
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
+#define SIGN(x) ((x) ? ((x) > 0 ? 1 : -1) : 0)
+
 /**
  * @brief CUDA implementation of atomicAdd for double.
  *
@@ -34,16 +36,6 @@ __device__ double atomicAdd(double* address, double val) {
             __longlong_as_double(assumed)));
   } while (assumed != old);
   return __longlong_as_double(old);
-}
-
-/// @brief Sets all elements of array to zero.
-extern "C"
-__global__ void ClearArray32(float* address) {
-  address[threadIdx.x + blockIdx.x * blockDim.x] = 0;
-}
-extern "C"
-__global__ void ClearArray64(double* address) {
-  address[threadIdx.x + blockIdx.x * blockDim.x] = 0;
 }
 
 #endif  // _DEFINES_

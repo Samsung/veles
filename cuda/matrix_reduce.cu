@@ -20,8 +20,8 @@
 ///          The result will be in (sum + AS[0]), output offset will be in bx, write it in if (tx == 0) { ... }
   __shared__ dtype AS[REDUCE_SIZE];
 
-  int bx = blockIdx.x; // from 0 to number of resulting output elements
-  int tx = threadIdx.x; // from 0 to BLOCK_SIZE - 1
+  int bx = blockIdx.x; // from 0 to number of resulting output elements - 1
+  int tx = threadIdx.x; // from 0 to REDUCE_SIZE - 1
 
   dtype sum = 0;
 
