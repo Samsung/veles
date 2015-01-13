@@ -253,7 +253,7 @@ class LinkableAttribute(object):
         # get the reference to the attribute value
         pointer = getattr(obj, self.real_attribute_name)
         # dereference it
-        return getattr(*pointer)
+        return getattr(*pointer) if isinstance(pointer, tuple) else pointer
 
     def __set__(self, obj, value):
         if not LinkableAttribute.__is_reference__(value):

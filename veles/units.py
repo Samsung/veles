@@ -15,6 +15,7 @@ from zope.interface import Interface, implementer
 from zope.interface.verify import verifyObject, verifyClass
 
 from veles.cmdline import CommandLineArgumentsRegistry
+from veles.compat import from_none
 from veles.config import root, get, validate_kwargs
 from veles.distributable import Distributable, TriviallyDistributable, \
     IDistributable
@@ -513,7 +514,14 @@ class Unit(Distributable):
                 isinstance(value, bool) or isinstance(value, str))
 
     def _link_attr(self, other, mine, yours, two_way):
-        attr = getattr(other, yours)
+        if isinstance(other, Container) and not hasattr(other, yours):
+            setattr(other, yours, False)
+        try:
+            attr = getattr(other, yours)
+        except AttributeError as e:
+            self.error("Unable to link %s.%s to %s.%s",
+                       other, yours, self, mine)
+            raise from_none(e)
         if Unit.is_immutable(attr):
             LinkableAttribute(self, mine, (other, yours), two_way=two_way)
         else:
@@ -586,3 +594,7 @@ class TrivialUnit(Unit, TriviallyDistributable):
 
     def run(self):
         pass
+
+
+class Container(Unit):
+    pass

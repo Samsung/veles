@@ -6,10 +6,11 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import unittest
+from zope.interface import implementer
 
 import veles
 from veles.config import root
-from veles.units import TrivialUnit
+from veles.units import TrivialUnit, Container, IUnit
 from veles.pickle2 import pickle
 from veles.dummy import DummyWorkflow
 
@@ -42,6 +43,11 @@ class TestUnit(TrivialUnit):
 
     def warning(self, *args, **kwargs):
         self.was_warning = True
+
+
+@implementer(IUnit)
+class TestContainer(Container, TrivialUnit):
+    pass
 
 
 class Test(unittest.TestCase):
@@ -87,6 +93,22 @@ class Test(unittest.TestCase):
         self.assertIsInstance(units, set)
         self.assertGreater(len(units), 0)
         print("Number of units:", len(units))
+
+    def testContainerInputs(self):
+        c = TestContainer(DummyWorkflow())
+        tu = TestUnit(DummyWorkflow())
+        tu.demand("attr_name")
+        tu.link_attrs(c, "attr_name")
+        c.attr_name = 100500
+        self.assertEqual(tu.attr_name, 100500)
+        tu.initialize()
+        outer = TestUnit(DummyWorkflow())
+        outer.attr_name = 100
+        c.demand("attr_name")
+        c.link_attrs(outer, "attr_name")
+        c.initialize()
+        self.assertEqual(tu.attr_name, 100)
+        self.assertEqual(c.attr_name, 100)
 
 
 if __name__ == "__main__":

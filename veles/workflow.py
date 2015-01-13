@@ -24,7 +24,7 @@ from zope.interface import implementer
 from veles.config import root
 from veles.distributable import IDistributable
 from veles.mutable import LinkableAttribute
-from veles.units import Unit, TrivialUnit, IUnit
+from veles.units import Unit, TrivialUnit, IUnit, Container
 from veles.external.prettytable import PrettyTable
 from veles.external.progressbar import ProgressBar, Percentage, Bar
 import veles.external.pydot as pydot
@@ -104,7 +104,7 @@ class NoMoreJobs(Exception):
 
 
 @implementer(IUnit, IDistributable)
-class Workflow(Unit):
+class Workflow(Container):
     """Base class for unit sets which are logically connected and belong to
     the same host.
 
