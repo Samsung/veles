@@ -270,7 +270,7 @@ class AcceleratedUnit(Unit):
                 need_event=need_event)
         except RuntimeError:
             self.error("execute_kernel(%s) has failed. global_size = %s, "
-                       "local_size = %s", (kernel or self._kernel_).name,
+                       "local_size = %s", str(kernel or self._kernel_),
                        str(global_size), str(local_size))
             raise
 
