@@ -84,6 +84,7 @@ class TestClientServer(unittest.TestCase):
         self.client = client.Client("127.0.0.1:5050", self.slave)
         self.stopper = threading.Thread(target=self.stop)
         self.stopper.start()
+        self.master.thread_pool.start()
 
     def stop(self):
         TestWorkflow.sync.wait(0.1)

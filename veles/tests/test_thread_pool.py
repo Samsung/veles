@@ -37,6 +37,7 @@ class TestThreadPool(unittest.TestCase):
 
     def test_pause_resume(self):
         pool = thread_pool.ThreadPool(minthreads=1, maxthreads=1)
+        pool.start()
 
         flag = [False]
         event = threading.Event()
@@ -67,6 +68,7 @@ class TestThreadPool(unittest.TestCase):
         pool = thread_pool.ThreadPool(minthreads=threads_min,
                                       maxthreads=threads_max,
                                       queue_size=threads_max)
+        pool.start()
         n = 100
         n_jobs = [n]
         for _ in range(n):
@@ -87,6 +89,7 @@ class TestThreadPool(unittest.TestCase):
         data_lock = threading.Lock()
         pool = thread_pool.ThreadPool(minthreads=0, maxthreads=32,
                                       queue_size=32)
+        pool.start()
         pool.silent = True
         n = 10
         n_jobs = [n]
@@ -110,6 +113,7 @@ class TestThreadPool(unittest.TestCase):
         data_lock = threading.Lock()
         pool = thread_pool.ThreadPool(minthreads=1, maxthreads=32,
                                       queue_size=32)
+        pool.start()
         n = 10
         for _ in range(n):
             with data_lock:

@@ -276,10 +276,23 @@ class Workflow(Container):
     def history(self):
         return self._history
 
+    @property
+    def is_main(self):
+        """
+        :return:
+            True if this workflow is the topmost workflow, that is, not nested;
+            otherwise, False.
+        """
+        return self.workflow.workflow is self
+
     def initialize(self, **kwargs):
         """Initializes all the units belonging to this Workflow, in dependency
         order.
         """
+        if self.is_main:
+            self.thread_pool.start()
+            self.debug("Started the pool with %d threads",
+                       len(self.thread_pool.threads))
         fin_text = "all units are initialized"
         maxlen = max([len(u.name) for u in self] + [len(fin_text)])
         units_number = len(self)
@@ -348,8 +361,7 @@ class Workflow(Container):
         self.is_running = False
         if not self.is_master:
             self.event("run", "end")
-        if (self.is_standalone or force_propagate) and \
-                self.workflow.workflow is self:
+        if (self.is_standalone or force_propagate) and self.is_main:
             self.workflow.on_workflow_finished()
         elif self.is_slave:
             self._do_job_callback_(self.generate_data_for_master())

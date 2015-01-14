@@ -69,7 +69,6 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                 self, minthreads=minthreads, maxthreads=maxthreads, name=name)
         logger.Logger.__init__(self)
         self.q = queue.Queue(queue_size)
-        self.start()
         self.silent = False
         self._shutting_down = False
         self._shutting_down_lock_ = threading.Lock()
