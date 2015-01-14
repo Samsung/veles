@@ -187,8 +187,8 @@ class Device(Pickleable):
     def register_thread_pool_callbacks(self, pool):
         """Registers callbacks for the thread pool.
         """
-        pool.register_on_thread_enter(self._on_thread_enter)
-        pool.register_on_thread_enter(self._on_thread_exit)
+        pool.register_on_thread_enter(self._on_thread_enter, False)
+        pool.register_on_thread_exit(self._on_thread_exit, False)
 
     def _on_thread_enter(self):
         """Called justed after the new thread has been created
@@ -229,6 +229,7 @@ class OpenCLDevice(Device):
 
     BACKEND = "ocl"
     DEVICE_INFOS_JSON = "device_infos.json"
+    skip = cl.skip
 
     def __init__(self):
         super(OpenCLDevice, self).__init__()
@@ -288,7 +289,6 @@ class OpenCLDevice(Device):
     def init_unpickled(self):
         super(OpenCLDevice, self).init_unpickled()
         self.queue_ = None
-        self.pid_ = os.getpid()
 
     @staticmethod
     def arg_completer(prefix, **kwargs):
@@ -508,6 +508,7 @@ class CUDADevice(Device):
     """
 
     BACKEND = "cuda"
+    skip = cu.skip
 
     def __init__(self):
         super(CUDADevice, self).__init__()
@@ -527,6 +528,21 @@ class CUDADevice(Device):
             "%d.%d" % self.context.device.compute_capability,
             self.context.device.pci_bus_id)
         self.info(log_configs + str(table))
+
+    def suggest_block_size(self, krn):
+        if krn is None:
+            raise ValueError("Received None as an argument")
+        _min_grid_size, block_size = krn.max_potential_block_size()
+        ab_best = krn.max_active_blocks_per_multiprocessor(block_size)
+        ab = ab_best
+        min_size = self.context.device.warp_size
+        while (ab >= ab_best and not (block_size & 1) and
+               block_size >= min_size):
+            ab_best = ab
+            best_block_size = block_size
+            block_size >>= 1
+            ab = krn.max_active_blocks_per_multiprocessor(block_size)
+        return best_block_size
 
     def thread_pool_attach(self, thread_pool):
         self.context.push_current()
@@ -552,8 +568,9 @@ class CUDADevice(Device):
 
     def _on_thread_exit(self):
         tid = current_thread().ident
-        blas = self._blas_.pop(tid)
-        del blas
+        if tid in self._blas_:
+            blas = self._blas_.pop(tid)
+            del blas
         self._context_.pop_current()
 
     @property
