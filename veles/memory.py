@@ -288,7 +288,7 @@ class Vector(Pickleable):
     @mem.setter
     def mem(self, value):
         if self.devmem is not None and not eq_addr(self._mem, value):
-            raise error.AlreadyExistsError("OpenCL buffer already assigned, "
+            raise error.AlreadyExistsError("Device buffer already assigned, "
                                            "call reset() beforehand.")
         self._mem = value
 
@@ -368,7 +368,7 @@ class Vector(Pickleable):
     def __getstate__(self):
         """Get data from OpenCL device before pickling.
         """
-        if self.device is not None and self.device.pid_ == os.getpid():
+        if self.device is not None and self.device.pid == os.getpid():
             self.map_read()
         state = super(Vector, self).__getstate__()
         state['devmem'] = None
@@ -539,13 +539,15 @@ class Vector(Pickleable):
     def cuda_map_write(self):
         if self.device is None or self.map_flags >= 2:
             return
-        if self.map_flags <= 1:
-            self.devmem.to_host(self.mem)
+        if self.map_flags < 1:  # there were no map_read before
+            self.devmem.to_host(self.mem)  # sync copy
         self.map_flags = 2
 
     def cuda_map_invalidate(self):
-        if self.device is None or self.map_flags >= 1:
+        if self.device is None or self.map_flags >= 2:
             return
+        if self.map_flags < 1:  # there were no map_read before
+            self.device.sync()  # sync without copy
         self.map_flags = 2
 
     def cuda_unmap(self):
