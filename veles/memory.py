@@ -461,8 +461,7 @@ class Vector(Pickleable):
 
     def ocl_create_devmem(self):
         self.devmem = self.device.queue_.context.create_buffer(
-            cl.CL_MEM_READ_WRITE | cl.CL_MEM_USE_HOST_PTR,
-            ravel(self._mem))
+            cl.CL_MEM_READ_WRITE | cl.CL_MEM_USE_HOST_PTR, self.plain)
 
     def ocl_map(self, flags):
         if self.device is None:
@@ -527,7 +526,7 @@ class Vector(Pickleable):
         self._mem = cl.realign_array(self._mem, memalign, numpy)
 
     def cuda_create_devmem(self):
-        self.devmem = cu.MemAlloc(self.device.context, self.mem.nbytes)
+        self.devmem = cu.MemAlloc(self.device.context, self.plain.nbytes)
         self.devmem.to_device(self.mem)
 
     def cuda_map_read(self):
@@ -558,6 +557,6 @@ class Vector(Pickleable):
         self.map_flags = 0
 
     def cuda_realign_mem(self):
-        """We are using simple cuMemAlloc, so host memory can be unaligned.
-        """
-        pass
+        # We expect numpy array with continuous memory layout, so realign it.
+        # PAGE-boundary alignment may increase speed also.
+        self._mem = cl.realign_array(self._mem, 4096, numpy)
