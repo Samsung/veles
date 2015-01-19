@@ -95,6 +95,7 @@ def validate_kwargs(caller, **kwargs):
 __home__ = os.path.join(os.environ.get("HOME", "./"), ".veles")
 
 root.common.update({
+    "allow_root": False,
     "graphics_multicast_address": "239.192.1.1",
     "graphics_blacklisted_ifaces": set(),
     "matplotlib_backend": "Qt4Agg",
@@ -165,3 +166,10 @@ root.common.snapshot_dir = os.path.join(root.common.veles_user_dir,
                                         "snapshots")
 if not os.path.exists(root.common.snapshot_dir):
     os.makedirs(root.common.snapshot_dir)
+
+if not root.common.allow_root and os.getuid() == 0:
+    raise PermissionError(
+        "I have detected your attempt to run this VELES-based script with root"
+        " privileges. Most likely this is because the code must be fixed and "
+        "you are too lazy to find out where and how. Bad, bad boy! "
+        "If you REALLY need it, set root.common.allow_root to True.")
