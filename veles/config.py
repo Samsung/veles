@@ -99,7 +99,7 @@ root.common.update({
     "graphics_blacklisted_ifaces": set(),
     "matplotlib_backend": "Qt4Agg",
     "matplotlib_webagg_port": 8081,
-    "mongodb_logging_address": "0.0.0.0:27017",
+    "mongodb_logging_address": "127.0.0.1:27017",
     "plotters_disabled": False,
     "precision_type": "double",  # float or double
     "precision_level": 0,  # 0 - use simple summation
@@ -122,7 +122,7 @@ root.common.update({
     "help_dir": "/usr/share/doc/python3-veles",
     "web": {
         "host": "0.0.0.0",
-        "port": 80,
+        "port": 8080,
         "log_file": "/var/log/veles/web_status.log",
         "log_backups": 9,
         "notification_interval": 1,

@@ -237,24 +237,32 @@ class WebServer(Logger):
         IOLoop.instance().stop()
 
 
-def main():
-    WebServer().run()
+def main(**kwargs):
+    WebServer(**kwargs).run()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", default=False,
                         help="activates debugging mode (run in foreground, "
                         "DEBUG logging level)", action='store_true')
+    parser.add_argument("-p", "--port", default=root.common.web.port, type=int,
+                        help="Port to listen on.")
+    parser.add_argument("-u", "--user", default=None,
+                        help="Become this user (uid or name).")
+    parser.add_argument("-g", "--group", default=None,
+                        help="Belong to this group (gid or name).")
     args = parser.parse_args()
     debug_mode = args.debug
     if not debug_mode:
         pidfile = root.common.web.pidfile
         full_pidfile = pidfile + ".lock"
-        if not os.access(os.path.dirname(full_pidfile), os.W_OK):
+        if args.user is None and not os.access(os.path.dirname(full_pidfile),
+                                               os.W_OK):
             raise PermissionError(pidfile)
         if os.path.exists(full_pidfile):
             real_pidfile = os.readlink(full_pidfile)
             pid = int(real_pidfile.split('.')[-1])
+            print("Replacing PID %d..." % pid)
             try:
                 os.kill(pid, 0)
             except OSError:
@@ -269,11 +277,12 @@ if __name__ == "__main__":
             sys.stdout.flush()
         except BrokenPipeError:
             pass
-        with daemon.DaemonContext(pidfile=pidfile, stderr=sys.stderr):
+        with daemon.DaemonContext(pidfile=pidfile, stderr=sys.stderr,
+                                  uid=args.user, gid=args.group):
             log_file = root.common.web.log_file
             Logger.setup(level=logging.INFO)
             Logger.redirect_all_logging_to_file(log_file, backups=9)
-            main()
+            main(port=args.port)
     else:
         Logger.setup(level=logging.DEBUG)
-        main()
+        main(port=args.port)

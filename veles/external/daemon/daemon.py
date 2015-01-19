@@ -19,8 +19,10 @@
 import atexit
 import copy
 import errno
+from grp import getgrnam
 import lockfile
 import os
+from pwd import getpwnam
 import signal
 import socket
 import sys
@@ -234,9 +236,19 @@ class DaemonContext(object):
 
         if uid is None:
             uid = os.getuid()
+        elif isinstance(uid, str):
+            try:
+                uid = int(uid)
+            except ValueError:
+                uid = getpwnam(uid).pw_uid
         self.uid = uid
         if gid is None:
             gid = os.getgid()
+        elif isinstance(gid, str):
+            try:
+                gid = int(gid)
+            except ValueError:
+                gid = getgrnam(gid).gr_gid
         self.gid = gid
 
         if detach_process is None:
@@ -538,10 +550,9 @@ def change_process_owner(uid, gid):
     try:
         os.setgid(gid)
         os.setuid(uid)
-    except:
+    except PermissionError as e:
         error = DaemonOSEnvironmentError(
-            "Unable to change file creation mask (%(exc)s)"
-            % vars())
+            "Unable to change user and group: %s" % e)
         raise error
 
 
