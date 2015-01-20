@@ -299,8 +299,7 @@ class Workflow(Container):
         if not self.is_standalone:
             self.verify_interface(IDistributable)
         progress = ProgressBar(maxval=units_number,
-                               term_width=min(80,
-                                              len(self) + 8 + maxlen),
+                               term_width=min(80, len(self) + 8 + maxlen),
                                widgets=[Percentage(), ' ', Bar(), ' ',
                                         ' ' * maxlen])
         self.info("Initializing units in %s...", self.name)
