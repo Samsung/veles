@@ -25,9 +25,8 @@
  *                                    unsigned long long int val);
  * - float atomicAdd(float* address, float val);
  */
-__device__ double atomicAdd(double* address, double val) {
-  unsigned long long int* address_as_ull =
-  (unsigned long long int*)address;
+__device__ __forceinline__ double atomicAdd(double *address, double val) {
+  unsigned long long int *address_as_ull = (unsigned long long int*)address;
   unsigned long long int old = *address_as_ull, assumed;
   do {
     assumed = old;
