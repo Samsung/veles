@@ -126,6 +126,10 @@ class AcceleratedUnit(Unit):
         self._force_cpu = value
 
     def initialize(self, device, **kwargs):
+        try:
+            super(AcceleratedUnit, self).initialize(**kwargs)
+        except AttributeError:
+            pass
         self.device = device
         if not (self.device is None or self.device.exists or self._force_cpu):
             self.critical("No OpenCL device exists and --force-cpu option was "
