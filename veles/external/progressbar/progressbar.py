@@ -98,7 +98,8 @@ class ProgressBar(object):
     _DEFAULT_WIDGETS = [Percentage(), ' ', Bar()]
 
     def __init__(self, maxval=None, widgets=None, term_width=None, poll=1,
-                 left_justify=True, fd=sys.stdout, log_level=logging.INFO):
+                 left_justify=True, fd=sys.stdout, log_level=logging.INFO,
+                 update_interval=1):
         """Initializes a progress bar with sane defaults."""
 
         # Don't share a reference with any other progress bars
@@ -137,7 +138,7 @@ class ProgressBar(object):
         self.poll = poll
         self.seconds_elapsed = 0
         self.start_time = None
-        self.update_interval = 1
+        self.update_interval = update_interval
         self.next_update = 0
 
     def __call__(self, iterable):
@@ -251,7 +252,7 @@ class ProgressBar(object):
         """Checks all widgets for the time sensitive bit."""
 
         self._time_sensitive = any(getattr(w, 'TIME_SENSITIVE', False)
-                                    for w in self.widgets)
+                                   for w in self.widgets)
 
 
     def update(self, value=None):
@@ -259,14 +260,14 @@ class ProgressBar(object):
 
         if value is not None and value is not UnknownLength:
             if (self.maxval is not UnknownLength
-                and not 0 <= value <= self.maxval):
+                    and not 0 <= value <= self.maxval):
 
                 raise ValueError('Value out of range')
 
             self.currval = value
 
-
-        if not self._need_update(): return
+        if not self._need_update():
+            return
         if self.start_time is None:
             raise RuntimeError('You must call "start" before calling "update"')
 
@@ -275,6 +276,7 @@ class ProgressBar(object):
         self.next_update = self.currval + self.update_interval
         if self.log_level >= self.logger.level:
             self.fd.write(self._format_line() + '\r')
+            self.fd.flush()
         self.last_update_time = now
 
     def inc(self):
