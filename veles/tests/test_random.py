@@ -5,30 +5,27 @@ Will test correctness of OpenCL random xor-shift generator.
 
 Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
-
-
+import gc
 import logging
 import numpy
 import os
 import unittest
 
-from veles.config import root
-import veles.memory as formats
-import veles.backends as opencl
 from veles.accelerated_units import TrivialOpenCLUnit
-import veles.prng as rnd
+import veles.backends as opencl
+from veles.config import root
 from veles.dummy import DummyWorkflow
+import veles.memory as formats
+import veles.prng as rnd
 
 
 class TestRandom1024(unittest.TestCase):
     def setUp(self):
         self.device = opencl.Device()
         self.chunk = 4
-        # rnd.get().seed(numpy.fromfile("%s/veles/znicz/samples/seed" %
-        #                                (root.common.veles_dir),
-        #                                dtype=numpy.int32, count=1024))
 
     def tearDown(self):
+        gc.collect()
         del self.device
 
     def _gpu(self):
@@ -52,8 +49,16 @@ class TestRandom1024(unittest.TestCase):
         krn = obj.get_kernel("random_xorshift1024star")
         krn.set_args(states.devmem, n_rounds, output.devmem)
 
-        self.device.queue_.execute_kernel(krn, (states.mem.shape[0],),
-                                          None, need_event=False)
+        if self.device.backend_name == "ocl":
+            self.device.queue_.execute_kernel(krn, (states.mem.shape[0],),
+                                              None, need_event=False)
+        else:
+            n = states.mem.shape[0]
+            l = 1
+            while not (n & 1) and l < 32:
+                n >>= 1
+                l <<= 1
+            krn((n, 1, 1), (l, 1, 1))
 
         output.map_read()
         logging.debug("gpu output:")
@@ -94,9 +99,30 @@ class TestRandom1024(unittest.TestCase):
         self.states = rnd.get().randint(
             0, 0x100000000, self.n_states * 128 // 4).astype(
             numpy.uint32).view(numpy.uint64).reshape(self.n_states, 16)
+        stt = self.states.copy()
         v_gpu = self._gpu()
         v_cpu = self._cpu()
         self.assertEqual(numpy.count_nonzero(v_gpu - v_cpu), 0)
+
+        # Test Uniform on GPU
+        u = rnd.Uniform(DummyWorkflow(), num_states=self.n_states,
+                        output_bytes=v_cpu.nbytes)
+        u.states.mem = stt.copy()
+        u.initialize(self.device)
+        u.run()
+        u.output.map_read()
+        v = u.output.plain.copy().view(dtype=numpy.uint64)
+        self.assertEqual(numpy.count_nonzero(v - v_cpu), 0)
+
+        # Test Uniform on CPU
+        u = rnd.Uniform(DummyWorkflow(), num_states=self.n_states,
+                        output_bytes=v_cpu.nbytes)
+        u.states.mem = stt.copy()
+        u.initialize(None)
+        u.run()
+        u.output.map_read()
+        v = u.output.plain.copy().view(dtype=numpy.uint64)
+        self.assertEqual(numpy.count_nonzero(v - v_cpu), 0)
 
 
 class TestRandom128(unittest.TestCase):
@@ -105,6 +131,7 @@ class TestRandom128(unittest.TestCase):
         self.chunk = 4
 
     def tearDown(self):
+        gc.collect()
         del self.device
 
     def _gpu(self):
@@ -123,11 +150,20 @@ class TestRandom128(unittest.TestCase):
                                            "test_random"))
         obj.assign_kernel("random_xorshift128plus")
         obj.set_args(states, output)
-        obj.execute_kernel((output.mem.size >> self.chunk,), None,
-                           need_event=False)
+
+        if self.device.backend_name == "ocl":
+            obj.execute_kernel((output.mem.size >> self.chunk,), None,
+                               need_event=False)
+        else:
+            n = output.mem.size >> self.chunk
+            l = 1
+            while not (n & 1) and l < 32:
+                n >>= 1
+                l <<= 1
+            obj.execute_kernel((n, 1, 1), (l, 1, 1))
 
         output.map_read()
-        logging.debug("opencl output:")
+        logging.debug("gpu output:")
         logging.debug(output.mem)
         return output.mem
 
@@ -154,5 +190,4 @@ class TestRandom128(unittest.TestCase):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    # import sys;sys.argv = ['', 'Test.testName']
     unittest.main()

@@ -27,6 +27,7 @@ class Uniform(AcceleratedUnit):
         output_bytes: number of output bytes to generate.
     """
     def __init__(self, workflow, **kwargs):
+        self.backend_methods = self.backend_methods + ("fill",)
         super(Uniform, self).__init__(workflow, **kwargs)
         self.num_states = kwargs.get("num_states", 256)
         self.states = Vector()
@@ -42,7 +43,7 @@ class Uniform(AcceleratedUnit):
     def initialize(self, device, **kwargs):
         super(Uniform, self).initialize(device, **kwargs)
 
-        if not self.states or self.states.size != self.num_states:
+        if not self.states or self.states.size != self.num_states * 16:
             self.states.reset()
             self.states.mem = numpy.empty(self.num_states * 16 * 2,
                                           dtype=numpy.uint32)
@@ -60,21 +61,30 @@ class Uniform(AcceleratedUnit):
         self.states.initialize(self.device)
         self.output.initialize(self.device)
 
-        if self.device is None:
-            return
+        self._backend_init_()
 
+    def _gpu_init(self):
         self.build_program({}, "uniform_%d" % self.num_states)
 
         self.assign_kernel("random_xorshift1024star")
         self.set_args(self.states, self.cl_const, self.output)
 
     def ocl_init(self):
-        pass
+        self._gpu_init()
+        self._global_size = [self.num_states]
+        self._local_size = None
 
     def cuda_init(self):
-        pass
+        self._gpu_init()
+        n = self.num_states
+        l = 1
+        while not (n & 1) and l < 32:
+            n >>= 1
+            l <<= 1
+        self._global_size = (n, 1, 1)
+        self._local_size = (l, 1, 1)
 
-    def fill_ocl(self, nbytes):
+    def _gpu_fill(self, nbytes):
         bytes_per_round = self.num_states * 16 * 8
         nbytes = roundup(nbytes, bytes_per_round)
         if nbytes > self.output.nbytes:
@@ -83,9 +93,15 @@ class Uniform(AcceleratedUnit):
         self.output.unmap()
         self.cl_const[0] = nbytes // bytes_per_round
         self.set_arg(1, self.cl_const)
-        self.execute_kernel([self.num_states], None)
+        self.execute_kernel(self._global_size, self._local_size)
 
-    def fill_cpu(self, nbytes):
+    def ocl_fill(self, nbytes):
+        self._gpu_fill(nbytes)
+
+    def cuda_fill(self, nbytes):
+        self._gpu_fill(nbytes)
+
+    def cpu_fill(self, nbytes):
         bytes_per_round = self.num_states * 16 * 8
         nbytes = roundup(nbytes, bytes_per_round)
         if nbytes > self.output.nbytes:
@@ -122,14 +138,13 @@ class Uniform(AcceleratedUnit):
         return (s0 * u64)[0]
 
     def fill(self, nbytes):
-        return (self.fill_ocl(nbytes) if self.device is not None
-                else self.fill_cpu(nbytes))
+        self._backend_fill_(nbytes)
 
     def ocl_run(self):
-        self.fill_ocl(self.output.nbytes)
-
-    def cpu_run(self):
-        self.fill_cpu(self.output.nbytes)
+        self.ocl_fill(self.output.nbytes)
 
     def cuda_run(self):
-        raise NotImplementedError("TODO(a.kazantsev): implement.")
+        self.cuda_fill(self.output.nbytes)
+
+    def cpu_run(self):
+        self.cpu_fill(self.output.nbytes)

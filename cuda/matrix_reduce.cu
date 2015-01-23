@@ -1,3 +1,20 @@
+/* TODO(a.kazantsev): rewrite reduction as follows:
+ *
+ * Read more at: http://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#ixzz3Pdbxsl5K
+__global__ void warpReduce() {
+    int laneId = threadIdx.x & 0x1f;
+    // Seed starting value as inverse lane ID
+    int value = 31 - laneId;
+
+    // Use XOR mode to perform butterfly reduction
+    for (int i=16; i>=1; i/=2)
+        value += __shfl_xor(value, i, 32);
+
+    // "value" now contains the sum across all threads
+    printf("Thread %d final value = %d\n", threadIdx.x, value);
+}
+*/
+
 /// @brief Define for reduce operation on matrix rows or columns.
 /// @author Kazantsev Alexey <a.kazantsev@samsung.com>
 /// @details Kernel should be defined as:

@@ -92,7 +92,7 @@ class AcceleratedUnit(Unit):
             backend = "cpu"
         else:
             backend = value.backend_name
-        for suffix in AcceleratedUnit.backend_methods:
+        for suffix in self.backend_methods:
             setattr(self, "_backend_" + suffix + "_",
                     getattr(self, backend + "_" + suffix))
         if self._sync and value is not None:
@@ -353,8 +353,7 @@ class AcceleratedUnit(Unit):
         res = [self._search_include(f + suffix)
                for f in self.cl_sources_.keys()]
         pending = copy(res)
-        include_matcher = re.compile(b'#\s*include\s*((")?|(<)?)([\w\.]+)'
-                                     b'(?(2)"|>)')
+        include_matcher = re.compile(b'#\s*include\s*\"([\w\.]+)\"')
         while len(pending):
             try:
                 with open(pending[0], "rb") as fr:
@@ -363,7 +362,7 @@ class AcceleratedUnit(Unit):
                 self.exception("Failed to read %s", pending[0])
                 raise
             for match in include_matcher.finditer(contents):
-                header = match.group(4)
+                header = match.group(1)
                 full = self._search_include(header.decode('utf-8'))
                 if not full:
                     self.warning("Could not find the header \"%s\" "
