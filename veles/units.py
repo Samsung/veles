@@ -245,6 +245,13 @@ class Unit(Distributable):
     def workflow(self, value):
         if value is None:
             raise error.VelesException("Unit must have a hosting Workflow")
+        if not hasattr(value, "add_ref"):
+            raise TypeError(
+                "Attempted to set %s's workflow to something which is not a "
+                "unit and does not look like a unit: %s. The first argument of"
+                " any unit's constructor must be a workflow. Use veles.dummy."
+                "DummyWorkflow if you want to create a standalone unit." %
+                (self, value))
         if self._workflow is not None:
             self._workflow.del_ref(self)
         self._workflow = value
