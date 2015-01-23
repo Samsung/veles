@@ -9,6 +9,7 @@ import bz2
 import gzip
 import logging
 import os
+import snappy
 import sys
 import time
 from zope.interface import implementer
@@ -110,6 +111,55 @@ class SnapshotterBase(Unit):
             self._slave_ended(slave)
 
 
+class SnappyFile(object):
+    def __init__(self, file_name, file_mode, buffer_size=snappy._CHUNK_MAX):
+        self._file = open(file_name, file_mode)
+        self.buffer = bytearray(buffer_size)
+        self.buffer_pos = 0
+        if file_mode == "wb":
+            self._compressor = snappy.StreamCompressor()
+        else:
+            self._decompressor = snappy.StreamDecompressor()
+
+    @property
+    def mode(self):
+        return self._file.mode
+
+    @property
+    def fileobj(self):
+        return self._file
+
+    def tell(self):
+        return self._file.tell()
+
+    def write(self, data):
+        while self.buffer_pos + len(data) > len(self.buffer):
+            remainder = len(self.buffer) - self.buffer_pos
+            self.buffer[self.buffer_pos:] = data[:remainder]
+            self._file.write(self._compressor.compress(bytes(self.buffer)))
+            data = data[remainder:]
+            self.buffer_pos = 0
+        self.buffer_pos = len(data)
+        self.buffer[:len(data)] = data
+
+    def read(self):
+        return self._decompressor.decompress(self._file.read(len(self.buffer)))
+
+    def flush(self):
+        if self.buffer_pos > 0:
+            self._file.write(self._compressor.compress(
+                bytes(self.buffer[:self.buffer_pos])))
+            self.buffer_pos = 0
+        last = self._compressor.flush()
+        if last is not None:
+            self._file.write(last)
+        self._file.flush()
+
+    def close(self):
+        self.flush()
+        self._file.close()
+
+
 class Snapshotter(SnapshotterBase):
     """Takes workflow snapshots.
 
@@ -130,6 +180,7 @@ class Snapshotter(SnapshotterBase):
     WRITE_CODECS = {
         None: lambda n, l: open(n, "wb"),
         "": lambda n, l: open(n, "wb"),
+        "snappy": lambda n, _: SnappyFile(n, "wb"),
         "gz": lambda n, l: gzip.GzipFile(n, "wb", compresslevel=l),
         "bz2": lambda n, l: bz2.BZ2File(n, "wb", compresslevel=l),
         "xz": lambda n, l: lzma.LZMAFile(n, "wb", preset=l)
@@ -137,6 +188,7 @@ class Snapshotter(SnapshotterBase):
 
     READ_CODECS = {
         ".pickle": lambda name: open(name, "rb"),
+        "snappy": lambda n, _: SnappyFile(n, "rb"),
         ".gz": lambda name: gzip.GzipFile(name, "rb"),
         ".bz2": lambda name: bz2.BZ2File(name, "rb"),
         ".xz": lambda name: lzma.LZMAFile(name, "rb")
