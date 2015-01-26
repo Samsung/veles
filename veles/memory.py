@@ -19,6 +19,84 @@ from veles.distributable import Pickleable
 from veles.backends import Device
 
 
+def max_type(num):
+    """Returns array converted to supported type with maximum precision.
+    """
+    return num.astype(numpy.float64)
+
+
+def eq_addr(a, b):
+    return a.__array_interface__["data"][0] == b.__array_interface__["data"][0]
+
+
+def assert_addr(a, b):
+    """Raises an exception if addresses of the supplied arrays differ.
+    """
+    if not eq_addr(a, b):
+        raise error.BadFormatError("Addresses of the arrays are not equal.")
+
+
+def ravel(a):
+    """numpy.ravel() with address check.
+    """
+    b = a.ravel()
+    assert_addr(a, b)
+    return b
+
+
+def reshape(a, shape):
+    """numpy.reshape() with address check.
+    """
+    b = a.reshape(shape)
+    assert_addr(a, b)
+    return b
+
+
+def interleave(arr):
+    """Returns the interleaved array.
+
+    Example:
+        [10000, 3, 32, 32] => [10000, 32, 32, 3].
+    """
+    last = arr.shape.pop(-3)
+    b = numpy.empty(arr.shape + (last,), dtype=arr.dtype)
+    if len(b.shape) == 4:
+        for i in range(last):
+            b[:, :, :, i] = arr[:, i, :, :]
+    elif len(b.shape) == 3:
+        for i in range(last):
+            b[:, :, i] = arr[i, :, :]
+    else:
+        raise error.BadFormatError("a should be of shape 4 or 3.")
+    return b
+
+
+def roundup(num, align):
+    d = num % align
+    if d == 0:
+        return num
+    return num + (align - d)
+
+
+class NumDiff(object):
+    """Numeric differentiation helper.
+
+    WARNING: it is invalid for single precision float data type.
+    """
+
+    def __init__(self):
+        self.h = 1.0e-8
+        self.points = (2.0 * self.h, self.h, -self.h, -2.0 * self.h)
+        self.coeffs = numpy.array([-1.0, 8.0, -8.0, 1.0],
+                                  dtype=numpy.float64)
+        self.divizor = 12.0 * self.h
+        self.errs = numpy.zeros_like(self.points)
+
+    @property
+    def derivative(self):
+        return (self.errs * self.coeffs).sum() / self.divizor
+
+
 class WatcherMeta(type):
     def __init__(cls, *args, **kwargs):
         super(WatcherMeta, cls).__init__(*args, **kwargs)
@@ -68,165 +146,6 @@ class WatcherMeta(type):
 @six.add_metaclass(WatcherMeta)
 class Watcher(object):
     pass
-
-
-def roundup(num, align):
-    d = num % align
-    if d == 0:
-        return num
-    return num + (align - d)
-
-
-def max_type(num):
-    """Returns array converted to supported type with maximum precision.
-    """
-    return num.astype(numpy.float64)
-
-
-def eq_addr(a, b):
-    return a.__array_interface__["data"][0] == b.__array_interface__["data"][0]
-
-
-def assert_addr(a, b):
-    """Raises an exception if addresses of the supplied arrays differ.
-    """
-    if not eq_addr(a, b):
-        raise error.BadFormatError("Addresses of the arrays are not equal.")
-
-
-def ravel(a):
-    """numpy.ravel() with address check.
-    """
-    b = a.ravel()
-    assert_addr(a, b)
-    return b
-
-
-def reshape(a, shape):
-    """numpy.reshape() with address check.
-    """
-    b = a.reshape(shape)
-    assert_addr(a, b)
-    return b
-
-
-def interleave(a):
-    """Returns interleaved array.
-
-    Example:
-        [10000, 3, 32, 32] => [10000, 32, 32, 3].
-    """
-    sh = list(a.shape)
-    sh.append(sh.pop(-3))
-    b = numpy.empty(sh, dtype=a.dtype)
-    if len(b.shape) == 4:
-        for i in range(sh[-1]):
-            b[:, :, :, i] = a[:, i, :, :]
-    elif len(b.shape) == 3:
-        for i in range(sh[-1]):
-            b[:, :, i] = a[i, :, :]
-    else:
-        raise error.BadFormatError("a should be of shape 4 or 3.")
-    return b
-
-
-def normalize_linear(arr, scale=1.0):
-    """Normalizes array to [-1, 1] in-place.
-    """
-    arr -= arr.min()
-    mx = arr.max()
-    if mx:
-        arr /= mx * 0.5
-        arr -= 1.0
-    arr *= scale
-
-
-def normalize_mean_disp(arr):
-    mean = numpy.mean(arr)
-    mi = numpy.min(arr)
-    mx = numpy.max(arr)
-    ds = max(mean - mi, mx - mean)
-    arr -= mean
-    if ds:
-        arr /= ds
-
-
-def normalize_exp(arr):
-    arr -= arr.max()
-    numpy.exp(arr, arr)
-    smm = arr.sum()
-    arr /= smm
-
-
-def calculate_pointwise_normalization(arr):
-    """Calculates coefficiets of pointwise dataset normalization to [-1, 1].
-    """
-    mul = numpy.zeros_like(arr[0])
-    add = numpy.zeros_like(arr[0])
-
-    mins = numpy.min(arr, 0)
-    maxs = numpy.max(arr, 0)
-    ds = maxs - mins
-    zs = numpy.nonzero(ds)
-
-    mul[zs] = 2.0
-    mul[zs] /= ds[zs]
-
-    mins *= mul
-    add[zs] = -1.0
-    add[zs] -= mins[zs]
-
-    logging.getLogger("Loader").debug("%f %f %f %f" % (mul.min(), mul.max(),
-                                                       add.min(), add.max()))
-
-    return mul, add
-
-
-def normalize_pointwise(arr):
-    mul, add = calculate_pointwise_normalization(arr)
-    arr *= mul
-    arr += add
-
-
-def norm_image(a, yuv=False):
-    """Normalizes numpy array to interval [0, 255].
-    """
-    aa = a.astype(numpy.float32)
-    if aa.__array_interface__["data"][0] == a.__array_interface__["data"][0]:
-        aa = aa.copy()
-    aa -= aa.min()
-    m = aa.max()
-    if m:
-        m /= 255.0
-        aa /= m
-    else:
-        aa[:] = 127.5
-    if yuv and len(aa.shape) == 3 and aa.shape[2] == 3:
-        aaa = numpy.empty_like(aa)
-        aaa[:, :, 0:1] = aa[:, :, 0:1] + (aa[:, :, 2:3] - 128) * 1.402
-        aaa[:, :, 1:2] = (aa[:, :, 0:1] + (aa[:, :, 1:2] - 128) * (-0.34414) +
-                          (aa[:, :, 2:3] - 128) * (-0.71414))
-        aaa[:, :, 2:3] = aa[:, :, 0:1] + (aa[:, :, 1:2] - 128) * 1.772
-        numpy.clip(aaa, 0.0, 255.0, aa)
-    return aa.astype(numpy.uint8)
-
-
-class NumDiff(object):
-    """Numeric differentiation helper.
-
-    WARNING: it is invalid for single precision float data type.
-    """
-    def __init__(self):
-        self.h = 1.0e-8
-        self.points = (2.0 * self.h, self.h, -self.h, -2.0 * self.h)
-        self.coeffs = numpy.array([-1.0, 8.0, -8.0, 1.0],
-                                  dtype=numpy.float64)
-        self.divizor = 12.0 * self.h
-        self.errs = numpy.zeros_like(self.points)
-
-    @property
-    def derivative(self):
-        return (self.errs * self.coeffs).sum() / self.divizor
 
 
 class Vector(Pickleable):

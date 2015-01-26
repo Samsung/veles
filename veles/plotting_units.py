@@ -17,6 +17,7 @@ import veles.memory as formats
 from veles.compat import from_none
 from veles.distributable import IDistributable
 from veles.mutable import Bool
+from veles.normalization import normalize_image
 from veles.plotter import Plotter, IPlotter
 
 
@@ -408,7 +409,7 @@ class ImagePlotter(Plotter):
             sx = int(numpy.round(value.size / sy))
             value = value.reshape(sy, sx)
 
-        return formats.norm_image(value, self.yuv)
+        return normalize_image(value, self.yuv)
 
     def redraw(self):
         figure = self.pp.figure(self.name)
