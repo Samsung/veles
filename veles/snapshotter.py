@@ -112,8 +112,12 @@ class SnapshotterBase(Unit):
 
 
 class SnappyFile(object):
-    def __init__(self, file_name, file_mode, buffer_size=snappy._CHUNK_MAX):
-        self._file = open(file_name, file_mode)
+    def __init__(self, file_name_or_obj, file_mode,
+                 buffer_size=snappy._CHUNK_MAX):
+        if isinstance(file_name_or_obj, str):
+            self._file = open(file_name_or_obj, file_mode)
+        else:
+            self._file = file_name_or_obj
         self.buffer = bytearray(buffer_size)
         self.buffer_pos = 0
         if file_mode == "wb":
