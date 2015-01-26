@@ -18,7 +18,7 @@ from warnings import warn
 from veles.paths import __root__
 
 __project__ = "Veles Machine Learning Platform"
-__version__ = "0.5.2"
+__version__ = "0.6.0"
 __license__ = "Samsung Proprietary License"
 __copyright__ = u"© 2013 Samsung Electronics Co., Ltd."
 __authors__ = ["Gennady Kuznetsov", "Vadim Markovtsev", "Alexey Kazantsev",
