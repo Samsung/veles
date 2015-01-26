@@ -3,74 +3,82 @@
 Using Configs
 :::::::::::::
 
- Class :class:`veles.config.Config` was designed to set the parameters of Model.
+ Class :class:`veles.config.Config` was designed to set the Model (:doc:`manualrst_veles_models`) parameters.
 
 In order to use it:
 
-1. Import most common usage - instance ``root`` of :class:`veles.config.Config`::
+1. Import the root configuration node - instance ``root`` of :class:`veles.config.Config`::
 
     from veles.config import root
 
-  Or you can create your own config object::
+  Or you can create your own configuration object::
 
     from veles.config import Config
 
     my_config = Config()
 
-2. To set the value of config object you can use "="::
+  You can use "=" to set the value of configuration object::
 
-    root.loader.minibatch_size = 100
+    root.my_workflow.loader.minibatch_size = 100
 
-  This entry automatically creates an object ''root.loader.minibatch_size'' and assign to it a value 100. For your config::
+  This line automatically creates the object ''root.my_workflow.loader.minibatch_size'' and assign to it a value 100. For your config::
 
     my_config = Config()
-    my_config.mnist.decision.fail_iteration = 20
+    my_config.my_workflow.decision.fail_iteration = 20
 
-3. Also you can use :meth:`update() <veles.config.Config>` method::
+2. Also you can use :meth:`update() <veles.config.Config>`, which can set arguments in a form of tree::
 
-    root.mnist.update({
-        "all2all": {"weights_stddev": 0.05},
-        "decision": {"fail_iterations": 300,
-                     "snapshot_prefix": "mnist"},
+    root.my_workflow.update({
+        "snapshotter": {"prefix": "my_workflow"},
         "loader": {"minibatch_size": 88, "on_device": True},
         "layers": [364, 10]})
 
-  It is more convenient entry and it is equivalent to this::
+  It is a more convenient form which is equivalent to this::
 
-    root.mnist.all2all.weights_stddev = 0.05
-    root.mnist.decision.fail_iterations = 300
-    root.mnist.decision.snapshot_prefix = "mnist"
-    root.mnist.loader.minibatch_size = 88
-    root.mnist.loader.on_device = True
-    root.mnist.layers = [364, 10]
+    root.my_workflow.snapshotter.prefix = "my_workflow"
+    root.my_workflow.loader.minibatch_size = 88
+    root.my_workflow.loader.on_device = True
+    root.my_workflow.layers = [364, 10]
 
-4. ``root.common`` is a common parameters. User can see all common parameters in :class:`veles.config.Config`, but changing should be in workflow (samples/mnist.py), configuration files (samples/mnist_config.py) or from command line::
+3. ``root.common`` is a set of general parameters of Veles engine. You can see all common arguments in :class:`veles.config.Config` or :doc:`manualrst_veles_workflow_parameters`::
 
     root.common.update({"precision_type": "float",
-                        "precision_level": 0}) # mnist_config.py
+                        "precision_level": 0}) # my_config.py
 
-5. You can set parameters in workflow file, configuration file and from command line.
+4. You can set parameters in workflow file, configuration file and in the command line.
 
-  Parameters in configuration file (samples/mnist_config.py) update parameters in workflow file (samples/mnist.py). And parameters from command line update parameters from configuration file (samples/mnist_config.py)::
+  Arguments application order:
 
-    root.mnist.loader.minibatch_size = 40 # mnist_config.py
-    root.mnist.loader.minibatch_size = 88 # mnist.py
+  1. Workflow. Workflow has default parameters. You can't delete default parameters, but you can move it to first configuration file::
 
-  minibatch_size will be 40. You can set the parameters from command line after workflow and configuration files::
+       root.my_workflow.loader.minibatch_size = 40 # my_workflow.py
 
-    python3 -m veles -s veles/znicz/samples/mnist.py - root.mnist.minibatch_size=20 root.common.plotters_disabled=True
+  2. Configuration files. Arguments in configuration file (my_config.py) update parameters in workflow file (my_workflow.py). You can run Model with many configuration files. They will update each other in the order in which they appear on the command line::
 
-6. After setting value of config object, you can use it. For example::
+       veles my_workflow.py my_config1.py my_config2.py
+
+     Arguments::
+
+       root.my_workflow.loader.minibatch_size = 40 # my_workflow.py
+       root.my_workflow.loader.minibatch_size = 88 # my_config1.py
+       root.my_workflow.loader.minibatch_size = 30 # my_config2.py
+
+   Result minibatch_size will be 30.
+
+  3. Command line. Parameters in the command line overwrite arguments in configuration file (my_config.py). You can set the parameters after workflow and configuration files on command line::
+
+       veles my_workflow.py my_config1.py my_config2.py root.my_workflow.loader.minibatch_size=20 root.common.plotters_disabled=True
+
+   Result minibatch_size will be 20.
+
+5. You can use arguments after setting value of configuration objects. For example::
 
     from veles.config import root
-    from veles.znicz.decision import DecisionGD
 
-    root.mnist.update({
+    root.my_workflow.update({
         "decision": {"fail_iterations": 20,
                      "max_epochs": 300})
 
-    class MnistWorkflow(nn_units.NNWorkflow):
-        def __init__(self, workflow, layers, **kwargs):
-            self.decision = DecisionGD(
-                self, fail_iterations=root.mnist.decision.fail_iterations,
-                max_epochs=root.mnist.decision.max_epochs)
+    print("Fail iterations is ", root.my_workflow.decision.fail_iterations)
+
+6. You can see all existing parameters in :doc:`manualrst_veles_workflow_parameters`.
