@@ -130,55 +130,62 @@ def interleave(a):
     return b
 
 
-def normalize(a):
+def normalize_linear(arr, scale=1.0):
     """Normalizes array to [-1, 1] in-place.
     """
-    a -= a.min()
-    mx = a.max()
+    arr -= arr.min()
+    mx = arr.max()
     if mx:
-        a /= mx * 0.5
-        a -= 1.0
+        arr /= mx * 0.5
+        arr -= 1.0
+    arr *= scale
 
 
-def normalize_mean_disp(a):
-    mean = numpy.mean(a)
-    mi = numpy.min(a)
-    mx = numpy.max(a)
+def normalize_mean_disp(arr):
+    mean = numpy.mean(arr)
+    mi = numpy.min(arr)
+    mx = numpy.max(arr)
     ds = max(mean - mi, mx - mean)
-    a -= mean
+    arr -= mean
     if ds:
-        a /= ds
+        arr /= ds
 
 
-def normalize_exp(a):
-    a -= a.max()
-    numpy.exp(a, a)
-    smm = a.sum()
-    a /= smm
+def normalize_exp(arr):
+    arr -= arr.max()
+    numpy.exp(arr, arr)
+    smm = arr.sum()
+    arr /= smm
 
 
-def normalize_pointwise(a):
-    """Normalizes dataset pointwise to [-1, 1].
+def calculate_pointwise_normalization(arr):
+    """Calculates coefficiets of pointwise dataset normalization to [-1, 1].
     """
-    IMul = numpy.zeros_like(a[0])
-    IAdd = numpy.zeros_like(a[0])
+    mul = numpy.zeros_like(arr[0])
+    add = numpy.zeros_like(arr[0])
 
-    mins = numpy.min(a, 0)
-    maxs = numpy.max(a, 0)
+    mins = numpy.min(arr, 0)
+    maxs = numpy.max(arr, 0)
     ds = maxs - mins
     zs = numpy.nonzero(ds)
 
-    IMul[zs] = 2.0
-    IMul[zs] /= ds[zs]
+    mul[zs] = 2.0
+    mul[zs] /= ds[zs]
 
-    mins *= IMul
-    IAdd[zs] = -1.0
-    IAdd[zs] -= mins[zs]
+    mins *= mul
+    add[zs] = -1.0
+    add[zs] -= mins[zs]
 
-    logging.getLogger("Loader").debug("%f %f %f %f" % (IMul.min(), IMul.max(),
-                                                       IAdd.min(), IAdd.max()))
+    logging.getLogger("Loader").debug("%f %f %f %f" % (mul.min(), mul.max(),
+                                                       add.min(), add.max()))
 
-    return (IMul, IAdd)
+    return mul, add
+
+
+def normalize_pointwise(arr):
+    mul, add = calculate_pointwise_normalization(arr)
+    arr *= mul
+    arr += add
 
 
 def norm_image(a, yuv=False):
