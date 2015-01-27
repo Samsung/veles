@@ -4,11 +4,11 @@ Created on Nov 5, 2013
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
-
-from veles.distributable import Distributable
+from dis import get_instructions
 import inspect
 from pyxdameraulevenshtein import damerau_levenshtein_distance
-import re
+
+from veles.distributable import Distributable
 
 
 class UnitRegistry(type):
@@ -22,7 +22,6 @@ class UnitRegistry(type):
     automatically hidden.
     """
     units = set()
-    kwarg_re = re.compile(r"kwargs\.get\(([^\s,\)]+)|kwargs\[([^\]]+)")
 
     def __init__(cls, name, bases, clsdict):
         yours = set(cls.mro())
@@ -40,15 +39,24 @@ class UnitRegistry(type):
         kwattrs = set()
         for base in cls.__mro__:
             try:
-                src, _ = inspect.getsourcelines(base.__init__)
+                instrs = get_instructions(base.__init__)
             except TypeError:
                 continue
-            for line in src:
-                # IUnit requires kwargs to be named as "kwargs", so apply
-                # a simple regular expression here
-                match = UnitRegistry.kwarg_re.search(line)
-                if match is not None:
-                    kwattrs.add((match.group(1) or match.group(2))[1:-1])
+            kw_var = inspect.getargspec(base.__init__).keywords
+            loading_fast_kwargs = False
+            for inst in instrs:
+                # opcodes:
+                # 0x7C = LOAD_FAST
+                # 0x69 = LOAD_ATTR
+                # 0x64 = LOAD_CONST
+                if inst.opcode == 0x7C and inst.argval == kw_var:
+                    loading_fast_kwargs = True
+                elif loading_fast_kwargs and inst.opcode == 0x69:
+                    continue
+                elif loading_fast_kwargs and inst.opcode == 0x64:
+                    kwattrs.add(inst.argval)
+                else:
+                    loading_fast_kwargs = False
         cls.KWATTRS = kwattrs
         # Build the matrix of differences
         matrix = {}
