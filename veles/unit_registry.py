@@ -22,7 +22,7 @@ class UnitRegistry(type):
     automatically hidden.
     """
     units = set()
-    kwarg_re = re.compile(r"kwargs\.get\(([^\s,]+)|kwargs\[([^\]]+)")
+    kwarg_re = re.compile(r"kwargs\.get\(([^\s,\)]+)|kwargs\[([^\]]+)")
 
     def __init__(cls, name, bases, clsdict):
         yours = set(cls.mro())
