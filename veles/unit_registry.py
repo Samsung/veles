@@ -45,16 +45,17 @@ class UnitRegistry(type):
             kw_var = inspect.getargspec(base.__init__).keywords
             loading_fast_kwargs = False
             for inst in instrs:
-                # opcodes:
-                # 0x7C = LOAD_FAST
-                # 0x69 = LOAD_ATTR
-                # 0x64 = LOAD_CONST
-                if inst.opcode == 0x7C and inst.argval == kw_var:
+                # https://hg.python.org/cpython/file/b3f0d7f50544/Include/opcode.h  # nopep8
+                # 124 = LOAD_FAST
+                # 106 = LOAD_ATTR
+                # 100 = LOAD_CONST
+                if inst.opcode == 124 and inst.argval == kw_var:
                     loading_fast_kwargs = True
-                elif loading_fast_kwargs and inst.opcode == 0x69:
+                elif loading_fast_kwargs and inst.opcode == 106:
                     continue
-                elif loading_fast_kwargs and inst.opcode == 0x64:
+                elif loading_fast_kwargs and inst.opcode == 100:
                     kwattrs.add(inst.argval)
+                    loading_fast_kwargs = False
                 else:
                     loading_fast_kwargs = False
         cls.KWATTRS = kwattrs
