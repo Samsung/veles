@@ -70,7 +70,10 @@ class RandomGenerator(Pickleable):
                 seed = numpy.zeros(count, dtype=dtype)
                 n = fin.readinto(seed)
             seed = seed[:n // seed[0].nbytes]
-        numpy.random.seed(seed)
+        try:
+            numpy.random.seed(seed)
+        except ValueError:
+            numpy.random.seed(seed.view(numpy.uint32))
         numpy.save(self.seed_file_name, seed)
         self.restore_state()
 
