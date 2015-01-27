@@ -58,8 +58,8 @@ def interleave(arr):
     Example:
         [10000, 3, 32, 32] => [10000, 32, 32, 3].
     """
-    last = arr.shape.pop(-3)
-    b = numpy.empty(arr.shape + (last,), dtype=arr.dtype)
+    last = arr.shape[-3]
+    b = numpy.empty((arr.shape[0],) + arr.shape[2:] + (last,), dtype=arr.dtype)
     if len(b.shape) == 4:
         for i in range(last):
             b[:, :, :, i] = arr[:, i, :, :]
