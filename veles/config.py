@@ -7,6 +7,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 
+from collections import defaultdict
 import os
 import platform
 from pprint import pprint
@@ -17,6 +18,7 @@ from veles.paths import __root__
 
 # : Global config
 root = None
+__protected__ = defaultdict(set)
 
 
 class Config(object):
@@ -24,6 +26,10 @@ class Config(object):
     """
     def __init__(self, path):
         self.__path__ = path
+
+    def __del__(self):
+        if self in __protected__:
+            del __protected__[self]
 
     def update(self, value):
         if self == root:
@@ -39,12 +45,19 @@ class Config(object):
             else:
                 setattr(self, k, v)
 
+    def protect(self, *names):
+        __protected__[self].update(names)
+
     def __getattr__(self, name):
         temp = Config("%s.%s" % (self.__path__, name))
         setattr(self, name, temp)
         return temp
 
     def __setattr__(self, name, value):
+        if name in __protected__[self]:
+            raise AttributeError(
+                "Attempted to change the protected configuration setting %s.%s"
+                % (self.__path__, name))
         super(Config, self).__setattr__(name, value)
 
     def __repr__(self):
@@ -74,6 +87,7 @@ class Config(object):
 
 
 root = Config("root")
+# Preload "common"
 root.common
 
 
@@ -173,3 +187,7 @@ if not root.common.allow_root and os.getuid() == 0:
         " privileges. Most likely this is because the code must be fixed and "
         "you are too lazy to find out where and how. Bad, bad boy! "
         "If you REALLY need it, set root.common.allow_root to True.")
+
+# Make some settings read-only
+root.common.protect("cache_dir", "snapshot_dir", "pickles_compression",
+                    "veles_user_dir")
