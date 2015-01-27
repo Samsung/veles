@@ -197,7 +197,6 @@ class AcceleratedUnit(Unit):
                     cache["devices"][0][0] and
                     self.device.queue_.device.platform.name ==
                     cache["devices"][0][1])
-
         binaries, my_defines = self._load_binary(
             defines, cache_file_name, dtype, ".cl", cache_is_valid)
         if binaries is not None:
@@ -399,7 +398,8 @@ class AcceleratedUnit(Unit):
                     self.warning("Cached binaries have an invalid format")
                     return None, None
                 return cache["binaries"], my_defines
-        except:
+        except Exception as e:
+            self.debug("Failed to load %s: %s", cache_file_name, e)
             return None, None
 
     def _save_to_cache(self, cache_file_name, suffix, program_source,
