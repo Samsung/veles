@@ -4,7 +4,12 @@ Created on Nov 5, 2013
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
-from dis import get_instructions
+try:
+    from dis import get_instructions
+    USE_DIS = True
+except ImportError:
+    import re
+    USE_DIS = False
 import inspect
 from pyxdameraulevenshtein import damerau_levenshtein_distance
 
@@ -39,25 +44,41 @@ class UnitRegistry(type):
         kwattrs = set()
         for base in cls.__mro__:
             try:
-                instrs = get_instructions(base.__init__)
+                kw_var = inspect.getargspec(base.__init__).keywords
             except TypeError:
                 continue
-            kw_var = inspect.getargspec(base.__init__).keywords
-            loading_fast_kwargs = False
-            for inst in instrs:
-                # https://hg.python.org/cpython/file/b3f0d7f50544/Include/opcode.h  # nopep8
-                # 124 = LOAD_FAST
-                # 106 = LOAD_ATTR
-                # 100 = LOAD_CONST
-                if inst.opcode == 124 and inst.argval == kw_var:
-                    loading_fast_kwargs = True
-                elif loading_fast_kwargs and inst.opcode == 106:
+            if USE_DIS:
+                try:
+                    instrs = get_instructions(base.__init__)
+                except TypeError:
                     continue
-                elif loading_fast_kwargs and inst.opcode == 100:
-                    kwattrs.add(inst.argval)
-                    loading_fast_kwargs = False
-                else:
-                    loading_fast_kwargs = False
+                loading_fast_kwargs = False
+                for inst in instrs:
+                    # https://hg.python.org/cpython/file/b3f0d7f50544/Include/opcode.h  # nopep8
+                    # 124 = LOAD_FAST
+                    # 106 = LOAD_ATTR
+                    # 100 = LOAD_CONST
+                    if inst.opcode == 124 and inst.argval == kw_var:
+                        loading_fast_kwargs = True
+                    elif loading_fast_kwargs and inst.opcode == 106:
+                        continue
+                    elif loading_fast_kwargs and inst.opcode == 100:
+                        kwattrs.add(inst.argval)
+                        loading_fast_kwargs = False
+                    else:
+                        loading_fast_kwargs = False
+            else:
+                try:
+                    src, _ = inspect.getsourcelines(base.__init__)
+                except TypeError:
+                    continue
+                kwarg_re = re.compile(
+                    r"%(kwargs)s\.get\(([^\s,\)]+)|%(kwargs)s\[([^\]]+)" %
+                    {"kwargs": kw_var})
+                for line in src:
+                    match = kwarg_re.search(line)
+                    if match is not None:
+                        kwattrs.add((match.group(1) or match.group(2))[1:-1])
         cls.KWATTRS = kwattrs
         # Build the matrix of differences
         matrix = {}
