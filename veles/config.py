@@ -28,7 +28,7 @@ class Config(object):
         self.__path__ = path
 
     def __del__(self):
-        if self in __protected__:
+        if __protected__ is not None and self in __protected__:
             del __protected__[self]
 
     def update(self, value):
