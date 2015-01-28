@@ -12,7 +12,6 @@ import threading
 import uuid
 import weakref
 from zope.interface import Interface, implementer
-from zope.interface.verify import verifyObject, verifyClass
 
 from veles.cmdline import CommandLineArgumentsRegistry
 from veles.compat import from_none
@@ -24,7 +23,7 @@ from veles.mutable import Bool, LinkableAttribute
 import veles.thread_pool as thread_pool
 from veles.timeit import timeit
 from veles.unit_registry import UnitRegistry
-import veles.zope_verify_fix  # pylint: disable=W0611
+from veles.verified import Verified
 
 
 class IUnit(Interface):
@@ -64,7 +63,7 @@ def nothing(*args, **kwargs):
 
 
 @six.add_metaclass(UnitRegistry)
-class Unit(Distributable):
+class Unit(Distributable, Verified):
     """General unit in data stream model.
 
     Attributes:
@@ -495,24 +494,6 @@ class Unit(Distributable):
         for link in self.links_to:
             res += "\t%s" % repr(link)
         print(res)
-
-    def verify_interface(self, iface):
-        if not iface.providedBy(self):
-            raise NotImplementedError(
-                "Unit %s does not implement %s interface" % (repr(self),
-                                                             iface.__name__))
-        try:
-            verifyObject(iface, self)
-        except:
-            self.error("%s does not pass verifyObject(%s)", str(self),
-                       str(iface))
-            raise
-        try:
-            verifyClass(iface, self.__class__)
-        except:
-            self.error("%s does not pass verifyClass(%s)",
-                       str(self.__class__), str(iface))
-            raise
 
     @staticmethod
     def is_immutable(value):
