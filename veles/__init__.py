@@ -85,10 +85,41 @@ def __html__():
 class VelesModule(ModuleType):
     """Redefined module class with added properties which are lazily evaluated.
     """
+
     def __init__(self, *args, **kwargs):
         super(VelesModule, self).__init__(__name__, *args, **kwargs)
         self.__dict__.update(modules[__name__].__dict__)
         self.__units_cache__ = None
+        self.__modules_cache_ = None
+
+    def __scan(self):
+        import os
+        import sys
+
+        blacklist = {"tests", "external", "libVeles", "libZnicz"}
+        # Temporarily disable standard output since some modules produce spam
+        # during import
+        stdout = sys.stdout
+        sys.stdout = open(os.devnull, 'w')
+        for root, dirs, files in os.walk(os.path.dirname(self.__file__)):
+            if any(b in root for b in blacklist):
+                del dirs[:]
+                continue
+            for file in files:
+                modname, ext = os.path.splitext(file)
+                if ext != '.py':
+                    continue
+                try:
+                    sys.path.insert(0, root)
+                    yield __import__(modname)
+                    del sys.path[0]
+                except Exception as e:
+                    stdout.write("%s: %s\n" % (
+                        os.path.relpath(os.path.join(root, file),
+                                        self.__root__),
+                        e))
+        sys.stdout.close()
+        sys.stdout = stdout
 
     @property
     def __units__(self):
@@ -98,34 +129,18 @@ class VelesModule(ModuleType):
         if self.__units_cache__ is not None:
             return self.__units_cache__
 
-        import os
-        import sys
+        for _ in self.__scan():
+            pass
 
-        # Temporarily disable standard output since some modules produce spam
-        # during import
-        stdout = sys.stdout
-        sys.stdout = open(os.devnull, 'w')
-        for root, dirs, files in os.walk(os.path.dirname(self.__file__)):
-            if 'tests' in root or 'external' in root:
-                del dirs[:]
-                continue
-            for file in files:
-                modname, ext = os.path.splitext(file)
-                if ext == '.py':
-                    try:
-                        sys.path.insert(0, root)
-                        __import__(modname)
-                        del sys.path[0]
-                    except Exception as e:
-                        stdout.write("%s: %s\n" % (
-                            os.path.relpath(os.path.join(root, file),
-                                            self.__root__),
-                            e))
-        sys.stdout.close()
-        sys.stdout = stdout
         from veles.unit_registry import UnitRegistry
         self.__units_cache__ = UnitRegistry.units
         return self.__units_cache__
+
+    @property
+    def __modules__(self):
+        if self.__modules_cache_ is None:
+            self.__modules_cache_ = set(self.__scan())
+        return self.__modules_cache_
 
     @property
     def __loc__(self):
