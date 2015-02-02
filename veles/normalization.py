@@ -248,6 +248,18 @@ class ExponentNormalizer(StatelessNormalizer):
 
 
 @implementer(INormalizer)
+class NoneNormalizer(StatelessNormalizer):
+    """
+    The most important normalizer which does simply nothing.
+    """
+
+    NAME = "none"
+
+    def normalize(self, data):
+        pass
+
+
+@implementer(INormalizer)
 class PointwiseNormalizer(NormalizerBase):
     """
     During the analysis stage, this class find the absolute minimum and maximum
