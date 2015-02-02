@@ -1,6 +1,8 @@
 """
 Created on May 16, 2014
 
+Base units which export the workflow they are attached to.
+
 Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 """
 

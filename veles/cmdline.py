@@ -1,6 +1,9 @@
 """
 Created on Jul 2, 2014
 
+Base class for __main__'s Main class and others which are topmost script
+classes.
+
 Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 """
 

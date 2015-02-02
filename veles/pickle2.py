@@ -1,6 +1,9 @@
 """
 Created on May 15, 2014
 
+Enables the interactive debugging of errors occured during pickling
+and unpickling.
+
 Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 """
 

@@ -1,6 +1,9 @@
 """
 Created on Jan 31, 2014
 
+Contains GraphicsClient cllass, which handling all interaction with the main
+graphics window
+
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 

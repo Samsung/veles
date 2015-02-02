@@ -1,6 +1,8 @@
 """
 Created on Mar 7, 2014
 
+Graphics server which uses ZeroMQ PUB socket to publish updates.
+
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 

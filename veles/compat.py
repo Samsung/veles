@@ -1,6 +1,8 @@
 """
 Created on Oct 14, 2014
 
+This module provides compatibility functions between python2 and python3 code
+
 Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
 

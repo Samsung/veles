@@ -1,6 +1,8 @@
 """
 Created on Nov 10, 2014
 
+Common code between VelesForge server and client classes.
+
 Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
 

@@ -1,6 +1,8 @@
 """
 Created on Feb 11, 2014
 
+Mapping between numpy and opencl types
+
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 

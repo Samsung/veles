@@ -1,6 +1,9 @@
 """
 Created on May 26, 2014
 
+Classes which are necessary for distributed operations (so-called master-slave
+mode)
+
 Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 """
 

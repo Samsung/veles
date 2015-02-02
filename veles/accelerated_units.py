@@ -1,6 +1,9 @@
 '''
 Created on Apr 25, 2014
 
+Units that use hardware acceleration, either OpenCL, CUDA or other supported
+backend.
+
 Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 '''
 

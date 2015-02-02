@@ -1,6 +1,8 @@
 """
 Created on Jul 12, 2013
 
+Provides logging facilities
+
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 

@@ -1,6 +1,9 @@
 """
 Created on Nov 5, 2014
 
+Interface which states that the object supports plotting in GraphicsClient
+environment.
+
 Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
 
