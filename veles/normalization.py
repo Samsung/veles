@@ -312,8 +312,11 @@ class MeanFileNormalizer(StatelessNormalizer):
                     with open(mean_path, "rb") as fin:
                         self.mean = pickle.load(fin)
                 except:
-                    raise from_none(ValueError(
-                        "Unable to load %s" % mean_path))
+                    if isinstance(mean_path, numpy.ndarray):
+                        self.mean = mean_path
+                    else:
+                        raise from_none(ValueError(
+                            "Unable to load %s" % mean_path))
         if not isinstance(self.mean, numpy.ndarray):
             raise ValueError("%s is in invalid format" % mean_path)
 
