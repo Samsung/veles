@@ -6,7 +6,8 @@ Loader package.
 Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
 
-from veles.loader.base import ILoader, Loader
+from veles.loader.base import ILoader, Loader, CLASS_NAME, TARGET, TRAIN, \
+    VALID, TEST
 from veles.loader.fullbatch import IFullBatchLoader, FullBatchLoader, \
     FullBatchLoaderMSE
 from veles.loader.image import IImageLoader, ImageLoader, IFileImageLoader, \
