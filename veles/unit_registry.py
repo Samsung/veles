@@ -36,11 +36,6 @@ class UnitRegistry(type):
                 not clsdict.get('hide', False) and \
                 not getattr(cls, 'hide_all', False):
             UnitRegistry.units.add(cls)
-        super(UnitRegistry, cls).__init__(name, bases, clsdict)
-
-    def __call__(cls, *args, **kwargs):
-        """ Checks for misprints in argument names """
-        obj = super(UnitRegistry, cls).__call__(*args, **kwargs)
         kwattrs = set()
         for base in cls.__mro__:
             try:
@@ -80,11 +75,16 @@ class UnitRegistry(type):
                     if match is not None:
                         kwattrs.add((match.group(1) or match.group(2))[1:-1])
         cls.KWATTRS = kwattrs
+        super(UnitRegistry, cls).__init__(name, bases, clsdict)
+
+    def __call__(cls, *args, **kwargs):
+        """ Checks for misprints in argument names """
+        obj = super(UnitRegistry, cls).__call__(*args, **kwargs)
         # Build the matrix of differences
         matrix = {}
         matched = set()
         for given_kwarg in kwargs:
-            for kwattr in kwattrs:
+            for kwattr in cls.KWATTRS:
                 if (kwattr, given_kwarg) in matrix:
                     continue
                 matrix[(given_kwarg, kwattr)] = d = \
@@ -98,7 +98,7 @@ class UnitRegistry(type):
             ignored_kwargs = []
             for given_kwarg in set(kwargs).difference(matched):
                 candidates = []
-                for kwattr in kwattrs:
+                for kwattr in cls.KWATTRS:
                     d = matrix.get((given_kwarg, kwattr))
                     if d == 1:
                         candidates.append(kwattr)
