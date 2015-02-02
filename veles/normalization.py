@@ -173,13 +173,12 @@ class MeanDispersionNormalizer(NormalizerBase):
     def _initialize(self, data):
         self._sum = numpy.zeros_like(data[0])
         self._count = 0
-        self._min = data[0].copy()
-        self._max = data[0].copy()
+        self._min = numpy.array(data[0])
+        self._max = numpy.array(data[0])
 
     def analyze(self, data):
         self._count += data.shape[0]
         self._sum += numpy.sum(data, axis=0)
-        self.count_data += 1
         numpy.minimum(self._min, numpy.min(data, axis=0), self._min)
         numpy.maximum(self._max, numpy.max(data, axis=0), self._max)
 
