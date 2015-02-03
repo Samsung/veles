@@ -70,10 +70,9 @@ class UnitRegistry(type):
                 kwarg_re = re.compile(
                     r"%(kwargs)s\.get\(([^\s,\)]+)|%(kwargs)s\[([^\]]+)" %
                     {"kwargs": kw_var})
-                for line in src:
-                    match = kwarg_re.search(line)
-                    if match is not None:
-                        kwattrs.add((match.group(1) or match.group(2))[1:-1])
+                src = "".join((l.strip() for l in src)).replace('\n', '')
+                for match in kwarg_re.finditer(src):
+                    kwattrs.add((match.group(1) or match.group(2))[1:-1])
         cls.KWATTRS = kwattrs
         super(UnitRegistry, cls).__init__(name, bases, clsdict)
 
