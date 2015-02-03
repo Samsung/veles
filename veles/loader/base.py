@@ -82,7 +82,7 @@ class Loader(Unit):
         max_minibatch_size: maximal size of a minibatch.
         total_samples: total number of samples in the dataset.
         class_lengths: number of samples per class.
-        class_offsets: offset in samples where the next class begins.
+        class_end_offsets: offset in samples where the next class begins.
         last_minibatch: if current minibatch is last in it's class.
         epoch_ended: True right after validation is completed and no samples
                      have been served since.
@@ -120,7 +120,7 @@ class Loader(Unit):
 
         self._total_samples = 0
         self.class_lengths = [0, 0, 0]
-        self.class_offsets = [0, 0, 0]
+        self.class_end_offsets = [0, 0, 0]
 
         self.epoch_ended = Bool(False)
         self.epoch_number = 0
@@ -362,13 +362,13 @@ class Loader(Unit):
 
     @property
     def class_ended(self):
-        for offset in self.class_offsets:
+        for offset in self.class_end_offsets:
             if self.global_offset == offset:
                 return True
             if self.global_offset < offset:
                 return False
-        raise error.Bug("global_offset %d is out of bounds %s",
-                        self.global_offset, str(self.class_offsets))
+        raise error.Bug("global_offset %d is out of bounds %s" %
+                        (self.global_offset, self.class_end_offsets))
 
     @property
     def total_failed(self):
@@ -496,8 +496,8 @@ class Loader(Unit):
             self.shuffled_indices.mem = numpy.arange(self.total_samples,
                                                      dtype=Loader.LABEL_DTYPE)
         self.shuffled_indices.map_write()
-        self.prng.shuffle(self.shuffled_indices.mem[self.class_offsets[VALID]:
-                                                    self.class_offsets[TRAIN]])
+        self.prng.shuffle(self.shuffled_indices.mem[
+            self.class_end_offsets[VALID]:])
         self.debug("Shuffled TRAIN")
 
     def serve_next_minibatch(self, slave_id):
@@ -538,7 +538,7 @@ class Loader(Unit):
             start_index = i * self.max_minibatch_size
             self.minibatch_indices[:self.minibatch_size] = \
                 numpy.arange(start_index, start_index + self.minibatch_size,
-                             dtype=int) + self.class_offsets[VALID]
+                             dtype=int) + self.class_end_offsets[VALID]
             self.fill_minibatch()
             self.normalizer.analyze(self.minibatch_data[:self.minibatch_size])
 
@@ -564,21 +564,21 @@ class Loader(Unit):
         return False
 
     def class_index_by_sample_index(self, index):
-        for class_index, class_offset in enumerate(self.class_offsets):
+        for class_index, class_offset in enumerate(self.class_end_offsets):
             if index < class_offset:
                 return class_index, class_offset - index
         raise error.Bug("Could not convert sample index to class index, "
-                        "probably due to incorrect class_offsets.")
+                        "probably due to incorrect class_end_offsets.")
 
     def _update_total_samples(self):
-        """Fills self.class_offsets from self.class_lengths.
+        """Fills self.class_end_offsets from self.class_lengths.
         """
         total_samples = 0
         for i, n in enumerate(self.class_lengths):
             assert isinstance(n, int), \
                 "class_length must contain integers only"
             total_samples += n
-            self.class_offsets[i] = total_samples
+            self.class_end_offsets[i] = total_samples
         self.total_samples = total_samples
         if self.class_lengths[TRAIN] < 1:
             raise ValueError(

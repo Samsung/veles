@@ -183,7 +183,8 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         pass
 
     def analyze_and_normalize_original_data(self):
-        self.normalizer.analyze(self.original_data[self.class_offsets[VALID]:])
+        self.normalizer.analyze(self.original_data[
+            self.class_end_offsets[VALID]:])
         self.normalizer.normalize(self.original_data.mem)
 
     def _gpu_init(self):
