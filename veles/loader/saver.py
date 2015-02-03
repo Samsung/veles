@@ -24,6 +24,17 @@ from veles.snapshotter import SnappyFile
 from veles.units import Unit, IUnit
 
 
+if not hasattr(gzip, "decompress"):
+    def decompress(data):
+        """Decompress a gzip compressed string in one shot.
+        Return the decompressed string.
+        """
+        with gzip.GzipFile(fileobj=gzip.io.BytesIO(data)) as f:
+            return f.read()
+
+    gzip.decompress = decompress
+
+
 @implementer(IUnit)
 class MinibatchesSaver(Unit):
     """Saves data from Loader to pickle file.
