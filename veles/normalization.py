@@ -100,6 +100,8 @@ class NormalizerBase(Verified):
     def assert_initialized(self, fn):
         def wrapped(data):
             assert self._initialized
+            assert data.dtype in (numpy.float32, numpy.float64)
+            assert isinstance(data.shape, tuple) and len(data.shape) > 1
             return fn(data)
 
         wrapped.__name__ = "assert_initialized_" + fn.__name__
@@ -171,14 +173,15 @@ class MeanDispersionNormalizer(NormalizerBase):
     NAME = "mean_disp"
 
     def _initialize(self, data):
-        self._sum = numpy.zeros_like(data[0])
+        # We force float64 to fix possible float32 saturation
+        self._sum = numpy.zeros_like(data[0], dtype=numpy.float64)
         self._count = 0
         self._min = numpy.array(data[0])
         self._max = numpy.array(data[0])
 
     def analyze(self, data):
         self._count += data.shape[0]
-        self._sum += numpy.sum(data, axis=0)
+        self._sum += numpy.sum(data.astype(numpy.float64), axis=0)
         numpy.minimum(self._min, numpy.min(data, axis=0), self._min)
         numpy.maximum(self._max, numpy.max(data, axis=0), self._max)
 
@@ -188,7 +191,8 @@ class MeanDispersionNormalizer(NormalizerBase):
     def normalize(self, data):
         mean, disp = self._calculate_coefficients()
         data -= mean
-        data /= disp
+        nonzeros = numpy.nonzero(disp)
+        data[nonzeros] /= disp[nonzeros]
 
 
 @implementer(INormalizer)
@@ -221,14 +225,19 @@ class LinearNormalizer(StatelessNormalizer):
                 raise TypeError(
                     "Each value in the interval must be either an int or a "
                     "float (got %s of %s)" % (v, v.__class__))
-        self._interval = vmin, vmax
+        self._interval = float(vmin), float(vmax)
 
     def normalize(self, data):
-        dmin = data.min(axis=0)
-        dmax = data.max(axis=0)
+        data = data.transpose()
+        dmin = numpy.min(data, axis=0)
+        dmax = numpy.max(data, axis=0)
+        diff = dmax - dmin
         imin, imax = self.interval
-        data *= (imin - imax) / (dmin - dmax)
-        data += (dmin * imax - dmax * imin) / (dmin - dmax)
+        if numpy.count_nonzero(dmax - dmin) < numpy.prod(dmin.shape):
+            self.warning("There are uniform samples and the normalization "
+                         "type is linear, they are set to 0")
+        data *= (imin - imax) / diff
+        data += (dmin * imax - dmax * imin) / diff
 
 
 @implementer(INormalizer)
@@ -242,6 +251,7 @@ class ExponentNormalizer(StatelessNormalizer):
     NAME = "exp"
 
     def normalize(self, data):
+        data = data.transpose()
         data -= data.max(axis=0)
         numpy.exp(data, data)
         data /= data.sum(axis=0)
@@ -272,7 +282,9 @@ class PointwiseNormalizer(NormalizerBase):
     def _initialize(self, data):
         self._min = data[0].copy()
         self._max = data[0].copy()
-        self._cache = [numpy.zeros_like(data[0]) for _ in range(2)]
+        dtype = numpy.float32 if data[0].dtype != numpy.float64 \
+            else numpy.float64
+        self._cache = [numpy.zeros_like(data[0], dtype=dtype) for _ in (0, 1)]
 
     def analyze(self, data):
         numpy.minimum(self._min, numpy.min(data, axis=0), self._min)
@@ -296,41 +308,85 @@ class PointwiseNormalizer(NormalizerBase):
         data += add
 
 
+class MeanNormalizerBase(object):
+    def __init__(self, state=None, **kwargs):
+        super(MeanNormalizerBase, self).__init__(state, **kwargs)
+        self.scale = kwargs.get("scale", 1)
+
+    @property
+    def scale(self):
+        """Can be a reversed dispersion matrix.
+        """
+        return self._scale
+
+    @scale.setter
+    def scale(self, value):
+        if not isinstance(value, (int, float, numpy.float32, numpy.float64)):
+            raise TypeError("Scale must be a scalar floating point value")
+        self._scale = float(value)
+
+    def apply_scale(self, data):
+        data *= self.scale
+
+
 @implementer(INormalizer)
-class MeanFileNormalizer(StatelessNormalizer):
+class ExternalMeanNormalizer(MeanNormalizerBase, StatelessNormalizer):
     """
-    subtracts the "mean" sample from each subarray. Optionally, it then
+    Subtracts the "mean" sample from each subarray. Optionally, it then
     multiplies the result by scale.
     """
 
-    NAME = "mean"
+    NAME = "external_mean"
 
     def __init__(self, state=None, **kwargs):
-        super(MeanFileNormalizer, self).__init__(state, **kwargs)
-        self.scale = kwargs.get("scale", 1)
-        # normalization_scale can be a reverse dispersion matrix
+        super(ExternalMeanNormalizer, self).__init__(state, **kwargs)
         if state is not None:
             return
-        mean_path = kwargs["mean_path"]
+        mean_source = kwargs["mean_source"]
         try:
-            with open(mean_path, "rb") as fin:
+            with open(mean_source, "rb") as fin:
                 self.mean = numpy.array(Image.open(fin))
         except:
             try:
-                self.mean = numpy.load(mean_path)
+                self.mean = numpy.load(mean_source)
             except:
                 try:
-                    with open(mean_path, "rb") as fin:
+                    with open(mean_source, "rb") as fin:
                         self.mean = pickle.load(fin)
                 except:
-                    if isinstance(mean_path, numpy.ndarray):
-                        self.mean = mean_path
+                    if isinstance(mean_source, numpy.ndarray):
+                        self.mean = mean_source
                     else:
                         raise from_none(ValueError(
-                            "Unable to load %s" % mean_path))
+                            "Unable to load %s" % mean_source))
         if not isinstance(self.mean, numpy.ndarray):
-            raise ValueError("%s is in invalid format" % mean_path)
+            raise ValueError("%s is in invalid format" % mean_source)
 
     def normalize(self, data):
         data -= self.mean
-        data *= self.scale
+        self.apply_scale(data)
+
+
+@implementer(INormalizer)
+class InternalMeanNormalizer(MeanNormalizerBase, NormalizerBase):
+    """
+    Subtracts the calculated globally "mean" sample from each subarray.
+    Optionally, it then multiplies the result by scale.
+    """
+
+    NAME = "internal_mean"
+
+    def analyze(self, data):
+        self._count += data.shape[0]
+        self._sum += numpy.sum(data, axis=0)
+
+    def _initialize(self, data):
+        self._sum = numpy.zeros_like(data[0], dtype=numpy.float64)
+        self._count = 0
+
+    def _calculate_coefficients(self):
+        return self._sum / self._count
+
+    def normalize(self, data):
+        data -= self._calculate_coefficients()
+        self.apply_scale(data)
