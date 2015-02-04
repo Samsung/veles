@@ -10,6 +10,7 @@ import signal
 from six import print_
 import sys
 import threading
+import time
 import unittest
 
 from veles.thread_pool import ThreadPool
@@ -26,10 +27,13 @@ def wait():
         if event is None:
             return
         if not event.wait(seconds):
-            print_("Timeout %.1f sec - sending SIGINT" % seconds,
-                   file=sys.stderr)
+            print_("Timeout %.1f sec - sending SIGINT and waiting 60 seconds"
+                   % seconds, file=sys.stderr)
             os.kill(os.getpid(), signal.SIGINT)
-
+            time.sleep(60)
+            print_("Time has come to make things right - sending SIGTERM",
+                   file=sys.stderr)
+            os.kill(os.getpid(), signal.SIGTERM)
 
 thread = threading.Thread(target=wait, name='timeout')
 sysexit = sys.exit
