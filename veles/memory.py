@@ -194,7 +194,7 @@ class Vector(Pickleable):
 
     @device.setter
     def device(self, device):
-        self._reset(False)
+        self._reset(self.mem)
         if device is None:
             self._unset_device()
             return
@@ -213,9 +213,14 @@ class Vector(Pickleable):
 
     @mem.setter
     def mem(self, value):
-        if self.devmem is not None and not eq_addr(self._mem, value):
-            raise error.AlreadyExistsError("Device buffer already assigned, "
-                                           "call reset() beforehand.")
+        if self.devmem is not None and not eq_addr(self.mem, value):
+            raise error.AlreadyExistsError(
+                "Device buffer has already been assigned, call reset() "
+                "beforehand.")
+        if value is not None and not isinstance(value, numpy.ndarray):
+            raise TypeError(
+                "Attempted to set Vector's mem to something which is not a "
+                "numpy array: %s of type %s" % (value, type(value)))
         self._mem = value
 
     @property
@@ -307,7 +312,7 @@ class Vector(Pickleable):
         return self.__bool__()
 
     def __lshift__(self, value):
-        self._mem = value
+        self.mem = value
 
     def __rlshift__(self, other):
         other.extend(self._mem)
@@ -339,10 +344,14 @@ class Vector(Pickleable):
 
     @threadsafe
     def initialize(self, device):
-        if self._mem is None or self.devmem is not None or device is None:
+        if self.device == device and self.devmem is not None:
+            return
+        self.device = device
+        if self.mem is None or self.device is None:
             return
 
-        self.device = device
+        assert isinstance(self.mem, numpy.ndarray), \
+            "Wrong mem type: %s" % type(self.mem)
         self._backend_realign_mem_()
         self._backend_create_devmem_()
 
@@ -368,20 +377,24 @@ class Vector(Pickleable):
         return self._backend_unmap_()
 
     @threadsafe
-    def reset(self, clear_hostmem=True):
-        """Sets device buffers to None and optionally host buffer.
+    def reset(self, new_mem=None):
+        """Sets device buffers to None and optionally release the host buffer.
+        :param new_mem: Set "mem" property to this value.
         """
-        return self._reset(clear_hostmem)
+        return self._reset(new_mem)
 
-    def _reset(self, clear_hostmem):
+    def _reset(self, new_mem):
+        """
+        :param new_mem: mem will be set to this value. Can be None.
+        :return: Nothing.
+        """
         self._backend_unmap_()
         if self.devmem is not None:
             global Watcher  # pylint: disable=W0601
             Watcher -= self.devmem.size
         self.devmem = None
         self.map_flags = 0
-        if clear_hostmem:
-            self._mem = None
+        self.mem = new_mem
 
     threadsafe = staticmethod(threadsafe)
 
@@ -449,7 +462,7 @@ class Vector(Pickleable):
             memalign = 4096
         else:
             memalign = self.device.device_info.memalign
-        self._mem = cl.realign_array(self._mem, memalign, numpy)
+        self.mem = cl.realign_array(self._mem, memalign, numpy)
 
     def cuda_create_devmem(self):
         self.devmem = cu.MemAlloc(self.device.context, self.plain.nbytes)
@@ -485,4 +498,4 @@ class Vector(Pickleable):
     def cuda_realign_mem(self):
         # We expect numpy array with continuous memory layout, so realign it.
         # PAGE-boundary alignment may increase speed also.
-        self._mem = cl.realign_array(self._mem, 4096, numpy)
+        self.mem = cl.realign_array(self._mem, 4096, numpy)

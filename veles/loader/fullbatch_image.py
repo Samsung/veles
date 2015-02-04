@@ -130,7 +130,7 @@ class FullBatchImageLoader(ImageLoader, FullBatchLoader):
                 continue
             if self.samples_inflation == 1:
                 has_labels.append(self.load_keys(
-                    keys, pbar, data[offset:], labels[offset:]))
+                    keys, pbar, data[offset:], labels[offset:], ))
                 offset += len(keys)
                 continue
             offset, hl = self._load_distorted_keys(

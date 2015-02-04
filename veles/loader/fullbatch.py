@@ -115,18 +115,15 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
     def create_minibatches(self):
         self.check_types()
 
-        self.minibatch_data.reset()
-        self.minibatch_data.mem = numpy.zeros(
-            (self.max_minibatch_size,) + self.shape, dtype=self.dtype)
+        self.minibatch_data.reset(numpy.zeros(
+            (self.max_minibatch_size,) + self.shape, dtype=self.dtype))
 
-        self.minibatch_labels.reset()
-        if self.has_labels:
-            self.minibatch_labels.mem = numpy.zeros(
-                (self.max_minibatch_size,), dtype=Loader.LABEL_DTYPE)
+        self.minibatch_labels.reset(numpy.zeros(
+            (self.max_minibatch_size,), dtype=Loader.LABEL_DTYPE)
+            if self.has_labels else None)
 
-        self.minibatch_indices.reset()
-        self.minibatch_indices.mem = numpy.zeros(
-            self.max_minibatch_size, dtype=Loader.INDEX_DTYPE)
+        self.minibatch_indices.reset(numpy.zeros(
+            self.max_minibatch_size, dtype=Loader.INDEX_DTYPE))
 
     def check_types(self):
         if (not isinstance(self.original_data, memory.Vector) or

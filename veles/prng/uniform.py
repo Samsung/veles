@@ -44,17 +44,15 @@ class Uniform(AcceleratedUnit):
         super(Uniform, self).initialize(device, **kwargs)
 
         if not self.states or self.states.size != self.num_states * 16:
-            self.states.reset()
-            self.states.mem = numpy.empty(self.num_states * 16 * 2,
-                                          dtype=numpy.uint32)
+            self.states.reset(numpy.empty(self.num_states * 16 * 2,
+                                          dtype=numpy.uint32))
             self.states.mem[:] = self.prng.randint(0, (1 << 32) + 1,
                                                    self.states.size)
 
         if not self.output or self.output.nbytes < self.output_bytes:
-            self.output.reset()
             self.output_bytes = roundup(self.output_bytes,
                                         self.num_states * 16 * 8)
-            self.output.mem = numpy.zeros(self.output_bytes, dtype=numpy.uint8)
+            self.output.reset(numpy.zeros(self.output_bytes, numpy.uint8))
         else:
             self.output_bytes = self.output.nbytes
 
