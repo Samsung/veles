@@ -20,8 +20,8 @@ from zope.interface import implementer, Interface
 
 from veles.compat import from_none
 import veles.error as error
-from veles.loader.base import CLASS_NAME, TARGET, ILoader, Loader, \
-    LoaderMSEMixin
+from veles.loader.base import CLASS_NAME, ILoader, Loader
+from veles.memory import Vector
 
 
 MODE_COLOR_MAP = {
@@ -112,6 +112,8 @@ class ImageLoader(Loader):
         self.crop_number = kwargs.get("crop_number", 1)
         self._background = None
         self.mean_image = None
+        self.smart_crop = kwargs.get("smart_crop", True)
+        self.minibatch_label_values = Vector()
 
     def __setstate__(self, state):
         super(ImageLoader, self).__setstate__(state)
@@ -233,6 +235,19 @@ class ImageLoader(Loader):
         self._crop_number = value
 
     @property
+    def smart_crop(self):
+        """
+        :return: Value indicating whether to crop only around bboxes.
+        """
+        return self._smart_crop
+
+    @smart_crop.setter
+    def smart_crop(self, value):
+        if not isinstance(value, bool):
+            raise TypeError("smart_crop must be a boolean value")
+        self._smart_crop = value
+
+    @property
     def mirror(self):
         return self._mirror
 
@@ -344,7 +359,25 @@ class ImageLoader(Loader):
             return tuple(int(info[0][i] * self.scale)
                          for i in (0, 1)), info[1]
 
-    def preprocess_image(self, data, color, crop=True):
+    def get_image_bbox(self, key, size):
+        """
+        Override this method for custom label <-> bbox mapping.
+        :param key: The image key.
+        :param size: The image size (for optimization purposes).
+        :return: (ymin, ymax, xmin, xmax).
+        """
+        return 0, size[0], 0, size[1]
+
+    def preprocess_image(self, data, color, crop, bbox):
+        """
+        Transforms images before serving.
+        :param data: the loaded image data.
+        :param color: The loaded image color space.
+        :param crop: True if must crop the scaled image; otherwise, False.
+        :param bbox: The bounding box of the labeled object. Tuple
+        (ymin, ymax, xmin, xmax).
+        :return: The transformed image data, the label value (from 0 to 1).
+        """
         if color != self.color_space:
             method = getattr(
                 cv2, "COLOR_%s2%s" % (color, self.color_space), None)
@@ -365,13 +398,16 @@ class ImageLoader(Loader):
         if self.add_sobel:
             data = self.add_sobel_channel(data)
         if self.scale != 1.0:
-            data = self.scale_image(data)
+            data, bbox = self.scale_image(data, bbox)
         if crop and self.crop is not None:
-            data = self.crop_image(data)
+            data, label_value = self.crop_image(data, bbox)
+        else:
+            label_value = 1
 
-        return data
+        return data, label_value, bbox
 
-    def scale_image(self, data):
+    def scale_image(self, data, bbox):
+        bbox = numpy.array(bbox)
         if self.scale_maintain_aspect_ratio:
             if data.shape[1] >= data.shape[0]:
                 dst_width = self.uncropped_shape[:2][1]
@@ -395,11 +431,17 @@ class ImageLoader(Loader):
             sample = self.background_image.copy()
             sample[dst_y_min:dst_y_max, dst_x_min:dst_x_max] = data
             data = sample.copy()
+            bbox[:2] *= (dst_y_max - dst_y_min) / (bbox[1] - bbox[0])
+            bbox[:2] += dst_y_min
+            bbox[2:] *= (dst_x_max - dst_x_min) / (bbox[3] - bbox[2])
+            bbox[2:] += dst_x_min
         else:
             cv2.resize(
                 data, tuple(reversed(self.uncropped_shape[:2])),
                 interpolation=cv2.INTER_CUBIC)
-        return data
+            bbox[:2] *= self.uncropped_shape[0] / (bbox[1] - bbox[0])
+            bbox[2:] *= self.uncropped_shape[1] / (bbox[3] - bbox[2])
+        return data, tuple(bbox)
 
     def add_sobel_channel(self, data):
         if self.channels_number == 1:
@@ -418,17 +460,28 @@ class ImageLoader(Loader):
                          for d in ((1, 0), (0, 1)))
         return numpy.linalg.norm(sobel_xy)
 
-    def crop_image(self, data):
+    def crop_image(self, data, bbox):
+        """
+        :param data: The source image to crop.
+        :param bbox: (ymin, ymax, xmin, xmax)
+        :return: tuple (image part randomly cropped around the bbox,
+        intersection ratio)
+        """
         crop_hw_yx = [[0, 0], [0, 0]]
         for i in 0, 1:
             crop_hw_yx[0][i] = self.crop[i] if isinstance(self.crop[i], int) \
                 else int(self.crop[i] * data.shape[i])
+            crop_size = crop_hw_yx[0][i]
             crop_hw_yx[1][i] = self.prng.randint(
-                0, data.shape[i] - crop_hw_yx[0][i] + 1)
+                max(bbox[i * 2] - crop_size, 0),
+                min(data.shape[i] - crop_size + 1,
+                    bbox[i * 2 + 1] + crop_size))
         crop_first = crop_hw_yx[1]
         crop_last = tuple(crop_hw_yx[1][i] + crop_hw_yx[0][i]
                           for i in (0, 1))
-        return data[crop_first[0]:crop_last[0], crop_first[1]:crop_last[1]]
+        crop_bbox = crop_first[0], crop_last[0], crop_first[1], crop_last[1]
+        return data[crop_bbox[0]:crop_bbox[1], crop_bbox[2]:crop_bbox[3]], \
+            self._intersection(bbox, crop_bbox)
 
     def distort(self, data, mirror, rot):
         if mirror:
@@ -456,13 +509,13 @@ class ImageLoader(Loader):
             mirror = False
         return mirror, self.rotations[index]
 
-    def load_keys(self, keys, pbar, data, labels, crop=True):
+    def load_keys(self, keys, pbar, data, labels, label_values, crop=True):
         """Loads data from the specified keys.
         """
         index = 0
         has_labels = False
         for key in keys:
-            obj = self._load_image(key)
+            obj, label_value, _ = self._load_image(key)
             label, has_labels = self._load_label(key, has_labels)
             if (self.crop is None or not crop) and \
                     obj.shape[:2] != self.uncropped_shape:
@@ -473,6 +526,8 @@ class ImageLoader(Loader):
                 data[index] = obj
             if labels is not None:
                 labels[index] = label
+            if label_values is not None:
+                label_values[index] = label_value
             index += 1
             if pbar is not None:
                 pbar.inc()
@@ -512,24 +567,22 @@ class ImageLoader(Loader):
             if len(keys) > 0:
                 break
         assert len(keys) > 0
-        data = numpy.zeros((1,) + self.shape, dtype=self.source_dtype)
-        labels = numpy.zeros((1,), dtype=Loader.LABEL_DTYPE)
         self._has_labels = self.load_keys(
-            (keys[numpy.random.randint(len(keys))],), None, data, labels)
+            (keys[numpy.random.randint(len(keys))],), None, None, None, None)
 
     def create_minibatches(self):
-        self.minibatch_data.reset()
-        self.minibatch_data.mem = numpy.zeros(
-            (self.max_minibatch_size,) + self.shape, dtype=self.dtype)
+        self.minibatch_data.reset(numpy.zeros(
+            (self.max_minibatch_size,) + self.shape, dtype=self.dtype))
 
-        self.minibatch_labels.reset()
-        if self.has_labels:
-            self.minibatch_labels.mem = numpy.zeros(
-                (self.max_minibatch_size,), dtype=Loader.LABEL_DTYPE)
+        self.minibatch_labels.reset(numpy.zeros(
+            (self.max_minibatch_size,), dtype=Loader.LABEL_DTYPE)
+            if self.has_labels else None)
 
-        self.minibatch_indices.reset()
-        self.minibatch_indices.mem = numpy.zeros(
-            self.max_minibatch_size, dtype=Loader.INDEX_DTYPE)
+        self.minibatch_indices.reset(numpy.zeros(
+            self.max_minibatch_size, dtype=Loader.INDEX_DTYPE))
+
+        self.minibatch_label_values.reset(numpy.zeros(
+            self.max_minibatch_size, numpy.float32))
 
     def keys_from_indices(self, indices):
         keys = []
@@ -545,7 +598,8 @@ class ImageLoader(Loader):
         keys = self.keys_from_indices(indices)
         assert self.has_labels == self.load_keys(
             keys, None, self.minibatch_data.mem[-len(keys):],
-            self.minibatch_labels.mem[-len(keys):])
+            self.minibatch_labels.mem[-len(keys):],
+            self.minibatch_label_values[-len(keys):], None)
         if self.samples_inflation == 1:
             return
         for index in indices:
@@ -557,9 +611,13 @@ class ImageLoader(Loader):
             self.minibatch_labels[index] = self.minibatch_labels[src_key_index]
 
     def _load_image(self, key, crop=True):
+        """Returns the data to serve corresponding to the given image key and
+        the label value (from 0 to 1).
+        """
         data = self.get_image_data(key)
-        _, color = self.get_image_info(key)
-        return self.preprocess_image(data, color, crop=crop)
+        size, color = self.get_image_info(key)
+        bbox = self.get_image_bbox(key, size)
+        return self.preprocess_image(data, color, crop, bbox)
 
     def _load_label(self, key, has_labels):
         label = self.get_image_label(key)
@@ -573,72 +631,17 @@ class ImageLoader(Loader):
                 "%s does not have a label, but others do" % key)
         return label, has_labels
 
+    def _intersection(self, bbox_a, bbox_b):
+        ymin_a, ymax_a, xmin_a, xmax_a = bbox_a
+        ymin_b, ymax_b, xmin_b, xmax_b = bbox_b
 
-class ImageLoaderMSEMixin(LoaderMSEMixin):
-    """
-    Implementation of ImageLoaderMSE for parallel inheritance.
+        x_intersection = min(xmax_a, xmax_b) - max(xmin_a, xmin_b)
+        y_intersection = min(ymax_a, ymax_b) - max(ymin_a, ymin_b)
 
-    Attributes:
-        target_keys: additional key list of targets.
-    """
-    def __init__(self, workflow, **kwargs):
-        super(ImageLoaderMSEMixin, self).__init__(workflow, **kwargs)
-        self.target_keys = []
-        self.target_label_map = None
-
-    def load_data(self):
-        super(ImageLoaderMSEMixin, self).load_data()
-        if self._restored_from_pickle:
-            return
-        self.target_keys.extend(self.get_keys(TARGET))
-        length = len(self.target_keys)
-        if len(set(self.target_keys)) < length:
-            raise error.BadFormatError("Some targets have duplicate keys")
-        self.target_keys.sort()
-        if not self.has_labels and length != sum(self.class_lengths):
-            raise error.BadFormatError(
-                "Number of class samples %d differs from the number of "
-                "targets %d" % (sum(self.class_lengths), length))
-        if self.has_labels:
-            labels = numpy.zeros(length, dtype=Loader.LABEL_DTYPE)
-            assert self.load_keys(self.target_keys, None, None, labels)
-            if len(set(labels)) < length:
-                raise error.BadFormatError("Targets have duplicate labels")
-            self.target_label_map = {l: self.target_keys[l] for l in labels}
-
-    def create_minibatches(self):
-        super(ImageLoaderMSEMixin, self).create_minibatches()
-        self.minibatch_targets.reset()
-        self.minibatch_targets.mem = numpy.zeros(
-            (self.max_minibatch_size,) + self.shape, dtype=self.dtype)
-
-    def fill_minibatch(self):
-        super(ImageLoaderMSEMixin, self).fill_minibatch()
-        indices = self.minibatch_indices.mem[:self.minibatch_size]
-        if not self.has_labels:
-            keys = self.keys_from_indices(self.shuffled_indices[i]
-                                          for i in indices)
+        if int(x_intersection) | int(y_intersection) <= 0:
+            return 0
         else:
-            keys = []
-            for label in self.minibatch_labels.mem:
-                keys.append(self.target_label_map[label])
-        assert self.has_labels == self.load_keys(
-            keys, None, self.minibatch_targets.mem[-len(keys):], None)
-        if self.samples_inflation == 1:
-            return
-        # The only thing we can do is copy the same target for all distortions
-        for index in indices:
-            key_index, _ = divmod(index, self.samples_inflation)
-            self.minibatch_targets[index] = \
-                self.minibatch_targets[len(keys) - key_index - 1]
-
-
-class ImageLoaderMSE(ImageLoaderMSEMixin, ImageLoader):
-    """
-    Loads images in MSE schemes. Like ImageLoader, mostly useful for large
-    datasets.
-    """
-    pass
+            return x_intersection * y_intersection
 
 
 class IFileImageLoader(Interface):
@@ -936,40 +939,3 @@ class AutoLabelFileImageLoader(FileImageLoader):
             self.unique_labels[name] = self.labels_count
             self.labels_count += 1
         return self.unique_labels[name]
-
-
-class FileImageLoaderMSEMixin(ImageLoaderMSEMixin):
-    """
-    FileImageLoaderMSE implementation for parallel inheritance.
-
-    Attributes:
-        target_paths: list of paths for target in case of MSE.
-    """
-
-    def __init__(self, workflow, **kwargs):
-        super(FileImageLoaderMSEMixin, self).__init__(
-            workflow, **kwargs)
-        self.target_paths = kwargs["target_paths"]
-
-    @property
-    def target_paths(self):
-        return self._target_paths
-
-    @target_paths.setter
-    def target_paths(self, value):
-        self._check_paths(value)
-        self._target_paths = value
-
-    def get_keys(self, index):
-        if index != TARGET:
-            return super(FileImageLoaderMSEMixin, self).get_keys(
-                index)
-        return list(chain.from_iterable(
-            self.scan_files(p) for p in self.target_paths))
-
-
-class FileImageLoaderMSE(FileImageLoaderMSEMixin, FileImageLoader):
-    """
-    MSE modification of  FileImageLoader class.
-    """
-    pass

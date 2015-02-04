@@ -18,15 +18,19 @@ from veles.external.progressbar import ProgressBar, Percentage, Bar
 from veles.loader.base import Loader
 from veles.loader.fullbatch import IFullBatchLoader, FullBatchLoader, \
     FullBatchLoaderMSEMixin
-from veles.loader.image import ImageLoader, ImageLoaderMSEMixin, \
-    IFileImageLoader, FileListImageLoader, AutoLabelFileImageLoader, \
-    FileImageLoader, FileImageLoaderMSEMixin
+from veles.loader.image import ImageLoader, IFileImageLoader, \
+    FileListImageLoader, AutoLabelFileImageLoader, FileImageLoader
+from veles.loader.image_mse import ImageLoaderMSEMixin, FileImageLoaderMSEMixin
+from veles.memory import Vector
 
 
 @implementer(IFullBatchLoader)
 class FullBatchImageLoader(ImageLoader, FullBatchLoader):
     """Loads all images into the memory.
     """
+    def __init__(self, workflow, **kwargs):
+        super(FullBatchImageLoader, self).__init__(workflow, **kwargs)
+        self.original_label_values = Vector()
 
     @property
     def has_labels(self):
@@ -71,6 +75,7 @@ class FullBatchImageLoader(ImageLoader, FullBatchLoader):
             (overall,) + self.shape, dtype=self.source_dtype)
         self.original_labels.mem = numpy.zeros(
             overall, dtype=Loader.LABEL_DTYPE)
+        self.original_label_values.mem = numpy.zeros(overall, numpy.float32)
 
         has_labels = self._fill_original_data()
 
@@ -87,20 +92,23 @@ class FullBatchImageLoader(ImageLoader, FullBatchLoader):
         """
         super(FullBatchImageLoader, self).initialize(device=device, **kwargs)
 
-    def _load_distorted_keys(self, keys, data, labels, offset, pbar):
+    def _load_distorted_keys(self, keys, data, labels, label_values, offset,
+                             pbar):
         has_labels = False
         for key in keys:
-            img = self._load_image(key, crop=False)
+            img, _, bbox = self._load_image(key, crop=False)
             label, has_labels = self._load_label(key, has_labels)
             for ci in range(self.crop_number):
                 if self.crop is not None:
-                    cropped = self.crop_image(img)
+                    cropped, label_value = self.crop_image(img, bbox)
                 else:
                     cropped = img
+                    label_value = 1.0
                 for dist in FullBatchImageLoader.DistortionIterator(
                         cropped, self):
                     data[offset] = self.distort(cropped, *dist)
                     labels[offset] = label
+                    label_values[offset] = label_value
                     offset += 1
                     if pbar is not None:
                         pbar.inc()
@@ -125,16 +133,18 @@ class FullBatchImageLoader(ImageLoader, FullBatchLoader):
         has_labels = []
         data = self.original_data.mem
         labels = self.original_labels.mem
+        label_values = self.original_label_values.mem
         for keys in self.class_keys:
             if len(keys) == 0:
                 continue
             if self.samples_inflation == 1:
                 has_labels.append(self.load_keys(
-                    keys, pbar, data[offset:], labels[offset:], ))
+                    keys, pbar, data[offset:], labels[offset:],
+                    label_values[offset:]))
                 offset += len(keys)
                 continue
             offset, hl = self._load_distorted_keys(
-                keys, data, labels, offset, pbar)
+                keys, data, labels, label_values, offset, pbar)
             has_labels.append(hl)
         pbar.finish()
         return has_labels
