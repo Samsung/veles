@@ -105,13 +105,12 @@ class ImageLoader(Loader):
         self.scale_maintain_aspect_ratio = kwargs.get(
             "scale_maintain_aspect_ratio", True)
         self.rotations = kwargs.get("rotations", (0.0,))  # radians
-        self.background_image = kwargs.get("background_image", None)
-        self.background_color = kwargs.get(
-            "background_color", (0xff, 0x14, 0x93))
         self.crop = kwargs.get("crop", None)
         self.crop_number = kwargs.get("crop_number", 1)
         self._background = None
-        self.mean_image = None
+        self.background_image = kwargs.get("background_image", None)
+        self.background_color = kwargs.get(
+            "background_color", (0xff, 0x14, 0x93))
         self.smart_crop = kwargs.get("smart_crop", True)
         self.minibatch_label_values = Vector()
 
@@ -162,8 +161,7 @@ class ImageLoader(Loader):
             if d < 1:
                 raise ValueError("shape[%d] < 1 (= %s)" % (i, d))
         if not isinstance(self.scale, tuple):
-            self._uncropped_shape = tuple(
-                int(value[i] * self.scale) for i in (0, 1))
+            self._uncropped_shape = self._scale_shape(value)
         else:
             self.warning("Setting uncropped_shape is ignored: scale is %s" %
                          self.scale)
@@ -184,7 +182,7 @@ class ImageLoader(Loader):
             if not isinstance(value[0], int) or not isinstance(value[1], int):
                 raise ValueError("scale must consist of integers (got %s)" %
                                  value)
-            self._uncropped_shape = self.scale
+            self._uncropped_shape = value
         self._scale = value
 
     @property
@@ -297,7 +295,7 @@ class ImageLoader(Loader):
                     "background_image's shape %s != sample's shape "
                     "%s" % (value.shape, self.shape))
             self._background_image = value
-            if self.background_color is not None:
+            if getattr(self, "background_color", None) is not None:
                 self.warning(
                     "background_color = %s is ignored in favor of "
                     "background_image", self.background_color)
@@ -329,10 +327,10 @@ class ImageLoader(Loader):
             if not isinstance(col, int):
                 raise TypeError(
                     "background_color[%d] = %s is not an integer" % (i, col))
-        if self.background_image is not None:
+        if getattr(self, "background_image", None) is not None:
             self.warning(
                 "background_color = %s is ignored in favor of "
-                "background_image", self.background_color)
+                "background_image", value)
         self._background_color = value
 
     @property
@@ -356,8 +354,7 @@ class ImageLoader(Loader):
         if isinstance(self.scale, tuple):
             return self.scale, info[1]
         else:
-            return tuple(int(info[0][i] * self.scale)
-                         for i in (0, 1)), info[1]
+            return self._scale_shape(info[0]), info[1]
 
     def get_image_bbox(self, key, size):
         """
@@ -643,6 +640,9 @@ class ImageLoader(Loader):
         else:
             return x_intersection * y_intersection
 
+    def _scale_shape(self, shape):
+        return tuple(int(shape[i] * self.scale) for i in (0, 1)) + shape[2:]
+
 
 class IFileImageLoader(Interface):
     def get_label_from_filename(filename):
@@ -752,13 +752,14 @@ class FileImageLoaderBase(ImageLoader):
         for file in files:
             size, color_space = self.get_image_info(file)
             shape = size + (COLOR_CHANNELS_MAP[color_space],)
-            if self.uncropped_shape != tuple() and \
-                    shape[:2] != self.uncropped_shape:
+            if (not isinstance(self.scale, tuple) and
+                    self.uncropped_shape != tuple() and
+                    shape[:2] != self.uncropped_shape):
                 self.warning("%s has the different shape %s (expected %s)",
                              file, shape[:2], self.uncropped_shape)
             else:
                 if self.uncropped_shape == tuple():
-                    self.uncropped_shape = shape
+                    self.uncropped_shape = self._scale_shape(shape)
                 uniform_files.append(file)
         return uniform_files
 
