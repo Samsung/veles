@@ -51,7 +51,7 @@ class SnapshotterBase(Unit):
         self.directory = kwargs.get("directory", "/tmp")
         self.prefix = kwargs.get("prefix", "")
         self.compress = kwargs.get("compress", "gz")
-        self.compress_level = kwargs.get("compress_level", 9)
+        self.compress_level = kwargs.get("compress_level", 6)
         self.interval = kwargs.get("interval", 1)
         self.time_interval = kwargs.get("time_interval", 15)
         self.time = 0
