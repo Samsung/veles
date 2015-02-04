@@ -480,7 +480,7 @@ class Main(Logger, CommandLineBase):
     def print_max_rss(self):
         def space_group(val):
             if val < 1000:
-                return "%d" % val
+                return "%03d" % val
             d, m = divmod(val, 1000)
             return space_group(d) + " %d" % m
 
