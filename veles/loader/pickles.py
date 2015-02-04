@@ -1,3 +1,11 @@
+"""
+Created on Jan 25, 2015
+
+Loaders which get data from pickles
+
+Copyright (c) 2013 Samsung Electronics Co., Ltd.
+"""
+
 import pickle
 
 import numpy

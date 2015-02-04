@@ -436,7 +436,7 @@ class ImageLoader(Loader):
             bbox[2:] *= (dst_x_max - dst_x_min) / (bbox[3] - bbox[2])
             bbox[2:] += dst_x_min
         else:
-            cv2.resize(
+            data = cv2.resize(
                 data, tuple(reversed(self.uncropped_shape[:2])),
                 interpolation=cv2.INTER_CUBIC)
             bbox[:2] *= self.uncropped_shape[0] / (bbox[1] - bbox[0])

@@ -1,6 +1,8 @@
 """
 Created on Jan 23, 2015
 
+Defines classes to save and to load an arbitrary Loader's output for 1 epoch.
+
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
