@@ -387,11 +387,11 @@ class ImageLoader(Loader):
             dst_y_min = int(
                 numpy.round(
                     0.5 * (self.uncropped_shape[:2][0] - dst_height)))
-            dst_x_max = dst_x_min + self.uncropped_shape[:2][1]
-            dst_y_max = dst_y_min + self.uncropped_shape[:2][0]
             data = cv2.resize(
                 data, (dst_width, dst_height),
                 interpolation=cv2.INTER_CUBIC)
+            dst_x_max = dst_x_min + data.shape[1]
+            dst_y_max = dst_y_min + data.shape[0]
             sample = self.background_image.copy()
             sample[dst_y_min:dst_y_max, dst_x_min:dst_x_max] = data
             data = sample.copy()
