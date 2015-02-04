@@ -257,6 +257,10 @@ class Vector(Pickleable):
     def shape(self):
         return self.mem.shape
 
+    @shape.setter
+    def shape(self, value):
+        self.mem.shape = value
+
     @property
     def dtype(self):
         return self.mem.dtype
