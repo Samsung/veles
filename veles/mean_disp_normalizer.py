@@ -65,7 +65,7 @@ class MeanDispNormalizer(AcceleratedUnit, TriviallyDistributable):
 
         dtype = self.rdisp.dtype
 
-        if self.output.mem is None or self.output.size != self.input.size:
+        if not self.output.mem:
             self.output.reset()
             sh = self.input.shape
             if root.common.unit_test:  # for overflow test
@@ -81,13 +81,10 @@ class MeanDispNormalizer(AcceleratedUnit, TriviallyDistributable):
                 self.output.vv[sh[0]:] = numpy.nan
             else:
                 self.output.mem = numpy.zeros(sh, dtype=dtype)
+        else:
+            assert self.output.shape == self.input.shape
 
-        self.input.initialize(self.device)
-        self.mean.initialize(self.device)
-        self.rdisp.initialize(self.device)
-        self.output.initialize(self.device)
-
-        self.backend_init()
+        self.init_vectors(self.input, self.mean, self.rdisp, self.output)
 
     def ocl_init(self):
         dtype = self.rdisp.dtype

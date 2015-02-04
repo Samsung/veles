@@ -80,6 +80,16 @@ class AcceleratedUnit(Unit):
         self._sync = args.sync_ocl
         self._kernel_ = None
         self._backend_run_ = None
+        self.initialize = self.with_backend_init(self.initialize)
+
+    def with_backend_init(self, fn):
+        def wrapped(device, **kwargs):
+            result = fn(device, **kwargs)
+            self._backend_init_()
+            return result
+
+        wrapped.__name__ = fn.__name__ + "_backend_init"
+        return wrapped
 
     @property
     def device(self):
@@ -105,12 +115,6 @@ class AcceleratedUnit(Unit):
     def _run_synchronized(self):
         self._original_run_()
         self.device.sync()
-
-    def backend_init(self):
-        """Should be called at the end of the initialize method
-        in the derived classes.
-        """
-        return self._backend_init_()
 
     @property
     def cache(self):
@@ -310,6 +314,10 @@ class AcceleratedUnit(Unit):
                 filtered_args.append(arg)
         kernel.set_args(*filtered_args)
 
+    def init_vectors(self, *vecs):
+        for vec in vecs:
+            vec.initialize(self.device)
+
     def _generate_source(self, defines, dtype=None, suffix=""):
         if defines and not isinstance(defines, dict):
             raise RuntimeError("defines must be a dictionary")
@@ -489,8 +497,6 @@ class DeviceBenchmark(AcceleratedUnit):
             self.input_A_.mem = self.input_A_.mem.reshape(self.size, self.size)
             self.input_B_.mem = self.input_B_.mem.reshape(self.size, self.size)
             return
-
-        self.backend_init()
 
     def ocl_init(self):
         if self.block_size is None and self.device is not None:

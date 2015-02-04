@@ -168,10 +168,7 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         if not self.shuffled_indices:
             self.shuffled_indices.mem = numpy.arange(
                 self.total_samples, dtype=Loader.LABEL_DTYPE)
-        self.shuffled_indices.initialize(self.device)
-        self.minibatch_indices.initialize(self.device)
-
-        self.backend_init()
+        self.init_vectors(self.shuffled_indices, self.minibatch_indices)
 
     def analyze_train_for_normalization(self):
         pass

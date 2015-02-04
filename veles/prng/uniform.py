@@ -56,10 +56,7 @@ class Uniform(AcceleratedUnit):
         else:
             self.output_bytes = self.output.nbytes
 
-        self.states.initialize(self.device)
-        self.output.initialize(self.device)
-
-        self._backend_init_()
+        self.init_vectors(self.states, self.output)
 
     def _gpu_init(self):
         self.build_program({}, "uniform_%d" % self.num_states)
