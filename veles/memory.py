@@ -349,9 +349,13 @@ class Vector(Pickleable):
     @threadsafe
     def initialize(self, device):
         if self.device == device and self.devmem is not None:
+            # Check against double initialization (pretty legal)
             return
-        self.device = device
+        if self.mem is not None or device is None:
+            # Set the device only if it makes sense
+            self.device = device
         if self.mem is None or self.device is None:
+            # We are done if there is no host buffer or device
             return
 
         assert isinstance(self.mem, numpy.ndarray), \
@@ -418,6 +422,7 @@ class Vector(Pickleable):
                 self.device.device_info.version < 1.1999):
             # 'cause available only starting with 1.2
             flags = cl.CL_MAP_WRITE
+        assert self.devmem is not None
         try:
             ev, self.map_arr_ = self.device.queue_.map_buffer(
                 self.devmem, flags, self._mem.nbytes)
