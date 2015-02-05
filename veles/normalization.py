@@ -181,7 +181,7 @@ class MeanDispersionNormalizer(NormalizerBase):
 
     def analyze(self, data):
         self._count += data.shape[0]
-        self._sum += numpy.sum(data.astype(numpy.float64), axis=0)
+        self._sum += numpy.sum(data, axis=0, dtype=numpy.float64)
         numpy.minimum(self._min, numpy.min(data, axis=0), self._min)
         numpy.maximum(self._max, numpy.max(data, axis=0), self._max)
 
@@ -378,7 +378,7 @@ class InternalMeanNormalizer(MeanNormalizerBase, NormalizerBase):
 
     def analyze(self, data):
         self._count += data.shape[0]
-        self._sum += numpy.sum(data, axis=0)
+        self._sum += numpy.sum(data, axis=0, dtype=numpy.float64)
 
     def _initialize(self, data):
         self._sum = numpy.zeros_like(data[0], dtype=numpy.float64)
