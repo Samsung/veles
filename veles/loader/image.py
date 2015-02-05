@@ -425,7 +425,7 @@ class ImageLoader(Loader):
                 interpolation=cv2.INTER_CUBIC)
             dst_x_max = dst_x_min + data.shape[1]
             dst_y_max = dst_y_min + data.shape[0]
-            sample = self.background_image.copy()
+            sample = self._background
             sample[dst_y_min:dst_y_max, dst_x_min:dst_x_max] = data
             data = sample.copy()
             bbox[:2] *= (dst_y_max - dst_y_min) / (bbox[1] - bbox[0])
@@ -441,6 +441,7 @@ class ImageLoader(Loader):
         return data, tuple(bbox)
 
     def add_sobel_channel(self, data):
+        original_data = data
         if self.channels_number == 1:
             pass
         elif self.color_space in ("RGB", "BGR", "RGBA", "BGRA"):
@@ -455,7 +456,12 @@ class ImageLoader(Loader):
                 "Conversion from %s to GRAY is not ready" % self.color_space)
         sobel_xy = tuple(cv2.Sobel(data, cv2.CV_32F, *d, ksize=3)
                          for d in ((1, 0), (0, 1)))
-        return numpy.linalg.norm(sobel_xy)
+        sobel_data = numpy.zeros(
+            shape=data.shape + (original_data.shape[2] + 1,),
+            dtype=original_data.dtype)
+        sobel_data[:, :, -1] = numpy.linalg.norm(sobel_xy)
+        sobel_data[:, :, :-1] = original_data
+        return sobel_data
 
     def crop_image(self, data, bbox):
         """
@@ -531,13 +537,13 @@ class ImageLoader(Loader):
         return has_labels
 
     def initialize(self, **kwargs):
-        super(ImageLoader, self).initialize(**kwargs)
         self._restored_from_pickle = False
         if self.background_image is not None:
             self._background = self.background_image
         else:
             self._background = numpy.zeros(self.shape)
             self._background[:] = self.background_color
+        super(ImageLoader, self).initialize(**kwargs)
 
     def load_data(self):
         try:
