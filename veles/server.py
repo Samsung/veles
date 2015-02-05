@@ -410,7 +410,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
         if checksum is None:
             self._sendError("Workflow checksum was not specified")
             return True
-        valid_checksum = self.host.workflow.checksum()
+        valid_checksum = self.host.workflow.checksum
         if checksum != valid_checksum:
             self._sendError("Workflow checksum mismatch: mine is %s" %
                             valid_checksum)
@@ -433,7 +433,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
                        self.state.current)
             self._sendError("Invalid state")
             return
-        mysha = self.host.workflow.checksum()
+        mysha = self.host.workflow.checksum
         your_sha = msg.get("checksum")
         if not your_sha:
             self.error("Did not receive the workflow checksum")

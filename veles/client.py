@@ -323,7 +323,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
     def _common_id(self):
         return {'cmd': 'handshake',
                 'power': self.host.workflow.computing_power,
-                'checksum': self.host.workflow.checksum(),
+                'checksum': self.host.workflow.checksum,
                 'mid': self.host.mid,
                 'pid': self.host.pid}
 

@@ -140,7 +140,7 @@ class Workflow(Container):
         self._checksum = None
         self._history = []
         self.fitness = None
-        self.debug("My checksum is %s", self.checksum())
+        self.debug("My checksum is %s", self.checksum)
 
     def init_unpickled(self):
         super(Workflow, self).init_unpickled()
@@ -768,6 +768,7 @@ class Workflow(Container):
         self._history.append((
             op, datetime.datetime.fromtimestamp(time.time()), sid))
 
+    @property
     def checksum(self):
         """Returns the cached checksum of file where this workflow is defined.
         """

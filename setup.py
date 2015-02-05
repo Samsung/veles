@@ -58,7 +58,9 @@ if __name__ == "__main__":
         packages=find_packages(),
         include_package_data=True,
         entry_points={
-            'console_scripts': ['veles=veles.__main__:__run__']
+            'console_scripts': [
+                'veles=veles.__main__:__run__',
+                'compare_snapshots=veles.scripts.compare_snapshots.main']
         },
         keywords=["Samsung", "Veles", "Znicz"],
         classifiers=[
