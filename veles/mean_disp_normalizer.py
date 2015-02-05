@@ -11,9 +11,8 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 import numpy
 from zope.interface import implementer
 
-from veles.config import root
 import veles.error as error
-from veles.memory import Vector, assert_addr
+from veles.memory import Vector
 from veles.distributable import IDistributable, TriviallyDistributable
 from veles.opencl_types import numpy_dtype_to_opencl
 from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit
@@ -63,24 +62,8 @@ class MeanDispNormalizer(AcceleratedUnit, TriviallyDistributable):
             raise error.BadFormatError("Sample size of input differs from "
                                        "mean-rdisp size")
 
-        dtype = self.rdisp.dtype
-
         if not self.output.mem:
-            self.output.reset()
-            sh = self.input.shape
-            if root.common.unit_test:  # for overflow test
-                sh = list(sh)
-                sh[0] <<= 1
-                self.output.mem = numpy.zeros(sh, dtype=dtype)
-                self.output.initialize(self.device)
-                self.output.map_write()
-                self.output.vv = self.output.mem
-                sh[0] >>= 1
-                self.output.mem = self.output.vv[:sh[0]]
-                assert_addr(self.output.mem, self.output.vv)
-                self.output.vv[sh[0]:] = numpy.nan
-            else:
-                self.output.mem = numpy.zeros(sh, dtype=dtype)
+            self.output.reset(numpy.zeros(self.input.shape, self.rdisp.dtype))
         else:
             assert self.output.shape == self.input.shape
 

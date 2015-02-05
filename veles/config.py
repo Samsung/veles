@@ -115,7 +115,7 @@ root.common.update({
     "matplotlib_backend": "Qt4Agg",
     "matplotlib_webagg_port": 8081,
     "mongodb_logging_address": "127.0.0.1:27017",
-    "plotters_disabled": False,
+    "plotters_disabled": "unittest" not in sys.modules,
     "precision_type": "double",  # float or double
     "precision_level": 0,  # 0 - use simple summation
                            # Only for ocl backend:
@@ -129,7 +129,6 @@ root.common.update({
     "test_unknown_device": True,
     "prefer_numpy_on_cpu": True,
     "disable_snapshots": False,
-    "unit_test": False,
     "veles_dir": __root__,
     "veles_user_dir": __home__,
     "device_dirs": ["/usr/share/veles/devices",

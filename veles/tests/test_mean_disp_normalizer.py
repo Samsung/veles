@@ -19,13 +19,19 @@ import veles.opencl_types as opencl_types
 import veles.prng as rnd
 from veles.mean_disp_normalizer import MeanDispNormalizer
 from veles.dummy import DummyWorkflow
+from veles.tests.doubling_reset import patch
+
+
+class PatchedMeanDispNormalizer(MeanDispNormalizer):
+    def __init__(self, workflow, **kwargs):
+        super(PatchedMeanDispNormalizer, self).__init__(workflow, **kwargs)
+        patch(self, self.output, lambda: self.input.shape,
+              lambda: self.rdisp.dtype)
 
 
 class TestMeanDispNormalizer(unittest.TestCase):
     def setUp(self):
         gc.collect()
-        root.common.unit_test = True
-        root.common.plotters_disabled = True
         self.device = opencl.Device()
         dtype = opencl_types.dtypes[root.common.precision_type]
         self.mean = numpy.zeros([256, 256, 4], dtype=dtype)
@@ -48,7 +54,7 @@ class TestMeanDispNormalizer(unittest.TestCase):
         self.assertLess(max_diff, 1.0e-5)
 
     def _test_random(self, device):
-        unit = MeanDispNormalizer(DummyWorkflow())
+        unit = PatchedMeanDispNormalizer(DummyWorkflow())
         unit.input = Vector(self.input.copy())
         unit.mean = Vector(self.mean.copy())
         unit.rdisp = Vector(self.rdisp.copy())
@@ -57,7 +63,7 @@ class TestMeanDispNormalizer(unittest.TestCase):
         unit.output.map_read()
         self.assertEqual(unit.output.dtype, self.rdisp.dtype)
         if device is not None:
-            vv = unit.output.vv[unit.output.shape[0]:]
+            vv = unit.output.unit_test_mem[unit.output.shape[0]:]
             nz = numpy.count_nonzero(numpy.isnan(vv))
             self.assertEqual(nz, vv.size, "Overflow occured")
         return unit.output.mem.copy()

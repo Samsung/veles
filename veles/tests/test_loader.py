@@ -13,7 +13,6 @@ import unittest
 import numpy
 from zope.interface import implementer
 
-from veles.config import root
 import veles.backends as opencl
 import veles.prng as rnd
 from veles.loader import IFullBatchLoader, FullBatchLoaderMSE
@@ -48,8 +47,6 @@ class Loader(FullBatchLoaderMSE):
 
 class TestFullBatchLoader(unittest.TestCase):
     def setUp(self):
-        root.common.unit_test = True
-        root.common.plotters_disabled = True
         self.device = opencl.Device()
 
     def tearDown(self):

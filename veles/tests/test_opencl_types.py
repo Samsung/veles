@@ -12,14 +12,10 @@ import logging
 import numpy
 import unittest
 
-from veles.config import root
 import veles.opencl_types as ot
 
 
 class TestOpenclTypes(unittest.TestCase):
-    def setUp(self):
-        root.common.unit_test = True
-
     def test_numpy_dtype_to_opencl(self):
         logging.info("Will test opencl types")
         self.assertEqual(ot.numpy_dtype_to_opencl(numpy.float32), "float")

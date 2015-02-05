@@ -17,7 +17,6 @@ from veles.config import root, Config, get, validate_kwargs
 
 class TestConfig(unittest.TestCase):
     def setUp(self):
-        root.common.unit_test = True
         self.was_warning = False
 
     def test_temp_config(self):
