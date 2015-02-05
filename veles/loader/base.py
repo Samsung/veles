@@ -494,7 +494,7 @@ class Loader(Unit):
         self.debug("Shuffling, remaining limit is %d", self.shuffle_limit)
         if self.shuffled_indices.mem is None:
             self.shuffled_indices.mem = numpy.arange(self.total_samples,
-                                                     dtype=Loader.LABEL_DTYPE)
+                                                     dtype=Loader.INDEX_DTYPE)
         self.shuffled_indices.map_write()
         self.prng.shuffle(self.shuffled_indices.mem[
             self.class_end_offsets[VALID]:])
