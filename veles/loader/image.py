@@ -161,7 +161,7 @@ class ImageLoader(Loader):
             if d < 1:
                 raise ValueError("shape[%d] < 1 (= %s)" % (i, d))
         if not isinstance(self.scale, tuple):
-            self._uncropped_shape = self._scale_shape(value)
+            self._uncropped_shape = self._scale_shape(value)[:2]
         else:
             self.warning("Setting uncropped_shape is ignored: scale is %s" %
                          self.scale)
