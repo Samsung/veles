@@ -64,9 +64,9 @@ class Main(Logger, CommandLineBase):
         self._optimization = "no"
 
     @property
-    def opencl_is_enabled(self):
+    def acceleration_is_enabled(self):
         return not (self.launcher.is_master or self.optimization or
-                    self._disable_opencl)
+                    self._disable_acceleration)
 
     def _process_special_args(self):
         if sys.argv[1] == "forge":
@@ -355,7 +355,7 @@ class Main(Logger, CommandLineBase):
             sys.exit(Main.EXIT_FAILURE)
         self.main_called = True
         try:
-            self.device = Device() if self.opencl_is_enabled else None
+            self.device = Device() if self.acceleration_is_enabled else None
             if self.device is not None:
                 self.device.thread_pool_attach(self.workflow.thread_pool)
         except:
@@ -530,7 +530,7 @@ class Main(Logger, CommandLineBase):
         self._workflow_graph = args.workflow_graph
         self._dry_run = Main.DRY_RUN_CHOICES.index(args.dry_run)
         self._dump_attrs = args.dump_unit_attributes
-        self._disable_opencl = args.disable_opencl
+        self._disable_acceleration = args.disable_acceleration
         self._parse_optimization(args)
 
         Logger.setup(level=Main.LOG_LEVEL_MAP[args.verbosity])

@@ -139,9 +139,10 @@ class AcceleratedUnit(Unit):
             pass
         self.device = device
         if not (self.device is None or self.device.exists or self._force_cpu):
-            self.critical("No OpenCL device exists and --force-cpu option was "
-                          "not specified")
-            raise ValueError()
+            self.critical(
+                "No device exists and --disable-acceleration option was not "
+                "specified")
+            raise ValueError("No device was found")
         if self._force_cpu:
             self.device = None
         # TODO(a.kazantsev): remove prefer_numpy.
@@ -163,8 +164,9 @@ class AcceleratedUnit(Unit):
     def init_parser(parser=None):
         parser = parser or argparse.ArgumentParser()
         parser.add_argument("--force-cpu", default="", type=str,
-                            help="Force these comma separated OpenCL units to "
-                            "run on CPU (that is, disable OpenCL for them).")
+                            help="Force these comma separated accelerated "
+                                 "units to run on CPU (that is, disable "
+                                 "OpenCL/CUDA/... for them).")
         parser.add_argument("--sync-ocl", default=False, action="store_true",
                             help="Force OpenCL units to run synchronously. "
                             "This option is useful for measuring the actual "

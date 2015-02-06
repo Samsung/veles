@@ -170,9 +170,9 @@ class CommandLineBase(object):
         parser.add_argument("-b", "--background", default=False,
                             help="Run in background as a daemon.",
                             action='store_true')
-        parser.add_argument("--disable-opencl", default=False,
-                            action="store_true", help="Completely disable the "
-                                                      "usage of OpenCL.")
+        parser.add_argument("--disable-acceleration", default=False,
+                            action="store_true",
+                            help="Completely disable hardware acceleration.")
         try:
             class NoEscapeCompleter(argcomplete.CompletionFinder):
                 def quote_completions(self, completions, *args, **kwargs):
