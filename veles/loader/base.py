@@ -18,6 +18,7 @@ from veles.compat import from_none
 import veles.config as config
 from veles.distributable import IDistributable
 import veles.error as error
+from veles.external.progressbar import ProgressBar
 import veles.memory as memory
 from veles.mutable import Bool
 import veles.normalization as normalization
@@ -530,8 +531,17 @@ class Loader(Unit):
             self.minibatch_indices[minibatch_size:] = -1
 
     def analyze_train_for_normalization(self):
-        for i in range(int(numpy.ceil(self.class_lengths[TRAIN] /
-                                      self.max_minibatch_size))):
+        if isinstance(self.normalizer, normalization.StatelessNormalizer):
+            self.info('Skipped normalization analysis (type was set to "%s")',
+                      type(self.normalizer).NAME)
+            # Call to analyze() is still needed
+            self.normalizer.analyze(self.minibatch_data.mem)
+            return
+        size = int(numpy.ceil(self.class_lengths[TRAIN] /
+                              self.max_minibatch_size))
+        self.info("Performing \"%s\" normalization analysis...",
+                  type(self.normalizer).NAME)
+        for i in ProgressBar(term_width=40)(range(size)):
             self.minibatch_size = min(
                 self.max_minibatch_size,
                 self.class_lengths[TRAIN] - (i + 1) * self.max_minibatch_size)

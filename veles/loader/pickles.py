@@ -158,7 +158,7 @@ class PicklesImageFullBatchLoader(FullBatchImageLoader, PicklesLoader):
         offsets = [0, self.class_lengths[0],
                    self.class_lengths[0] + self.class_lengths[1],
                    sum(self.class_lengths)]
-        self.uncropped_shape = self.image_data.shape[1:-1]
+        self.original_shape = self.image_data.shape[1:-1]
         return range(offsets[index], offsets[index + 1])
 
     def reshape(self, shape):

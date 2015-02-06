@@ -93,7 +93,7 @@ class ImageLoader(Loader):
         super(ImageLoader, self).__init__(workflow, **kwargs)
         self.color_space = kwargs.get("color_space", "RGB")
         self.source_dtype = numpy.float32
-        self._uncropped_shape = tuple()
+        self._original_shape = tuple()
         self._has_labels = False
         self.class_keys = [[], [], []]
         self.verify_interface(IImageLoader)
@@ -126,6 +126,15 @@ class ImageLoader(Loader):
                         (key, size, self.uncropped_shape))
         self._restored_from_pickle = True
 
+    @property
+    def color_space(self):
+        return self._color_space
+
+    @color_space.setter
+    def color_space(self, value):
+        self._validate_color_space(value)
+        self._color_space = value
+
     @Loader.shape.getter
     def shape(self):
         """
@@ -144,10 +153,19 @@ class ImageLoader(Loader):
         """
         :return: Uncropped (but scaled) image shape.
         """
-        return self._uncropped_shape
+        if not isinstance(self.scale, tuple):
+            if self._original_shape == tuple():
+                return tuple()
+            return self._scale_shape(self._original_shape)[:2]
+        else:
+            return self.scale
 
-    @uncropped_shape.setter
-    def uncropped_shape(self, value):
+    @property
+    def original_shape(self):
+        return self._original_shape
+
+    @original_shape.setter
+    def original_shape(self, value):
         if value is None:
             raise ValueError("shape must not be None")
         if not isinstance(value, tuple):
@@ -160,11 +178,7 @@ class ImageLoader(Loader):
                 raise TypeError("shape[%d] is not an integer (= %s)" % (i, d))
             if d < 1:
                 raise ValueError("shape[%d] < 1 (= %s)" % (i, d))
-        if not isinstance(self.scale, tuple):
-            self._uncropped_shape = self._scale_shape(value)[:2]
-        else:
-            self.warning("Setting uncropped_shape is ignored: scale is %s" %
-                         self.scale)
+        self._original_shape = value[:2]
 
     @property
     def scale(self):
@@ -182,7 +196,6 @@ class ImageLoader(Loader):
             if not isinstance(value[0], int) or not isinstance(value[1], int):
                 raise ValueError("scale must consist of integers (got %s)" %
                                  value)
-            self._uncropped_shape = value
         self._scale = value
 
     @property
@@ -334,6 +347,16 @@ class ImageLoader(Loader):
         self._background_color = value
 
     @property
+    def background(self):
+        if self._background is None:
+            if self.background_image is not None:
+                self._background = self.background_image
+            else:
+                self._background = numpy.zeros(self.shape)
+                self._background[:] = self.background_color
+        return self._background.copy()
+
+    @property
     def has_labels(self):
         """
         This is set after initialize() (particularly, after load_data()).
@@ -425,7 +448,7 @@ class ImageLoader(Loader):
                 interpolation=cv2.INTER_CUBIC)
             dst_x_max = dst_x_min + data.shape[1]
             dst_y_max = dst_y_min + data.shape[0]
-            sample = self._background
+            sample = self.background
             sample[dst_y_min:dst_y_max, dst_x_min:dst_x_max] = data
             data = sample.copy()
             bbox[:2] *= (dst_y_max - dst_y_min) / (bbox[1] - bbox[0])
@@ -538,11 +561,6 @@ class ImageLoader(Loader):
 
     def initialize(self, **kwargs):
         self._restored_from_pickle = False
-        if self.background_image is not None:
-            self._background = self.background_image
-        else:
-            self._background = numpy.zeros(self.shape)
-            self._background[:] = self.background_color
         super(ImageLoader, self).initialize(**kwargs)
 
     def load_data(self):
@@ -561,7 +579,7 @@ class ImageLoader(Loader):
             self.class_keys[index].sort()
         if self.uncropped_shape == tuple():
             raise error.BadFormatError(
-                "uncropped_shape was not initialized in get_keys()")
+                "original_shape was not initialized in get_keys()")
 
         # Perform a quick (unreliable) test to determine if we have labels
         keys = []
@@ -588,30 +606,29 @@ class ImageLoader(Loader):
             self.max_minibatch_size, numpy.float32))
 
     def keys_from_indices(self, indices):
-        keys = []
-        for si in indices:
-            class_index, key_remainder = self.class_index_by_sample_index(si)
-            key_index = self.class_lengths[class_index] - key_remainder
-            keys.append(self.class_keys[class_index][
-                (key_index - 1) // self.samples_inflation])
-        return keys
+        for index in indices:
+            class_index, origin_index, _ = \
+                self._get_class_origin_distortion_from_index(index)
+            yield self.class_keys[class_index][origin_index]
 
     def fill_minibatch(self):
         indices = self.minibatch_indices.mem[:self.minibatch_size]
-        keys = self.keys_from_indices(indices)
         assert self.has_labels == self.load_keys(
-            keys, None, self.minibatch_data.mem[-len(keys):],
-            self.minibatch_labels.mem[-len(keys):],
-            self.minibatch_label_values[-len(keys):], None)
+            self.keys_from_indices(indices), None, self.minibatch_data.mem,
+            self.minibatch_labels.mem, self.minibatch_label_values)
         if self.samples_inflation == 1:
             return
-        for index in indices:
-            key_index, dist_index = divmod(index, self.samples_inflation)
-            src_key_index = len(keys) - key_index - 1
-            self.minibatch_data[key_index] = self.distort(
-                self.minibatch_data[src_key_index],
+        for pos, index in enumerate(indices):
+            _, _, dist_index = \
+                self._get_class_origin_distortion_from_index(index)
+            self.minibatch_data[pos] = self.distort(
+                self.minibatch_data[pos],
                 *self.get_distortion_by_index(dist_index))
-            self.minibatch_labels[index] = self.minibatch_labels[src_key_index]
+
+    def _get_class_origin_distortion_from_index(self, index):
+        class_index, key_remainder = self.class_index_by_sample_index(index)
+        key_index = self.class_lengths[class_index] - key_remainder
+        return (class_index,) + divmod(key_index - 1, self.samples_inflation)
 
     def _load_image(self, key, crop=True):
         """Returns the data to serve corresponding to the given image key and
@@ -648,6 +665,13 @@ class ImageLoader(Loader):
 
     def _scale_shape(self, shape):
         return tuple(int(shape[i] * self.scale) for i in (0, 1)) + shape[2:]
+
+    def _validate_color_space(self, value):
+        if not isinstance(value, str):
+            raise TypeError(
+                "db_colorpsace must be a string (got %s)" % type(value))
+        if value != "RGB" and not hasattr(cv2, "COLOR_%s2RGB" % value):
+            raise ValueError("Unsupported color space: %s" % value)
 
 
 class IFileImageLoader(Interface):
@@ -765,7 +789,7 @@ class FileImageLoaderBase(ImageLoader):
                              file, shape[:2], self.uncropped_shape)
             else:
                 if self.uncropped_shape == tuple():
-                    self.uncropped_shape = self._scale_shape(shape)
+                    self.original_shape = shape
                 uniform_files.append(file)
         return uniform_files
 

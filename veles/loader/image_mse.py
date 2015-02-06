@@ -61,18 +61,10 @@ class ImageLoaderMSEMixin(LoaderMSEMixin):
             keys = self.keys_from_indices(self.shuffled_indices[i]
                                           for i in indices)
         else:
-            keys = []
-            for label in self.minibatch_labels.mem:
-                keys.append(self.target_label_map[label])
+            keys = (self.target_label_map[l]
+                    for l in self.minibatch_labels.mem)
         assert self.has_labels == self.load_keys(
-            keys, None, self.minibatch_targets.mem[-len(keys):], None, None)
-        if self.samples_inflation == 1:
-            return
-        # The only thing we can do is copy the same target for all distortions
-        for index in indices:
-            key_index, _ = divmod(index, self.samples_inflation)
-            self.minibatch_targets[index] = \
-                self.minibatch_targets[len(keys) - key_index - 1]
+            keys, None, self.minibatch_targets.mem, None, None)
 
 
 class ImageLoaderMSE(ImageLoaderMSEMixin, ImageLoader):
