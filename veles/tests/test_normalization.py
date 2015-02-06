@@ -13,7 +13,7 @@ import unittest
 from veles.normalization import NormalizerRegistry
 
 
-class LinearCase(unittest.TestCase):
+class TestNormalizers(unittest.TestCase):
     def test_mean_disp(self):
         nclass = NormalizerRegistry.normalizers["mean_disp"]
         mdn = nclass()
@@ -40,6 +40,28 @@ class LinearCase(unittest.TestCase):
         ln.normalize(arr)
         self.assertEqual(numpy.max(arr), 2.0)
         self.assertEqual(numpy.min(arr), -2.0)
+
+    def test_linear_uniform(self):
+        nclass = NormalizerRegistry.normalizers["linear"]
+        ln = nclass()
+        arr = numpy.ones((3, 10), dtype=numpy.float32)
+        arr[0, :5] = 0
+        ln.analyze(arr)
+        ln.normalize(arr)
+        self.assertTrue((arr[0] == (-1,) * 5 + (1,) * 5).all())
+        self.assertTrue((arr[1] == 0).all())
+        self.assertTrue((arr[2] == 0).all())
+
+    def test_linear_complex(self):
+        nclass = NormalizerRegistry.normalizers["linear"]
+        ln = nclass(interval=(0, 1))
+        arr = numpy.ones((3, 10), dtype=numpy.float32)
+        arr[0, :5] = 0
+        ln.analyze(arr)
+        ln.normalize(arr)
+        self.assertTrue((arr[0] == (0,) * 5 + (1,) * 5).all())
+        self.assertTrue((arr[1] == 0.5).all())
+        self.assertTrue((arr[2] == 0.5).all())
 
     def test_exp(self):
         nclass = NormalizerRegistry.normalizers["exp"]

@@ -140,6 +140,11 @@ class NormalizerBase(Verified):
                 "disabled.")
         super(NormalizerBase, self).__setattr__(key, value)
 
+    @staticmethod
+    def prepare(data):
+        return transpose(reshape(
+            data, (data.shape[0], data.size // data.shape[0])))
+
 
 class StatelessNormalizer(NormalizerBase):
     """
@@ -229,24 +234,24 @@ class LinearNormalizer(StatelessNormalizer):
         self._interval = float(vmin), float(vmax)
 
     def normalize(self, data):
-        data = transpose(
-            reshape(data, (data.shape[0], data.size // data.shape[0])))
-        data -= data.min(axis=0)
-        mx = data.max(axis=0)
-        rmx = numpy.zeros_like(mx)
-        imin, imax = self._interval
-        if numpy.count_nonzero(mx) < mx.size:
+        orig_shape_data = data
+        data = NormalizerBase.prepare(data)
+        dmin = numpy.min(data, axis=0)
+        dmax = numpy.max(data, axis=0)
+        imin, imax = self.interval
+        diff = dmin - dmax
+        if numpy.count_nonzero(diff) < numpy.prod(dmin.shape):
             self.warning("There are uniform samples and the normalization "
-                         "type is linear, they are set to lower bound "
-                         "of the normalization interval [%.10f, %.10f]",
-                         imin, imax)
-            nonzeros = numpy.nonzero(mx)
-            numpy.reciprocal(mx[nonzeros], rmx[nonzeros])
-        else:
-            numpy.reciprocal(mx, rmx)
-        rmx *= imax - imin
-        data *= rmx
-        data += imin
+                         "type is linear, they are set to the middle %.2f "
+                         "of the normalization interval [%.2f, %.2f]",
+                         (imin + imax) / 2, imin, imax)
+            zeros = diff == 0
+            orig_shape_data[zeros] = (imin + imax) / 2
+            dmax[zeros] = imax
+            dmin[zeros] = imin
+            diff[zeros] = imin - imax
+        data *= (imin - imax) / diff
+        data += (dmin * imax - dmax * imin) / diff
 
 
 @implementer(INormalizer)
@@ -260,8 +265,7 @@ class ExponentNormalizer(StatelessNormalizer):
     NAME = "exp"
 
     def normalize(self, data):
-        data = transpose(
-            reshape(data, (data.shape[0], data.size // data.shape[0])))
+        data = NormalizerBase.prepare(data)
         data -= data.max(axis=0)
         numpy.exp(data, data)
         data /= data.sum(axis=0)
