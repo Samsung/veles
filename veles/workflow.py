@@ -301,7 +301,8 @@ class Workflow(Container):
         progress = ProgressBar(maxval=units_number,
                                term_width=min(80, len(self) + 8 + maxlen),
                                widgets=[Percentage(), ' ', Bar(), ' ',
-                                        ' ' * maxlen])
+                                        ' ' * maxlen], poll=0)
+        progress.widgets[0].TIME_SENSITIVE = True
         self.info("Initializing units in %s...", self.name)
         progress.start()
         units_in_dependency_order = self.units_in_dependency_order
