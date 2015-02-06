@@ -71,10 +71,7 @@ class FullBatchImageLoader(ImageLoader, FullBatchLoader):
                           virtual_memory().free * gb, required_mem * gb)
             raise MemoryError("Not enough memory")
         # Real allocation will still happen during the second pass
-        self.original_data.mem = numpy.zeros(
-            (overall,) + self.shape, dtype=self.source_dtype)
-        self.original_labels.mem = numpy.zeros(
-            overall, dtype=Loader.LABEL_DTYPE)
+        self.create_originals(self.shape)
         self.original_label_values.mem = numpy.zeros(overall, numpy.float32)
 
         has_labels = self._fill_original_data()

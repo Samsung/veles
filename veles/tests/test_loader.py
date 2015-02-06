@@ -9,11 +9,12 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 import gc
 import logging
 import unittest
-
 import numpy
+import os
 from zope.interface import implementer
 
-import veles.backends as opencl
+from veles.backends import Device
+from veles.loader.loader_hdf5 import HDF5Loader, FullBatchHDF5Loader
 import veles.prng as rnd
 from veles.loader import IFullBatchLoader, FullBatchLoaderMSE
 from veles.dummy import DummyWorkflow
@@ -47,7 +48,7 @@ class Loader(FullBatchLoaderMSE):
 
 class TestFullBatchLoader(unittest.TestCase):
     def setUp(self):
-        self.device = opencl.Device()
+        self.device = Device()
 
     def tearDown(self):
         gc.collect()
@@ -83,6 +84,24 @@ class TestFullBatchLoader(unittest.TestCase):
             res_target[i] = unit.minibatch_targets.mem
         return res_data, res_labels, res_target
 
+
+class TestHDF5Loader(unittest.TestCase):
+    def do(self, klass, **kwargs):
+        csd = os.path.dirname(os.path.abspath(__file__))
+        loader = klass(DummyWorkflow(),
+                       validation_path=os.path.join(csd, "res", "test.h5"),
+                       train_path=os.path.join(csd, "res", "train.h5"))
+        loader.initialize(**kwargs)
+        while not loader.train_ended:
+            loader.run()
+            self.assertFalse((loader.minibatch_data.mem == 0).all())
+            self.assertFalse((loader.minibatch_labels.mem == 0).all())
+
+    def test_hdf5(self):
+        self.do(HDF5Loader)
+
+    def test_hdf5_fullbatch(self):
+        self.do(FullBatchHDF5Loader, device=Device())
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

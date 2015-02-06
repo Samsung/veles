@@ -591,16 +591,9 @@ class ImageLoader(Loader):
         self._has_labels = self.load_keys(
             (keys[numpy.random.randint(len(keys))],), None, None, None, None)
 
-    def create_minibatches(self):
+    def create_minibatch_data(self):
         self.minibatch_data.reset(numpy.zeros(
             (self.max_minibatch_size,) + self.shape, dtype=self.dtype))
-
-        self.minibatch_labels.reset(numpy.zeros(
-            (self.max_minibatch_size,), dtype=Loader.LABEL_DTYPE)
-            if self.has_labels else None)
-
-        self.minibatch_indices.reset(numpy.zeros(
-            self.max_minibatch_size, dtype=Loader.INDEX_DTYPE))
 
         self.minibatch_label_values.reset(numpy.zeros(
             self.max_minibatch_size, numpy.float32))
@@ -628,7 +621,7 @@ class ImageLoader(Loader):
     def _get_class_origin_distortion_from_index(self, index):
         class_index, key_remainder = self.class_index_by_sample_index(index)
         key_index = self.class_lengths[class_index] - key_remainder
-        return (class_index,) + divmod(key_index - 1, self.samples_inflation)
+        return (class_index,) + divmod(key_index, self.samples_inflation)
 
     def _load_image(self, key, crop=True):
         """Returns the data to serve corresponding to the given image key and

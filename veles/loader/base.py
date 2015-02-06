@@ -56,18 +56,19 @@ class LoaderError(Exception):
 
 class ILoader(Interface):
     def load_data():
-        """Load the data here.
+        """Initializes the instance and measures the dataset size.
 
         Should be filled here:
             class_lengths[].
         """
 
-    def create_minibatches():
-        """Allocate arrays for minibatch_data etc. here.
+    def create_minibatch_data():
+        """Allocates array for minibatch_data.
         """
 
     def fill_minibatch():
-        """Fill minibatch data labels and indexes according to current shuffle.
+        """Fills minibatch data labels and indexes according to the current
+        shuffle (minibatch_indices[:self.minibatch_size]).
         """
 
 
@@ -122,6 +123,7 @@ class Loader(Unit):
         self._total_samples = 0
         self.class_lengths = [0, 0, 0]
         self.class_end_offsets = [0, 0, 0]
+        self.has_labels = False
 
         self.epoch_ended = Bool(False)
         self.epoch_number = 0
@@ -381,6 +383,8 @@ class Loader(Unit):
         Takes the shape from minibatch_data.
         :return: Sample's shape.
         """
+        assert bool(self.minibatch_data), \
+            "May be called after create_minibatch_data()"
         return self.minibatch_data[0].shape
 
     def initialize(self, **kwargs):
@@ -397,17 +401,22 @@ class Loader(Unit):
             raise from_none(e)
         self.max_minibatch_size = kwargs.get("minibatch_size",
                                              self.max_minibatch_size)
-        self.on_before_create_minibatches()
+        self.on_before_create_minibatch_data()
         self._update_total_samples()
         self.info("Samples number: test: %d, validation: %d, train: %d",
                   *self.class_lengths)
-        self.create_minibatches()
-        if self.minibatch_labels:
-            assert self.minibatch_labels.dtype.type == Loader.LABEL_DTYPE
-        assert self.minibatch_indices.dtype.type == Loader.INDEX_DTYPE
-        if self.minibatch_data is None:
+
+        self.minibatch_labels.reset(numpy.zeros(
+            self.max_minibatch_size, dtype=Loader.LABEL_DTYPE)
+            if self.has_labels else None)
+        self.minibatch_indices.reset(numpy.zeros(
+            self.max_minibatch_size, dtype=Loader.INDEX_DTYPE))
+
+        self.create_minibatch_data()
+
+        if not self.minibatch_data:
             raise error.BadFormatError("minibatch_data MUST be initialized in "
-                                       "create_minibatches()")
+                                       "create_minibatch_data()")
         self.analyze_train_for_normalization()
         if not self._unpickled:
             self.shuffle()
@@ -481,7 +490,7 @@ class Loader(Unit):
                       len(self.failed_minibatches),
                       self.pending_minibatches_count)
 
-    def on_before_create_minibatches(self):
+    def on_before_create_minibatch_data(self):
         self.minibatch_data.reset()
         self.minibatch_labels.reset()
         self.minibatch_indices.reset()

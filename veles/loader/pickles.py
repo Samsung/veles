@@ -69,10 +69,7 @@ class PicklesLoader(FullBatchLoader):
                     raise error.BadFormatError(
                         "TRAIN and %s sets have the different sample shape "
                         "(%s vs %s)" % (CLASS_NAME[i], shape, shi))
-        size = sum(l[0] for l in loaded)
-        shape = self.reshape(shape)
-        self.original_data.mem = numpy.zeros((size,) + shape, dtype=self.dtype)
-        self.original_labels.mem = numpy.zeros(size, dtype=Loader.LABEL_DTYPE)
+        self.create_originals(self.reshape(shape))
         offsets = [0, 0]
         for ds in range(3):
             if loaded[ds][0] == 0:

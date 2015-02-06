@@ -82,11 +82,9 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         Takes the shape from original_data.
         :return: Sample's shape.
         """
+        if not self.original_data:
+            raise AttributeError("Must first initialize original_data")
         return self.original_data[0].shape
-
-    @property
-    def has_labels(self):
-        return bool(self.original_labels)
 
     @property
     def validation_ratio(self):
@@ -112,19 +110,6 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
                 value)
         self._validation_ratio = value
 
-    def create_minibatches(self):
-        self.check_types()
-
-        self.minibatch_data.reset(numpy.zeros(
-            (self.max_minibatch_size,) + self.shape, dtype=self.dtype))
-
-        self.minibatch_labels.reset(numpy.zeros(
-            (self.max_minibatch_size,), dtype=Loader.LABEL_DTYPE)
-            if self.has_labels else None)
-
-        self.minibatch_indices.reset(numpy.zeros(
-            self.max_minibatch_size, dtype=Loader.INDEX_DTYPE))
-
     def check_types(self):
         if (not isinstance(self.original_data, memory.Vector) or
                 not isinstance(self.original_labels, memory.Vector)):
@@ -140,23 +125,16 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         """
         return {}
 
-    def on_before_create_minibatches(self):
-        try:
-            super(FullBatchLoader, self).on_before_create_minibatches()
-        except AttributeError:
-            pass
-        if self.validation_ratio is not None:
-            self.resize_validation(ratio=self.validation_ratio)
-
     def initialize(self, device, **kwargs):
         super(FullBatchLoader, self).initialize(device=device, **kwargs)
         assert self.total_samples > 0
         self.check_types()
-        if not self.on_device or self.device is None:
-            return
 
         self.info("Normalizing to %s...", self.normalization_type)
         self.analyze_and_normalize_original_data()
+
+        if not self.on_device or self.device is None:
+            return
 
         self.info("Will load the entire dataset on device")
         self.original_data.initialize(self.device)
@@ -169,17 +147,6 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
             self.shuffled_indices.mem = numpy.arange(
                 self.total_samples, dtype=Loader.LABEL_DTYPE)
         self.init_vectors(self.shuffled_indices, self.minibatch_indices)
-
-    def analyze_train_for_normalization(self):
-        pass
-
-    def normalize_minibatch(self):
-        pass
-
-    def analyze_and_normalize_original_data(self):
-        self.normalizer.analyze(self.original_data[
-            self.class_end_offsets[VALID]:])
-        self.normalizer.normalize(self.original_data.mem)
 
     def _gpu_init(self):
         defines = {
@@ -229,6 +196,30 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
             self.minibatch_data.size / block_size)), 1, 1)
         self._local_size = (block_size, 1, 1)
 
+    def on_before_create_minibatch_data(self):
+        self.has_labels = bool(self.original_labels)
+        try:
+            super(FullBatchLoader, self).on_before_create_minibatch_data()
+        except AttributeError:
+            pass
+        if self.validation_ratio is not None:
+            self.resize_validation(ratio=self.validation_ratio)
+
+    def create_minibatch_data(self):
+        self.check_types()
+
+        self.minibatch_data.reset(numpy.zeros(
+            (self.max_minibatch_size,) + self.shape, dtype=self.dtype))
+
+    def create_originals(self, dshape):
+        """
+        Create original_data.mem and original_labels.mem.
+        :param dshape: Future original_data.shape[1:]
+        """
+        length = sum(self.class_lengths)
+        self.original_data.mem = numpy.zeros((length,) + dshape, self.dtype)
+        self.original_labels.mem = numpy.zeros(length, Loader.LABEL_DTYPE)
+
     def fill_indices(self, start_offset, count):
         if not self.on_device or self.device is None:
             return super(FullBatchLoader, self).fill_indices(
@@ -258,6 +249,23 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
             self.minibatch_data[i] = self.original_data[sample_index]
             if self.has_labels:
                 self.minibatch_labels[i] = self.original_labels[sample_index]
+
+    def analyze_train_for_normalization(self):
+        """
+        Override.
+        """
+        pass
+
+    def normalize_minibatch(self):
+        """
+        Override.
+        """
+        pass
+
+    def analyze_and_normalize_original_data(self):
+        self.normalizer.analyze(self.original_data[
+                                self.class_end_offsets[VALID]:])
+        self.normalizer.normalize(self.original_data.mem)
 
     def resize_validation(self, rand=None, ratio=None):
         """Extracts validation dataset from joined validation and train
@@ -369,8 +377,8 @@ class FullBatchLoaderMSEMixin(LoaderMSEMixin):
         state["original_targets"] = None
         return state
 
-    def create_minibatches(self):
-        super(FullBatchLoaderMSEMixin, self).create_minibatches()
+    def create_minibatch_data(self):
+        super(FullBatchLoaderMSEMixin, self).create_minibatch_data()
         self.minibatch_targets.reset()
         self.minibatch_targets.mem = numpy.zeros(
             (self.max_minibatch_size,) + self.original_targets[0].shape,

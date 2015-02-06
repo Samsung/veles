@@ -49,8 +49,8 @@ class ImageLoaderMSEMixin(LoaderMSEMixin):
                 raise error.BadFormatError("Targets have duplicate labels")
             self.target_label_map = {l: self.target_keys[l] for l in labels}
 
-    def create_minibatches(self):
-        super(ImageLoaderMSEMixin, self).create_minibatches()
+    def create_minibatch_data(self):
+        super(ImageLoaderMSEMixin, self).create_minibatch_data()
         self.minibatch_targets.reset(numpy.zeros(
             (self.max_minibatch_size,) + self.shape, dtype=self.dtype))
 

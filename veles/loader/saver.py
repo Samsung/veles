@@ -193,15 +193,10 @@ class MinibatchesLoader(Loader):
         self.offset_table.append(self.file.tell() - bm.size)
         self.debug("Offsets: %s", self.offset_table)
 
-    def create_minibatches(self):
+    def create_minibatch_data(self):
         self.minibatch_data.reset(numpy.zeros(
             (self.max_minibatch_size,) + self.minibatch_data_shape[1:],
             dtype=self.minibatch_data_dtype))
-        self.minibatch_labels.reset(numpy.zeros(
-            (self.max_minibatch_size,) + self.minibatch_labels_shape[1:],
-            dtype=self.minibatch_labels_dtype))
-        self.minibatch_indices.reset(numpy.zeros(
-            self.max_minibatch_size, dtype=Loader.INDEX_DTYPE))
 
     def fill_minibatch(self):
         chunks_map = [self.get_address(i) + (i,) for i in
