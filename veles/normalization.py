@@ -13,6 +13,7 @@ from six import add_metaclass
 from zope.interface import implementer, Interface
 
 from veles.compat import from_none
+from veles.memory import reshape, transpose
 from veles.verified import Verified
 
 
@@ -228,16 +229,24 @@ class LinearNormalizer(StatelessNormalizer):
         self._interval = float(vmin), float(vmax)
 
     def normalize(self, data):
-        data = data.transpose()
-        dmin = numpy.min(data, axis=0)
-        dmax = numpy.max(data, axis=0)
-        diff = dmax - dmin
-        imin, imax = self.interval
-        if numpy.count_nonzero(dmax - dmin) < numpy.prod(dmin.shape):
+        data = transpose(
+            reshape(data, (data.shape[0], data.size // data.shape[0])))
+        data -= data.min(axis=0)
+        mx = data.max(axis=0)
+        rmx = numpy.zeros_like(mx)
+        imin, imax = self._interval
+        if numpy.count_nonzero(mx) < mx.size:
             self.warning("There are uniform samples and the normalization "
-                         "type is linear, they are set to 0")
-        data *= (imin - imax) / diff
-        data += (dmin * imax - dmax * imin) / diff
+                         "type is linear, they are set to lower bound "
+                         "of the normalization interval [%.10f, %.10f]",
+                         imin, imax)
+            nonzeros = numpy.nonzero(mx)
+            numpy.reciprocal(mx[nonzeros], rmx[nonzeros])
+        else:
+            numpy.reciprocal(mx, rmx)
+        rmx *= imax - imin
+        data *= rmx
+        data += imin
 
 
 @implementer(INormalizer)
@@ -292,13 +301,13 @@ class PointwiseNormalizer(NormalizerBase):
 
     def _calculate_coefficients(self):
         disp = self._max - self._min
-        nzeros = numpy.nonzero(disp)
+        nonzeros = numpy.nonzero(disp)
 
         mul, add = self._cache
-        mul[nzeros] = 2.0
-        mul[nzeros] /= disp[nzeros]
+        mul[nonzeros] = 2.0
+        mul[nonzeros] /= disp[nonzeros]
         mm = self._min * mul
-        add[nzeros] = -1.0 - mm[nzeros]
+        add[nonzeros] = -1.0 - mm[nonzeros]
 
         return mul, add
 

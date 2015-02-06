@@ -52,6 +52,14 @@ def reshape(a, shape):
     return b
 
 
+def transpose(a):
+    """numpy.transpose() with address check.
+    """
+    b = a.transpose()
+    assert_addr(a, b)
+    return b
+
+
 def interleave(arr):
     """Returns the interleaved array.
 
