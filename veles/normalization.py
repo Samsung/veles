@@ -260,7 +260,8 @@ class ExponentNormalizer(StatelessNormalizer):
     NAME = "exp"
 
     def normalize(self, data):
-        data = data.transpose()
+        data = transpose(
+            reshape(data, (data.shape[0], data.size // data.shape[0])))
         data -= data.max(axis=0)
         numpy.exp(data, data)
         data /= data.sum(axis=0)
