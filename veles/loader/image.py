@@ -178,7 +178,7 @@ class ImageLoader(Loader):
                 raise TypeError("shape[%d] is not an integer (= %s)" % (i, d))
             if d < 1:
                 raise ValueError("shape[%d] < 1 (= %s)" % (i, d))
-        self._original_shape = value[:2]
+        self._original_shape = value
 
     @property
     def scale(self):
