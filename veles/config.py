@@ -60,10 +60,14 @@ class Config(object):
                 % (self.__path__, name))
         super(Config, self).__setattr__(name, value)
 
+    @property
+    def __content__(self):
+        attrs = dict(self.__dict__)
+        del attrs["__path__"]
+        return attrs
+
     def __repr__(self):
-        cnt = dict(self.__dict__)
-        del cnt["__path__"]
-        return '<Config "%s": %s>' % (self.__path__, repr(cnt))
+        return '<Config "%s": %s>' % (self.__path__, repr(self.__content__))
 
     def print_(self, indent=1, width=80, file=sys.stdout):
         print_('-' * width, file=file)
