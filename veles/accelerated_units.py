@@ -10,6 +10,7 @@ Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 
 import argparse
 from copy import copy
+from jinja2 import Template, TemplateError
 import logging
 import numpy
 import os
@@ -18,6 +19,7 @@ from six import BytesIO, add_metaclass, PY3
 import tarfile
 import time
 from zope.interface import implementer, Interface
+from veles.compat import from_none
 
 from veles.config import root
 import veles.memory as formats
@@ -173,50 +175,63 @@ class AcceleratedUnit(Unit):
                             "unit run times.")
         return parser
 
-    def build_program(self, defines=None, cache_file_name=None, dtype=None):
+    def build_program(self, defines=None, cache_file_name=None, dtype=None,
+                      **kwargs):
         if cache_file_name is None:
             cache_file_name = self.name
         if not isinstance(cache_file_name, str):
             raise ValueError("cache_file_name must be a string")
-        return self._backend_build_program_(defines, cache_file_name, dtype)
+        if dtype is None:
+            dtype = root.common.precision_type
+        elif type(dtype) != str:
+            dtype = opencl_types.numpy_dtype_to_opencl(dtype)
+        return self._backend_build_program_(
+            defines, cache_file_name, dtype, kwargs)
 
     def cpu_build_program(self, defines, cache_file_name, dtype):
         pass
 
-    def _load_binary(self, defines, cache_file_name, dtype, suffix,
-                     cache_is_valid):
+    def _load_binary(self, defines, cache_file_name, dtype, engine, suffix,
+                     cache_is_valid, template_kwargs):
         cache_file_name = cache_file_name + suffix + (".3" if PY3 else ".2")
         if not os.path.isabs(cache_file_name):
             cache_file_name = os.path.join(root.common.cache_dir,
                                            cache_file_name)
         if self.cache and os.path.exists("%s.cache" % cache_file_name):
-            return self._load_from_cache(cache_file_name, defines, dtype,
-                                         suffix, cache_is_valid)
+            return self._load_from_cache(
+                cache_file_name, defines, dtype, engine, suffix,
+                cache_is_valid, template_kwargs)
         else:
             return None, defines
 
-    def ocl_build_program(self, defines=None, cache_file_name=None,
-                          dtype=None):
+    def ocl_build_program(self, defines, cache_file_name, dtype,
+                          template_kwargs):
         """Builds the OpenCL program.
 
         `program_` will be initialized to the resulting program object.
         """
+
         def cache_is_valid(cache):
             return (self.device.queue_.device.name ==
                     cache["devices"][0][0] and
                     self.device.queue_.device.platform.name ==
                     cache["devices"][0][1])
+
         binaries, my_defines = self._load_binary(
-            defines, cache_file_name, dtype, ".cl", cache_is_valid)
+            defines, cache_file_name, dtype, "ocl", ".cl", cache_is_valid,
+            template_kwargs)
         if binaries is not None:
             self.program_ = self.device.queue_.context.create_program(
                 binaries, binary=True)
             self.debug("Used %s.cache", cache_file_name)
             return my_defines
-        source, my_defines = self._generate_source(defines, dtype, ".cl")
+        include_dirs = [os.path.join(d, "ocl")
+                        for d in root.common.engine.dirs]
+        source, my_defines = self._generate_source(
+            defines, include_dirs, dtype, ".cl", template_kwargs)
         show_ocl_logs = self.logger.isEnabledFor(logging.DEBUG)
         self.program_ = self.device.queue_.context.create_program(
-            source, [os.path.join(x, "ocl") for x in root.common.engine.dirs],
+            source, include_dirs,
             "-cl-nv-verbose" if show_ocl_logs and "cl_nv_compiler_options" in
             self.device.queue_.device.extensions else "")
         if show_ocl_logs and len(self.program_.build_logs):
@@ -231,26 +246,30 @@ class AcceleratedUnit(Unit):
                                          for d in self.program_.devices]})
         return my_defines
 
-    def cuda_build_program(self, defines=None, cache_file_name=None,
-                           dtype=None):
+    def cuda_build_program(self, defines, cache_file_name, dtype,
+                           template_kwargs):
         """Builds the OpenCL program.
 
         `program_` will be initialized to the resulting program object.
         """
+
         def cache_is_valid(cache):
             return self.device.context.device.name == cache["device"]
 
         binaries, my_defines = self._load_binary(
-            defines, cache_file_name, dtype, ".cu", cache_is_valid)
+            defines, cache_file_name, dtype, "cuda", ".cu", cache_is_valid,
+            template_kwargs)
         if binaries is not None:
             self.program_ = self.device.context.create_module(ptx=binaries)
             self.debug("Used %s.cache", cache_file_name)
             return my_defines
-        source, my_defines = self._generate_source(defines, dtype, ".cu")
+        include_dirs = [os.path.join(d, "cuda")
+                        for d in root.common.engine.dirs]
+        source, my_defines = self._generate_source(
+            defines, include_dirs, dtype, ".cu", template_kwargs)
         show_logs = self.logger.isEnabledFor(logging.DEBUG)
         self.program_ = self.device.context.create_module(
-            source=source,
-            include_dirs=list(x + "/cuda" for x in root.common.engine.dirs))
+            source=source, include_dirs=include_dirs)
         if show_logs and len(self.program_.stderr):
             self.debug("Non-empty CUDA build log encountered: %s",
                        self.program_.stderr)
@@ -320,21 +339,38 @@ class AcceleratedUnit(Unit):
         for vec in vecs:
             vec.initialize(self.device)
 
-    def _generate_source(self, defines, dtype=None, suffix=""):
+    def _generate_source(self, defines, include_dirs, dtype, suffix,
+                         template_kwargs):
         if defines and not isinstance(defines, dict):
             raise RuntimeError("defines must be a dictionary")
         lines = []
+
+        def define(cdefs, undef=False):
+            for key, value in sorted(cdefs.items()):
+                if not undef:
+                    lines.insert(0, "#define %(key)s %(value)s\n" % locals())
+                else:
+                    lines.append("#undef %(key)s\n" % locals())
+
         my_defines = copy(defines) if defines else {}
-        for fnme, defs in self.cl_sources_.items():
-            for k, v in sorted(defs.items()):
-                lines.append("#define %s %s" % (k, v))
-            lines.append("#include \"%s%s\"" % (fnme, suffix))
-            for k in sorted(defs.keys()):
-                lines.append("#undef %s" % k)
-        if dtype is None:
-            dtype = root.common.precision_type
-        elif type(dtype) != str:
-            dtype = opencl_types.numpy_dtype_to_opencl(dtype)
+        for name, defs in self.cl_sources_.items():
+            define(defs)
+            if len(template_kwargs) == 0:
+                # No templating
+                lines.append("#include \"%s%s\"" % (name, suffix))
+                continue
+            else:
+                for include_dir in include_dirs:
+                    path = os.path.join(include_dir, name) + suffix
+                    if not os.access(path, os.R_OK):
+                        continue
+                    lines.append("\n// #include \"%s%s\"\n" % (name, suffix))
+                    with open(path, "r") as fin:
+                        lines.extend(fin.readlines())
+                    break
+                else:
+                    raise SyntaxError("Unable to include \"%s\"" % name)
+            define(defs, undef=True)
         my_defines.update(opencl_types.cl_defines[dtype])
         if "PRECISION_LEVEL" not in my_defines:
             my_defines["PRECISION_LEVEL"] = root.common.precision_level
@@ -345,12 +381,18 @@ class AcceleratedUnit(Unit):
         if "GPU_FORCE_64BIT_PTR" not in my_defines:  # for AMD
             my_defines["GPU_FORCE_64BIT_PTR"] = os.getenv(
                 "GPU_FORCE_64BIT_PTR", 0)
-
-        for k, v in sorted(my_defines.items()):
-            lines.insert(0, "#define %s %s" % (k, v))
-
-        source = "\n".join(lines)
-        return (source, my_defines)
+        define(my_defines)
+        source = "".join(lines)
+        if len(template_kwargs) > 0:
+            try:
+                source = Template(source).render(**template_kwargs)
+            except TemplateError as e:
+                self.error(
+                    "Failed to render the template. Here is the source:\n%s\n",
+                    "".join("%04d\t%s" % (i + 1, l)
+                            for i, l in enumerate(lines)))
+                raise from_none(e)
+        return source, my_defines
 
     def _search_include(self, file_name):
         if os.path.exists(file_name):
@@ -385,12 +427,15 @@ class AcceleratedUnit(Unit):
             pending = pending[1:]
         return res
 
-    def _load_from_cache(self, cache_file_name, defines, dtype, suffix,
-                         cache_is_valid):
+    def _load_from_cache(self, cache_file_name, defines, dtype, engine, suffix,
+                         cache_is_valid, template_kwargs):
+        include_dirs = tuple(os.path.join(d, engine)
+                             for d in root.common.engine.dirs)
         try:
             with tarfile.open("%s.cache" % cache_file_name, "r:gz") as tar:
                 cached_source = tar.extractfile("source" + suffix).read()
-                src, my_defines = self._generate_source(defines, dtype, suffix)
+                src, my_defines = self._generate_source(
+                    defines, include_dirs, dtype, suffix, template_kwargs)
                 real_source = src.encode("utf-8")
                 if cached_source != real_source:
                     return None, None
