@@ -49,7 +49,7 @@ class HDF5LoaderBase(Loader):
                 sum(self.class_lengths) > 0:
             raise error.BadFormatError(
                 "Some sets have labels and some do not")
-        self.has_labels = has_labels
+        self._has_labels = has_labels
         labels = h5f["label"] if self.has_labels else None
         if self.has_labels and len(data) != len(labels):
             raise error.BadFormatError(

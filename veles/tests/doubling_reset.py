@@ -12,9 +12,8 @@ from veles.memory import Vector, assert_addr
 
 def patch(self, instance, shape_func, dtype_func):
     def doubling_reset(mem=None):
-        shape = list(shape_func())
         Vector.reset(instance, mem)
-        if mem is None or self.device is None:
+        if mem is None:
             return
         instance_name = None
         for k, v in self.__dict__.items():
@@ -23,6 +22,7 @@ def patch(self, instance, shape_func, dtype_func):
                 break
         self.debug("Unit test mode: allocating 2x memory for %s",
                    instance_name)
+        shape = list(shape_func())
         shape[0] <<= 1
         instance.mem = numpy.zeros(shape, dtype_func())
         instance.initialize(self.device)

@@ -32,10 +32,6 @@ class FullBatchImageLoader(ImageLoader, FullBatchLoader):
         super(FullBatchImageLoader, self).__init__(workflow, **kwargs)
         self.original_label_values = Vector()
 
-    @property
-    def has_labels(self):
-        return ImageLoader.has_labels.fget(self)
-
     class DistortionIterator(object):
         def __init__(self, data, loader):
             self.data = data

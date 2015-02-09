@@ -94,7 +94,6 @@ class ImageLoader(Loader):
         self.color_space = kwargs.get("color_space", "RGB")
         self.source_dtype = numpy.float32
         self._original_shape = tuple()
-        self._has_labels = False
         self.class_keys = [[], [], []]
         self.verify_interface(IImageLoader)
         self._restored_from_pickle = False
@@ -355,13 +354,6 @@ class ImageLoader(Loader):
                 self._background = numpy.zeros(self.shape)
                 self._background[:] = self.background_color
         return self._background.copy()
-
-    @property
-    def has_labels(self):
-        """
-        This is set after initialize() (particularly, after load_data()).
-        """
-        return self._has_labels
 
     @property
     def channels_number(self):

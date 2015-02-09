@@ -123,7 +123,7 @@ class Loader(Unit):
         self._total_samples = 0
         self.class_lengths = [0, 0, 0]
         self.class_end_offsets = [0, 0, 0]
-        self.has_labels = False
+        self._has_labels = False
 
         self.epoch_ended = Bool(False)
         self.epoch_number = 0
@@ -164,6 +164,14 @@ class Loader(Unit):
         else:
             state["failed_minibatches"] = []
         return state
+
+    @property
+    def has_labels(self):
+        """
+        True if the loaded dataset has labels; otherwise, False.
+        This is set after initialize() (particularly, after load_data()).
+        """
+        return self._has_labels
 
     @property
     def dtype(self):

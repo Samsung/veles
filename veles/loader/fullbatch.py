@@ -197,7 +197,7 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         self._local_size = (block_size, 1, 1)
 
     def on_before_create_minibatch_data(self):
-        self.has_labels = bool(self.original_labels)
+        self._has_labels = bool(self.original_labels)
         try:
             super(FullBatchLoader, self).on_before_create_minibatch_data()
         except AttributeError:
