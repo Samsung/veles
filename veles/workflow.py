@@ -306,7 +306,9 @@ class Workflow(Container):
         self.info("Initializing units in %s...", self.name)
         progress.start()
         units_in_dependency_order = self.units_in_dependency_order
-        for unit in units_in_dependency_order:
+        iqueue = list(units_in_dependency_order)
+        while len(iqueue) > 0:
+            unit = iqueue.pop(0)
             # Early abort in case of KeyboardInterrupt
             if self.thread_pool.joined:
                 break
@@ -315,11 +317,14 @@ class Workflow(Container):
             if not self.is_standalone:
                 unit.verify_interface(IDistributable)
             try:
-                unit.initialize(**kwargs)
+                partially = unit.initialize(**kwargs)
             except:
                 self.error("Unit \"%s\" failed to initialize", unit.name)
                 raise
-            progress.inc()
+            if partially:
+                iqueue.append(unit)
+            else:
+                progress.inc()
         progress.widgets[-1] = fin_text + ' ' * (maxlen - len(fin_text))
         progress.finish()
         if len(units_in_dependency_order) < units_number:

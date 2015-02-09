@@ -32,12 +32,14 @@ class IUnit(Interface):
 
     def initialize(**kwargs):
         """Performs the object initialization before execution of the workflow.
-        E.g., allocate buffers here.
+        E.g., allocate buffers here. Returns True if you need it to be called
+        again, after other units are initialized; otherwise, None or False.
 
         initialize() is invoked in the same order as run(), including
         open_gate() and effects of gate_block and gate_skip.
 
-        self.is_initialized flag is automatically set after it was executed.
+        self.is_initialized flag is automatically set after it was executed
+        and None or False returned.
         """
 
     def run():
@@ -139,7 +141,7 @@ class Unit(Distributable, Verified):
             self.run = self._track_call(self.run, "run_was_called")
             self.run = self._measure_time(self.run, Unit.timers)
         if hasattr(self, "initialize"):
-            self.initialize = self._track_call(self.initialize,
+            self.initialize = self._retry_call(self.initialize,
                                                "_is_initialized")
             self.initialize = self._check_attrs(self.initialize, self.demanded)
         Unit.timers[self.id] = 0
@@ -558,6 +560,19 @@ class Unit(Distributable, Verified):
                          getattr(fn, 'func', wrapped_track_call).__name__)
         wrapped_track_call.__name__ = fnname + '_track_call'
         return wrapped_track_call
+
+    def _retry_call(self, fn, name):
+        def wrapped_retry_call(*args, **kwargs):
+            retry = fn(*args, **kwargs)
+            assert retry is None or isinstance(retry, bool)
+            if not retry:
+                setattr(self, name, True)
+            return retry
+
+        fnname = getattr(fn, '__name__',
+                         getattr(fn, 'func', wrapped_retry_call).__name__)
+        wrapped_retry_call.__name__ = fnname + '_track_call'
+        return wrapped_retry_call
 
     def _check_attrs(self, fn, attrs):
         def wrapped_check_attrs(*args, **kwargs):
