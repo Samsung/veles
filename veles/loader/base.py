@@ -559,10 +559,10 @@ class Loader(Unit):
         self.info("Performing \"%s\" normalization analysis...",
                   type(self.normalizer).NAME)
         for i in ProgressBar(term_width=40)(range(size)):
+            start_index = i * self.max_minibatch_size
             self.minibatch_size = min(
                 self.max_minibatch_size,
-                self.class_lengths[TRAIN] - (i + 1) * self.max_minibatch_size)
-            start_index = i * self.max_minibatch_size
+                self.class_lengths[TRAIN] - start_index)
             self.minibatch_indices[:self.minibatch_size] = \
                 numpy.arange(start_index, start_index + self.minibatch_size,
                              dtype=int) + self.class_end_offsets[VALID]
