@@ -66,7 +66,7 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         super(FullBatchLoader, self).init_unpickled()
         self.original_data = memory.Vector()
         self.original_labels = memory.Vector()
-        self.cl_sources_["fullbatch_loader"] = {}
+        self.sources_["fullbatch_loader"] = {}
         self._global_size = None
         self._krn_const = numpy.zeros(2, dtype=Loader.LABEL_DTYPE)
 

@@ -1,0 +1,6 @@
+Contents of second.jcc
+======================
+
+{% for i in var %}
+{{ i + 10 }}
+{% endfor %}

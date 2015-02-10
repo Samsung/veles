@@ -43,7 +43,7 @@ class MeanDispNormalizer(AcceleratedUnit, TriviallyDistributable):
 
     def init_unpickled(self):
         super(MeanDispNormalizer, self).init_unpickled()
-        self.cl_sources_["mean_disp_normalizer"] = {}
+        self.sources_["mean_disp_normalizer"] = {}
 
     def initialize(self, device, **kwargs):
         super(MeanDispNormalizer, self).initialize(device, **kwargs)

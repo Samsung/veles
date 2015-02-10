@@ -1,0 +1,7 @@
+Some text on top
+
+#include <first.jcc>
+#include "second.jcc"
+#include "third.cc"
+
+Some text on bottom

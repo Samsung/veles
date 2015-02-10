@@ -31,6 +31,10 @@ from veles.units import Unit, IUnit, UnitCommandLineArgumentsRegistry
 from veles.workflow import Workflow
 
 
+class IncludeError(Exception):
+    pass
+
+
 class IOpenCLUnit(Interface):
     """Requires cpu and ocl run() methods for OpenCLUnit.
     """
@@ -56,7 +60,7 @@ class AcceleratedUnit(Unit):
     Attributes:
         device: Device object.
         program_: OpenCL program.
-        cl_sources_: OpenCL source files: file => defines.
+        sources_: OpenCL source files: file => defines.
         cache: whether to cache the compiled OpenCL programs.
     """
     backend_methods = ("run", "init", "build_program", "get_kernel",
@@ -75,7 +79,7 @@ class AcceleratedUnit(Unit):
     def init_unpickled(self):
         super(AcceleratedUnit, self).init_unpickled()
         self.program_ = None
-        self.cl_sources_ = {}
+        self.sources_ = {}
         parser = AcceleratedUnit.init_parser()
         args, _ = parser.parse_known_args()
         self._force_cpu = self.__class__.__name__ in args.force_cpu.split(',')
@@ -87,7 +91,8 @@ class AcceleratedUnit(Unit):
     def with_backend_init(self, fn):
         def wrapped(device, **kwargs):
             result = fn(device, **kwargs)
-            self._backend_init_()
+            if not result:
+                self._backend_init_()
             return result
 
         wrapped.__name__ = fn.__name__ + "_backend_init"
@@ -218,7 +223,7 @@ class AcceleratedUnit(Unit):
                     cache["devices"][0][1])
 
         binaries, my_defines = self._load_binary(
-            defines, cache_file_name, dtype, "ocl", ".cl", cache_is_valid,
+            defines, cache_file_name, dtype, "ocl", "cl", cache_is_valid,
             template_kwargs)
         if binaries is not None:
             self.program_ = self.device.queue_.context.create_program(
@@ -228,7 +233,7 @@ class AcceleratedUnit(Unit):
         include_dirs = [os.path.join(d, "ocl")
                         for d in root.common.engine.dirs]
         source, my_defines = self._generate_source(
-            defines, include_dirs, dtype, ".cl", template_kwargs)
+            defines, include_dirs, dtype, "cl", template_kwargs)
         show_ocl_logs = self.logger.isEnabledFor(logging.DEBUG)
         self.program_ = self.device.queue_.context.create_program(
             source, include_dirs,
@@ -240,7 +245,7 @@ class AcceleratedUnit(Unit):
                 if not s:
                     continue
                 self.debug("Non-empty OpenCL build log encountered: %s", s)
-        self._save_to_cache(cache_file_name, ".cl", self.program_.source,
+        self._save_to_cache(cache_file_name, "cl", self.program_.source,
                             self.program_.binaries,
                             {"devices": [(d.name, d.platform.name)
                                          for d in self.program_.devices]})
@@ -257,7 +262,7 @@ class AcceleratedUnit(Unit):
             return self.device.context.device.name == cache["device"]
 
         binaries, my_defines = self._load_binary(
-            defines, cache_file_name, dtype, "cuda", ".cu", cache_is_valid,
+            defines, cache_file_name, dtype, "cuda", "cu", cache_is_valid,
             template_kwargs)
         if binaries is not None:
             self.program_ = self.device.context.create_module(ptx=binaries)
@@ -266,14 +271,14 @@ class AcceleratedUnit(Unit):
         include_dirs = [os.path.join(d, "cuda")
                         for d in root.common.engine.dirs]
         source, my_defines = self._generate_source(
-            defines, include_dirs, dtype, ".cu", template_kwargs)
+            defines, include_dirs, dtype, "cu", template_kwargs)
         show_logs = self.logger.isEnabledFor(logging.DEBUG)
         self.program_ = self.device.context.create_module(
             source=source, include_dirs=include_dirs)
         if show_logs and len(self.program_.stderr):
             self.debug("Non-empty CUDA build log encountered: %s",
                        self.program_.stderr)
-        self._save_to_cache(cache_file_name, ".cu", source.encode("utf-8"),
+        self._save_to_cache(cache_file_name, "cu", source.encode("utf-8"),
                             self.program_.ptx,
                             {"device": self.device.context.device.name})
         return my_defines
@@ -339,38 +344,7 @@ class AcceleratedUnit(Unit):
         for vec in vecs:
             vec.initialize(self.device)
 
-    def _generate_source(self, defines, include_dirs, dtype, suffix,
-                         template_kwargs):
-        if defines and not isinstance(defines, dict):
-            raise RuntimeError("defines must be a dictionary")
-        lines = []
-
-        def define(cdefs, undef=False):
-            for key, value in sorted(cdefs.items()):
-                if not undef:
-                    lines.insert(0, "#define %(key)s %(value)s\n" % locals())
-                else:
-                    lines.append("#undef %(key)s\n" % locals())
-
-        my_defines = copy(defines) if defines else {}
-        for name, defs in self.cl_sources_.items():
-            define(defs)
-            if len(template_kwargs) == 0:
-                # No templating
-                lines.append("#include \"%s%s\"\n" % (name, suffix))
-                continue
-            else:
-                for include_dir in include_dirs:
-                    path = os.path.join(include_dir, name) + suffix
-                    if not os.access(path, os.R_OK):
-                        continue
-                    lines.append("\n// #include \"%s%s\"\n" % (name, suffix))
-                    with open(path, "r") as fin:
-                        lines.extend(fin.readlines())
-                    break
-                else:
-                    raise SyntaxError("Unable to include \"%s\"" % name)
-            define(defs, undef=True)
+    def _adjust_defines(self, my_defines, dtype):
         my_defines.update(opencl_types.cl_defines[dtype])
         if "PRECISION_LEVEL" not in my_defines:
             my_defines["PRECISION_LEVEL"] = root.common.precision_level
@@ -381,17 +355,75 @@ class AcceleratedUnit(Unit):
         if "GPU_FORCE_64BIT_PTR" not in my_defines:  # for AMD
             my_defines["GPU_FORCE_64BIT_PTR"] = os.getenv(
                 "GPU_FORCE_64BIT_PTR", 0)
+
+    def _include_file(self, include_dirs, file, lines):
+        for include_dir in include_dirs:
+            path = os.path.join(include_dir, file)
+            if not os.access(path, os.R_OK):
+                continue
+            lines.append("\n// #include \"%s\"\n" % file)
+            with open(path, "r") as fin:
+                lines.extend(fin.readlines())
+            break
+        else:
+            raise IncludeError("Unable to include \"%s\"" % file)
+
+    def _generate_source(self, defines, include_dirs, dtype, suffix,
+                         template_kwargs):
+        if defines and not isinstance(defines, dict):
+            raise RuntimeError("defines must be a dictionary")
+        jsuffix = ".j" + suffix
+        suffix = "." + suffix
+        lines = []
+
+        def define(cdefs, undef=False):
+            for key, value in sorted(cdefs.items()):
+                if not undef:
+                    lines.insert(0, "#define %(key)s %(value)s\n" % locals())
+                else:
+                    lines.append("#undef %(key)s\n" % locals())
+
+        my_defines = copy(defines) if defines else {}
+        for name, defs in self.sources_.items():
+            define(defs)
+            if len(template_kwargs) == 0:
+                # No templating
+                lines.append("#include \"%s%s\"\n" % (name, suffix))
+                continue
+            else:
+                try:
+                    self._include_file(include_dirs, name + jsuffix, lines)
+                except IncludeError:
+                    try:
+                        self._include_file(include_dirs, name + suffix, lines)
+                    except IncludeError:
+                        raise from_none(
+                            IncludeError("Unable to include \"%s(%s|%s)\"" %
+                                         (name, jsuffix, suffix)))
+            define(defs, undef=True)
+        self._adjust_defines(my_defines, dtype)
         define(my_defines)
         source = "".join(lines)
-        if len(template_kwargs) > 0:
-            try:
-                source = Template(source).render(**template_kwargs)
-            except TemplateError as e:
-                self.error(
-                    "Failed to render the template. Here is the source:\n%s\n",
-                    "".join("%04d\t%s" % (i + 1, l)
-                            for i, l in enumerate(lines)))
-                raise from_none(e)
+        if len(template_kwargs) == 0:
+            return source, my_defines
+        include_re = re.compile(
+            r'^\s*#\s*include\s*(<(\w+%(sfx)s)>|"(\w+%(sfx)s)")\s*$' %
+            {"sfx": "\\" + jsuffix}, flags=re.MULTILINE)
+        match = include_re.search(source)
+        while match is not None:
+            file = match.group(2) or match.group(3)
+            lines = []
+            self._include_file(include_dirs, file, lines)
+            source = include_re.sub("\n" + "".join(lines), source, count=1)
+            match = include_re.search(source)
+        try:
+            source = Template(source).render(**template_kwargs)
+        except TemplateError as e:
+            self.error(
+                "Failed to render the template. Here is the source:\n%s\n",
+                "".join("%04d\t%s" % (i + 1, l)
+                        for i, l in enumerate(lines)))
+            raise from_none(e)
         return source, my_defines
 
     def _search_include(self, file_name):
@@ -405,7 +437,7 @@ class AcceleratedUnit(Unit):
 
     def _scan_include_dependencies(self, suffix):
         res = [self._search_include(f + suffix)
-               for f in self.cl_sources_.keys()]
+               for f in self.sources_.keys()]
         pending = copy(res)
         include_matcher = re.compile(b'#\s*include\s*\"([\w\.]+)\"')
         while len(pending):
@@ -462,6 +494,7 @@ class AcceleratedUnit(Unit):
 
     def _save_to_cache(self, cache_file_name, suffix, program_source,
                        program_binaries, device_id_dict):
+        suffix = "." + suffix
         cache_file_name = cache_file_name + suffix + (".3" if PY3 else ".2")
         if not os.path.isabs(cache_file_name):
             cache_file_name = os.path.join(root.common.cache_dir,
@@ -549,7 +582,7 @@ class DeviceBenchmark(AcceleratedUnit):
         if self.block_size is None and self.device is not None:
             self.block_size = self.device.device_info.get_block_size(
                 kernel="matrix_multiplication", dtype=self.dtype)
-        self.cl_sources_["benchmark"] = {}
+        self.sources_["benchmark"] = {}
         defines = {
             "BLOCK_SIZE": self.block_size,
             "SIZE": self.size,

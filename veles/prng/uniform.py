@@ -38,7 +38,7 @@ class Uniform(AcceleratedUnit):
 
     def init_unpickled(self):
         super(Uniform, self).init_unpickled()
-        self.cl_sources_["random"] = {}
+        self.sources_["random"] = {}
 
     def initialize(self, device, **kwargs):
         super(Uniform, self).initialize(device, **kwargs)

@@ -44,7 +44,7 @@ class InputJoiner(AcceleratedUnit):
 
     def init_unpickled(self):
         super(InputJoiner, self).init_unpickled()
-        self.cl_sources_["join"] = {}
+        self.sources_["join"] = {}
 
     @property
     def inputs(self):

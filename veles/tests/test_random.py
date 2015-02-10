@@ -42,7 +42,7 @@ class TestRandom1024(unittest.TestCase):
         states.initialize(self.device)
         output.initialize(self.device)
 
-        obj.cl_sources_["random"] = {'LOG_CHUNK': self.chunk}
+        obj.sources_["random"] = {'LOG_CHUNK': self.chunk}
         obj.build_program({}, os.path.join(root.common.cache_dir,
                                            "test_random"))
 
@@ -145,7 +145,7 @@ class TestRandom128(unittest.TestCase):
         states.initialize(self.device)
         output.initialize(self.device)
 
-        obj.cl_sources_["random"] = {'LOG_CHUNK': self.chunk}
+        obj.sources_["random"] = {'LOG_CHUNK': self.chunk}
         obj.build_program({}, os.path.join(root.common.cache_dir,
                                            "test_random"))
         obj.assign_kernel("random_xorshift128plus")
