@@ -357,7 +357,7 @@ class AcceleratedUnit(Unit):
             define(defs)
             if len(template_kwargs) == 0:
                 # No templating
-                lines.append("#include \"%s%s\"" % (name, suffix))
+                lines.append("#include \"%s%s\"\n" % (name, suffix))
                 continue
             else:
                 for include_dir in include_dirs:

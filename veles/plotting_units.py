@@ -408,6 +408,17 @@ class ImagePlotter(Plotter):
             sx = int(numpy.round(value.size / sy))
             value = value.reshape(sy, sx)
 
+        # Normalize value and convert to uint8
+        value = value.astype(numpy.float32).copy()
+        value -= value.min()
+        mx = value.max()
+        if mx:
+            value *= 255.0 / mx
+        value = numpy.round(value).astype(numpy.uint8)
+
+        if not self.yuv:
+            return value
+
         import cv2
         return cv2.cvtColor(value, cv2.COLOR_YUV2RGB)
 

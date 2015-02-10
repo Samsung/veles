@@ -3,9 +3,8 @@ Created on Mar 17, 2014
 
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
-
-
 import io
+import logging
 import matplotlib
 matplotlib.use("cairo")
 import matplotlib.cm as cm
@@ -15,9 +14,10 @@ import matplotlib.pyplot as pp
 pp.ion()
 import numpy
 import os
-from PIL import Image
-import unittest
 import pickle
+from PIL import Image
+import tempfile
+import unittest
 
 from veles.plotting_units import AccumulatingPlotter, MatrixPlotter, \
     ImagePlotter, ImmediatePlotter, Histogram
@@ -43,7 +43,9 @@ class Test(unittest.TestCase):
         fig.savefig(fio, format="png")
         fio.seek(0)
         if save_on_disk:
-            tmp_file_name = "/tmp/%s.png" % plotter.__class__.__name__
+            tmp_file_name = tempfile.mkstemp("%s.png" %
+                                             plotter.__class__.__name__)[1]
+            logging.info("Dumped figure to %s", tmp_file_name)
             pp.savefig(tmp_file_name)
         return plotter, fio
 
@@ -111,6 +113,7 @@ class Test(unittest.TestCase):
             h.y[int(numpy.round((i + 1) / 0.2))] = i * i
         self.compare_images(*self.run_plotter(h))
 
+
 if __name__ == "__main__":
-    # import sys;sys.argv = ['', 'Test.testMatrixPlotter']
+    logging.basicConfig(level=logging.INFO)
     unittest.main()
