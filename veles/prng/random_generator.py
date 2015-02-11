@@ -16,6 +16,22 @@ from veles.distributable import Pickleable
 import veles.memory as formats
 
 
+# Disable stock numpy.random for great justice
+my_random = numpy.random
+
+
+class WrappedRandom(object):
+    def __getattr__(self, item):
+        if item in self.__dict__:
+            return self.__dict__[item]
+        raise AttributeError(
+            "veles.prng disables any direct usage of numpy.random. You can "
+            "use veles.prng.get().%(item)s or self.prng.%(item)s instead." %
+            locals())
+
+numpy.random = WrappedRandom()
+
+
 class RandomGenerator(Pickleable):
     """Random generator with exact reproducibility property.
 
@@ -71,9 +87,9 @@ class RandomGenerator(Pickleable):
                 n = fin.readinto(seed)
             seed = seed[:n // seed[0].nbytes]
         try:
-            numpy.random.seed(seed)
+            my_random.seed(seed)
         except ValueError:
-            numpy.random.seed(seed.view(numpy.uint32))
+            my_random.seed(seed.view(numpy.uint32))
         numpy.save(self.seed_file_name, seed)
         self.restore_state()
 
@@ -82,7 +98,7 @@ class RandomGenerator(Pickleable):
         """numpy.normal() with saving the random state.
         """
         self.save_state()
-        retval = numpy.random.normal(loc=loc, scale=scale, size=size)
+        retval = my_random.normal(loc=loc, scale=scale, size=size)
         self.restore_state()
         return retval
 
@@ -97,7 +113,7 @@ class RandomGenerator(Pickleable):
         """
         self.save_state()
         arr = formats.ravel(arr)
-        arr[:] = (numpy.random.rand(arr.size) * (vle_max - vle_min) +
+        arr[:] = (my_random.rand(arr.size) * (vle_max - vle_min) +
                   vle_min)[:]
         self.restore_state()
 
@@ -114,7 +130,7 @@ class RandomGenerator(Pickleable):
         """
         self.save_state()
         arr = formats.ravel(arr)
-        arr[:] = numpy.random.normal(loc=mean, scale=stddev, size=arr.size)[:]
+        arr[:] = my_random.normal(loc=mean, scale=stddev, size=arr.size)[:]
 
         numpy.clip(arr, mean - clip_to_sigma * stddev,
                    mean + clip_to_sigma * stddev, out=arr)
@@ -125,16 +141,16 @@ class RandomGenerator(Pickleable):
         """numpy.shuffle() with saving the random state.
         """
         self.save_state()
-        if numpy.random.shuffle is not None:
-            numpy.random.shuffle(arr)
+        if my_random.shuffle is not None:
+            my_random.shuffle(arr)
         else:
             import logging
-            logging.warn("numpy.random.shuffle is None")
+            logging.warn("my_random.shuffle is None")
             n = len(arr) - 1
             for i in range(n):
                 j = n + 1
                 while j >= n + 1:  # pypy workaround
-                    j = numpy.random.randint(i, n + 1)
+                    j = my_random.randint(i, n + 1)
                 t = arr[i]
                 arr[i] = arr[j]
                 arr[j] = t
@@ -145,7 +161,7 @@ class RandomGenerator(Pickleable):
         """numpy.permutation() with saving the random state.
         """
         self.save_state()
-        retval = numpy.random.permutation(x)
+        retval = my_random.permutation(x)
         self.restore_state()
         return retval
 
@@ -154,14 +170,23 @@ class RandomGenerator(Pickleable):
         """Returns random integer(s) from [low, high).
         """
         self.save_state()
-        retval = numpy.random.randint(low, high, size)
+        retval = my_random.randint(low, high, size)
+        self.restore_state()
+        return retval
+
+    @threadsafe
+    def random_sample(self, size=None):
+        """Returns random integer(s) from [low, high).
+        """
+        self.save_state()
+        retval = my_random.random_sample(size)
         self.restore_state()
         return retval
 
     @threadsafe
     def rand(self, *args):
         self.save_state()
-        retval = numpy.random.rand(*args)
+        retval = my_random.rand(*args)
         self.restore_state()
         return retval
 
@@ -169,18 +194,23 @@ class RandomGenerator(Pickleable):
         return self.rand(*args)
 
     def save_state(self):
-        if numpy.random.get_state is None:
+        if my_random.get_state is None:
             return
-        self._saved_state = numpy.random.get_state()
+        self._saved_state = my_random.get_state()
         if self._state is not None:
-            numpy.random.set_state(self._state)
+            my_random.set_state(self._state)
 
     def restore_state(self):
-        if numpy.random.get_state is None:
+        if my_random.get_state is None:
             return
-        self._state = numpy.random.get_state()
+        self._state = my_random.get_state()
         if self._saved_state is not None:
-            numpy.random.set_state(self._saved_state)
+            my_random.set_state(self._saved_state)
+
+    def _get_state(self):
+        if my_random.get_state is None:
+            return None
+        return my_random.get_state()
 
     threadsafe = staticmethod(threadsafe)
 
@@ -207,3 +237,10 @@ def get(key=1):
         res = RandomGenerator(key)
         __generators__[key] = res
     return res
+
+
+# This is needed for scipy.stats.distributions
+numpy.random.random_sample = get().random_sample
+
+# This is harmless
+numpy.random.get_state = get()._get_state
