@@ -170,7 +170,7 @@ root.common.web.templates = os.path.join(root.common.web.root, "templates")
 
 # Allow to override the settings above
 try:
-    from veles.siteconfig import update
+    from veles.site_config import update
     update(root)
     del update
 except ImportError:
