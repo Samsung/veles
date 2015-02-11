@@ -119,6 +119,7 @@ root.common.update({
     "matplotlib_backend": "Qt4Agg",
     "matplotlib_webagg_port": 8081,
     "mongodb_logging_address": "127.0.0.1:27017",
+    "trace_misprints": False,
     "plotters_disabled": "unittest" not in sys.modules,
     "precision_type": "double",  # float or double
     "precision_level": 0,  # 0 - use simple summation

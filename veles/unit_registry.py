@@ -12,7 +12,9 @@ except ImportError:
     USE_DIS = False
 import inspect
 from pyxdameraulevenshtein import damerau_levenshtein_distance
+from traceback import extract_stack, format_list
 
+from veles.config import root
 from veles.distributable import Distributable
 
 
@@ -79,6 +81,14 @@ class UnitRegistry(type):
     def __call__(cls, *args, **kwargs):
         """ Checks for misprints in argument names """
         obj = super(UnitRegistry, cls).__call__(*args, **kwargs)
+
+        def warning(*largs):
+            obj.warning(*largs)
+            if root.common.trace_misprints:
+                obj.warning("Stack trace:\n%s",
+                            "".join(format_list(extract_stack(
+                                inspect.currentframe().f_back.f_back))))
+
         # Build the matrix of differences
         matrix = {}
         matched = set()
@@ -104,12 +114,12 @@ class UnitRegistry(type):
                 if len(candidates) == 0:
                     ignored_kwargs.append(given_kwarg)
                 else:
-                    obj.warning(
+                    warning(
                         "Creating %s: potential misprint in keyword argument "
                         "name: expected %s - got %s", obj,
                         " or ".join(candidates), given_kwarg)
             if len(ignored_kwargs) > 0:
-                obj.warning(
+                warning(
                     "Creating %s: ignored the following keyword arguments: %s",
                     obj, ", ".join(ignored_kwargs))
         return obj
