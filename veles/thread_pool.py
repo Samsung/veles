@@ -39,8 +39,12 @@ class classproperty(object):
         return self.getter(owner)
 
 
-def errback(failure):
-    reactor.callFromThread(failure.raiseException)
+def errback(failure, thread_pool=None):
+    if reactor.running:
+        reactor.callFromThread(failure.raiseException)
+    else:
+        failure.printTraceback()
+        thread_pool.shutdown()
 
 
 @add_metaclass(CommandLineArgumentsRegistry)
@@ -157,7 +161,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         if original is not None:
             return original(success, result)
         if not success:
-            errback(result)
+            errback(result, self)
 
     def _worker(self):
         """
@@ -236,6 +240,8 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             self.workers -= 1
         self.debug("Joining threads")
         for thread in threads:
+            if threading.current_thread() == thread:
+                continue
             if not force:
                 thread.join()
             else:
@@ -359,14 +365,14 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         Private method - handler for SIGUSR1.
         """
         print("SIGUSR1 was received, dumping current frames...")
-        ThreadPool.printthread_stacks()
+        ThreadPool.print_thread_stacks()
 
     @staticmethod
     def sigusr2_handler(sign, frame):
         print("SIGUSR2 was received")
 
     @staticmethod
-    def printthread_stacks():
+    def print_thread_stacks():
         if not hasattr(sys, "_current_frames"):
             print("Threads' stacks printing is not implemented for this "
                   "Python interpreter", file=sys.stderr)
@@ -392,4 +398,4 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                             str(threading.enumerate())
                             if hasattr(threading, "_active")
                             else "<unable to list active threads>")
-            ThreadPool.printthread_stacks()
+            ThreadPool.print_thread_stacks()
