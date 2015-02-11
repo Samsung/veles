@@ -108,6 +108,13 @@ def validate_kwargs(caller, **kwargs):
         if isinstance(v, Config):
             caller.warning("Argument '%s' seems to be undefined at %s",
                            k, v.__path__)
+            if root.common.trace_undefined_configs:
+                import inspect
+                from traceback import format_list, extract_stack
+                caller.warning("kwargs are: %s", kwargs)
+                caller.warning("Stack trace:\n%s" %
+                               "".join(format_list(extract_stack(
+                                   inspect.currentframe().f_back))))
 
 
 __home__ = os.path.join(os.environ.get("HOME", "./"), ".veles")
@@ -120,6 +127,7 @@ root.common.update({
     "matplotlib_webagg_port": 8081,
     "mongodb_logging_address": "127.0.0.1:27017",
     "trace_misprints": False,
+    "trace_undefined_configs": False,
     "plotters_disabled": "unittest" not in sys.modules,
     "precision_type": "double",  # float or double
     "precision_level": 0,  # 0 - use simple summation
