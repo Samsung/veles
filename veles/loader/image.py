@@ -581,7 +581,7 @@ class ImageLoader(Loader):
                 break
         assert len(keys) > 0
         self._has_labels = self.load_keys(
-            (keys[numpy.random.randint(len(keys))],), None, None, None, None)
+            (keys[self.prng.randint(len(keys))],), None, None, None, None)
 
     def create_minibatch_data(self):
         self.minibatch_data.reset(numpy.zeros(
