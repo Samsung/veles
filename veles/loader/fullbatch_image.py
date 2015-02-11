@@ -108,7 +108,7 @@ class FullBatchImageLoader(ImageLoader, FullBatchLoader):
         return offset, has_labels
 
     def fill_minibatch(self):
-        super(FullBatchImageLoader, self).fill_minibatch()
+        FullBatchLoader.fill_minibatch(self)
         if self.epoch_ended and self.crop is not None:
             # Overwrite original_data
             self.original_data.map_invalidate()
