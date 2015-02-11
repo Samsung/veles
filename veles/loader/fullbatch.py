@@ -225,15 +225,11 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
             return super(FullBatchLoader, self).fill_indices(
                 start_offset, count)
 
-        self.original_data.unmap()
-        self.minibatch_data.unmap()
+        self.unmap_vectors(self.original_data, self.minibatch_data,
+                           self.shuffled_indices, self.minibatch_indices)
 
         if self.has_labels:
-            self.original_labels.unmap()
-            self.minibatch_labels.unmap()
-
-        self.shuffled_indices.unmap()
-        self.minibatch_indices.unmap()
+            self.unmap_vectors(self.original_labels, self.minibatch_labels)
 
         self._krn_const[0:2] = start_offset, count
         self._kernel_.set_arg(2, self._krn_const[0:1])
@@ -428,8 +424,7 @@ class FullBatchLoaderMSEMixin(LoaderMSEMixin):
         if not super(FullBatchLoaderMSEMixin, self).fill_indices(
                 start_offset, count):
             return False
-        self.original_targets.unmap()
-        self.minibatch_targets.unmap()
+        self.unmap_vectors(self.original_targets, self.minibatch_targets)
         self._kernel_target_.set_arg(2, self._krn_const[0:1])
         self._kernel_target_.set_arg(3, self._krn_const[1:2])
         self.execute_kernel(

@@ -22,7 +22,7 @@ from zope.interface import implementer, Interface
 from veles.compat import from_none
 
 from veles.config import root
-import veles.memory as formats
+from veles.memory import Vector, roundup
 import veles.opencl_types as opencl_types
 from veles.backends import Device, OpenCLDevice
 from veles.pickle2 import pickle, best_protocol
@@ -325,7 +325,7 @@ class AcceleratedUnit(Unit):
     def set_arg(self, index, arg, kernel=None):
         if kernel is None:
             kernel = self._kernel_
-        if isinstance(arg, formats.Vector):
+        if isinstance(arg, Vector):
             kernel.set_arg(index, arg.devmem)
         else:
             kernel.set_arg(index, arg)
@@ -334,7 +334,7 @@ class AcceleratedUnit(Unit):
         kernel = kwargs.get("kernel", self._kernel_)
         filtered_args = []
         for arg in args:
-            if isinstance(arg, formats.Vector):
+            if isinstance(arg, Vector):
                 filtered_args.append(arg.devmem)
             else:
                 filtered_args.append(arg)
@@ -343,6 +343,10 @@ class AcceleratedUnit(Unit):
     def init_vectors(self, *vecs):
         for vec in vecs:
             vec.initialize(self.device)
+
+    def unmap_vectors(self, *vecs):
+        for vec in vecs:
+            vec.unmap()
 
     def _adjust_defines(self, my_defines, dtype):
         my_defines.update(opencl_types.cl_defines[dtype])
@@ -559,8 +563,8 @@ class DeviceBenchmark(AcceleratedUnit):
         dtype = opencl_types.dtypes[self.dtype]
         self.size = kwargs.get("size", 1500)
         self.repeats = kwargs.get("repeats", 10)
-        self.input_A_ = formats.Vector()
-        self.input_B_ = formats.Vector()
+        self.input_A_ = Vector()
+        self.input_B_ = Vector()
         msize = self.size * self.size
         genmem = lambda: numpy.random.rand(msize).astype(dtype) - 0.5
         self.input_A_.mem = genmem()
@@ -624,8 +628,8 @@ class DeviceBenchmark(AcceleratedUnit):
     def _estimate_ocl(self, dry_run_first):
         self.debug("Running %d repetitions of size %d on %s...",
                    self.repeats, self.size, self.dtype)
-        global_size = [formats.roundup(self.size, self.block_size),
-                       formats.roundup(self.size, self.block_size)]
+        global_size = [roundup(self.size, self.block_size),
+                       roundup(self.size, self.block_size)]
         local_size = [self.block_size, self.block_size]
         self.device.queue_.flush()
         self.device.queue_.finish()

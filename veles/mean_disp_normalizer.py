@@ -85,10 +85,7 @@ class MeanDispNormalizer(AcceleratedUnit, TriviallyDistributable):
         self.global_size = [sample_size, self.input.shape[0]]
 
     def ocl_run(self):
-        self.input.unmap()
-        self.mean.unmap()
-        self.rdisp.unmap()
-        self.output.unmap()
+        self.unmap_vectors(self.input, self.mean, self.rdisp, self.output)
         self.execute_kernel(self.global_size, self.local_size)
 
     def cpu_run(self):

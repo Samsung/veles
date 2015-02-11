@@ -84,8 +84,7 @@ class Uniform(AcceleratedUnit):
         nbytes = roundup(nbytes, bytes_per_round)
         if nbytes > self.output.nbytes:
             raise error.Bug("nbytes > self.output.nbytes")
-        self.states.unmap()
-        self.output.unmap()
+        self.unmap_vectors(self.states, self.output)
         self.cl_const[0] = nbytes // bytes_per_round
         self.set_arg(1, self.cl_const)
         self.execute_kernel(self._global_size, self._local_size)
