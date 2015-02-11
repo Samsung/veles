@@ -84,7 +84,7 @@ class DeviceInfo(Logger):
             # so only debug level here
             # TODO(a.kazantsev): implement benchmark for conv and deconv.
             self.debug(
-                "krnnme = %s was not found, "
+                "Kernel \"%s\" was not found, "
                 "rolling back to block size for matrix_multiplication",
                 krnnme)
             krnnme = "matrix_multiplication"
