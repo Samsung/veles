@@ -61,6 +61,7 @@ class PicklesLoader(FullBatchLoader):
         loaded = [self.load_pickles(i, self._pickles[i], pbar)
                   for i in range(3)]
         pbar.finish()
+        self.info("Initializing the arrays...")
         shape = loaded[2][1][0].shape[1:]
         for i in range(2):
             if loaded[i][0] > 0:
@@ -133,7 +134,7 @@ class PicklesLoader(FullBatchLoader):
 
 
 @implementer(IImageLoader)
-class PicklesImageFullBatchLoader(FullBatchImageLoader, PicklesLoader):
+class PicklesImageFullBatchLoader(PicklesLoader, FullBatchImageLoader):
     MAPPING = "full_batch_pickles_image"
 
     def __init__(self, workflow, **kwargs):
