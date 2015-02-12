@@ -5,8 +5,9 @@ Dummy units for tests and benchmarks.
 
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
+from zope.interface import implementer
 
-
+from veles.units import IUnit, Unit
 from veles.workflow import Workflow
 
 
@@ -41,10 +42,24 @@ class DummyWorkflow(Workflow):
     """
     Dummy standalone workflow for tests and benchmarks.
     """
-
     def __init__(self):
         """
         Passes DummyLauncher as workflow parameter value.
         """
         super(DummyWorkflow, self).__init__(DummyLauncher())
         self.end_point.link_from(self.start_point)
+
+
+@implementer(IUnit)
+class DummyUnit(Unit):
+    """
+    Dummy unit.
+    """
+    def __init__(self):
+        super(DummyUnit, self).__init__(DummyWorkflow())
+
+    def initialize(self, **kwargs):
+        pass
+
+    def run(self):
+        pass
