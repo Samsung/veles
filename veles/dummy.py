@@ -55,8 +55,9 @@ class DummyUnit(Unit):
     """
     Dummy unit.
     """
-    def __init__(self):
+    def __init__(self, **kwargs):
         super(DummyUnit, self).__init__(DummyWorkflow())
+        self.__dict__.update(kwargs)
 
     def initialize(self, **kwargs):
         pass
