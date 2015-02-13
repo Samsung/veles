@@ -150,23 +150,33 @@ class VelesModule(ModuleType):
 
         result = {}
 
-        def calc(cond):
-            cmd = ("cd %s && echo $(find %s -exec cloc --quiet --csv {} \; | "
+        def calc(cond, exclude_docs=True):
+            cmd = ("cd %s && echo $(find %s ! -path '*debian*' "
+                   "%s ! -path '*.pybuild*' "
+                   "-exec cloc --quiet --csv {} \; | "
                    "sed -n '1p;0~3p' | tail -n +2 | cut -d ',' -f 5 | "
-                   "tr '\n' '+' | head -c -1) | bc") % (self.__root__, cond)
+                   "tr '\n' '+' | head -c -1) | bc") %\
+                  (self.__root__, cond,
+                   "! -path '*docs*'" if exclude_docs else "")
             discovery = Popen(cmd, shell=True, stdout=PIPE)
             num, _ = discovery.communicate()
             return int(num)
-
         result["core"] = \
-            calc("-name '*.py' -not -name 'cpplint*' -not -path './deploy/*' "
-                 "-not -path './web/*' -not -path './veles/external/*' "
-                 "-not -name create-emitter-tests.py -not -path "
-                 "'./veles/tests/*' -not -path './veles/znicz/tests/*'")
+            calc("-name '*.py' ! -path '*cpplint*' ! -path './deploy/*' "
+                 "! -path './web/*' ! -path './veles/external/*' "
+                 "! -name create-emitter-tests.py ! -path "
+                 "'./veles/tests/*' ! -path './veles/znicz/tests/*'")
         result["core"] += calc("veles/external/txzmq  -name '*.py'")
         result["tests"] = calc("'./veles/tests' './veles/znicz/tests' "
                                "-name '*.py'")
-        result["opencl"] = calc("-name '*.cl' -not -path './web/*'")
+        result["c/c++"] = calc(
+            "\( -name '*.cc' -o -name '*.h' -o -name '*.c' \) ! -path "
+            "'*google*' ! -path '*web*' ! -path '*zlib*' !"
+            " -path '*libarchive*' ! -path '*yaml-cpp*'")
+        result["js"] = calc("-name '*.js' ! -path '*.min.js*' "
+                            "! -path '*viz.js*' ! -path '*emscripten*'")
+        result["docs"] = calc("-name '*manualrst*'", False)
+        result["opencl"] = calc("-name '*.cl' ! -path './web/*'")
         result["java"] = calc("'./mastodon/lib/src/main' -name '*.java'")
         result["tests"] += calc("'./mastodon/lib/src/test' -name '*.java'")
 

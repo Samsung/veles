@@ -69,7 +69,7 @@ class Main(Logger, CommandLineBase):
                     self._disable_acceleration)
 
     def _process_special_args(self):
-        if sys.argv[1] == "forge":
+        if len(sys.argv) > 1 and sys.argv[1] == "forge":
             from veles.forge_client import __run__ as forge_run
             del sys.argv[1]
             action = sys.argv[1]
