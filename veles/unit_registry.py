@@ -38,6 +38,9 @@ class UnitRegistry(type):
                 not clsdict.get('hide', False) and \
                 not getattr(cls, 'hide_all', False):
             UnitRegistry.units.add(cls)
+        if "DISABLE_KWARGS_CHECK" in clsdict:
+            super(UnitRegistry, cls).__init__(name, bases, clsdict)
+            return
         kwattrs = set()
         for base in cls.__mro__:
             try:
@@ -81,6 +84,8 @@ class UnitRegistry(type):
     def __call__(cls, *args, **kwargs):
         """ Checks for misprints in argument names """
         obj = super(UnitRegistry, cls).__call__(*args, **kwargs)
+        if hasattr(cls, "DISABLE_KWARGS_CHECK"):
+            return obj
 
         def warning(*largs):
             obj.warning(*largs)

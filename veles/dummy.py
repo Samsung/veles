@@ -55,6 +55,8 @@ class DummyUnit(Unit):
     """
     Dummy unit.
     """
+    DISABLE_KWARGS_CHECK = True
+
     def __init__(self, **kwargs):
         super(DummyUnit, self).__init__(DummyWorkflow())
         self.__dict__.update(kwargs)
