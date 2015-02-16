@@ -398,6 +398,7 @@ class Loader(Unit):
     def initialize(self, **kwargs):
         """Loads the data, initializes indices, shuffles the training set.
         """
+        self.normalizer.reset()
         try:
             super(Loader, self).initialize(**kwargs)
         except AttributeError:

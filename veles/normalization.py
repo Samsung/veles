@@ -131,7 +131,8 @@ class NormalizerBase(Verified):
         """
         assert self._initialized
         return {k: v for k, v in self.__dict__.items()
-                if k not in ("_initialized", "_cache")}
+                if k not in ("_initialized", "_cache", "_logger_")
+                and not hasattr(v, "__call__")}
 
     def __setattr__(self, key, value):
         if getattr(self, "_initialized", False) and key not in self.__dict__:
@@ -139,6 +140,24 @@ class NormalizerBase(Verified):
                 "Adding new attributes after initialize() was called is"
                 "disabled.")
         super(NormalizerBase, self).__setattr__(key, value)
+
+    def __getstate__(self):
+        state = self.state
+        state.update(super(NormalizerBase, self).__getstate__())
+        if "_cache" in state:
+            del state["_cache"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        super(NormalizerBase, self).__setstate__(state)
+        self.analyze = self.initialized(self.analyze)
+        self.normalize = self.assert_initialized(self.normalize)
+
+    def reset(self):
+        if hasattr(self, "_cache"):
+            delattr(self, "_cache")
+        self._initialized = False
 
     @staticmethod
     def prepare(data):

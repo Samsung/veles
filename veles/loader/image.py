@@ -457,8 +457,9 @@ class ImageLoader(Loader):
 
     def add_sobel_channel(self, data):
         original_data = data
-        if self.channels_number == 1:
-            pass
+        if self.channels_number == 1 + 1:
+            original_data = original_data.reshape(
+                original_data.shape[:2] + (1,))
         elif self.color_space in ("RGB", "BGR", "RGBA", "BGRA"):
             data = cv2.cvtColor(
                 data, getattr(cv2, "COLOR_%s2GRAY" % self.color_space))
