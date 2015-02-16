@@ -31,8 +31,6 @@ class InputJoiner(AcceleratedUnit):
     Attributes:
         inputs: list of inputs of type formats.Vector().
         output: formats.Vector().
-        output_sample_shape: shape of an output sample, if None,
-                             will be a plain sum of input sample shapes.
         minibatch_size: size of the minibatch (will be set to the minimum
                         of the first shapes from the inputs
                         if not provided prior to the initialize)
@@ -79,7 +77,7 @@ class InputJoiner(AcceleratedUnit):
 
         self.init_vectors(self.output, *self.inputs)
 
-    def ocl_init(self):
+    def _gpu_init(self):
         defines = {
             'etype': opencl_types.numpy_dtype_to_opencl(self.output.dtype),
         }
@@ -89,6 +87,12 @@ class InputJoiner(AcceleratedUnit):
              "_".join(map(str, self.output.shape[1:]))), inputs=self.inputs)
         self.assign_kernel("join")
         self.set_args(self.output, *self.inputs)
+
+    def ocl_init(self):
+        self._gpu_init()
+
+    def cuda_init(self):
+        self._gpu_init()
 
     def cpu_run(self):
         self.output.map_invalidate()  # we will update output on CPU
@@ -104,3 +108,6 @@ class InputJoiner(AcceleratedUnit):
 
     def ocl_run(self):
         self.execute_kernel(*((self.output.shape[0],),) * 2)
+
+    def cuda_run(self):
+        self.execute_kernel((1, 1, 1), (self.output.shape[0], 1, 1))

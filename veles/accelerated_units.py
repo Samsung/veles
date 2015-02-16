@@ -198,11 +198,12 @@ class AcceleratedUnit(Unit):
 
     def _load_binary(self, defines, cache_file_name, dtype, engine, suffix,
                      cache_is_valid, template_kwargs):
-        cache_file_name = cache_file_name + suffix + (".3" if PY3 else ".2")
+        cache_file_name = "%s.%s.%d" % (cache_file_name, suffix, (2, 3)[PY3])
         if not os.path.isabs(cache_file_name):
             cache_file_name = os.path.join(root.common.cache_dir,
                                            cache_file_name)
-        if self.cache and os.path.exists("%s.cache" % cache_file_name):
+        cache_file_name = "%s.cache" % cache_file_name
+        if self.cache and os.path.exists(cache_file_name):
             return self._load_from_cache(
                 cache_file_name, defines, dtype, engine, suffix,
                 cache_is_valid, template_kwargs)
@@ -228,10 +229,9 @@ class AcceleratedUnit(Unit):
         if binaries is not None:
             self.program_ = self.device.queue_.context.create_program(
                 binaries, binary=True)
-            self.debug("Used %s.cache", cache_file_name)
+            self._log_about_cache(cache_file_name, "ocl")
             return my_defines
-        include_dirs = [os.path.join(d, "ocl")
-                        for d in root.common.engine.dirs]
+        include_dirs = self._get_include_dirs("ocl")
         source, my_defines = self._generate_source(
             defines, include_dirs, dtype, "cl", template_kwargs)
         show_ocl_logs = self.logger.isEnabledFor(logging.DEBUG)
@@ -266,10 +266,9 @@ class AcceleratedUnit(Unit):
             template_kwargs)
         if binaries is not None:
             self.program_ = self.device.context.create_module(ptx=binaries)
-            self.debug("Used %s.cache", cache_file_name)
+            self._log_about_cache(cache_file_name, "cuda")
             return my_defines
-        include_dirs = [os.path.join(d, "cuda")
-                        for d in root.common.engine.dirs]
+        include_dirs = self._get_include_dirs("cuda")
         source, my_defines = self._generate_source(
             defines, include_dirs, dtype, "cu", template_kwargs)
         show_logs = self.logger.isEnabledFor(logging.DEBUG)
@@ -282,6 +281,9 @@ class AcceleratedUnit(Unit):
                             self.program_.ptx,
                             {"device": self.device.context.device.name})
         return my_defines
+
+    def _log_about_cache(self, cache_name, engine):
+        self.debug('Used the cached %s for engine "%s"', cache_name, engine)
 
     def ocl_get_kernel(self, name):
         return self.program_.get_kernel(name)
@@ -347,6 +349,9 @@ class AcceleratedUnit(Unit):
     def unmap_vectors(self, *vecs):
         for vec in vecs:
             vec.unmap()
+
+    def _get_include_dirs(self, engine):
+        return tuple(os.path.join(d, engine) for d in root.common.engine.dirs)
 
     def _adjust_defines(self, my_defines, dtype):
         my_defines.update(opencl_types.cl_defines[dtype])
@@ -437,39 +442,43 @@ class AcceleratedUnit(Unit):
             full = os.path.join(d + "/" + self.device.backend_name, file_name)
             if os.path.exists(full):
                 return os.path.abspath(full)
-        return ""
+        return None
+
+    def _search_jinclude(self, file_name, suffix):
+        return self._search_include("%s.j%s" % (file_name, suffix)) or \
+            self._search_include("%s.%s" % (file_name, suffix))
 
     def _scan_include_dependencies(self, suffix):
-        res = [self._search_include(f + suffix)
-               for f in self.sources_.keys()]
+        res = [r for r in (self._search_jinclude(f, suffix)
+                           for f in self.sources_.keys())
+               if r is not None]
         pending = copy(res)
         include_matcher = re.compile(b'#\s*include\s*\"([\w\.]+)\"')
         while len(pending):
+            current = pending.pop(0)
             try:
-                with open(pending[0], "rb") as fr:
+                with open(current, "rb") as fr:
                     contents = fr.read()
             except:
-                self.exception("Failed to read %s", pending[0])
+                self.exception("Failed to read %s", current)
                 raise
             for match in include_matcher.finditer(contents):
                 header = match.group(1)
                 full = self._search_include(header.decode('utf-8'))
                 if not full:
                     self.warning("Could not find the header \"%s\" "
-                                 "required from %s", header, pending[0])
+                                 "required from %s", header, current)
                     continue
                 pending.append(full)
                 res.append(full)
-            pending = pending[1:]
         return res
 
     def _load_from_cache(self, cache_file_name, defines, dtype, engine, suffix,
                          cache_is_valid, template_kwargs):
-        include_dirs = tuple(os.path.join(d, engine)
-                             for d in root.common.engine.dirs)
+        include_dirs = self._get_include_dirs(engine)
         try:
-            with tarfile.open("%s.cache" % cache_file_name, "r:gz") as tar:
-                cached_source = tar.extractfile("source" + suffix).read()
+            with tarfile.open(cache_file_name, "r:gz") as tar:
+                cached_source = tar.extractfile("source." + suffix).read()
                 src, my_defines = self._generate_source(
                     defines, include_dirs, dtype, suffix, template_kwargs)
                 real_source = src.encode("utf-8")
@@ -498,6 +507,7 @@ class AcceleratedUnit(Unit):
 
     def _save_to_cache(self, cache_file_name, suffix, program_source,
                        program_binaries, device_id_dict):
+        naked_suffix = suffix
         suffix = "." + suffix
         cache_file_name = cache_file_name + suffix + (".3" if PY3 else ".2")
         if not os.path.isabs(cache_file_name):
@@ -512,7 +522,7 @@ class AcceleratedUnit(Unit):
                 ti.mode = int("666", 8)
                 source_io.seek(0)
                 tar.addfile(ti, fileobj=source_io)
-                for dep in set(self._scan_include_dependencies(suffix)):
+                for dep in set(self._scan_include_dependencies(naked_suffix)):
                     ti = tarfile.TarInfo(os.path.basename(dep))
                     ti.size = os.path.getsize(dep)
                     ti.mode = int("666", 8)

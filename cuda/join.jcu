@@ -1,23 +1,21 @@
 #include "defines.cu"
 #include "highlight.cuh"
 
-inline void copy(const __global etype *input, const int size,
-                 __global etype *output) {
+__device__ inline void copy(const etype *input, const int size, etype *output) {
   for (int i = 0; i < size; i++) {
     output[i] = input[i];
   }
-  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
 }
 
 /// @brief Copies several buffers into one.
-__kernel
-void join(__global etype *output
+extern "C" __global__
+void join(etype *output
 {% for i in range(inputs|length) %}
-    , __global const etype *input{{ i }}
+    , const etype *input{{ i }}
 {% endfor %}
   ) {
 
-  int index = get_global_id(0);
+  int index = blockIdx.x * blockDim.x + threadIdx.x;
   const int sizes[] = {
    {% for input in inputs %}
      {{ input.size // input.shape[0] }},

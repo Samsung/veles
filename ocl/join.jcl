@@ -7,7 +7,6 @@ inline void copy(const __global etype *input, const int size,
   for (int i = 0; i < size; i++) {
     output[i] = input[i];
   }
-  barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
 }
 
 /// @brief Copies several buffers into one.
