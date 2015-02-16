@@ -19,8 +19,8 @@ from six import BytesIO, add_metaclass, PY3
 import tarfile
 import time
 from zope.interface import implementer, Interface
-from veles.compat import from_none
 
+from veles.compat import from_none
 from veles.config import root
 from veles.memory import Vector, roundup
 import veles.opencl_types as opencl_types
@@ -576,7 +576,9 @@ class DeviceBenchmark(AcceleratedUnit):
         self.input_A_ = Vector()
         self.input_B_ = Vector()
         msize = self.size * self.size
-        genmem = lambda: numpy.random.rand(msize).astype(dtype) - 0.5
+        from veles.prng.random_generator import RandomGenerator
+        rnd = RandomGenerator(None)
+        genmem = lambda: rnd.rand(msize).astype(dtype) - 0.5
         self.input_A_.mem = genmem()
         self.input_B_.mem = genmem()
         self.block_size = kwargs.get("block_size")
