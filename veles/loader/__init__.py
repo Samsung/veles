@@ -13,6 +13,6 @@ from veles.loader.fullbatch import IFullBatchLoader, FullBatchLoader, \
 from veles.loader.image import IImageLoader, ImageLoader, IFileImageLoader, \
     FileImageLoader
 from veles.loader.fullbatch_image import FullBatchFileImageLoader, \
-    FullBatchFileImageLoaderMSE
+    FullBatchFileImageLoaderMSE, FullBatchAutoLabelFileImageLoader
 from veles.loader.pickles import PicklesImageFullBatchLoader
 from veles.loader.saver import MinibatchesSaver, MinibatchesLoader
