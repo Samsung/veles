@@ -44,15 +44,33 @@ class ImageLoaderMSEMixin(LoaderMSEMixin):
                 "targets %d" % (sum(self.class_lengths), length))
         if self.has_labels:
             labels = numpy.zeros(length, dtype=Loader.LABEL_DTYPE)
-            assert self.load_keys(self.target_keys, None, None, labels, None)
+            assert self.load_target_keys(self.target_keys, None, labels)
             if len(set(labels)) < length:
                 raise error.BadFormatError("Targets have duplicate labels")
             self.target_label_map = {l: self.target_keys[l] for l in labels}
 
+    def load_target_keys(self, keys, data, labels):
+        """Loads data from the specified keys.
+        """
+        index = 0
+        has_labels = False
+        for key in keys:
+            obj = self.load_target(key)
+            label, has_labels = self._load_label(key, has_labels)
+            if data is not None:
+                data[index] = obj
+            if labels is not None:
+                labels[index] = label
+            index += 1
+        return has_labels
+
+    def load_target(self, key):
+        return self.get_image_data(key)
+
     def create_minibatch_data(self):
         super(ImageLoaderMSEMixin, self).create_minibatch_data()
         self.minibatch_targets.reset(numpy.zeros(
-            (self.max_minibatch_size,) + self.shape, dtype=self.dtype))
+            (self.max_minibatch_size,) + self.targets_shape, dtype=self.dtype))
 
     def fill_minibatch(self):
         super(ImageLoaderMSEMixin, self).fill_minibatch()
@@ -63,8 +81,8 @@ class ImageLoaderMSEMixin(LoaderMSEMixin):
         else:
             keys = (self.target_label_map[l]
                     for l in self.minibatch_labels.mem)
-        assert self.has_labels == self.load_keys(
-            keys, None, self.minibatch_targets.mem, None, None)
+        assert self.has_labels == self.load_target_keys(
+            keys, self.minibatch_targets.mem, None)
 
 
 class ImageLoaderMSE(ImageLoaderMSEMixin, ImageLoader):

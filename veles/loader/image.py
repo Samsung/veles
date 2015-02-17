@@ -538,8 +538,9 @@ class ImageLoader(Loader):
             label, has_labels = self._load_label(key, has_labels)
             if (self.crop is None or not crop) and \
                     obj.shape[:2] != self.uncropped_shape:
-                self.debug("Ignored %s (label %s): shape %s",
-                           key, label, obj.shape[:2])
+                self.warning(
+                    "Ignored %s (label %s): shape %s",
+                    key, label, obj.shape[:2])
                 continue
             if data is not None:
                 data[index] = obj

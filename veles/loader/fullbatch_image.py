@@ -151,16 +151,12 @@ class FullBatchImageLoaderMSEMixin(ImageLoaderMSEMixin,
 
     def load_data(self):
         super(FullBatchImageLoaderMSEMixin, self).load_data()
-
         length = len(self.target_keys) * self.samples_inflation
-        targets = numpy.zeros((length,) + self.shape, dtype=self.source_dtype)
+        targets = numpy.zeros(
+            (length,) + self.targets_shape, dtype=self.source_dtype)
         target_labels = numpy.zeros(length, dtype=Loader.LABEL_DTYPE)
-        if self.samples_inflation == 1:
-            has_labels = self.load_keys(
-                self.target_keys, None, targets, target_labels)
-        else:
-            _, has_labels = self._load_distorted_keys(
-                self.target_keys, targets, target_labels, 0, None)
+        has_labels = self.load_target_keys(
+            self.target_keys, targets, target_labels)
         if not has_labels:
             if self.has_labels:
                 raise error.BadFormatError(
@@ -177,14 +173,19 @@ class FullBatchImageLoaderMSEMixin(ImageLoaderMSEMixin,
         if len(diff) > 0:
             raise error.BadFormatError(
                 "Labels %s do not have corresponding targets" % diff)
+        self.original_targets.reset()
+        shape = (len(targets),) + targets[0].shape
         self.original_targets.mem = numpy.zeros(
-            (self.original_labels.shape[0],) + self.shape, self.source_dtype)
+            (self.original_labels.shape[0],) + targets[0].shape,
+            self.source_dtype)
         target_mapping = {
             target_labels[i * self.samples_inflation]: i
             for i in range(length // self.samples_inflation)}
+        self.class_targets.reset(numpy.empty(shape, self.source_dtype))
+        for i in range(len(target_labels)):
+            self.class_targets.mem[i] = targets[target_mapping[i]]
         for i, label in enumerate(self.original_labels):
-            real_i, offset = divmod(i, self.samples_inflation)
-            self.original_targets[i] = targets[target_mapping[real_i] + offset]
+            self.original_targets[i] = targets[target_mapping[label]]
 
 
 class FullBatchImageLoaderMSE(FullBatchImageLoaderMSEMixin,
@@ -225,3 +226,9 @@ class FullBatchFileImageLoaderMSE(FullBatchFileImageLoaderMSEMixin,
     MSE modification of  FullBatchFileImageLoader class.
     """
     pass
+
+
+@implementer(IFileImageLoader)
+class FullBatchAutoLabelFileImageLoaderMSE(
+        AutoLabelFileImageLoader, FullBatchFileImageLoaderMSE):
+    MAPPING = "full_batch_auto_label_file_image_mse"

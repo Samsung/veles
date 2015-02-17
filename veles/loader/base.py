@@ -672,6 +672,7 @@ class LoaderMSEMixin(Unit):
         super(LoaderMSEMixin, self).__init__(workflow, **kwargs)
         self.class_targets = memory.Vector()
         self.minibatch_targets = memory.Vector()
+        self.targets_shape = kwargs.get("targets_shape")
 
     @property
     def minibatch_targets(self):
