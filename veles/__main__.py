@@ -202,10 +202,21 @@ class Main(Logger, CommandLineBase):
         self.snapshot_file_name = fname_snapshot
         self.load_called = False
         self.main_called = False
+        package_name = os.path.basename(os.path.dirname(fname_workflow))
+        module_name = os.path.splitext(os.path.basename(fname_workflow))[0]
+        sys.path.insert(0, os.path.dirname(os.path.dirname(fname_workflow)))
+        try:
+            package = __import__("%s.%s" % (package_name, module_name))
+            return getattr(package, module_name)
+        except Exception as e:
+            self.debug("Failed to import \"%s\" through the parent package "
+                       "\"%s\": %s", package_name, e)
+        finally:
+            del sys.path[0]
+
         sys.path.insert(0, os.path.dirname(fname_workflow))
         try:
-            module = __import__(
-                os.path.splitext(os.path.basename(fname_workflow))[0])
+            return __import__(module_name)
         except FileNotFoundError:
             self.exception("Workflow does not exist: \"%s\"", fname_workflow)
             sys.exit(errno.ENOENT)
@@ -221,7 +232,6 @@ class Main(Logger, CommandLineBase):
             sys.exit(Main.EXIT_FAILURE)
         finally:
             del sys.path[0]
-        return module
 
     def _apply_config(self, fname_config, config_list):
         self.debug("Applying the configuration from %s...",
