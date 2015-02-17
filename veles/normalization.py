@@ -216,8 +216,8 @@ class MeanDispersionNormalizer(NormalizerBase):
     def normalize(self, data):
         mean, disp = self._calculate_coefficients()
         data -= mean
-        nonzeros = numpy.nonzero(disp)
-        data[nonzeros] /= disp[nonzeros]
+        disp[disp == 0] = 1
+        data /= disp
 
 
 @implementer(INormalizer)

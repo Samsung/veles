@@ -144,7 +144,7 @@ class Logger(object):
     def __setstate__(self, state):
         logger = state.get("_logger_")
         if logger is not None:
-            state["_logger_"] = logging.getLogger(logger)
+            self._logger_ = state["_logger_"] = logging.getLogger(logger)
         getattr(super(Logger, self), "__setstate__", lambda _: None)(state)
 
     @staticmethod
