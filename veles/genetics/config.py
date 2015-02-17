@@ -416,7 +416,7 @@ class ConfigPopulation(Population):
             self.job_process.start()
             self.job_connection[0].close()
 
-            root.common.plotters_disabled = True
+            root.common.disable_plotting = True
         # Launch the container workflow
         self.main_.run_workflow(GeneticsWorkflow,
                                 kwargs_load={"population": self})

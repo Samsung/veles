@@ -63,6 +63,7 @@ class Plotter(Unit, TriviallyDistributable):
     def run(self):
         if self.workflow.plotters_are_enabled and \
            (time.time() - self._last_run_) > self.redraw_threshold:
+            assert self.graphics_server is not None
             self._last_run_ = time.time()
             self.stripped_pickle = True
             self.graphics_server.enqueue(self)

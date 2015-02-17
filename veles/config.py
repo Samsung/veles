@@ -128,7 +128,7 @@ root.common.update({
     "mongodb_logging_address": "127.0.0.1:27017",
     "trace_misprints": False,
     "trace_undefined_configs": False,
-    "plotters_disabled": "unittest" not in sys.modules,
+    "disable_plotting": "unittest" in sys.modules,
     "precision_type": "double",  # float or double
     "precision_level": 0,  # 0 - use simple summation
                            # Only for ocl backend:
