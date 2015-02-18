@@ -58,12 +58,6 @@ class TestPickle(unittest.TestCase):
                              "Pickle test failed.")
 
     def test_setup_pickle_debug(self):
-        if not six.PY3:
-            with warnings.catch_warnings(record=True) as w:
-                setup_pickle_debug()
-                self.assertEqual(1, len(w))
-                return
-
         stderr = sys.stderr
         sys.stderr = six.StringIO()
         flag = [False]
