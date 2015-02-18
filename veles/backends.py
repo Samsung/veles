@@ -370,7 +370,7 @@ class OpenCLDevice(Device):
     def _fill_device_info_performance_values(self):
         device_infos = {}
         found_any = False
-        for devdir in root.common.device_dirs:
+        for devdir in root.common.engine.device_dirs:
             if not os.path.exists(devdir):
                 try:
                     os.makedirs(devdir, 0o755)
@@ -388,7 +388,7 @@ class OpenCLDevice(Device):
         if not found_any:
             self.warning("Did not find %s in any of the configured paths: %s",
                          OpenCLDevice.DEVICE_INFOS_JSON,
-                         root.common.device_dirs)
+                         root.common.engine.device_dirs)
         if ((self.device_info.desc not in device_infos and
              root.common.test_unknown_device) or
             (self.device_info.desc in device_infos and
@@ -399,7 +399,7 @@ class OpenCLDevice(Device):
                          else "Device has not been analyzed yet")
             self._find_optimal_block_size(device_infos)
             found_any = False
-            for devdir in root.common.device_dirs:
+            for devdir in root.common.engine.device_dirs:
                 device_infos_fnme = os.path.join(
                     devdir, OpenCLDevice.DEVICE_INFOS_JSON)
                 if os.access(device_infos_fnme, os.W_OK):
@@ -409,7 +409,7 @@ class OpenCLDevice(Device):
             if not found_any:
                 self.warning("Unable to save the analysis results to any of "
                              "the configured paths: %s",
-                             root.common.device_dirs)
+                             root.common.engine.device_dirs)
         self.compute_ratings(device_infos)
         if self.device_info.desc in device_infos:
             self.device_info.device_info = device_infos[self.device_info.desc]

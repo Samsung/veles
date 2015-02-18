@@ -13,10 +13,11 @@ def update(root):
             "port": 8090,
         },
         "engine": {
-            "dirs": (os.environ.get("VELES_ENGINE_DIRS", "").split(":") +
-                     [__root__])
+            "source_dirs": (
+                os.environ.get("VELES_ENGINE_DIRS", "").split(":") +
+                [__root__])
         }
     })
 
-    root.common.device_dirs.append(os.path.join(__root__, "devices"))
+    root.common.engine.device_dirs.append(os.path.join(__root__, "devices"))
     root.common.test_dataset_root = "/data/veles/datasets"

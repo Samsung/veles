@@ -132,13 +132,14 @@ root.common.update({
     "mongodb_logging_address": "127.0.0.1:27017",
     "trace_misprints": False,
     "trace_undefined_configs": False,
+    "trace_run": False,
     "disable_plotting": "unittest" in sys.modules,
     "precision_type": "double",  # float or double
     "precision_level": 0,  # 0 - use simple summation
                            # Only for ocl backend:
                            # 1 - use Kahan summation (9% slower)
                            # 2 - use multipartials summation (90% slower)
-    "pickles_compression": (None if
+    "network_compression": (None if  # snappy is slow on CPython
                             platform.python_implementation() == "CPython"
                             else "snappy"),
     "test_dataset_root": os.path.join(os.environ.get("HOME", "./"), "data"),
@@ -148,9 +149,6 @@ root.common.update({
     "disable_snapshots": False,
     "veles_dir": __root__,
     "veles_user_dir": __home__,
-    "device_dirs": ["/usr/share/veles/devices",
-                    os.path.join(__home__, "devices"),
-                    os.environ.get("VELES_OPENCL_DEVICES", "./")],
     "help_dir": "/usr/share/doc/python3-veles",
     "web": {
         "host": "0.0.0.0",
@@ -174,8 +172,11 @@ root.common.update({
     },
     "engine": {
         "backend": "ocl",
-        "dirs": (os.environ.get("VELES_ENGINE_DIRS", "").split(":") +
-                 ["/usr/share/veles"])
+        "source_dirs": (os.environ.get("VELES_ENGINE_DIRS", "").split(":") +
+                        ["/usr/share/veles"]),
+        "device_dirs": ["/usr/share/veles/devices",
+                        os.path.join(__home__, "devices"),
+                        os.environ.get("VELES_DEVICE_DIRS", "./")],
     }
 })
 

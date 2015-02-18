@@ -327,6 +327,8 @@ class Unit(Distributable, Verified):
     def run_was_called(self, value):
         if value:
             self._run_calls += 1
+            if root.common.trace_run:
+                self.debug("call #%d", self._run_calls)
         else:
             raise ValueError("You can not reset run_was_called flag.")
 

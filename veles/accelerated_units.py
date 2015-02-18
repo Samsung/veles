@@ -351,7 +351,8 @@ class AcceleratedUnit(Unit):
             vec.unmap()
 
     def _get_include_dirs(self, engine):
-        return tuple(os.path.join(d, engine) for d in root.common.engine.dirs)
+        return tuple(os.path.join(d, engine)
+                     for d in root.common.engine.source_dirs)
 
     def _adjust_defines(self, my_defines, dtype):
         my_defines.update(opencl_types.cl_defines[dtype])
@@ -438,7 +439,7 @@ class AcceleratedUnit(Unit):
     def _search_include(self, file_name):
         if os.path.exists(file_name):
             return os.path.abspath(file_name)
-        for d in root.common.engine.dirs:
+        for d in root.common.engine.source_dirs:
             full = os.path.join(d + "/" + self.device.backend_name, file_name)
             if os.path.exists(full):
                 return os.path.abspath(full)

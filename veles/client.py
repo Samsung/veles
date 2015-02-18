@@ -50,7 +50,7 @@ class ZmqDealer(ZmqConnection):
         self.host = host
         self.is_ipc = endpoint.address.startswith('ipc://')
         self.shmem = None
-        self.pickles_compression = root.common.pickles_compression \
+        self.pickles_compression = root.common.network_compression \
             if not self.is_ipc else None
         self._request_timings = {}
         self._command = None
