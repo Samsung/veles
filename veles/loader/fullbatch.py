@@ -375,10 +375,9 @@ class FullBatchLoaderMSEMixin(LoaderMSEMixin):
 
     def create_minibatch_data(self):
         super(FullBatchLoaderMSEMixin, self).create_minibatch_data()
-        self.minibatch_targets.reset()
-        self.minibatch_targets.mem = numpy.zeros(
+        self.minibatch_targets.reset(numpy.zeros(
             (self.max_minibatch_size,) + self.original_targets[0].shape,
-            self.dtype)
+            self.dtype))
 
     def check_types(self):
         super(FullBatchLoaderMSEMixin, self).check_types()

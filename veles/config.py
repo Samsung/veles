@@ -11,7 +11,7 @@ from collections import defaultdict
 import os
 import platform
 from pprint import pprint
-from six import print_
+from six import print_, PY2
 import sys
 
 from veles.paths import __root__
@@ -88,6 +88,10 @@ class Config(object):
 
     def __setstate__(self, state):
         self.__update__(state)
+
+    if PY2:
+        def __getnewargs__(self):
+            return tuple()
 
 
 root = Config("root")

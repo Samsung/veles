@@ -12,7 +12,6 @@ import six
 import pickle
 import sys
 from pickle import PicklingError, UnpicklingError
-import warnings
 
 
 # : The best protocol value for pickle().
@@ -23,20 +22,20 @@ def setup_pickle_debug():
     """Enables the interactive debugging of errors occured during pickling
     and unpickling.
     """
-    if not six.PY3:
-        warnings.warn("Pickle debugging is only available for Python 3.x")
-        return
-
-    pickle.dump = pickle._dump
-    pickle.dumps = pickle._dumps
-    pickle.load = pickle._load
-    pickle.loads = pickle._loads
+    if six.PY3:
+        pickle.dump = pickle._dump
+        pickle.dumps = pickle._dumps
+        pickle.load = pickle._load
+        pickle.loads = pickle._loads
+    else:
+        pickle._Pickler = pickle.Pickler
+        pickle._Unpickler = pickle.Unpickler
     orig_save = pickle._Pickler.save
     orig_load = pickle._Unpickler.load
 
     def save(self, obj):
         try:
-            orig_save(self, obj)
+            return orig_save(self, obj)
         except (PicklingError, TypeError, AssertionError):
             import traceback
             import pdb
@@ -47,7 +46,7 @@ def setup_pickle_debug():
 
     def load(self):
         try:
-            orig_load(self)
+            return orig_load(self)
         except (UnpicklingError, ImportError, AssertionError):
             import traceback
             import pdb
