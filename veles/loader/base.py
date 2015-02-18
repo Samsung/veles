@@ -140,6 +140,8 @@ class Loader(Unit):
         self.failed_minibatches = []
         self._total_failed = 0
         self._unpickled = False
+        self._on_unique_labels_counted = self.nothing
+        self._unique_labels_count = 0
 
         self.shuffled_indices = memory.Vector()
         self.normalization_type = kwargs.get("normalization_type", "none")
@@ -172,6 +174,37 @@ class Loader(Unit):
         This is set after initialize() (particularly, after load_data()).
         """
         return self._has_labels
+
+    @property
+    def unique_labels_count(self):
+        if self._unique_labels_count == 0 and self.class_lengths[TRAIN] > 0 \
+                and self.has_labels:
+            different_labels = set()
+            self.info("Counting unique labels...")
+            self._iterate_train(lambda: different_labels.update(
+                self.minibatch_labels))
+            self._unique_labels_count = len(different_labels)
+        return self._unique_labels_count
+
+    @property
+    def _unique_labels_count(self):
+        return self.__unique_labels_count
+
+    @_unique_labels_count.setter
+    def _unique_labels_count(self, value):
+        self.info("There are %d unique labels", value)
+        self.__unique_labels_count = value
+        self.on_unique_labels_counted()  # pylint: disable=E1102
+
+    @property
+    def on_unique_labels_counted(self):
+        return self._on_unique_labels_counted
+
+    @on_unique_labels_counted.setter
+    def on_unique_labels_counted(self, value):
+        if not hasattr(value, "__call__"):
+            raise TypeError("on_unique_labels_counted must be callable")
+        self._on_unique_labels_counted = value
 
     @property
     def dtype(self):
@@ -555,20 +588,16 @@ class Loader(Unit):
             # Call to analyze() is still needed
             self.normalizer.analyze(self.minibatch_data.mem)
             return
-        size = int(numpy.ceil(self.class_lengths[TRAIN] /
-                              self.max_minibatch_size))
         self.info("Performing \"%s\" normalization analysis...",
                   type(self.normalizer).NAME)
-        for i in ProgressBar(term_width=40)(range(size)):
-            start_index = i * self.max_minibatch_size
-            self.minibatch_size = min(
-                self.max_minibatch_size,
-                self.class_lengths[TRAIN] - start_index)
-            self.minibatch_indices[:self.minibatch_size] = \
-                numpy.arange(start_index, start_index + self.minibatch_size,
-                             dtype=int) + self.class_end_offsets[VALID]
-            self.fill_minibatch()
+        different_labels = set()
+
+        def callback():
+            different_labels.update(self.minibatch_labels)
             self.normalizer.analyze(self.minibatch_data[:self.minibatch_size])
+
+        self._iterate_train(callback)
+        self._unique_labels_count = len(different_labels)
 
     def normalize_minibatch(self):
         self.normalizer.normalize(self.minibatch_data[:self.minibatch_size])
@@ -657,6 +686,20 @@ class Loader(Unit):
             # The following line will reduce info message count
             # for small datasets
             self._minibatch_serve_timestamp_ = time.time()
+
+    def _iterate_train(self, fn):
+        size = int(numpy.ceil(self.class_lengths[TRAIN] /
+                              self.max_minibatch_size))
+        for i in ProgressBar(term_width=40)(range(size)):
+            start_index = i * self.max_minibatch_size
+            self.minibatch_size = min(
+                self.max_minibatch_size,
+                self.class_lengths[TRAIN] - start_index)
+            self.minibatch_indices[:self.minibatch_size] = \
+                numpy.arange(start_index, start_index + self.minibatch_size,
+                             dtype=numpy.int64) + self.class_end_offsets[VALID]
+            self.fill_minibatch()
+            fn()
 
 
 class LoaderMSEMixin(Unit):
