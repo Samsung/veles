@@ -15,9 +15,7 @@ from zope.interface import implementer, Interface
 
 from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit
 import veles.error as error
-from veles.external.progressbar import ProgressBar
 import veles.memory as memory
-import veles.normalization as normalization
 from veles.opencl_types import numpy_dtype_to_opencl
 from veles.units import UnitCommandLineArgumentsRegistry
 from veles.loader.base import ILoader, Loader, LoaderMSEMixin, \
@@ -261,9 +259,15 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         pass
 
     def analyze_and_normalize_original_data(self):
+        self.debug(
+            "Data range: (%.6f, %.6f), "
+            % (self.original_data.min(), self.original_data.max()))
         self.normalizer.analyze(self.original_data[
                                 self.class_end_offsets[VALID]:])
         self.normalizer.normalize(self.original_data.mem)
+        self.debug(
+            "Normalized data range: (%.6f, %.6f), "
+            % (self.original_data.min(), self.original_data.max()))
 
     def resize_validation(self, rand=None, ratio=None):
         """Extracts validation dataset from joined validation and train
@@ -375,7 +379,8 @@ class FullBatchLoaderMSEMixin(LoaderMSEMixin):
             device=device, **kwargs)
         assert self.total_samples > 0
         self.target_normalizer.reset()
-        self.info("Normalizing targets to %s...", self.normalization_type)
+        self.info("Normalizing targets to %s...",
+                  self.target_normalization_type)
         self.analyze_and_normalize_targets()
 
     def __getstate__(self):
@@ -388,37 +393,16 @@ class FullBatchLoaderMSEMixin(LoaderMSEMixin):
         self.minibatch_targets.reset(numpy.zeros(
             (self.max_minibatch_size,) + self.original_targets[0].shape,
             self.dtype))
-        self.analyze_target_for_normalization()
 
     def analyze_and_normalize_targets(self):
-        self.target_normalizer.analyze(self.original_targets[
-            self.class_end_offsets[TRAIN]:])
+        self.debug(
+            "Target range: (%.6f, %.6f)"
+            % (self.original_targets.min(), self.original_targets.max()))
+        self.target_normalizer.analyze(self.original_targets.mem)
         self.target_normalizer.normalize(self.original_targets.mem)
-
-    def analyze_target_for_normalization(self):
-        if isinstance(self.target_normalizer,
-                      normalization.StatelessNormalizer):
-            self.info(
-                'Skipped targets normalization analysis (type was set to'
-                '"%s")', type(self.target_normalizer).NAME)
-            # Call to analyze() is still needed
-            self.target_normalizer.analyze(self.minibatch_targets.mem)
-            return
-        size = int(numpy.ceil(self.class_lengths[3] /
-                              self.max_minibatch_size))
-        self.info("Performing \"%s\" targets normalization analysis...",
-                  type(self.target_normalizer).NAME)
-        for i in ProgressBar(term_width=40)(range(size)):
-            start_index = i * self.max_minibatch_size
-            self.minibatch_size = min(
-                self.max_minibatch_size,
-                self.class_lengths[3] - start_index)
-            self.minibatch_indices[:self.minibatch_size] = \
-                numpy.arange(start_index, start_index + self.minibatch_size,
-                             dtype=int) + self.class_end_offsets[VALID]
-            self.fill_minibatch()
-            self.target_normalizer.analyze(
-                self.minibatch_targets[:self.minibatch_size])
+        self.debug(
+            "Normalized target range: (%.6f, %.6f)"
+            % (self.original_targets.min(), self.original_targets.max()))
 
     def check_types(self):
         super(FullBatchLoaderMSEMixin, self).check_types()
@@ -472,15 +456,10 @@ class FullBatchLoaderMSEMixin(LoaderMSEMixin):
             self._kernel_target_)
         return True
 
-    def normalize_minibatch_target(self):
-        self.target_normalizer.normalize(
-            self.minibatch_targets[:self.minibatch_size])
-
     def fill_minibatch(self):
         super(FullBatchLoaderMSEMixin, self).fill_minibatch()
         for i, v in enumerate(self.minibatch_indices[:self.minibatch_size]):
             self.minibatch_targets[i] = self.original_targets[v]
-        self.normalize_minibatch_target()
 
 
 class FullBatchLoaderMSE(FullBatchLoaderMSEMixin, FullBatchLoader):
