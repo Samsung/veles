@@ -488,11 +488,11 @@ class Main(Logger, CommandLineBase):
         self.debug("\n%s", io.getvalue().strip())
 
     def print_max_rss(self):
-        def space_group(val):
+        def space_group(val, first_pos=True):
             if val < 1000:
-                return "%03d" % val
+                return ("%d" if first_pos else "%03d") % val
             d, m = divmod(val, 1000)
-            return space_group(d) + " %d" % m
+            return space_group(d, d < 1000) + " %d" % m
 
         res = resource.getrusage(resource.RUSAGE_SELF)
         if Watcher.max_mem_in_use > 0:

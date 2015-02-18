@@ -11,7 +11,6 @@ import sys
 import pdb
 import threading
 import unittest
-import warnings
 
 from veles.distributable import Pickleable
 from veles.pickle2 import setup_pickle_debug, pickle
