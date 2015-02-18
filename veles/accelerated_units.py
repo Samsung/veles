@@ -83,7 +83,7 @@ class AcceleratedUnit(Unit):
         parser = AcceleratedUnit.init_parser()
         args, _ = parser.parse_known_args()
         self._force_cpu = self.__class__.__name__ in args.force_cpu.split(',')
-        self._sync = args.sync_ocl
+        self._sync = args.sync_run
         self._kernel_ = None
         self._backend_run_ = None
         self.initialize = self.with_backend_init(self.initialize)
@@ -174,10 +174,10 @@ class AcceleratedUnit(Unit):
                             help="Force these comma separated accelerated "
                                  "units to run on CPU (that is, disable "
                                  "OpenCL/CUDA/... for them).")
-        parser.add_argument("--sync-ocl", default=False, action="store_true",
-                            help="Force OpenCL units to run synchronously. "
-                            "This option is useful for measuring the actual "
-                            "unit run times.")
+        parser.add_argument(
+            "--sync-run", default=False, action="store_true",
+            help="Force accelerated units to run synchronously. This option "
+                 "is useful for measuring the actual unit run times.")
         return parser
 
     def build_program(self, defines=None, cache_file_name=None, dtype=None,
