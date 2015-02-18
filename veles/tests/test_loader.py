@@ -32,8 +32,8 @@ class Loader(FullBatchLoaderMSE):
         self.original_data.mem = numpy.zeros([N, 28, 28],
                                              dtype=numpy.float32)
         # Will use different dtype for target
-        self.original_targets.mem = numpy.zeros([N, 3, 3, 3],
-                                                dtype=numpy.int16)
+        self.original_targets.mem = numpy.zeros(
+            [N, 3, 3, 3], dtype=numpy.float32)
 
         self.original_labels.mem[:] = rnd.get().randint(
             0, 1000, self.original_labels.size)

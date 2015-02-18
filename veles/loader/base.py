@@ -673,6 +673,45 @@ class LoaderMSEMixin(Unit):
         self.class_targets = memory.Vector()
         self.minibatch_targets = memory.Vector()
         self.targets_shape = kwargs.get("targets_shape")
+        self.target_normalization_type = kwargs.get(
+            "target_normalization_type", "none")
+        self.target_normalization_parameters = kwargs.get(
+            "target_normalization_parameters", {})
+
+    @property
+    def target_normalization_type(self):
+        return self._target_normalization_type
+
+    @target_normalization_type.setter
+    def target_normalization_type(self, value):
+        if not isinstance(value, str):
+            raise TypeError(
+                "Normalization type must be a string (got %s)", type(value))
+        if value not in normalization.NormalizerRegistry.normalizers:
+            raise ValueError("Unknown normalization type \"%s\"" % value)
+        assert not self.is_initialized
+        self._target_normalization_type = value
+        self.target_normalization_parameters = {}
+
+    @property
+    def target_normalization_parameters(self):
+        return self._target_normalization_parameters
+
+    @target_normalization_parameters.setter
+    def target_normalization_parameters(self, value):
+        if not isinstance(value, dict):
+            raise TypeError("Normalization parameters must be a dictionary")
+        self._target_normalization_parameters = value
+        self._target_normalizer = None
+
+    @property
+    def target_normalizer(self):
+        nr = normalization.NormalizerRegistry
+        if self._target_normalizer is None:
+            self._target_normalizer = nr.normalizers[
+                self.target_normalization_type](
+                **self.target_normalization_parameters)
+        return self._target_normalizer
 
     @property
     def minibatch_targets(self):
