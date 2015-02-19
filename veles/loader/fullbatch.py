@@ -250,7 +250,8 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         """
         Override.
         """
-        self._unique_labels_count = len(set(self.original_labels))
+        if self.has_labels:
+            self._unique_labels_count = len(set(self.original_labels))
 
     def normalize_minibatch(self):
         """

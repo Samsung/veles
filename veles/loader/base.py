@@ -192,6 +192,8 @@ class Loader(Unit):
 
     @_unique_labels_count.setter
     def _unique_labels_count(self, value):
+        if not self.has_labels:
+            return
         self.info("There are %d unique labels", value)
         self.__unique_labels_count = value
         self.on_unique_labels_counted()  # pylint: disable=E1102
@@ -593,7 +595,8 @@ class Loader(Unit):
         different_labels = set()
 
         def callback():
-            different_labels.update(self.minibatch_labels)
+            if self.has_labels:
+                different_labels.update(self.minibatch_labels)
             self.normalizer.analyze(self.minibatch_data[:self.minibatch_size])
 
         self._iterate_train(callback)
