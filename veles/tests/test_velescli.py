@@ -47,6 +47,19 @@ class Test(unittest.TestCase):
         self.main.run()
         self.assertTrue(Workflow.run_was_called)
 
+    def test_format_decimal(self):
+        fd = Main.format_decimal
+        res = fd(1047151)
+        self.assertEqual(res, "1 047 151")
+        res = fd(45)
+        self.assertEqual(res, "45")
+        res = fd(145)
+        self.assertEqual(res, "145")
+        res = fd(1145)
+        self.assertEqual(res, "1 145")
+        res = fd(12345)
+        self.assertEqual(res, "12 345")
+
 
 def run(load, main):
     wf, _ = load(Workflow)

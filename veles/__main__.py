@@ -487,19 +487,20 @@ class Main(Logger, CommandLineBase):
         cfg.print_(file=io)
         self.debug("\n%s", io.getvalue().strip())
 
-    def print_max_rss(self):
-        def space_group(val, first_pos=True):
-            if val < 1000:
-                return ("%d" if first_pos else "%03d") % val
-            d, m = divmod(val, 1000)
-            return space_group(d, d < 1000) + " %d" % m
+    @staticmethod
+    def format_decimal(val):
+        if val < 1000:
+            return str(val)
+        d, m = divmod(val, 1000)
+        return Main.format_decimal(d) + " %03d" % m
 
+    def print_max_rss(self):
         res = resource.getrusage(resource.RUSAGE_SELF)
         if Watcher.max_mem_in_use > 0:
             self.info("Peak device memory used: %s Kb",
-                      space_group(Watcher.max_mem_in_use // 1000))
+                      self.format_decimal(Watcher.max_mem_in_use // 1000))
         self.info("Peak resident memory used: %s Kb",
-                  space_group(res.ru_maxrss))
+                  self.format_decimal(res.ru_maxrss))
 
     def run_module(self, module):
         self.debug("Calling %s.run()...", module.__name__)
