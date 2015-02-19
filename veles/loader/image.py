@@ -752,6 +752,8 @@ class FileImageLoaderBase(ImageLoader):
                                        dtype=self.source_dtype)
                 else:
                     return numpy.array(img, dtype=self.source_dtype)
+        except (TypeError, KeyboardInterrupt) as e:
+            raise from_none(e)
         except Exception as e:
             self.warning("Failed to read %s with PIL: %s", key, e)
             img = cv2.imread(key)
