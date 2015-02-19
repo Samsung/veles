@@ -30,7 +30,6 @@ from veles.config import root
 from veles.external import daemon
 from veles.logger import Logger
 from veles.launcher import Launcher
-from veles.backends import Device
 from veles.memory import Watcher
 from veles.pickle2 import setup_pickle_debug
 from veles import prng
@@ -364,27 +363,15 @@ class Main(Logger, CommandLineBase):
             self.critical("Call load() first in run()")
             sys.exit(Main.EXIT_FAILURE)
         self.main_called = True
+
         try:
-            self.device = Device() if self.acceleration_is_enabled else None
-            if self.device is not None:
-                self.device.thread_pool_attach(self.workflow.thread_pool)
+            self.launcher.initialize(self.acceleration_is_enabled, **kwargs)
         except:
-            self.exception("Failed to create the OpenCL device.")
+            self.exception("Failed to initialize the launcher.")
             self.launcher.stop()
             sys.exit(Main.EXIT_FAILURE)
 
-        def device_thread_pool_detach():
-            if self.device is not None:
-                self.device.thread_pool_detach()
-
-        try:
-            self.workflow.initialize(device=self.device, **kwargs)
-        except:
-            self.exception("Failed to initialize the workflow")
-            self.launcher.stop()
-            device_thread_pool_detach()
-            sys.exit(Main.EXIT_FAILURE)
-        self.debug("Workflow initialization has been completed")
+        self.debug("Initialization is complete")
         try:
             if self._dump_attrs != "no":
                 self._dump_unit_attributes(self._dump_attrs == "all")
@@ -400,7 +387,7 @@ class Main(Logger, CommandLineBase):
             self.launcher.stop()
             sys.exit(Main.EXIT_FAILURE)
         finally:
-            device_thread_pool_detach()
+            self.launcher.device_thread_pool_detach()
 
     def _dump_unit_attributes(self, arrays=True):
         import veles.external.prettytable as prettytable

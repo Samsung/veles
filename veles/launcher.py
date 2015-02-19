@@ -27,8 +27,10 @@ from twisted.web.client import (Agent, HTTPConnectionPool, FileBodyProducer,
 from twisted.web.http_headers import Headers
 import uuid
 
+from veles.backends import Device
 import veles.client as client
 from veles.cmdline import CommandLineArgumentsRegistry, CommandLineBase
+from veles.compat import from_none
 from veles.config import root
 import veles.graphics_server as graphics_server
 from veles.plotter import Plotter
@@ -121,6 +123,7 @@ class Launcher(logger.Logger):
         self._initialized = False
         self._running = False
         self._start_time = None
+        self._device = None
         self.graphics_client = None
         self.graphics_server = None
         self._notify_update_interval = kwargs.get(
@@ -286,6 +289,10 @@ class Launcher(logger.Logger):
         raise RuntimeError("Impossible happened")
 
     @property
+    def device(self):
+        return self._device
+
+    @property
     def is_initialized(self):
         return self._initialized
 
@@ -307,6 +314,10 @@ class Launcher(logger.Logger):
                 [self.graphics_server.endpoints["ipc"]]) \
             if getattr(self, "graphics_server", None) is not None else []
 
+    @property
+    def start_time(self):
+        return self._start_time
+
     def threadsafe(fn):
         def wrapped(self, *args, **kwargs):
             with self._lock:
@@ -321,7 +332,6 @@ class Launcher(logger.Logger):
         Links with the nested Workflow instance, so that we are able to
         initialize.
         """
-        self._initialized = True
         self._workflow = workflow
         workflow.run_is_blocking = False
         if self.is_slave or self.matplotlib_backend == "":
@@ -383,6 +393,42 @@ class Launcher(logger.Logger):
     def on_workflow_finished(self):
         reactor.callFromThread(self.stop)
 
+    def device_thread_pool_detach(self):
+        if self.device is not None:
+            self.device.thread_pool_detach()
+
+    @threadsafe
+    def initialize(self, acceleration_is_enabled, **kwargs):
+        if not self.is_slave and self.reports_web_status:
+            self.workflow_graph, _ = self.workflow.generate_graph(
+                filename=None, write_on_disk=False, with_data_links=True)
+
+        try:
+            self._device = Device() if acceleration_is_enabled else None
+            if self.device is not None:
+                self.device.thread_pool_attach(self.workflow.thread_pool)
+        except Exception as e:
+            self.error("Failed to create the OpenCL device.")
+            raise from_none(e)
+
+        try:
+            self.workflow.initialize(device=self.device, **kwargs)
+        except Exception as e:
+            self.error("Failed to initialize the workflow")
+            self.device_thread_pool_detach()
+            raise from_none(e)
+
+        if not self.is_standalone:
+            self._agent.initialize()
+        reactor.addSystemEventTrigger('before', 'shutdown', self._on_stop)
+        reactor.addSystemEventTrigger('after', 'shutdown', self._print_stats)
+        reactor.addSystemEventTrigger('after', 'shutdown', self.event,
+                                      "work", "end", height=0.1)
+        for unit in self.workflow:
+            if isinstance(unit, Plotter):
+                unit.graphics_server = self.graphics_server
+        self._initialized = True
+
     def run(self):
         """starts Twisted reactor, Workflow.run() and periodic status updates.
         """
@@ -403,7 +449,7 @@ class Launcher(logger.Logger):
         """Stops Twisted reactor and Workflow execution.
         """
         with self._lock:
-            if not self._initialized:
+            if self.workflow is None:
                 return
             running = self._running and reactor.running
             self._running = False
@@ -426,21 +472,8 @@ class Launcher(logger.Logger):
         if not self._initialized:
             raise RuntimeError("Launcher was not initialized")
         self._running = True
-        if not self.is_standalone:
-            self._agent.initialize()
-        reactor.addSystemEventTrigger('before', 'shutdown', self._on_stop)
-        reactor.addSystemEventTrigger('after', 'shutdown', self._print_stats)
-        reactor.addSystemEventTrigger('after', 'shutdown', self.event,
-                                      "work", "end", height=0.1)
-        for unit in self.workflow:
-            if isinstance(unit, Plotter):
-                unit.graphics_server = self.graphics_server
         self._start_time = time.time()
-        if not self.is_slave and self.reports_web_status:
-            self.workflow_graph, _ = self.workflow.generate_graph(
-                filename=None, write_on_disk=False, with_data_links=True)
         if self.reports_web_status:
-            self.start_time = time.time()
             self._notify_update_last_time = self.start_time
             self._notify_status()
         if not self.is_slave:
@@ -448,7 +481,7 @@ class Launcher(logger.Logger):
 
     @threadsafe
     def _on_stop(self):
-        if not self._initialized:
+        if self.workflow is None:
             return
         self.info("Stopping everything (%s mode)", self.mode)
         self._initialized = False
@@ -481,10 +514,10 @@ class Launcher(logger.Logger):
         self.workflow.print_stats()
         if self.agent is not None:
             self.agent.print_stats()
-        if self._start_time is not None:
+        if self.start_time is not None:
             self.info(
                 "Time elapsed: %s", datetime.timedelta(
-                    seconds=(time.time() - self._start_time)))
+                    seconds=(time.time() - self.start_time)))
 
     def _launch_status(self):
         if not self.reports_web_status:
