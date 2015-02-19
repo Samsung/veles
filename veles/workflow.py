@@ -692,7 +692,7 @@ class Workflow(Container):
                 except FileExistsError:
                     pass
                 (_, filename) = tempfile.mkstemp(
-                    ".png", "workflow_",
+                    os.path.splitext(filename)[1], "workflow_",
                     dir=os.path.join(root.common.cache_dir, "plots"))
             self.debug("Saving the workflow graph to %s", filename)
             g.write(filename, format=os.path.splitext(filename)[1][1:])
