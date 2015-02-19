@@ -202,13 +202,15 @@ class Unit(Distributable, Verified):
         to None.
         """
         for attr in args:
+            if getattr(self, attr, None) is not None:
+                continue
             try:
                 setattr(self, attr, None)
-            except AttributeError:
+            except AttributeError as e:
                 self.error("Are you trying to set the value of a property "
                            "without a setter?")
-                raise
-            self.demanded.append(attr)
+                raise from_none(e)
+        self.demanded.extend(args)
 
     @property
     def links_from(self):
