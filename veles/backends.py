@@ -354,6 +354,13 @@ class OpenCLDevice(Device):
             context = platform.create_context(
                 [platform.devices[int(devnum)]
                  for devnum in devnums.split(',')])
+        if "NVIDIA" in context.platform.name:
+            def fail(*args, **kwargs):
+                raise RuntimeError("fork() breaks NVIDIA OpenCL")
+
+            os.fork = fail
+            import subprocess
+            subprocess.Popen = fail
         device = context.devices[0]
         desc = "%s/%s/%d" % (device.vendor.strip(), device.name.strip(),
                              device.vendor_id)
