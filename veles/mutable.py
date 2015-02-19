@@ -136,16 +136,23 @@ class Bool(object):
         state = {"__expr": [self.expr[0]]}
         es = state["__expr"]
         for expr in self.expr[1:]:
-            es.append((expr[0], expr[1].__name__,
-                       marshal.dumps(expr[1].__code__)))
+            fn = expr[1]
+            es.append((expr[0], fn.__name__, marshal.dumps(fn.__code__),
+                       tuple(c.cell_contents for c in fn.__closure__)
+                       if fn.__closure__ is not None else tuple()))
         return state
 
     def __setstate__(self, state):
+        def cell(obj):
+            return (lambda: obj).__closure__[0]
+
         es = self.__expr = [state["__expr"][0]]
         for expr in state["__expr"][1:]:
             func_code = marshal.loads(expr[2])
             es.append((expr[0],
-                       types.FunctionType(func_code, globals(), expr[1])))
+                       types.FunctionType(
+                           func_code, globals(), expr[1],
+                           closure=tuple(cell(c) for c in expr[3]))))
         self.on_true = None
         self.on_false = None
         self.__influences = {self}
