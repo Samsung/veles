@@ -41,7 +41,7 @@ class SnapshotterBase(Unit):
     Attributes:
         compress - the compression applied to pickles: None or '', gz, bz2, xz
         compress_level - the compression level in [0..9]
-        interval - take only one snapshot within this run() invocation number
+        interval - take only one snapshot within this run() invocations number
         time_interval - take no more than one snapshot within this time window
     """
 

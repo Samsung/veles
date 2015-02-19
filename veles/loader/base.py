@@ -9,8 +9,10 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 from __future__ import division
 from collections import defaultdict
 from copy import copy
+import marshal
 import numpy
 import time
+import types
 import six
 from zope.interface import implementer, Interface
 
@@ -165,7 +167,27 @@ class Loader(Unit):
                 state["failed_minibatches"].extend(pmb)
         else:
             state["failed_minibatches"] = []
+        ulc = self._on_unique_labels_counted
+        if ulc == self.nothing:
+            state["_on_unique_labels_counted"] = None
+        else:
+            state["_on_unique_labels_counted"] = (
+                ulc.__name__, marshal.dumps(ulc.__code__),
+                tuple(c.cell_contents for c in ulc.__closure__))
         return state
+
+    def __setstate__(self, state):
+        ulc_tuple = state.pop("_on_unique_labels_counted")
+        super(Loader, self).__setstate__(state)
+        if ulc_tuple is not None:
+            def cell(obj):
+                return (lambda: obj).__closure__[0]
+
+            name, code, closure = ulc_tuple
+            closure = tuple(cell(c) for c in closure)
+            self._on_unique_labels_counted = \
+                types.FunctionType(
+                    marshal.loads(code), globals(), name, closure=closure)
 
     @property
     def has_labels(self):
