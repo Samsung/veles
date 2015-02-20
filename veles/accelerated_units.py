@@ -83,7 +83,7 @@ class AcceleratedUnit(Unit):
         self._cache = kwargs.get("cache", True)
         # Yup, this is right - self._force_cpu is initialized in init_unpickled
         self._force_cpu = kwargs.get("force_cpu", self._force_cpu)
-        self.prefer_numpy = root.common.prefer_numpy_on_cpu
+        self.prefer_numpy = root.common.force_cpu_run_on_intel_opencl
 
     def init_unpickled(self):
         super(AcceleratedUnit, self).init_unpickled()
