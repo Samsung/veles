@@ -12,6 +12,10 @@ import argparse
 from copy import copy
 from jinja2 import Template, TemplateError
 import logging
+try:
+    from numba import jit
+except ImportError:
+    jit = None
 import numpy
 import os
 import re
@@ -41,6 +45,11 @@ class IOpenCLUnit(Interface):
 
     def cpu_run():
         """Run on CPU.
+        """
+
+    def ocl_init():
+        """
+        Initialize OpenCL-specific stuff. Called inside initialize().
         """
 
     def ocl_run():
@@ -87,6 +96,7 @@ class AcceleratedUnit(Unit):
         self._kernel_ = None
         self._backend_run_ = None
         self.initialize = self.with_backend_init(self.initialize)
+        self._cpu_run_jitted_ = False
 
     def with_backend_init(self, fn):
         def wrapped(device, **kwargs):
@@ -156,6 +166,15 @@ class AcceleratedUnit(Unit):
         self.prefer_numpy = (self.prefer_numpy and self.device is not None and
                              (isinstance(device, OpenCLDevice) and
                               device.device_info.is_cpu))
+        if self.device is None and not self._cpu_run_jitted_ and \
+                not root.common.disable_numba:
+            if jit is None:
+                self.warning("Numba (http://numba.pydata.org) was not found, "
+                             "cpu_run() is going to be slow.")
+            else:
+                self.cpu_run = jit(nopython=True, nogil=True)(self.cpu_run)
+                self.debug("Jitted cpu_run()")
+                self._cpu_run_jitted_ = True
 
     def cpu_init(self):
         pass

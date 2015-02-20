@@ -146,6 +146,9 @@ root.common.update({
     "test_known_device": False,
     "test_unknown_device": True,
     "prefer_numpy_on_cpu": True,
+    # Disable Numba JIT while debugging or on alternative interpreters
+    "disable_numba": (sys.gettrace() is not None or
+                      platform.python_implementation() != "CPython"),
     "disable_snapshots": False,
     "veles_dir": __root__,
     "veles_user_dir": __home__,
