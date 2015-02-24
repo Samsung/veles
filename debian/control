@@ -18,14 +18,14 @@ Vcs-Browser: http://alserver.rnd.samsung.ru/gerrit/gitweb?p=Veles.git;a=summary
 
 Package: python3-veles
 Architecture: any
-Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
+Depends: ${misc:Depends}, ${python3:Depends},
  libzmq3 (>= 4.1.0+smaug), python3-zmq (>= 14.0.2-smaug), python3-psutil,
  python3-matplotlib (>= 1.4), python3-twisted (>= 14.0.0-1veles1),
  python3-cffi (>= 0.8), python3-lxml (>= 3.3.3), python-lxml (>= 3.3.3),
  python3-pymongo (>= 2.6.3), python3-ecdsa (>= 0.10), python3-scipy (>= 0.13.3),
  python3-pyqt4, python3-pil (>= 2.3), python3-six, python3-ply (>= 3.4),
  python3-numpy (>= 1.8.2), python3-pip, ocl-icd-libopencl1 (>= 2.1.3-5),
- libsnappy-dev (>= 1.1), libgit2-dev (>= 0.21), libpng-dev libfreetype6-dev
+ libsnappy-dev (>= 1.1), libgit2-dev (>= 0.21), libpng12-dev, libfreetype6-dev
 Recommends: graphviz
 Description: VELES Machine Learning Platform
  Copyright © 2013 Samsung Electronics Co., Ltd.
