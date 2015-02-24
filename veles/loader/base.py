@@ -640,14 +640,14 @@ class Loader(Unit):
         train_different_labels = defaultdict(int)
 
         def callback():
-            if self.has_labels:
+            if self.has_labels and len(self.labels_mapping) == 0:
                 for lbl in self.raw_minibatch_labels:
                     train_different_labels[lbl] += 1
             self.normalizer.analyze(self.minibatch_data[:self.minibatch_size])
 
         self._iterate_class(TRAIN, callback)
 
-        if not self.has_labels:
+        if not self.has_labels or len(self.labels_mapping) > 0:
             return
 
         other_different_labels = defaultdict(int)
