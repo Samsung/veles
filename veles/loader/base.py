@@ -196,6 +196,8 @@ class Loader(Unit):
             self._on_unique_labels_counted = \
                 types.FunctionType(
                     marshal.loads(code), globals(), name, closure=closure)
+        else:
+            self._on_unique_labels_counted = self.nothing
 
     @property
     def has_labels(self):
