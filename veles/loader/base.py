@@ -836,6 +836,9 @@ class Loader(Unit):
                     "There is no such label in the training set: %s" % lbl)
         for lbl in self.labels_mapping:
             if lbl not in other_labels:
+                self.warning(
+                    "There is no such label in the test/validation set: %s",
+                    lbl)
                 other_labels[lbl] = 0
 
     def _compare_label_distributions(self, train_dist, other_dist):
