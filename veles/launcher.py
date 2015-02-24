@@ -460,6 +460,8 @@ class Launcher(logger.Logger):
         if not running:
             self._on_stop()
             return
+        if not reactor.running:
+            return
         try:
             reactor.stop()
         except:

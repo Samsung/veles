@@ -56,6 +56,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     sigint_initial = None
     pools = []
     _manhole = None
+    _sigint_printed = False
 
     def __init__(self, minthreads=2, maxthreads=1024, queue_size=2048,
                  name=None):
@@ -343,6 +344,16 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         quit_initial(*args, **kwargs)
 
     @staticmethod
+    def _warn_about_sigint_hysteria(log):
+        log.warning(
+            "Please, stop hitting Ctrl-C hysterically and let me "
+            "die peacefully.\nThis will not anticipate the "
+            "program's exit because currently Python is trying to "
+            "join all the threads\nand some of them can be very "
+            "busy on the native side, e.g. running some sophisticated "
+            "OpenCL code.")
+
+    @staticmethod
     def sigint_handler(sign, frame):
         """
         Private method - handler for SIGINT.
@@ -353,11 +364,18 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         except KeyboardInterrupt:
             log = logging.getLogger("ThreadPool")
             if not reactor.running:
-                log.warning("Raising KeyboardInterrupt since "
-                            "Twisted reactor is not running")
-                raise from_none(KeyboardInterrupt())
+                if not ThreadPool._sigint_printed:
+                    log.warning("Raising KeyboardInterrupt since "
+                                "Twisted reactor is not running")
+                    ThreadPool._sigint_printed = True
+                    raise from_none(KeyboardInterrupt())
+                ThreadPool._warn_about_sigint_hysteria(log)
             else:
-                log.critical("KeyboardInterrupt")
+                if not ThreadPool._sigint_printed:
+                    log.critical("KeyboardInterrupt")
+                    ThreadPool._sigint_printed = True
+                else:
+                    ThreadPool._warn_about_sigint_hysteria(log)
 
     @staticmethod
     def sigusr1_handler(sign, frame):

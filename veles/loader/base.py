@@ -794,6 +794,9 @@ class Loader(Unit):
 
     def _print_label_stats(self, stats, set_name):
         values = list(stats.values())
+        if sum(values) == 0:
+            self.info("No %s labels specified", set_name)
+            return
         mean = int(numpy.mean(values))
         stddev = int(numpy.std(values))
         lmin = numpy.min(values)
@@ -819,7 +822,9 @@ class Loader(Unit):
     def _calc_labels_normalized_distribution(self, different_labels):
         distribution = numpy.array(
             [v for k, v in sorted(different_labels.items())], numpy.float64)
-        distribution /= numpy.sum(distribution)
+        dist_sum = numpy.sum(distribution)
+        if dist_sum > 0:
+            distribution /= dist_sum
         return distribution
 
     def _validate_and_fix_other_labels(self, other_labels):
@@ -831,9 +836,11 @@ class Loader(Unit):
             if lbl not in other_labels:
                 other_labels[lbl] = 0
 
-    def _compare_label_distributions(self, train_dist, vt_dist):
+    def _compare_label_distributions(self, train_dist, other_dist):
+        if sum(other_dist) == 0:
+            return
         if chisquare is not None:
-            stat, p = chisquare(vt_dist, train_dist)
+            stat, p = chisquare(other_dist, train_dist)
             is_the_same = p > 0.95
             msg = ("TRAIN and TEST & VALIDATION labels have %s "
                    "distributions (Χ-square test's p-value is %.3f)")
