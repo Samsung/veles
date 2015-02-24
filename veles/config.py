@@ -78,7 +78,8 @@ class Config(object):
     def __getstate__(self):
         def fix_contents(contents):
             fixed_contents = dict(contents)
-            del fixed_contents["__path__"]
+            if "__path__" in fixed_contents:
+                del fixed_contents["__path__"]
             for k, v in contents.items():
                 if isinstance(v, Config):
                     fixed_contents[k] = fix_contents(v.__dict__)
