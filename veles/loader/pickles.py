@@ -155,7 +155,7 @@ class PicklesImageFullBatchLoader(PicklesLoader, FullBatchImageLoader):
     def get_keys(self, index):
         offsets = [0, self.class_lengths[0],
                    self.class_lengths[0] + self.class_lengths[1],
-                   sum(self.class_lengths)]
+                   self.total_samples]
         self.original_shape = self.image_data.shape[1:-1]
         return range(offsets[index], offsets[index + 1])
 
@@ -174,8 +174,8 @@ class PicklesImageFullBatchLoader(PicklesLoader, FullBatchImageLoader):
         self.original_class_lengths = self.class_lengths
         self.image_data = self.original_data.mem
         self.original_data.mem = None
-        self.image_labels = self.original_labels.mem
-        self.original_labels.mem = None
+        self.image_labels = self.original_labels
+        del self.original_labels[:]
         FullBatchImageLoader.load_data(self)
         assert self.original_class_lengths == self.class_lengths
         del self.image_data

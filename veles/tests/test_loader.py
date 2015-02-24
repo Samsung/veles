@@ -7,6 +7,7 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
 
 import gc
+from itertools import product
 import logging
 import unittest
 import numpy
@@ -28,15 +29,15 @@ class Loader(FullBatchLoaderMSE):
         """Here we will load MNIST data.
         """
         N = 71599
-        self.original_labels.mem = numpy.zeros([N], dtype=numpy.int32)
+        self.original_labels.extend([0] * N)
         self.original_data.mem = numpy.zeros([N, 28, 28],
                                              dtype=numpy.float32)
         # Will use different dtype for target
         self.original_targets.mem = numpy.zeros(
             [N, 3, 3, 3], dtype=numpy.float32)
 
-        self.original_labels.mem[:] = rnd.get().randint(
-            0, 1000, self.original_labels.size)
+        self.original_labels[:] = rnd.get().randint(
+            0, 1000, len(self.original_labels))
         rnd.get().fill(self.original_data.mem, -100, 100)
         self.original_targets.plain[:] = rnd.get().randint(
             27, 1735, self.original_targets.size)
@@ -55,24 +56,23 @@ class TestFullBatchLoader(unittest.TestCase):
         del self.device
 
     def test_random(self):
-        results = []
-        for device in (self.device, None):
-            for on_device in (True, False):
-                results.append(self._test_random(device, on_device))
+        results = [self._test_random(*p) for p in
+                   product((self.device, None), (True, False))]
         for result in results[1:]:
             for index, item in enumerate(result):
                 max_diff = numpy.fabs(item - results[0][index]).max()
                 self.assertLess(max_diff, 1e-6, "index = %d" % index)
 
-    def _test_random(self, device, on_device, N=1000):
+    def _test_random(self, device, force_cpu, N=1000):
         rnd.get().seed(123)
-        unit = Loader(DummyWorkflow(), on_device=on_device, prng=rnd.get())
+        unit = Loader(DummyWorkflow(), force_cpu=force_cpu, prng=rnd.get())
         unit.initialize(device)
-        res_data = numpy.zeros([N] + list(unit.minibatch_data.shape),
+        self.assertTrue(unit.has_labels)
+        res_data = numpy.zeros((N,) + unit.minibatch_data.shape,
                                dtype=unit.minibatch_data.dtype)
-        res_labels = numpy.zeros([N] + list(unit.minibatch_labels.shape),
+        res_labels = numpy.zeros((N,) + unit.minibatch_labels.shape,
                                  dtype=unit.minibatch_labels.dtype)
-        res_target = numpy.zeros([N] + list(unit.minibatch_targets.shape),
+        res_target = numpy.zeros((N,) + unit.minibatch_targets.shape,
                                  dtype=unit.minibatch_targets.dtype)
         for i in range(N):
             unit.run()
@@ -94,6 +94,8 @@ class TestHDF5Loader(unittest.TestCase):
         loader.initialize(**kwargs)
         while not loader.train_ended:
             loader.run()
+            loader.minibatch_data.map_read()
+            loader.minibatch_labels.map_read()
             self.assertFalse((loader.minibatch_data.mem == 0).all())
             self.assertFalse((loader.minibatch_labels.mem == 0).all())
 

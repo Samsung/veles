@@ -36,8 +36,8 @@ class Logger(object):
         pass
 
     class ColorFormatter(logging.Formatter):
-        GREEN_MARKERS = [' ok', 'finished', 'completed', 'ready', 'done',
-                         'running', 'successful', 'saved']
+        GREEN_MARKERS = [' ok', "ok:", 'finished', 'completed', 'ready',
+                         'done', 'running', 'successful', 'saved']
         GREEN_RE = re.compile("|".join(GREEN_MARKERS))
 
         def formatMessage(self, record):

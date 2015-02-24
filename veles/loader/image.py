@@ -9,6 +9,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 from __future__ import division
+from collections import defaultdict
 from itertools import chain
 from mimetypes import guess_type
 import os
@@ -20,7 +21,8 @@ from zope.interface import implementer, Interface
 
 from veles.compat import from_none
 import veles.error as error
-from veles.loader.base import CLASS_NAME, ILoader, Loader
+from veles.external.progressbar import ProgressBar
+from veles.loader.base import CLASS_NAME, ILoader, Loader, TRAIN
 from veles.memory import Vector
 
 
@@ -553,6 +555,29 @@ class ImageLoader(Loader):
                 pbar.inc()
         return has_labels
 
+    def load_labels(self):
+        if not self.has_labels:
+            return
+        self.info("Reading labels...")
+        train_different_labels = defaultdict(int)
+        pb = ProgressBar(maxval=self.total_samples, term_width=40)
+        pb.start()
+        for key in self.class_keys[TRAIN]:
+            label, has_labels = self._load_label(key, True)
+            assert has_labels
+            train_different_labels[label] += 1
+            pb.inc()
+        other_different_labels = defaultdict(int)
+        for key in chain.from_iterable(self.class_keys[:TRAIN]):
+            label, has_labels = self._load_label(key, True)
+            assert has_labels
+            other_different_labels[label] += 1
+            pb.inc()
+        pb.finish()
+
+        self._setup_labels_mapping(train_different_labels,
+                                   other_different_labels)
+
     def initialize(self, **kwargs):
         self._restored_from_pickle = False
         super(ImageLoader, self).initialize(**kwargs)
@@ -584,6 +609,7 @@ class ImageLoader(Loader):
         assert len(keys) > 0
         self._has_labels = self.load_keys(
             (keys[self.prng.randint(len(keys))],), None, None, None, None)
+        self.load_labels()
 
     def create_minibatch_data(self):
         self.minibatch_data.reset(numpy.zeros(
@@ -602,7 +628,7 @@ class ImageLoader(Loader):
         indices = self.minibatch_indices.mem[:self.minibatch_size]
         assert self.has_labels == self.load_keys(
             self.keys_from_indices(indices), None, self.minibatch_data.mem,
-            self.minibatch_labels.mem, self.minibatch_label_values)
+            self.raw_minibatch_labels, self.minibatch_label_values)
         if self.samples_inflation == 1:
             return
         for pos, index in enumerate(indices):

@@ -38,10 +38,10 @@ class ImageLoaderMSEMixin(LoaderMSEMixin):
         if len(set(self.target_keys)) < length:
             raise error.BadFormatError("Some targets have duplicate keys")
         self.target_keys.sort()
-        if not self.has_labels and length != sum(self.class_lengths):
+        if not self.has_labels and length != self.total_samples:
             raise error.BadFormatError(
                 "Number of class samples %d differs from the number of "
-                "targets %d" % (sum(self.class_lengths), length))
+                "targets %d" % (self.total_samples, length))
         if self.has_labels:
             labels = numpy.zeros(length, dtype=Loader.LABEL_DTYPE)
             assert self.load_target_keys(self.target_keys, None, labels)

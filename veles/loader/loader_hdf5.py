@@ -6,12 +6,16 @@ Base classes to load data from HDF5 (Caffe format).
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
+
+from collections import Counter
+from itertools import chain
 import h5py
 import numpy
 from zope.interface import implementer
 
 from veles import error
-from veles.loader import ILoader, Loader, IFullBatchLoader, FullBatchLoader
+from veles.loader.base import ILoader, Loader, TRAIN
+from veles.loader.fullbatch import IFullBatchLoader, FullBatchLoader
 
 
 class HDF5LoaderBase(Loader):
@@ -46,7 +50,7 @@ class HDF5LoaderBase(Loader):
         has_labels = "label" in h5f
         if self.has_labels and not has_labels or \
                 not self.has_labels and has_labels and \
-                sum(self.class_lengths) > 0:
+                self.total_samples > 0:
             raise error.BadFormatError(
                 "Some sets have labels and some do not")
         self._has_labels = has_labels
@@ -67,7 +71,11 @@ class HDF5Loader(HDF5LoaderBase):
 
     def load_data(self):
         for index in range(3):
-            self._datasets[index] = data, labels = self.open_hdf5(index)
+            self._datasets[index] = self.open_hdf5(index)
+        train_labels = Counter(self._datasets[TRAIN][1])
+        other_labels = Counter(chain.from_iterable(
+            d[1] for d in self._datasets[:TRAIN] if d[1] is not None))
+        self._setup_labels_mapping(train_labels, other_labels)
 
     def create_minibatch_data(self):
         """Allocate arrays for minibatch_data etc. here.
@@ -85,7 +93,7 @@ class HDF5Loader(HDF5LoaderBase):
             offset = self.class_lengths[ci] - rem
             self.minibatch_data[i] = dataset[0][offset]
             if self.has_labels:
-                self.minibatch_labels[i] = dataset[1][offset]
+                self.raw_minibatch_labels[i] = dataset[1][offset]
 
 
 @implementer(IFullBatchLoader)

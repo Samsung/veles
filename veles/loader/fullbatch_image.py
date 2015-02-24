@@ -52,15 +52,18 @@ class FullBatchImageLoader(ImageLoader, FullBatchLoader):
         def __iter__(self):
             return self
 
+    def load_labels(self):
+        pass
+
     def load_data(self):
         super(FullBatchImageLoader, self).load_data()
 
         # Allocate data
-        overall = sum(self.class_lengths)
-        self.info("Found %d samples of shape %s (%d TEST, %d VALIDATION, "
-                  "%d TRAIN)", overall, self.shape, *self.class_lengths)
-        required_mem = overall * numpy.prod(self.shape) * numpy.dtype(
-            self.source_dtype).itemsize
+        self.info(
+            "Found %d samples of shape %s (%d TEST, %d VALIDATION, %d TRAIN)",
+            self.total_samples, self.shape, *self.class_lengths)
+        required_mem = self.total_samples * numpy.prod(self.shape) * \
+            numpy.dtype(self.source_dtype).itemsize
         if virtual_memory().available < required_mem:
             gb = 1.0 / (1000 * 1000 * 1000)
             self.critical("Not enough memory (free %.3f Gb, required %.3f Gb)",
@@ -68,7 +71,8 @@ class FullBatchImageLoader(ImageLoader, FullBatchLoader):
             raise MemoryError("Not enough memory")
         # Real allocation will still happen during the second pass
         self.create_originals(self.shape)
-        self.original_label_values.mem = numpy.zeros(overall, numpy.float32)
+        self.original_label_values.mem = numpy.zeros(
+            self.total_samples, numpy.float32)
 
         has_labels = self._fill_original_data()
 
@@ -77,7 +81,7 @@ class FullBatchImageLoader(ImageLoader, FullBatchLoader):
             raise error.BadFormatError(
                 "Some classes do not have labels while other do")
         if sum(has_labels) == 0:
-            self.original_labels.mem = None
+            del self.original_labels[:]
 
     def initialize(self, device, **kwargs):
         """
@@ -115,17 +119,17 @@ class FullBatchImageLoader(ImageLoader, FullBatchLoader):
             self._fill_original_data()
 
     def _fill_original_data(self):
-        overall = sum(self.class_lengths)
         pbar = ProgressBar(
-            term_width=50, maxval=overall * self.samples_inflation,
-            widgets=["Loading %dx%d images " % (overall, self.crop_number),
+            term_width=50, maxval=self.total_samples * self.samples_inflation,
+            widgets=["Loading %dx%d images " % (self.total_samples,
+                                                self.crop_number),
                      Bar(), ' ', Percentage()],
             log_level=logging.INFO, poll=0.5)
         pbar.start()
         offset = 0
         has_labels = []
         data = self.original_data.mem
-        labels = self.original_labels.mem
+        labels = self.original_labels
         label_values = self.original_label_values.mem
         for keys in self.class_keys:
             if len(keys) == 0:
@@ -176,7 +180,7 @@ class FullBatchImageLoaderMSEMixin(ImageLoaderMSEMixin,
         self.original_targets.reset()
         shape = (len(targets),) + targets[0].shape
         self.original_targets.mem = numpy.zeros(
-            (self.original_labels.shape[0],) + targets[0].shape,
+            (len(self.original_labels),) + targets[0].shape,
             self.source_dtype)
         target_mapping = {
             target_labels[i * self.samples_inflation]: i

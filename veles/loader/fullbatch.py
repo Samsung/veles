@@ -8,7 +8,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 from __future__ import division
-
+from collections import Counter
 import numpy
 import six
 from zope.interface import implementer, Interface
@@ -51,7 +51,6 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         original_data: original data (Vector).
         original_labels: original labels (Vector, dtype=Loader.LABEL_DTYPE)
             (in case of classification).
-        on_device: True to load all data to the device memory.
 
     Should be overriden in child class:
         load_data()
@@ -59,22 +58,16 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
     def __init__(self, workflow, **kwargs):
         super(FullBatchLoader, self).__init__(workflow, **kwargs)
         self.verify_interface(IFullBatchLoader)
-        self.on_device = kwargs.get("on_device", False)
         self.validation_ratio = kwargs.get("validation_ratio", None)
 
     def init_unpickled(self):
         super(FullBatchLoader, self).init_unpickled()
-        self.original_data = memory.Vector()
-        self.original_labels = memory.Vector()
+        self._original_data_ = memory.Vector()
+        self._original_labels_ = []
+        self._mapped_original_labels_ = memory.Vector()
         self.sources_["fullbatch_loader"] = {}
         self._global_size = None
         self._krn_const = numpy.zeros(2, dtype=Loader.LABEL_DTYPE)
-
-    def __getstate__(self):
-        state = super(FullBatchLoader, self).__getstate__()
-        for attr in "original_data", "original_labels":
-            state[attr] = None
-        return state
 
     @Loader.shape.getter
     def shape(self):
@@ -110,15 +103,13 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
                 value)
         self._validation_ratio = value
 
-    def check_types(self):
-        if (not isinstance(self.original_data, memory.Vector) or
-                not isinstance(self.original_labels, memory.Vector)):
-            raise error.BadFormatError(
-                "original_data, original_labels must be of type Vector")
-        if (self.original_labels.mem is not None and
-                self.original_labels.dtype != Loader.LABEL_DTYPE):
-            raise error.BadFormatError(
-                "original_labels should have dtype=Loader.LABEL_DTYPE")
+    @property
+    def original_data(self):
+        return self._original_data_
+
+    @property
+    def original_labels(self):
+        return self._original_labels_
 
     def get_ocl_defines(self):
         """Add definitions before building the kernel during initialize().
@@ -128,20 +119,19 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
     def initialize(self, device, **kwargs):
         super(FullBatchLoader, self).initialize(device=device, **kwargs)
         assert self.total_samples > 0
-        self.check_types()
 
         self.info("Normalizing to %s...", self.normalization_type)
-        self.analyze_and_normalize_original_data()
+        self.analyze_original_dataset()
+        self._map_original_labels()
 
-        if not self.on_device or self.device is None:
+        if self.device is None:
             return
 
         self.info("Will load the entire dataset on device")
-        self.original_data.initialize(self.device)
-        self.minibatch_data.initialize(self.device)
+        self.init_vectors(self.original_data, self.minibatch_data)
         if self.has_labels:
-            self.original_labels.initialize(self.device)
-            self.minibatch_labels.initialize(self.device)
+            self.init_vectors(self._mapped_original_labels_,
+                              self.minibatch_labels)
 
         if not self.shuffled_indices:
             self.shuffled_indices.mem = numpy.arange(
@@ -171,7 +161,7 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         else:
             self.set_args(self.original_data, self.minibatch_data,
                           self.device.skip(2),
-                          self.original_labels, self.minibatch_labels,
+                          self._mapped_original_labels_, self.minibatch_labels,
                           self.shuffled_indices, self.minibatch_indices)
 
     def cpu_run(self):
@@ -197,7 +187,7 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         self._local_size = (block_size, 1, 1)
 
     def on_before_create_minibatch_data(self):
-        self._has_labels = bool(self.original_labels)
+        self._has_labels = len(self.original_labels) > 0
         try:
             super(FullBatchLoader, self).on_before_create_minibatch_data()
         except AttributeError:
@@ -206,8 +196,6 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
             self.resize_validation(ratio=self.validation_ratio)
 
     def create_minibatch_data(self):
-        self.check_types()
-
         self.minibatch_data.reset(numpy.zeros(
             (self.max_minibatch_size,) + self.shape, dtype=self.dtype))
 
@@ -216,12 +204,15 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         Create original_data.mem and original_labels.mem.
         :param dshape: Future original_data.shape[1:]
         """
-        length = sum(self.class_lengths)
-        self.original_data.mem = numpy.zeros((length,) + dshape, self.dtype)
-        self.original_labels.mem = numpy.zeros(length, Loader.LABEL_DTYPE)
+        self.original_data.reset(
+            numpy.zeros((self.total_samples,) + dshape, self.dtype))
+        self._mapped_original_labels_.reset(
+            numpy.zeros(self.total_samples, Loader.LABEL_DTYPE))
+        del self.original_labels[:]
+        self.original_labels.extend(None for _ in range(self.total_samples))
 
     def fill_indices(self, start_offset, count):
-        if not self.on_device or self.device is None:
+        if self.device is None:
             return super(FullBatchLoader, self).fill_indices(
                 start_offset, count)
 
@@ -229,7 +220,8 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
                            self.shuffled_indices, self.minibatch_indices)
 
         if self.has_labels:
-            self.unmap_vectors(self.original_labels, self.minibatch_labels)
+            self.unmap_vectors(self._mapped_original_labels_,
+                               self.minibatch_labels)
 
         self._krn_const[0:2] = start_offset, count
         self._kernel_.set_arg(2, self._krn_const[0:1])
@@ -244,14 +236,17 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
                 self.minibatch_indices.mem[:self.minibatch_size]):
             self.minibatch_data[i] = self.original_data[sample_index]
             if self.has_labels:
-                self.minibatch_labels[i] = self.original_labels[sample_index]
+                self.minibatch_labels[i] = \
+                    self._mapped_original_labels_[sample_index]
 
-    def analyze_train_for_normalization(self):
+    def map_minibatch_labels(self):
+        pass
+
+    def analyze_dataset(self):
         """
         Override.
         """
-        if self.has_labels:
-            self._unique_labels_count = len(set(self.original_labels))
+        pass
 
     def normalize_minibatch(self):
         """
@@ -259,7 +254,7 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         """
         pass
 
-    def analyze_and_normalize_original_data(self):
+    def analyze_original_dataset(self):
         self.debug(
             "Data range: (%.6f, %.6f), "
             % (self.original_data.min(), self.original_data.max()))
@@ -287,19 +282,14 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
             self.class_lengths[TRAIN] += self.class_lengths[VALID]
             self.class_lengths[VALID] = 0
             if self.shuffled_indices.mem is None:
-                total_samples = numpy.sum(self.class_lengths)
                 self.shuffled_indices.mem = numpy.arange(
-                    total_samples, dtype=Loader.LABEL_DTYPE)
+                    self.total_samples, dtype=Loader.LABEL_DTYPE)
             return
         offs_test = self.class_lengths[TEST]
         offs = offs_test
         train_samples = self.class_lengths[VALID] + self.class_lengths[TRAIN]
         total_samples = train_samples + offs
-        if isinstance(self.original_labels, memory.Vector):
-            self.original_labels.map_read()
-            original_labels = self.original_labels.mem
-        else:
-            original_labels = self.original_labels
+        original_labels = self.original_labels
 
         if self.shuffled_indices.mem is None:
             self.shuffled_indices.mem = numpy.arange(
@@ -363,6 +353,28 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         self.class_lengths[TRAIN] = (total_samples - self.class_lengths[VALID]
                                      - offs_test)
 
+    def _map_original_labels(self):
+        self._has_labels = len(self.original_labels) > 0
+        if not self.has_labels:
+            return
+        if len(self.original_labels) != self.original_data.shape[0]:
+            raise ValueError(
+                "original_labels and original_data must have the same length "
+                "(%d vs %d)" % (len(self.original_labels),
+                                self.original_data.shape[0]))
+
+        train_different_labels = Counter(
+            self.original_labels[self.class_end_offsets[TRAIN - 1]:])
+        other_different_labels = Counter(
+            self.original_labels[:self.class_end_offsets[TRAIN - 1]])
+        self._setup_labels_mapping(train_different_labels,
+                                   other_different_labels)
+
+        self._mapped_original_labels_.reset(
+            numpy.zeros(self.total_samples, Loader.LABEL_DTYPE))
+        for i, label in enumerate(self.original_labels):
+            self._mapped_original_labels_[i] = self.labels_mapping[label]
+
 
 class FullBatchLoaderMSEMixin(LoaderMSEMixin):
     """FullBatchLoader for MSE workflows.
@@ -371,9 +383,13 @@ class FullBatchLoaderMSEMixin(LoaderMSEMixin):
     """
     def init_unpickled(self):
         super(FullBatchLoaderMSEMixin, self).init_unpickled()
-        self.original_targets = memory.Vector()
+        self._original_targets_ = memory.Vector()
         self._kernel_target_ = None
         self._global_size_target = None
+
+    @property
+    def original_targets(self):
+        return self._original_targets_
 
     def initialize(self, device, **kwargs):
         super(FullBatchLoaderMSEMixin, self).initialize(
@@ -383,11 +399,6 @@ class FullBatchLoaderMSEMixin(LoaderMSEMixin):
         self.info("Normalizing targets to %s...",
                   self.target_normalization_type)
         self.analyze_and_normalize_targets()
-
-    def __getstate__(self):
-        state = super(FullBatchLoaderMSEMixin, self).__getstate__()
-        state["original_targets"] = None
-        return state
 
     def create_minibatch_data(self):
         super(FullBatchLoaderMSEMixin, self).create_minibatch_data()
@@ -404,12 +415,6 @@ class FullBatchLoaderMSEMixin(LoaderMSEMixin):
         self.debug(
             "Normalized target range: (%.6f, %.6f)"
             % (self.original_targets.min(), self.original_targets.max()))
-
-    def check_types(self):
-        super(FullBatchLoaderMSEMixin, self).check_types()
-        if not isinstance(self.original_targets, memory.Vector):
-            raise error.BadFormatError(
-                "original_targets must be of type Vector")
 
     def get_ocl_defines(self):
         return {

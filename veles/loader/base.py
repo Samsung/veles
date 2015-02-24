@@ -1,3 +1,4 @@
+# encoding: utf-8
 """
 Created on Aug 14, 2013
 
@@ -9,10 +10,15 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 from __future__ import division
 from collections import defaultdict
 from copy import copy
+import logging
 import marshal
 import numpy
 import time
 import types
+try:
+    from scipy.stats import chisquare
+except ImportError:
+    chisquare = None
 import six
 from zope.interface import implementer, Interface
 
@@ -20,6 +26,7 @@ from veles.compat import from_none
 import veles.config as config
 from veles.distributable import IDistributable
 import veles.error as error
+from veles.external.prettytable import PrettyTable
 from veles.external.progressbar import ProgressBar
 import veles.memory as memory
 from veles.mutable import Bool
@@ -122,7 +129,6 @@ class Loader(Unit):
         if self._max_minibatch_size < 1:
             raise ValueError("minibatch_size must be greater than zero")
 
-        self._total_samples = 0
         self.class_lengths = [0, 0, 0]
         self.class_end_offsets = [0, 0, 0]
         self._has_labels = False
@@ -138,6 +144,8 @@ class Loader(Unit):
         self.minibatch_data = memory.Vector()
         self.minibatch_indices = memory.Vector()
         self.minibatch_labels = memory.Vector()
+        self._raw_minibatch_labels = []
+        self._labels_mapping = {}
 
         self.failed_minibatches = []
         self._total_failed = 0
@@ -198,12 +206,20 @@ class Loader(Unit):
         return self._has_labels
 
     @property
+    def labels_mapping(self):
+        return self._labels_mapping
+
+    @property
+    def reversed_labels_mapping(self):
+        return list(sorted(self.labels_mapping))
+
+    @property
     def unique_labels_count(self):
         if self._unique_labels_count == 0 and self.class_lengths[TRAIN] > 0 \
                 and self.has_labels:
             different_labels = set()
             self.info("Counting unique labels...")
-            self._iterate_train(lambda: different_labels.update(
+            self._iterate_class(TRAIN, lambda: different_labels.update(
                 self.minibatch_labels))
             self._unique_labels_count = len(different_labels)
         return self._unique_labels_count
@@ -277,16 +293,7 @@ class Loader(Unit):
 
     @property
     def total_samples(self):
-        return self._total_samples
-
-    @total_samples.setter
-    def total_samples(self, value):
-        if value <= 0:
-            raise error.BadFormatError("class_lengths should be filled")
-        if value > numpy.iinfo(Loader.LABEL_DTYPE).max:
-            raise NotImplementedError(
-                "total_samples exceeds int32 capacity.")
-        self._total_samples = value
+        return sum(self.class_lengths)
 
     @property
     def samples_served(self):
@@ -383,6 +390,10 @@ class Loader(Unit):
         self._minibatch_labels = value
 
     @property
+    def raw_minibatch_labels(self):
+        return self._raw_minibatch_labels
+
+    @property
     def epoch_number(self):
         return self._epoch_number
 
@@ -468,22 +479,29 @@ class Loader(Unit):
         self.max_minibatch_size = kwargs.get("minibatch_size",
                                              self.max_minibatch_size)
         self.on_before_create_minibatch_data()
-        self._update_total_samples()
+        self._calc_class_end_offsets()
         self.info("Samples number: test: %d, validation: %d, train: %d",
                   *self.class_lengths)
 
         self.minibatch_labels.reset(numpy.zeros(
             self.max_minibatch_size, dtype=Loader.LABEL_DTYPE)
             if self.has_labels else None)
+        del self.raw_minibatch_labels[:]
+        self.raw_minibatch_labels.extend(
+            None for _ in range(self.max_minibatch_size))
         self.minibatch_indices.reset(numpy.zeros(
             self.max_minibatch_size, dtype=Loader.INDEX_DTYPE))
 
-        self.create_minibatch_data()
+        try:
+            self.create_minibatch_data()
+        except Exception as e:
+            self.error("Failed to create minibatch data")
+            raise from_none(e)
 
         if not self.minibatch_data:
             raise error.BadFormatError("minibatch_data MUST be initialized in "
                                        "create_minibatch_data()")
-        self.analyze_train_for_normalization()
+        self.analyze_dataset()
         if not self._unpickled:
             self.shuffle()
         else:
@@ -599,33 +617,67 @@ class Loader(Unit):
 
         self.fill_minibatch()
         self.normalize_minibatch()
+        self.map_minibatch_labels()
 
         if minibatch_size < self.max_minibatch_size:
             self.minibatch_data[minibatch_size:] = 0.0
             self.minibatch_labels[minibatch_size:] = -1
             self.minibatch_indices[minibatch_size:] = -1
 
-    def analyze_train_for_normalization(self):
+    def analyze_dataset(self):
         if isinstance(self.normalizer, normalization.StatelessNormalizer):
             self.info('Skipped normalization analysis (type was set to "%s")',
                       type(self.normalizer).NAME)
             # Call to analyze() is still needed
             self.normalizer.analyze(self.minibatch_data.mem)
+            if len(self.labels_mapping) == 0:
+                raise ValueError("Normalization analysis was skipped but you "
+                                 "did not setup labels_mapping in load_data()")
+            self._unique_labels_count = len(self.labels_mapping)
             return
         self.info("Performing \"%s\" normalization analysis...",
                   type(self.normalizer).NAME)
-        different_labels = set()
+        train_different_labels = defaultdict(int)
 
         def callback():
             if self.has_labels:
-                different_labels.update(self.minibatch_labels)
+                for lbl in self.raw_minibatch_labels:
+                    train_different_labels[lbl] += 1
             self.normalizer.analyze(self.minibatch_data[:self.minibatch_size])
 
-        self._iterate_train(callback)
-        self._unique_labels_count = len(different_labels)
+        self._iterate_class(TRAIN, callback)
+
+        if not self.has_labels:
+            return
+
+        other_different_labels = defaultdict(int)
+
+        def label_callback():
+            for lbl in self.raw_minibatch_labels:
+                other_different_labels[lbl] += 1
+
+        self._iterate_class(TEST, label_callback)
+        self._iterate_class(VALID, label_callback)
+
+        self._setup_labels_mapping(train_different_labels,
+                                   other_different_labels)
 
     def normalize_minibatch(self):
         self.normalizer.normalize(self.minibatch_data[:self.minibatch_size])
+
+    def map_minibatch_labels(self):
+        if not self.has_labels:
+            return
+        self.minibatch_labels.map_write()
+        for i, l in enumerate(self.raw_minibatch_labels[:self.minibatch_size]):
+            try:
+                self.minibatch_labels[i] = self.labels_mapping[l]
+            except KeyError as e:
+                if i == 0 and l is None:
+                    self.error(
+                        "Looks like you forgot to fill raw_minibatch_labels "
+                        "inside fill_minibatch()")
+                raise from_none(e)
 
     def fill_indices(self, start_offset, count):
         """Fills minibatch_indices.
@@ -652,7 +704,7 @@ class Loader(Unit):
         raise error.Bug("Could not convert sample index to class index, "
                         "probably due to incorrect class_end_offsets.")
 
-    def _update_total_samples(self):
+    def _calc_class_end_offsets(self):
         """Fills self.class_end_offsets from self.class_lengths.
         """
         total_samples = 0
@@ -661,7 +713,6 @@ class Loader(Unit):
                 "class_length must contain integers only"
             total_samples += n
             self.class_end_offsets[i] = total_samples
-        self.total_samples = total_samples
         if self.class_lengths[TRAIN] < 1:
             raise ValueError(
                 "class_length for TRAIN dataset is invalid: %d" %
@@ -712,19 +763,84 @@ class Loader(Unit):
             # for small datasets
             self._minibatch_serve_timestamp_ = time.time()
 
-    def _iterate_train(self, fn):
-        size = int(numpy.ceil(self.class_lengths[TRAIN] /
-                              self.max_minibatch_size))
+    def _iterate_class(self, class_index, fn):
+        size = int(numpy.ceil(
+            self.class_lengths[class_index] / self.max_minibatch_size))
         for i in ProgressBar(term_width=40)(range(size)):
             start_index = i * self.max_minibatch_size
             self.minibatch_size = min(
                 self.max_minibatch_size,
-                self.class_lengths[TRAIN] - start_index)
+                self.class_lengths[class_index] - start_index)
             self.minibatch_indices[:self.minibatch_size] = \
-                numpy.arange(start_index, start_index + self.minibatch_size,
-                             dtype=numpy.int64) + self.class_end_offsets[VALID]
+                numpy.arange(
+                    start_index, start_index + self.minibatch_size,
+                    numpy.int64) + self.class_end_offsets[class_index - 1]
             self.fill_minibatch()
             fn()
+
+    def _setup_labels_mapping(self, train_diff_labels, other_diff_labels):
+        if not self.has_labels:
+            return
+        self._unique_labels_count = len(train_diff_labels)
+        if len(self.labels_mapping) == 0:
+            self.labels_mapping.update(
+                {k: i for i, k in enumerate(sorted(train_diff_labels))})
+        self._print_label_stats(train_diff_labels, "TRAIN")
+        self._validate_and_fix_other_labels(other_diff_labels)
+        self._print_label_stats(other_diff_labels, "TEST & VALIDATION")
+        train_dist, other_dist = map(self._calc_labels_normalized_distribution,
+                                     (train_diff_labels, other_diff_labels))
+        self._compare_label_distributions(train_dist, other_dist)
+
+    def _print_label_stats(self, stats, set_name):
+        values = list(stats.values())
+        mean = int(numpy.mean(values))
+        stddev = int(numpy.std(values))
+        lmin = numpy.min(values)
+        amin = list(stats.keys())[numpy.argmin(values)]
+        lmax = numpy.max(values)
+        amax = list(stats.keys())[numpy.argmax(values)]
+        self.info(
+            u"%s label cardinalities: min: %d (\"%s\"), max: %d (\"%s\"), avg:"
+            u" %d, σ: %d (%d%%)", set_name, lmin, amin, lmax, amax, mean,
+            stddev, stddev * 100 // mean)
+        if not self.logger.isEnabledFor(logging.DEBUG):
+            return
+        total = sum(values)
+        table = PrettyTable("Label", "Cardinality", "%", "Histogram")
+        table.align["Cardinality"] = "r"
+        table.align["%"] = "r"
+        table.align["Histogram"] = "l"
+        for k, v in stats.items():
+            table.add_row(k, v, "%.1f" % (v * 100 / total),
+                          "*" * (v * 25 // lmax))
+        self.debug("Detailed %s label stats:\n%s", set_name, table)
+
+    def _calc_labels_normalized_distribution(self, different_labels):
+        distribution = numpy.array(
+            [v for k, v in sorted(different_labels.items())], numpy.float64)
+        distribution /= numpy.sum(distribution)
+        return distribution
+
+    def _validate_and_fix_other_labels(self, other_labels):
+        for lbl in other_labels:
+            if lbl not in self.labels_mapping:
+                raise LoaderError(
+                    "There is no such label in the training set: %s" % lbl)
+        for lbl in self.labels_mapping:
+            if lbl not in other_labels:
+                other_labels[lbl] = 0
+
+    def _compare_label_distributions(self, train_dist, vt_dist):
+        if chisquare is not None:
+            stat, p = chisquare(vt_dist, train_dist)
+            is_the_same = p > 0.95
+            msg = ("TRAIN and TEST & VALIDATION labels have %s "
+                   "distributions (Χ-square test's p-value is %.3f)")
+            if is_the_same:
+                self.info("OK: " + msg, "the same", p)
+            else:
+                self.warning(msg, "different", p)
 
 
 class LoaderMSEMixin(Unit):
