@@ -133,6 +133,7 @@ root.common.update({
     "trace_misprints": False,
     "trace_undefined_configs": False,
     "trace_run": False,
+    "spinning_run_progress": sys.stdout.isatty(),
     "disable_plotting": "unittest" in sys.modules,
     "precision_type": "double",  # float or double
     "precision_level": 0,  # 0 - use simple summation

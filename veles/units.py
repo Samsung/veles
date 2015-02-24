@@ -19,6 +19,7 @@ from veles.config import root, get, validate_kwargs
 from veles.distributable import Distributable, TriviallyDistributable, \
     IDistributable
 import veles.error as error
+from veles.external.progressbar import spin
 from veles.mutable import Bool, LinkableAttribute
 import veles.thread_pool as thread_pool
 from veles.timeit import timeit
@@ -331,6 +332,8 @@ class Unit(Distributable, Verified):
             self._run_calls += 1
             if root.common.trace_run:
                 self.debug("call #%d", self._run_calls)
+            if root.common.spinning_run_progress:
+                spin()
         else:
             raise ValueError("You can not reset run_was_called flag.")
 

@@ -47,3 +47,4 @@ __version__ = '2.3'
 from .compat import *
 from .widgets import *
 from .progressbar import *
+from .spinner import spin
