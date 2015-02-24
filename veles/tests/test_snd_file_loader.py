@@ -5,8 +5,10 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 import logging
+import os
 import unittest
 
+from veles import __root__
 from veles.loader.libsndfile_loader import SndFileLoader
 
 
@@ -18,7 +20,7 @@ class Test(unittest.TestCase):
     def testSndFileLoader(self):
         loader = SndFileLoader()
         data = loader.decode_file(
-            "/home/markhor/Development/speech_files/sawyer.flac")
+            os.path.join(__root__, "veles", "tests", "res", "sawyer.flac"))
         logging.info("%d samples at %d Hz" % (data["data"].size,
                                               data["sampling_rate"]))
 
