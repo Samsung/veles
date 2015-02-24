@@ -10,6 +10,8 @@ Contact:
 
 """
 
+import sys
+__unittest = "unittest" in sys.modules
 import atexit
 import binascii
 from email.utils import formatdate
@@ -21,12 +23,20 @@ import os
 import resource
 import runpy
 from six import print_, StringIO
-import sys
 
 import veles
+
+
+def unload_unittest():
+    if not __unittest and "unittest" in sys.modules:
+        # Ensure unittest package is unloaded if it should be
+        for k in [k for k in sys.modules if k.startswith("unittest")]:
+            del sys.modules[k]
+unload_unittest()
+
+from veles.config import root
 from veles.cmdline import CommandLineBase
 from veles.compat import from_none
-from veles.config import root
 from veles.external import daemon
 from veles.logger import Logger
 from veles.launcher import Launcher
@@ -35,6 +45,8 @@ from veles.pickle2 import setup_pickle_debug
 from veles import prng
 from veles.snapshotter import Snapshotter
 from veles.thread_pool import ThreadPool
+
+unload_unittest()
 
 if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
     FileNotFoundError = IOError  # pylint: disable=W0622
