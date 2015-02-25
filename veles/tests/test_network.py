@@ -6,17 +6,17 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import logging
-import numpy
 from six import BytesIO, PY3
 import threading
 from twisted.internet import reactor
 import unittest
 
 import veles.client as client
-import veles.server as server
-from veles.workflow import Workflow
-from veles.tests import DummyLauncher
 from veles.external.txzmq.connection import ZmqConnection
+from veles.prng import RandomGenerator
+import veles.server as server
+from veles.tests import DummyLauncher
+from veles.workflow import Workflow
 
 
 class TestWorkflow(Workflow):
@@ -118,7 +118,7 @@ class TestZmqConnection(unittest.TestCase):
             def send(self, data, *args, **kwargs):
                 self._bio.write(data)
 
-        idata = numpy.random.bytes(128000)
+        idata = RandomGenerator(None).bytes(128000)
         bufsize = 4096
         for codec in range(4):
             socket = FakeSocket(BytesIO())

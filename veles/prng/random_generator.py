@@ -124,6 +124,13 @@ class RandomGenerator(Pickleable):
         return retval
 
     @threadsafe
+    def bytes(self, length):
+        self.save_state()
+        retval = my_random.bytes(length)
+        self.restore_state()
+        return retval
+
+    @threadsafe
     def fill(self, arr, vle_min=-1.0, vle_max=1.0):
         """Fills numpy array with random numbers.
 

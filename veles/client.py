@@ -9,7 +9,6 @@ import argparse
 from copy import copy
 import datetime
 import json
-import numpy
 import six
 from six import add_metaclass
 import time
@@ -26,6 +25,7 @@ import veles.external.fysom as fysom
 from veles.external.prettytable import PrettyTable
 from veles.external.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
 from veles.network_common import NetworkAgent, StringLineReceiver, IDLogger
+from veles.prng import RandomGenerator
 from veles.thread_pool import errback
 from veles.timeit import timeit
 
@@ -179,6 +179,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
         self._current_deferred = None
         self._power_upload_time = 0
         self._power_upload_threshold = 60
+        self.rand = RandomGenerator(None)
 
     def connectionMade(self):
         self.info("Connected in %s state", self.state.current)
@@ -262,7 +263,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
             self.host.launcher.stop()
             return
         try:
-            if numpy.random.random() < self.host.death_probability:
+            if self.rand.random() < self.host.death_probability:
                 raise error.Bug("This slave has randomly crashed (death "
                                 "probability was %f)" %
                                 self.host.death_probability)
