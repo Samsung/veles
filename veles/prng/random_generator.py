@@ -103,6 +103,27 @@ class RandomGenerator(Pickleable):
         return retval
 
     @threadsafe
+    def uniform(self, low=0.0, high=1.0, size=None):
+        self.save_state()
+        retval = my_random.uniform(low=low, high=high, size=size)
+        self.restore_state()
+        return retval
+
+    @threadsafe
+    def random(self, size=None):
+        self.save_state()
+        retval = my_random.random(size=size)
+        self.restore_state()
+        return retval
+
+    @threadsafe
+    def choice(self, a, size=None, replace=True, p=None):
+        self.save_state()
+        retval = my_random.choice(a, size=size, replace=replace, p=p)
+        self.restore_state()
+        return retval
+
+    @threadsafe
     def fill(self, arr, vle_min=-1.0, vle_max=1.0):
         """Fills numpy array with random numbers.
 
