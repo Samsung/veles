@@ -129,20 +129,22 @@ class FullBatchImageLoader(ImageLoader, FullBatchLoader):
         offset = 0
         has_labels = []
         data = self.original_data.mem
-        labels = self.original_labels
         label_values = self.original_label_values.mem
         for keys in self.class_keys:
             if len(keys) == 0:
                 continue
             if self.samples_inflation == 1:
+                labels = [None] * len(keys)
                 has_labels.append(self.load_keys(
-                    keys, pbar, data[offset:], labels[offset:],
+                    keys, pbar, data[offset:], labels,
                     label_values[offset:]))
                 offset += len(keys)
-                continue
-            offset, hl = self._load_distorted_keys(
-                keys, data, labels, label_values, offset, pbar)
-            has_labels.append(hl)
+            else:
+                labels = [None] * len(keys) * self.samples_inflation
+                offset, hl = self._load_distorted_keys(
+                    keys, data, labels, label_values, offset, pbar)
+                has_labels.append(hl)
+            self.original_labels[offset - len(labels):offset] = labels
         pbar.finish()
         return has_labels
 

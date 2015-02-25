@@ -656,9 +656,6 @@ class ImageLoader(Loader):
         label = self.get_image_label(key)
         if label is not None:
             has_labels = True
-            assert isinstance(label, int), \
-                "Got non-integer label %s of type %s for %s" % (
-                    label, label.__class__, key)
         if has_labels and label is None:
             raise error.BadFormatError(
                 "%s does not have a label, but others do" % key)
@@ -971,8 +968,6 @@ class AutoLabelFileImageLoader(FileImageLoader):
         self.label_regexp = re.compile(kwargs.get(
             "label_regexp", ".*%(sep)s([^%(sep)s]+)%(sep)s[^%(sep)s]+$" %
             {"sep": "\\" + os.sep}))
-        self.unique_labels = {}
-        self.labels_count = 0
 
     def get_label_from_filename(self, filename):
         match = self.label_regexp.search(filename)
@@ -980,8 +975,4 @@ class AutoLabelFileImageLoader(FileImageLoader):
             raise error.BadFormatError(
                 "%s does not match label RegExp %s" %
                 (filename, self.label_regexp.pattern))
-        name = match.group(1)
-        if name not in self.unique_labels:
-            self.unique_labels[name] = self.labels_count
-            self.labels_count += 1
-        return self.unique_labels[name]
+        return match.group(1)
