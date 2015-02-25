@@ -18,6 +18,7 @@ import tarfile
 import tempfile
 import threading
 from twisted.internet import reactor
+from twisted.internet.error import CannotListenError
 from twisted.web.server import Site
 from twisted.web.resource import Resource
 import unittest
@@ -49,7 +50,12 @@ class TestForgeClient(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.router = Router()
-        reactor.listenTCP(PORT, Site(cls.router))
+        while True:
+            try:
+                reactor.listenTCP(PORT, Site(cls.router))
+                break
+            except CannotListenError:
+                continue
         cls.thread = threading.Thread(target=reactor.run, args=(False,))
         cls.thread.start()
 
