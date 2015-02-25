@@ -788,6 +788,8 @@ class Loader(Unit):
             self.labels_mapping.update(
                 {k: i for i, k in enumerate(sorted(train_diff_labels))})
         self._print_label_stats(train_diff_labels, "TRAIN")
+        if sum(self.class_lengths[:TRAIN]) == 0:
+            return
         self._validate_and_fix_other_labels(other_diff_labels)
         self._print_label_stats(other_diff_labels, "TEST & VALIDATION")
         train_dist, other_dist = map(self._calc_labels_normalized_distribution,
