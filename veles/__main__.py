@@ -76,8 +76,7 @@ class Main(Logger, CommandLineBase):
 
     @property
     def acceleration_is_enabled(self):
-        return not (self.launcher.is_master or self.optimization or
-                    self._disable_acceleration)
+        return not (self.launcher.is_master or self._disable_acceleration)
 
     def _process_special_args(self):
         if len(sys.argv) > 1 and sys.argv[1] == "forge":
