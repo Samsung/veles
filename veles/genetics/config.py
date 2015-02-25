@@ -21,6 +21,7 @@ from veles.units import IUnit, Unit
 from veles.workflow import Workflow, Repeater
 from veles.launcher import Launcher, filter_argv
 from veles.plotting_units import AccumulatingPlotter
+import veles.prng as prng
 
 
 if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
@@ -259,11 +260,11 @@ class ConfigChromosome(Chromosome):
     """
     def __init__(self, population,
                  size, minvles, maxvles, accuracy, codes,
-                 binary, numeric):
+                 binary, numeric, rand):
         self.population_ = population
         self.fitness = None
         super(ConfigChromosome, self).__init__(
-            size, minvles, maxvles, accuracy, codes, binary, numeric)
+            size, minvles, maxvles, accuracy, codes, binary, numeric, rand)
 
     def apply_config(self):
         for i, tune in enumerate(self.population_.registered_tunes_):
@@ -313,7 +314,7 @@ class ConfigPopulation(Population):
     """Creates population based on Config tree's Tune elements.
     """
     def __init__(self, cfgroot, main, workflow_module, multi, size,
-                 accuracy=0.00001):
+                 accuracy=0.00001, rand=prng.get()):
         """Constructor.
 
         Parameters:
@@ -340,7 +341,7 @@ class ConfigPopulation(Population):
             len(self.registered_tunes_),
             list(x.minvle for x in self.registered_tunes_),
             list(x.maxvle for x in self.registered_tunes_),
-            size, accuracy)
+            size, accuracy, rand)
 
     def register_tune(self, cfgroot, name, value):
         value.root = cfgroot
