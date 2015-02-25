@@ -174,9 +174,13 @@ class PicklesImageFullBatchLoader(PicklesLoader, FullBatchImageLoader):
         self.original_class_lengths = self.class_lengths
         self.image_data = self.original_data.mem
         self.original_data.mem = None
-        self.image_labels = self.original_labels
+        self.image_labels = self.original_labels[:]
         del self.original_labels[:]
         FullBatchImageLoader.load_data(self)
         assert self.original_class_lengths == self.class_lengths
         del self.image_data
+
+    def initialize(self, device, **kwargs):
+        super(PicklesImageFullBatchLoader, self).initialize(
+            device=device, **kwargs)
         del self.image_labels
