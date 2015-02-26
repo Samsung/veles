@@ -450,7 +450,7 @@ class ConfigPopulation(Population):
 
     def on_after_evolution_step(self):
         completed = super(ConfigPopulation, self).on_after_evolution_step()
-        if completed and self.is_slave is False:
+        if completed and not self.is_slave:
             # Stop master's workflow
             self.main_.workflow.stop()
         return completed
