@@ -13,7 +13,7 @@ import unittest
 
 import veles.client as client
 from veles.external.txzmq.connection import ZmqConnection
-from veles.prng import RandomGenerator
+from veles.prng import get as get_rg
 import veles.server as server
 from veles.tests import DummyLauncher
 from veles.workflow import Workflow
@@ -118,7 +118,7 @@ class TestZmqConnection(unittest.TestCase):
             def send(self, data, *args, **kwargs):
                 self._bio.write(data)
 
-        idata = RandomGenerator(None).bytes(128000)
+        idata = get_rg().bytes(128000)
         bufsize = 4096
         for codec in range(4):
             socket = FakeSocket(BytesIO())

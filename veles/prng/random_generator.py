@@ -93,44 +93,45 @@ class RandomGenerator(Pickleable):
         numpy.save(self.seed_file_name, seed)
         self.restore_state()
 
+    def preserve_state(fn):
+        def wrapped_preserve_state(self, *args, **kwargs):
+            self.save_state()
+            retval = fn(self, *args, **kwargs)
+            self.restore_state()
+            return retval
+
+        wrapped_preserve_state.__name__ = "wrapped_" + fn.__name__
+        return wrapped_preserve_state
+
     @threadsafe
+    @preserve_state
     def normal(self, loc=0.0, scale=1.0, size=None):
         """numpy.normal() with saving the random state.
         """
-        self.save_state()
-        retval = my_random.normal(loc=loc, scale=scale, size=size)
-        self.restore_state()
-        return retval
+        return my_random.normal(loc=loc, scale=scale, size=size)
 
     @threadsafe
+    @preserve_state
     def uniform(self, low=0.0, high=1.0, size=None):
-        self.save_state()
-        retval = my_random.uniform(low=low, high=high, size=size)
-        self.restore_state()
-        return retval
+        return my_random.uniform(low=low, high=high, size=size)
 
     @threadsafe
+    @preserve_state
     def random(self, size=None):
-        self.save_state()
-        retval = my_random.random(size=size)
-        self.restore_state()
-        return retval
+        return my_random.random(size=size)
 
     @threadsafe
+    @preserve_state
     def choice(self, a, size=None, replace=True, p=None):
-        self.save_state()
-        retval = my_random.choice(a, size=size, replace=replace, p=p)
-        self.restore_state()
-        return retval
+        return my_random.choice(a, size=size, replace=replace, p=p)
 
     @threadsafe
+    @preserve_state
     def bytes(self, length):
-        self.save_state()
-        retval = my_random.bytes(length)
-        self.restore_state()
-        return retval
+        return my_random.bytes(length)
 
     @threadsafe
+    @preserve_state
     def fill(self, arr, vle_min=-1.0, vle_max=1.0):
         """Fills numpy array with random numbers.
 
@@ -139,13 +140,12 @@ class RandomGenerator(Pickleable):
             vle_min: minimum value in random distribution.
             vle_max: maximum value in random distribution.
         """
-        self.save_state()
         arr = formats.ravel(arr)
         arr[:] = (my_random.rand(arr.size) * (vle_max - vle_min) +
                   vle_min)[:]
-        self.restore_state()
 
     @threadsafe
+    @preserve_state
     def fill_normal_real(self, arr, mean, stddev, clip_to_sigma=5.0):
         """
         #Fills real-valued numpy array with random normal distribution.
@@ -156,24 +156,23 @@ class RandomGenerator(Pickleable):
         #    stddev:
         #    min_val, max_val (optional): clipping values of output data.
         """
-        self.save_state()
         arr = formats.ravel(arr)
         arr[:] = my_random.normal(loc=mean, scale=stddev, size=arr.size)[:]
 
         numpy.clip(arr, mean - clip_to_sigma * stddev,
                    mean + clip_to_sigma * stddev, out=arr)
-        self.restore_state()
 
     @threadsafe
+    @preserve_state
     def shuffle(self, arr):
         """numpy.shuffle() with saving the random state.
         """
-        self.save_state()
         if my_random.shuffle is not None:
             my_random.shuffle(arr)
         else:
             import logging
-            logging.warn("my_random.shuffle is None")
+            logging.getLogger(self.__class__.__name__).warning(
+                "numpy.random.shuffle is None")
             n = len(arr) - 1
             for i in range(n):
                 j = n + 1
@@ -182,41 +181,32 @@ class RandomGenerator(Pickleable):
                 t = arr[i]
                 arr[i] = arr[j]
                 arr[j] = t
-        self.restore_state()
 
     @threadsafe
+    @preserve_state
     def permutation(self, x):
         """numpy.permutation() with saving the random state.
         """
-        self.save_state()
-        retval = my_random.permutation(x)
-        self.restore_state()
-        return retval
+        return my_random.permutation(x)
 
     @threadsafe
+    @preserve_state
     def randint(self, low, high=None, size=None):
         """Returns random integer(s) from [low, high).
         """
-        self.save_state()
-        retval = my_random.randint(low, high, size)
-        self.restore_state()
-        return retval
+        return my_random.randint(low, high, size)
 
     @threadsafe
+    @preserve_state
     def random_sample(self, size=None):
         """Returns random integer(s) from [low, high).
         """
-        self.save_state()
-        retval = my_random.random_sample(size)
-        self.restore_state()
-        return retval
+        return my_random.random_sample(size)
 
     @threadsafe
+    @preserve_state
     def rand(self, *args):
-        self.save_state()
-        retval = my_random.rand(*args)
-        self.restore_state()
-        return retval
+        return my_random.rand(*args)
 
     def __call__(self, *args):
         return self.rand(*args)
@@ -241,6 +231,7 @@ class RandomGenerator(Pickleable):
         return my_random.get_state()
 
     threadsafe = staticmethod(threadsafe)
+    preserve_state = staticmethod(preserve_state)
 
 
 def xorshift128plus(states, index):

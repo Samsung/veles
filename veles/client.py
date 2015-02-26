@@ -25,7 +25,7 @@ import veles.external.fysom as fysom
 from veles.external.prettytable import PrettyTable
 from veles.external.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
 from veles.network_common import NetworkAgent, StringLineReceiver, IDLogger
-from veles.prng import RandomGenerator
+from veles.prng import get as get_rg
 from veles.thread_pool import errback
 from veles.timeit import timeit
 
@@ -179,7 +179,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
         self._current_deferred = None
         self._power_upload_time = 0
         self._power_upload_threshold = 60
-        self.rand = RandomGenerator(None)
+        self.rand = get_rg()
 
     def connectionMade(self):
         self.info("Connected in %s state", self.state.current)
