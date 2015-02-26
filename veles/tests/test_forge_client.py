@@ -50,12 +50,13 @@ class TestForgeClient(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.router = Router()
+        global PORT
         while True:
             try:
                 reactor.listenTCP(PORT, Site(cls.router))
                 break
             except CannotListenError:
-                continue
+                PORT = 8068 + randint(-1000, 1000)
         cls.thread = threading.Thread(target=reactor.run, args=(False,))
         cls.thread.start()
 
