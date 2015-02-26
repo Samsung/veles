@@ -778,7 +778,7 @@ class Population(Pickleable):
     def _evolve(self):
         """Evolve until the completion.
         """
-        repeat = [False]
+        repeat = [False]  # matters only for standalone evolution
 
         def after_evolution_step():
             if not self.on_after_evolution_step():
@@ -799,7 +799,10 @@ class Population(Pickleable):
         """This method can be overriden.
         """
         while self._evolve():
+            # Evolve until convergence in standalone mode
             pass
+        # On master, self._evolve will schedule population evaluation
+        # and leave this function immediately.
 
     def on_after_evolution_step(self):
         """Called after an evolution step.

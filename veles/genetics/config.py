@@ -18,7 +18,7 @@ from veles.distributable import IDistributable
 from veles.genetics.simple import Chromosome, Population
 from veles.mutable import Bool
 from veles.units import IUnit, Unit
-from veles.workflow import Workflow, Repeater
+from veles.workflow import Workflow, Repeater, NoMoreJobs
 from veles.launcher import Launcher, filter_argv
 from veles.plotting_units import AccumulatingPlotter
 import veles.prng as prng
@@ -159,18 +159,23 @@ class GeneticsContainer(Unit):
         assert self.is_slave
         self._chromo = value
 
+    @property
+    def has_data_for_slave(self):
+        return bool(len(self.retry_chromos) or len(self.pending_chromos))
+
     def generate_data_for_slave(self, slave):
         if slave.id in self.scheduled_chromos:
             # We do not support more than one job for a slave
             # Wait until the previous job finishes via apply_data_from_slave()
-            return False
+            raise ValueError("slave requested a new job, "
+                             "but hadn't completed previous")
         try:
             idx = self.retry_chromos.pop()
         except IndexError:
             try:
                 idx = self.pending_chromos.pop()
             except IndexError:
-                return False
+                raise NoMoreJobs()
         self.generation_evolved <<= False
         self.scheduled_chromos[slave.id] = idx
         self.info("Assigned chromosome %d to slave %s", idx, slave.id)
@@ -194,7 +199,7 @@ class GeneticsContainer(Unit):
         self.max_fitness = max(self.max_fitness, data)
         self.info("Got fitness %.2f for chromosome number %d", data, idx)
         if self._generation_evolved:
-            self.info("Evaluated everything, breeding season approaches...")
+            self.info("Evaluated the entire population")
             self.generation_evolved <<= True
             self.on_evaluation_finished()  # pylint: disable=E1102
 
@@ -331,6 +336,7 @@ class ConfigPopulation(Population):
         self.evaluations_pending = 0
         self.job_request_queue_ = None
         self.job_response_queue_ = None
+        self.is_slave = None
 
         self.registered_tunes_ = []
 
@@ -408,9 +414,9 @@ class ConfigPopulation(Population):
     def evolve_multi(self):
         parser = Launcher.init_parser()
         args, _ = parser.parse_known_args()
-        is_slave = bool(args.master_address.strip())
-        if is_slave:
-            # Fork before creating the OpenCL device
+        self.is_slave = bool(args.master_address.strip())
+        if self.is_slave:
+            # Fork before creating the GPU device
             self.job_connection = Pipe()
             self.job_process = Process(target=self.job_process,
                                        args=self.job_connection)
@@ -418,11 +424,12 @@ class ConfigPopulation(Population):
             self.job_connection[0].close()
 
             root.common.disable_plotting = True
+
         # Launch the container workflow
         self.main_.run_workflow(GeneticsWorkflow,
                                 kwargs_load={"population": self})
 
-        if is_slave:
+        if self.is_slave:
             # Terminate the worker process
             try:
                 self.job_connection[1].send(None)
@@ -440,3 +447,10 @@ class ConfigPopulation(Population):
             self.evolve_multi()
         else:
             super(ConfigPopulation, self).evolve()
+
+    def on_after_evolution_step(self):
+        completed = super(ConfigPopulation, self).on_after_evolution_step()
+        if completed and self.is_slave is False:
+            # Stop master's workflow
+            self.main_.workflow.stop()
+        return completed
