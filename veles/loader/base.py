@@ -623,7 +623,8 @@ class Loader(Unit):
 
         if minibatch_size < self.max_minibatch_size:
             self.minibatch_data[minibatch_size:] = 0.0
-            self.minibatch_labels[minibatch_size:] = -1
+            if self.has_labels:
+                self.minibatch_labels[minibatch_size:] = -1
             self.minibatch_indices[minibatch_size:] = -1
 
     def analyze_dataset(self):
