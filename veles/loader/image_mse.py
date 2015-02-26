@@ -12,7 +12,7 @@ from itertools import chain
 import numpy
 
 from veles import error
-from veles.loader.base import LoaderMSEMixin, TARGET, Loader
+from veles.loader.base import LoaderMSEMixin, TARGET
 from veles.loader.image import ImageLoader
 from veles.loader.file_image import FileImageLoader
 
@@ -44,11 +44,12 @@ class ImageLoaderMSEMixin(LoaderMSEMixin):
                 "Number of class samples %d differs from the number of "
                 "targets %d" % (self.total_samples, length))
         if self.has_labels:
-            labels = numpy.zeros(length, dtype=Loader.LABEL_DTYPE)
+            labels = [None] * length
             assert self.load_target_keys(self.target_keys, None, labels)
             if len(set(labels)) < length:
                 raise error.BadFormatError("Targets have duplicate labels")
-            self.target_label_map = {l: self.target_keys[l] for l in labels}
+            self.target_label_map = {
+                l: k for l, k in zip(labels, self.target_keys)}
 
     def load_target_keys(self, keys, data, labels):
         """Loads data from the specified keys.

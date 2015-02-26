@@ -14,7 +14,6 @@ from zope.interface import implementer
 
 from veles import error
 from veles.external.progressbar import ProgressBar, Percentage, Bar
-from veles.loader.base import Loader
 from veles.loader.fullbatch import IFullBatchLoader, FullBatchLoader, \
     FullBatchLoaderMSEMixin
 from veles.loader.image import ImageLoader
@@ -159,7 +158,7 @@ class FullBatchImageLoaderMSEMixin(ImageLoaderMSEMixin,
         length = len(self.target_keys) * self.samples_inflation
         targets = numpy.zeros(
             (length,) + self.targets_shape, dtype=self.source_dtype)
-        target_labels = numpy.zeros(length, dtype=Loader.LABEL_DTYPE)
+        target_labels = [None] * length
         has_labels = self.load_target_keys(
             self.target_keys, targets, target_labels)
         if not has_labels:
@@ -184,13 +183,13 @@ class FullBatchImageLoaderMSEMixin(ImageLoaderMSEMixin,
             (len(self.original_labels),) + targets[0].shape,
             self.source_dtype)
         target_mapping = {
-            target_labels[i * self.samples_inflation]: i
+            target_labels[i * self.samples_inflation]: targets[i]
             for i in range(length // self.samples_inflation)}
         self.class_targets.reset(numpy.empty(shape, self.source_dtype))
-        for i in range(len(target_labels)):
-            self.class_targets.mem[i] = targets[target_mapping[i]]
+        for i, label in enumerate(target_labels):
+            self.class_targets[i] = target_mapping[label]
         for i, label in enumerate(self.original_labels):
-            self.original_targets[i] = targets[target_mapping[label]]
+            self.original_targets[i] = target_mapping[label]
 
 
 class FullBatchImageLoaderMSE(FullBatchImageLoaderMSEMixin,
