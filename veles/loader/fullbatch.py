@@ -351,7 +351,7 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
 
     def _map_original_labels(self):
         self._has_labels = len(self.original_labels) > 0
-        if not self.has_labels:
+        if not self.has_labels or len(self.labels_mapping) > 0:
             return
         if len(self.original_labels) != self.original_data.shape[0]:
             raise ValueError(
