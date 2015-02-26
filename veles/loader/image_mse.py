@@ -13,7 +13,8 @@ import numpy
 
 from veles import error
 from veles.loader.base import LoaderMSEMixin, TARGET, Loader
-from veles.loader.image import ImageLoader, FileImageLoader
+from veles.loader.image import ImageLoader
+from veles.loader.file_image import FileImageLoader
 
 
 class ImageLoaderMSEMixin(LoaderMSEMixin):

@@ -652,17 +652,17 @@ class Loader(Unit):
         if not self.has_labels or len(self.labels_mapping) > 0:
             return
 
-        other_different_labels = defaultdict(int)
+        other_different_labels = defaultdict(int), defaultdict(int)
 
-        def label_callback():
-            for lbl in self.raw_minibatch_labels:
-                other_different_labels[lbl] += 1
+        for index, diff_labels in other_different_labels:
+            def other_callback():
+                for lbl in self.raw_minibatch_labels:
+                    other_different_labels[index][lbl] += 1  # nopep8 pylint: disable=W0640
 
-        self._iterate_class(TEST, label_callback)
-        self._iterate_class(VALID, label_callback)
+            self._iterate_class(index, other_callback)
 
-        self._setup_labels_mapping(train_different_labels,
-                                   other_different_labels)
+        self._setup_labels_mapping(
+            other_different_labels + (train_different_labels,))
 
     def normalize_minibatch(self):
         self.normalizer.normalize(self.minibatch_data[:self.minibatch_size])
@@ -773,28 +773,31 @@ class Loader(Unit):
             self.minibatch_size = min(
                 self.max_minibatch_size,
                 self.class_lengths[class_index] - start_index)
+            offset = self.class_end_offsets[class_index - 1] + start_index
             self.minibatch_indices[:self.minibatch_size] = \
-                numpy.arange(
-                    start_index, start_index + self.minibatch_size,
-                    numpy.int64) + self.class_end_offsets[class_index - 1]
+                self.shuffled_indices[offset:offset + self.minibatch_size]
             self.fill_minibatch()
             fn()
 
-    def _setup_labels_mapping(self, train_diff_labels, other_diff_labels):
+    def _setup_labels_mapping(self, diff_labels):
         if not self.has_labels:
             return
+        other_diff_labels, train_diff_labels = \
+            diff_labels[:TRAIN], diff_labels[TRAIN]
         self._unique_labels_count = len(train_diff_labels)
         if len(self.labels_mapping) == 0:
             self.labels_mapping.update(
                 {k: i for i, k in enumerate(sorted(train_diff_labels))})
         self._print_label_stats(train_diff_labels, "TRAIN")
-        if sum(self.class_lengths[:TRAIN]) == 0:
-            return
-        self._validate_and_fix_other_labels(other_diff_labels)
-        self._print_label_stats(other_diff_labels, "TEST & VALIDATION")
-        train_dist, other_dist = map(self._calc_labels_normalized_distribution,
-                                     (train_diff_labels, other_diff_labels))
-        self._compare_label_distributions(train_dist, other_dist)
+        for i, diff_labels in enumerate(other_diff_labels):
+            if self.class_lengths[i] > 0:
+                self._validate_and_fix_other_labels(diff_labels)
+                self._print_label_stats(diff_labels, CLASS_NAME[i])
+        train_dist, test_dist, valid_dist = map(
+            self._calc_labels_normalized_distribution,
+            (train_diff_labels,) + other_diff_labels)
+        for i, dist in enumerate((test_dist, valid_dist)):
+            self._compare_label_distributions(train_dist, dist, CLASS_NAME[i])
 
     def _print_label_stats(self, stats, set_name):
         values = list(stats.values())
@@ -832,29 +835,33 @@ class Loader(Unit):
         return distribution
 
     def _validate_and_fix_other_labels(self, other_labels):
-        for lbl in other_labels:
-            if lbl not in self.labels_mapping:
-                raise LoaderError(
-                    "There is no such label in the training set: %s" % lbl)
-        for lbl in self.labels_mapping:
-            if lbl not in other_labels:
-                self.warning(
-                    "There is no such label in the test/validation set: %s",
-                    lbl)
+        train_set = set(self.labels_mapping)
+        other_set = set(other_labels)
+        diff = other_set - train_set
+        if len(diff) > 0:
+            self.debug("Other labels: %s", other_labels)
+            raise LoaderError(
+                "There are no such labels in the training set: %s" % diff)
+        diff = train_set - other_set
+        if len(diff) > 0:
+            for lbl in diff:
                 other_labels[lbl] = 0
+            self.warning(
+                "There are no such labels in the test/validation set: %s",
+                diff)
 
-    def _compare_label_distributions(self, train_dist, other_dist):
+    def _compare_label_distributions(self, train_dist, other_dist, other_name):
         if sum(other_dist) == 0:
             return
         if chisquare is not None:
-            stat, p = chisquare(other_dist, train_dist)
+            _, p = chisquare(other_dist, train_dist)
             is_the_same = p > 0.95
-            msg = ("TRAIN and TEST & VALIDATION labels have %s "
+            msg = ("TRAIN and %s labels have %s "
                    "distributions (Χ-square test's p-value is %.3f)")
             if is_the_same:
-                self.info("OK: " + msg, "the same", p)
+                self.info("OK: " + msg, other_name, "the same", p)
             else:
-                self.warning(msg, "different", p)
+                self.warning(msg, other_name, "different", p)
 
 
 class LoaderMSEMixin(Unit):

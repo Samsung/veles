@@ -10,8 +10,8 @@ from veles.loader.base import ILoader, Loader, CLASS_NAME, TARGET, TRAIN, \
     VALID, TEST
 from veles.loader.fullbatch import IFullBatchLoader, FullBatchLoader, \
     FullBatchLoaderMSE
-from veles.loader.image import IImageLoader, ImageLoader, IFileImageLoader, \
-    FileImageLoader
+from veles.loader.image import IImageLoader, ImageLoader
+from veles.loader.file_image import IFileImageLoader, FileImageLoader
 from veles.loader.fullbatch_image import FullBatchFileImageLoader, \
     FullBatchFileImageLoaderMSE, FullBatchAutoLabelFileImageLoader
 from veles.loader.pickles import PicklesImageFullBatchLoader

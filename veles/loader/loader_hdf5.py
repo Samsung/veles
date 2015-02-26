@@ -8,13 +8,12 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 from collections import Counter
-from itertools import chain
 import h5py
 import numpy
 from zope.interface import implementer
 
 from veles import error
-from veles.loader.base import ILoader, Loader, TRAIN
+from veles.loader.base import ILoader, Loader
 from veles.loader.fullbatch import IFullBatchLoader, FullBatchLoader
 
 
@@ -72,10 +71,8 @@ class HDF5Loader(HDF5LoaderBase):
     def load_data(self):
         for index in range(3):
             self._datasets[index] = self.open_hdf5(index)
-        train_labels = Counter(self._datasets[TRAIN][1])
-        other_labels = Counter(chain.from_iterable(
-            d[1] for d in self._datasets[:TRAIN] if d[1] is not None))
-        self._setup_labels_mapping(train_labels, other_labels)
+        diff_labels = tuple(Counter(self._datasets[i][1]) for i in range(3))
+        self._setup_labels_mapping(diff_labels)
 
     def create_minibatch_data(self):
         """Allocate arrays for minibatch_data etc. here.

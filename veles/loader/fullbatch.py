@@ -192,8 +192,7 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
             super(FullBatchLoader, self).on_before_create_minibatch_data()
         except AttributeError:
             pass
-        if self.validation_ratio is not None:
-            self.resize_validation(ratio=self.validation_ratio)
+        self._resize_validation()
 
     def create_minibatch_data(self):
         self.minibatch_data.reset(numpy.zeros(
@@ -265,19 +264,16 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
             "Normalized data range: (%.6f, %.6f), "
             % (self.original_data.min(), self.original_data.max()))
 
-    def resize_validation(self, rand=None, ratio=None):
+    def _resize_validation(self):
         """Extracts validation dataset from joined validation and train
         datasets randomly.
 
         We will rearrange indexes only.
-
-        Parameters:
-            ratio: how many samples move to validation dataset
-                   relative to the entire samples count of validation and
-                   train classes.
-            rand: veles.prng.RandomGenerator, if it is None, will use self.prng
         """
-        rand = rand or self.prng
+        rand = self.prng
+        ratio = self.validation_ratio
+        if ratio is None:
+            return
         if ratio <= 0:  # Dispose validation set
             self.class_lengths[TRAIN] += self.class_lengths[VALID]
             self.class_lengths[VALID] = 0
@@ -298,7 +294,7 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         shuffled_indices = self.shuffled_indices.mem
 
         # If there are no labels
-        if original_labels is None:
+        if not self.has_labels:
             n = int(numpy.round(ratio * train_samples))
             while n > 0:
                 i = rand.randint(offs, offs + train_samples)
@@ -324,8 +320,8 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
             n_train = nn[l]
             nn[l] = max(int(numpy.round(ratio * nn[l])), 1)
             if nn[l] >= n_train:
-                raise error.NotExistsError("There are too few labels "
-                                           "for class %d" % (l))
+                raise error.NotExistsError(
+                    "There are too few labels for class %d" % l)
             n += nn[l]
         while n > 0:
             i = rand.randint(offs, offs_test + train_samples)
@@ -363,12 +359,13 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
                 "(%d vs %d)" % (len(self.original_labels),
                                 self.original_data.shape[0]))
 
-        train_different_labels = Counter(
-            self.original_labels[self.class_end_offsets[TRAIN - 1]:])
-        other_different_labels = Counter(
-            self.original_labels[:self.class_end_offsets[TRAIN - 1]])
-        self._setup_labels_mapping(train_different_labels,
-                                   other_different_labels)
+        different_labels = tuple(Counter(
+            self.original_labels[i]
+            for i in self.shuffled_indices[
+                self.class_end_offsets[c] - self.class_lengths[c]:
+                self.class_end_offsets[c]])
+            for c in range(3))
+        self._setup_labels_mapping(different_labels)
 
         self._mapped_original_labels_.reset(
             numpy.zeros(self.total_samples, Loader.LABEL_DTYPE))
@@ -429,8 +426,7 @@ class FullBatchLoaderMSEMixin(LoaderMSEMixin):
     def _gpu_init(self):
         super(FullBatchLoaderMSEMixin, self)._gpu_init()
 
-        self.original_targets.initialize(self.device)
-        self.minibatch_targets.initialize(self.device)
+        self.init_vectors(self.original_targets, self.minibatch_targets)
 
         self._kernel_target_ = self.get_kernel("fill_minibatch_target")
         self._kernel_target_.set_args(

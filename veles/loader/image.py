@@ -11,9 +11,6 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 from __future__ import division
 from collections import defaultdict
 from itertools import chain
-from mimetypes import guess_type
-import os
-import re
 import cv2
 import numpy
 from PIL import Image
@@ -22,7 +19,8 @@ from zope.interface import implementer, Interface
 from veles.compat import from_none
 import veles.error as error
 from veles.external.progressbar import ProgressBar
-from veles.loader.base import CLASS_NAME, ILoader, Loader, TRAIN
+from veles.loader.base import CLASS_NAME, ILoader, Loader, \
+    TRAIN, VALID, TEST, LoaderError
 from veles.memory import Vector
 
 
@@ -559,24 +557,20 @@ class ImageLoader(Loader):
         if not self.has_labels:
             return
         self.info("Reading labels...")
-        train_different_labels = defaultdict(int)
+        different_labels = defaultdict(int), defaultdict(int), defaultdict(int)
+        label_key_map = defaultdict(list), defaultdict(list), defaultdict(list)
         pb = ProgressBar(maxval=self.total_samples, term_width=40)
         pb.start()
-        for key in self.class_keys[TRAIN]:
-            label, has_labels = self._load_label(key, True)
-            assert has_labels
-            train_different_labels[label] += 1
-            pb.inc()
-        other_different_labels = defaultdict(int)
-        for key in chain.from_iterable(self.class_keys[:TRAIN]):
-            label, has_labels = self._load_label(key, True)
-            assert has_labels
-            other_different_labels[label] += 1
-            pb.inc()
+        for class_index in range(3):
+            for key in self.class_keys[class_index]:
+                label, has_labels = self._load_label(key, True)
+                assert has_labels
+                different_labels[class_index][label] += 1
+                label_key_map[class_index][label].append(key)
+                pb.inc()
         pb.finish()
 
-        self._setup_labels_mapping(train_different_labels,
-                                   other_different_labels)
+        return different_labels, label_key_map
 
     def initialize(self, **kwargs):
         self._restored_from_pickle = False
@@ -592,24 +586,23 @@ class ImageLoader(Loader):
         for keys in self.class_keys:
             del keys[:]
         for index, class_name in enumerate(CLASS_NAME):
-            keys = self.get_keys(index)
+            keys = set(self.get_keys(index))
             self.class_keys[index].extend(keys)
             self.class_lengths[index] = len(keys) * self.samples_inflation
             self.class_keys[index].sort()
+
         if self.uncropped_shape == tuple():
             raise error.BadFormatError(
                 "original_shape was not initialized in get_keys()")
+        self.info(
+            "Found %d samples of shape %s (%d TEST, %d VALIDATION, %d TRAIN)",
+            self.total_samples, self.shape, *self.class_lengths)
 
         # Perform a quick (unreliable) test to determine if we have labels
-        keys = []
-        for i in range(3):
-            keys = self.class_keys[i]
-            if len(keys) > 0:
-                break
-        assert len(keys) > 0
+        keys = next(k for k in self.class_keys if len(k) > 0)
         self._has_labels = self.load_keys(
             (keys[self.prng.randint(len(keys))],), None, None, None, None)
-        self.load_labels()
+        self._resize_validation_keys(self.load_labels())
 
     def create_minibatch_data(self):
         self.minibatch_data.reset(numpy.zeros(
@@ -637,6 +630,95 @@ class ImageLoader(Loader):
             self.minibatch_data[pos] = self.distort(
                 self.minibatch_data[pos],
                 *self.get_distortion_by_index(dist_index))
+
+    def _resize_validation_keys(self, label_analysis):
+        if label_analysis is None:
+            return
+        different_labels, label_key_map = label_analysis
+        if self.validation_ratio is None:
+            self._setup_labels_mapping(different_labels)
+            return
+        if self.validation_ratio < 0:
+            self.class_keys[TRAIN] += self.class_keys[VALID]
+            self.class_lengths[TRAIN] += self.class_lengths[VALID]
+            del self.class_keys[VALID][:]
+            self.class_lengths[VALID] = 0
+            merged = {k: (different_labels[VALID][k] +
+                          different_labels)[TRAIN][k]
+                      for k in label_key_map[TRAIN]}
+            self._setup_labels_mapping((different_labels[TEST], {}, merged))
+            return
+
+        overall = sum(len(ck) for ck in self.class_keys[VALID:])
+        target_validation_length = int(overall * self.validation_ratio)
+
+        if not self.has_labels:
+            keys = list(chain.from_iterable(self.class_keys[VALID:]))
+            keys.sort()
+            self.prng.shuffle(keys)
+            del self.class_keys[VALID][:]
+            self.class_keys[VALID].extend(keys[:target_validation_length])
+            del self.class_keys[TRAIN][:]
+            self.class_keys[TRAIN].extend(keys[target_validation_length:])
+            self._finalize_resizing_validation(different_labels, label_key_map)
+            return
+
+        # We must ensure that each set has the same labels
+        # The first step is to pick two keys for each label and distribute them
+        # into VALID and TRAIN evenly
+        if len(label_key_map[TRAIN]) > target_validation_length:
+            raise LoaderError(
+                "Unable to set the new size of the validation set to %d (%.3f)"
+                " since the number of labels is %d" %
+                (target_validation_length * self.samples_inflation,
+                 self.validation_ratio, len(label_key_map[TRAIN])))
+        if overall - target_validation_length < len(label_key_map[TRAIN]):
+            raise LoaderError(
+                "Unable to set the new size of the training set to %d (%.3f) "
+                "since the number of labels is %d" %
+                ((overall - target_validation_length) * self.samples_inflation,
+                 1.0 - self.validation_ratio, len(label_key_map[TRAIN])))
+        vt_label_key_map = {l: (label_key_map[VALID].get(l, []) +
+                                label_key_map[TRAIN].get(l, []))
+                            for l in label_key_map[TRAIN]}
+        for i in VALID, TRAIN:
+            del self.class_keys[i][:]
+        for label, keys in sorted(vt_label_key_map.items()):
+            if len(keys) < 2:
+                raise LoaderError("Label %s has less than 2 keys" % label)
+            choice = self.prng.choice(len(keys), 2, replace=False)
+            assert choice[0] != choice[1]
+            for i in VALID, TRAIN:
+                self.class_keys[i].append(keys[choice[i - 1]])
+            for c in sorted(choice, reverse=True):
+                del keys[c]
+
+        # Distribute the left keys randomly
+        left_keys = list(sorted(chain.from_iterable(
+            vt_label_key_map.values())))
+        self.prng.shuffle(left_keys)
+        offset_val_length = \
+            target_validation_length - len(vt_label_key_map)
+        self.class_keys[VALID].extend(left_keys[:offset_val_length])
+        self.class_keys[TRAIN].extend(left_keys[offset_val_length:])
+        self._finalize_resizing_validation(different_labels, label_key_map)
+
+    def _finalize_resizing_validation(self, different_labels, label_key_map):
+        for ck in self.class_keys[VALID:]:
+            ck.sort()
+        for i in VALID, TRAIN:
+            self.class_lengths[i] = len(self.class_keys[i]) * \
+                self.samples_inflation
+        new_diff = defaultdict(int), defaultdict(int)
+        key_label_map = {}
+        for ci in VALID, TRAIN:
+            key_label_map.update({k: l
+                                  for l, keys in label_key_map[ci].items()
+                                  for k in keys})
+        for ci in VALID, TRAIN:
+            for key in self.class_keys[ci]:
+                new_diff[ci - 1][key_label_map[key]] += 1
+        self._setup_labels_mapping((different_labels[TEST],) + new_diff)
 
     def _get_class_origin_distortion_from_index(self, index):
         class_index, key_remainder = self.class_index_by_sample_index(index)
@@ -682,297 +764,3 @@ class ImageLoader(Loader):
                 "db_colorpsace must be a string (got %s)" % type(value))
         if value != "RGB" and not hasattr(cv2, "COLOR_%s2RGB" % value):
             raise ValueError("Unsupported color space: %s" % value)
-
-
-class IFileImageLoader(Interface):
-    def get_label_from_filename(filename):
-        """Retrieves label for the specified file path.
-        """
-
-
-class FileImageLoaderBase(ImageLoader):
-    """
-    Base class for loading something from files. Function is_valid_fiename()
-    should be used in child classes as filter for loading data.
-    """
-    def __init__(self, workflow, **kwargs):
-        super(FileImageLoaderBase, self).__init__(workflow, **kwargs)
-        self._filename_types = kwargs.get("filename_types", ["jpeg"])
-        self._ignored_files = kwargs.get("ignored_files", [])
-        self._included_files = kwargs.get("included_files", [".*"])
-        self._blacklist_regexp = re.compile(
-            "^%s$" % "|".join(self.ignored_files))
-        self._whitelist_regexp = re.compile(
-            "^%s$" % "|".join(self.included_files))
-
-    @property
-    def filename_types(self):
-        return self._filename_types
-
-    @filename_types.setter
-    def filename_types(self, value):
-        del self._filename_types[:]
-        if isinstance(value, str):
-            self._filename_types.append(value)
-        else:
-            self._filename_types.extend(value)
-
-    @property
-    def ignored_files(self):
-        return self._ignored_files
-
-    @ignored_files.setter
-    def ignored_files(self, value):
-        del self._ignored_files[:]
-        if isinstance(value, str):
-            self._ignored_files.append(value)
-        else:
-            self._ignored_files.extend(value)
-
-    @property
-    def included_files(self):
-        return self._included_files
-
-    @included_files.setter
-    def included_files(self, value):
-        del self._included_files[:]
-        if isinstance(value, str):
-            self._included_files.append(value)
-        else:
-            self._included_files.extend(value)
-
-    def get_image_info(self, key):
-        """
-        :param key: The full path to the analysed image.
-        :return: tuple (image size, number of channels).
-        """
-        try:
-            with open(key, "rb") as fin:
-                img = Image.open(fin)
-                return tuple(reversed(img.size)), MODE_COLOR_MAP[img.mode]
-        except Exception as e:
-            self.warning("Failed to read %s with PIL: %s", key, e)
-            # Unable to read the image with PIL. Fall back to slow OpenCV
-            # method which reads the whole image.
-            img = cv2.imread(key, cv2.IMREAD_UNCHANGED)
-            if img is None:
-                raise error.BadFormatError("Unable to read %s" % key)
-            return img.shape[:2], "BGR"
-
-    def get_image_data(self, key):
-        """
-        Loads data from image and normalizes it.
-
-        Returns:
-            :class:`numpy.ndarrayarray`: if there was one image in the file.
-            tuple: `(data, labels)` if there were many images in the file
-        """
-        try:
-            with open(key, "rb") as fin:
-                img = Image.open(fin)
-                if img.mode in ("P", "CMYK"):
-                    return numpy.array(img.convert("RGB"),
-                                       dtype=self.source_dtype)
-                else:
-                    return numpy.array(img, dtype=self.source_dtype)
-        except (TypeError, KeyboardInterrupt) as e:
-            raise from_none(e)
-        except Exception as e:
-            self.warning("Failed to read %s with PIL: %s", key, e)
-            img = cv2.imread(key)
-            if img is None:
-                raise error.BadFormatError("Unable to read %s" % key)
-            return img.astype(self.source_dtype)
-
-    def get_image_label(self, key):
-        return self.get_label_from_filename(key)
-
-    def analyze_images(self, files, pathname):
-        # First pass: get the final list of files and shape
-        self.debug("Analyzing %d images in %s", len(files), pathname)
-        uniform_files = []
-        for file in files:
-            size, color_space = self.get_image_info(file)
-            shape = size + (COLOR_CHANNELS_MAP[color_space],)
-            if (not isinstance(self.scale, tuple) and
-                    self.uncropped_shape != tuple() and
-                    shape[:2] != self.uncropped_shape):
-                self.warning("%s has the different shape %s (expected %s)",
-                             file, shape[:2], self.uncropped_shape)
-            else:
-                if self.uncropped_shape == tuple():
-                    self.original_shape = shape
-                uniform_files.append(file)
-        return uniform_files
-
-    def is_valid_filename(self, filename):
-        """Filters the file names. Return True if the specified file path must
--        be included, otherwise, False.
-        """
-        if self._blacklist_regexp.match(filename):
-            self.debug("Ignored %s (in black list)", filename)
-            return False
-        if not self._whitelist_regexp.match(filename):
-            self.debug("Ignored %s (not in white list)", filename)
-            return False
-        mime = guess_type(filename)[0]
-        if mime is None:
-            self.debug("Could not determine MIME type of %s", filename)
-            return False
-        if not mime.startswith("image/"):
-            self.debug("Ignored %s (MIME is not an image)", filename)
-            return False
-        mime_type_name = mime[len("image/"):]
-        if mime_type_name not in self.filename_types:
-            self.debug("Ignored %s (MIME %s not in the list)",
-                       filename, mime_type_name)
-            return False
-        return True
-
-
-class FileListImageLoader(FileImageLoaderBase):
-    """
-    Input: text file, with each line giving an image filename and label
-    As with ImageLoader, it is useful for large datasets.
-    """
-    MAPPING = "file_list_image"
-
-    def __init__(self, workflow, **kwargs):
-        super(FileListImageLoader, self).__init__(workflow, **kwargs)
-        self.path_to_test_text_file = kwargs.get("path_to_test_text_file", "")
-        self.path_to_val_text_file = kwargs.get("path_to_val_text_file", "")
-        self.path_to_train_text_file = kwargs.get(
-            "path_to_train_text_file", "")
-        self.labels = {}
-
-    def scan_files(self, pathname):
-        self.info("Scanning %s..." % pathname)
-        files = []
-        with open(pathname, "r") as fin:
-            for line in fin:
-                path_to_image, _, label = line.partition(' ')
-                self.labels[path_to_image] = label if label else None
-                files.append(path_to_image)
-        if not len(files):
-            self.warning("No files were taken from %s" % pathname)
-            return [], []
-        return files
-
-    def get_label_from_filename(self, filename):
-        label = self.labels[filename]
-        return label
-
-    def get_keys(self, index):
-        paths = (
-            self.path_to_test_text_file,
-            self.path_to_val_text_file,
-            self.path_to_train_text_file)[index]
-        if paths is None:
-            return []
-        return list(
-            chain.from_iterable(
-                self.analyze_images(self.scan_files(p), p) for p in paths))
-
-
-@implementer(IImageLoader)
-class FileImageLoader(FileImageLoaderBase):
-    """Loads images from multiple folders. As with ImageLoader, it is useful
-    for large datasets.
-
-    Attributes:
-        test_paths: list of paths with mask for test set,
-                    for example: ["/tmp/\*.png"].
-        validation_paths: list of paths with mask for validation set,
-                          for example: ["/tmp/\*.png"].
-        train_paths: list of paths with mask for train set,
-                     for example: ["/tmp/\*.png"].
-
-    Must be overriden in child class:
-        get_label_from_filename()
-        is_valid_filename()
-    """
-
-    def __init__(self, workflow, **kwargs):
-        super(FileImageLoader, self).__init__(workflow, **kwargs)
-        self.test_paths = kwargs.get("test_paths", [])
-        self.validation_paths = kwargs.get("validation_paths", [])
-        self.train_paths = kwargs.get("train_paths", [])
-        self.verify_interface(IFileImageLoader)
-
-    def _check_paths(self, paths):
-        if not hasattr(paths, "__iter__"):
-            raise TypeError("Paths must be iterable, e.g., a list or a tuple")
-
-    @property
-    def test_paths(self):
-        return self._test_paths
-
-    @test_paths.setter
-    def test_paths(self, value):
-        self._check_paths(value)
-        self._test_paths = value
-
-    @property
-    def validation_paths(self):
-        return self._validation_paths
-
-    @validation_paths.setter
-    def validation_paths(self, value):
-        self._check_paths(value)
-        self._validation_paths = value
-
-    @property
-    def train_paths(self):
-        return self._train_paths
-
-    @train_paths.setter
-    def train_paths(self, value):
-        self._check_paths(value)
-        self._train_paths = value
-
-    def scan_files(self, pathname):
-        self.info("Scanning %s..." % pathname)
-        files = []
-        for basedir, _, filelist in os.walk(pathname):
-            for name in filelist:
-                full_name = os.path.join(basedir, name)
-                if self.is_valid_filename(full_name):
-                    files.append(full_name)
-        if not len(files):
-            self.warning("No files were taken from %s" % pathname)
-            return [], []
-        return files
-
-    def get_keys(self, index):
-        paths = (self.test_paths, self.validation_paths,
-                 self.train_paths)[index]
-        if paths is None:
-            return []
-        return list(
-            chain.from_iterable(
-                self.analyze_images(self.scan_files(p), p) for p in paths))
-
-
-@implementer(IFileImageLoader)
-class AutoLabelFileImageLoader(FileImageLoader):
-    """
-    FileImageLoader modification which takes labels by regular expression from
-    file names. Unique selection groups are tracked and enumerated.
-    """
-
-    MAPPING = "auto_label_file_image"
-
-    def __init__(self, workflow, **kwargs):
-        super(AutoLabelFileImageLoader, self).__init__(workflow, **kwargs)
-        # The default label is the parent directory
-        self.label_regexp = re.compile(kwargs.get(
-            "label_regexp", ".*%(sep)s([^%(sep)s]+)%(sep)s[^%(sep)s]+$" %
-            {"sep": "\\" + os.sep}))
-
-    def get_label_from_filename(self, filename):
-        match = self.label_regexp.search(filename)
-        if match is None:
-            raise error.BadFormatError(
-                "%s does not match label RegExp %s" %
-                (filename, self.label_regexp.pattern))
-        return match.group(1)

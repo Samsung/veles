@@ -7,7 +7,6 @@ Ontology of image loading classes (full batch branch).
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
-
 import logging
 import numpy
 from psutil import virtual_memory
@@ -18,7 +17,8 @@ from veles.external.progressbar import ProgressBar, Percentage, Bar
 from veles.loader.base import Loader
 from veles.loader.fullbatch import IFullBatchLoader, FullBatchLoader, \
     FullBatchLoaderMSEMixin
-from veles.loader.image import ImageLoader, IFileImageLoader, \
+from veles.loader.image import ImageLoader
+from veles.loader.file_image import IFileImageLoader, \
     FileListImageLoader, AutoLabelFileImageLoader, FileImageLoader
 from veles.loader.image_mse import ImageLoaderMSEMixin, FileImageLoaderMSEMixin
 from veles.memory import Vector
@@ -52,16 +52,10 @@ class FullBatchImageLoader(ImageLoader, FullBatchLoader):
         def __iter__(self):
             return self
 
-    def load_labels(self):
-        pass
-
     def load_data(self):
         super(FullBatchImageLoader, self).load_data()
 
         # Allocate data
-        self.info(
-            "Found %d samples of shape %s (%d TEST, %d VALIDATION, %d TRAIN)",
-            self.total_samples, self.shape, *self.class_lengths)
         required_mem = self.total_samples * numpy.prod(self.shape) * \
             numpy.dtype(self.source_dtype).itemsize
         if virtual_memory().available < required_mem:
@@ -88,6 +82,11 @@ class FullBatchImageLoader(ImageLoader, FullBatchLoader):
         This method MUST exist to fix the diamond inherited signature.
         """
         super(FullBatchImageLoader, self).initialize(device=device, **kwargs)
+
+    def _resize_validation(self):
+        if self.validation_ratio is None:
+            return
+        self.debug("Skipped _resize_validation()")
 
     def _load_distorted_keys(self, keys, data, labels, label_values, offset,
                              pbar):
