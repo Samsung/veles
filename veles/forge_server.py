@@ -590,7 +590,11 @@ class ForgeServer(Logger):
             (self.suburi[:-1], web.RedirectHandler,
              {"url": self.uri("forge.html"), "permanent": True}),
         ], template_path=root.common.web.templates)
-        self.application.listen(self.port)
+        try:
+            self.application.listen(self.port)
+        except OSError as e:
+            self.error("Failed to open port %d", self.port)
+            raise from_none(e)
         self.info("Listening on port %d, suburi %s" % (self.port, self.suburi))
         if loop:
             IOLoop.instance().start()

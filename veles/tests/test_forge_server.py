@@ -11,6 +11,7 @@ import os
 import pygit2
 import shutil
 from six import BytesIO
+import socket
 import struct
 import sys
 from tarfile import TarFile
@@ -24,7 +25,12 @@ from veles.config import root
 from veles.forge_server import ForgeServer, ForgeServerArgs
 
 
-PORT = 8067 + randint(-1000, 1000)
+while True:
+    PORT = 8067 + randint(-1000, 1000)
+    probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    if probe.connect_ex(('127.0.0.1', PORT)):
+        probe.close()
+        break
 
 
 class TestForgeServer(unittest.TestCase):
