@@ -29,4 +29,5 @@ cuda4py>=1.0
 psutil>=1.2.1
 pyxDamerauLevenshtein>=1.2
 h5py>=2.2
-jinja2
+jinja2>=2.7.2
+pycparser>=2.10
