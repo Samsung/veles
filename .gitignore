@@ -24,6 +24,12 @@ ltmain.sh
 missing
 __pycache__
 cache
+debian/python3-veles*
+debian/substvars
+debian/files
+docs/build
+.idea/workspace.xml
+.pybuild
 !Doxyfile.in
 !Veles.pc.in
 !Application.mk.in
