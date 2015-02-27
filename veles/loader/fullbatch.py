@@ -351,7 +351,10 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
 
     def _map_original_labels(self):
         self._has_labels = len(self.original_labels) > 0
-        if not self.has_labels or len(self.labels_mapping) > 0:
+        if not self.has_labels:
+            return
+        if len(self.labels_mapping) > 0:
+            self._init_mapped_original_labels()
             return
         if len(self.original_labels) != self.original_data.shape[0]:
             raise ValueError(
@@ -366,7 +369,9 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
                 self.class_end_offsets[c]])
             for c in range(3))
         self._setup_labels_mapping(different_labels)
+        self._init_mapped_original_labels()
 
+    def _init_mapped_original_labels(self):
         self._mapped_original_labels_.reset(
             numpy.zeros(self.total_samples, Loader.LABEL_DTYPE))
         for i, label in enumerate(self.original_labels):
