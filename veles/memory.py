@@ -193,7 +193,7 @@ class Vector(Pickleable):
     def __init__(self, data=None):
         super(Vector, self).__init__()
         self._device = None
-        self._mem = data
+        self.mem = data
         self._max_value = 1.0
 
     @property
@@ -230,6 +230,10 @@ class Vector(Pickleable):
                 "Attempted to set Vector's mem to something which is not a "
                 "numpy array: %s of type %s" % (value, type(value)))
         self._mem = value
+
+    @property
+    def devmem(self):
+        return self._devmem_
 
     @property
     def max_supposed(self):
@@ -288,7 +292,7 @@ class Vector(Pickleable):
     def init_unpickled(self):
         super(Vector, self).init_unpickled()
         self._unset_device()
-        self.devmem = None
+        self._devmem_ = None
         self.map_arr_ = None
         self.map_flags = 0
         self.lock_ = threading.Lock()
@@ -313,9 +317,7 @@ class Vector(Pickleable):
         """
         if self.device is not None and self.device.pid == os.getpid():
             self.map_read()
-        state = super(Vector, self).__getstate__()
-        state['devmem'] = None
-        return state
+        return super(Vector, self).__getstate__()
 
     def __bool__(self):
         return self._mem is not None and len(self._mem) > 0
@@ -408,14 +410,14 @@ class Vector(Pickleable):
         if self.devmem is not None:
             global Watcher  # pylint: disable=W0601
             Watcher -= self.devmem.size
-        self.devmem = None
+        self._devmem_ = None
         self.map_flags = 0
         self.mem = new_mem
 
     threadsafe = staticmethod(threadsafe)
 
     def ocl_create_devmem(self):
-        self.devmem = self.device.queue_.context.create_buffer(
+        self._devmem_ = self.device.queue_.context.create_buffer(
             cl.CL_MEM_READ_WRITE | cl.CL_MEM_USE_HOST_PTR, self.plain)
 
     def ocl_map(self, flags):
@@ -482,7 +484,7 @@ class Vector(Pickleable):
         self.mem = cl.realign_array(self._mem, memalign, numpy)
 
     def cuda_create_devmem(self):
-        self.devmem = cu.MemAlloc(self.device.context, self.plain.nbytes)
+        self._devmem_ = cu.MemAlloc(self.device.context, self.plain.nbytes)
         self.devmem.to_device(self.mem)
 
     def cuda_map_read(self):
