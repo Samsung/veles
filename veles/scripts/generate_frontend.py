@@ -26,6 +26,8 @@ BLACKLISTED_DIRS = {'.', 'gource', 'docs', 'web', 'deploy', "libVeles",
                     "veles/external", "veles/znicz/tests/unit",
                     "veles/znicz/tests/functional"}
 
+BLACKLISTED_FILES = {"boxer.py", "bbox_detection.py", "generate_frontend.py"}
+
 
 def main(debug_imports=False):
     print("Scanning for workflow files...")
@@ -34,7 +36,6 @@ def main(debug_imports=False):
     print("Processing arguments...")
     parser = CommandLineBase.init_parser(ignore_conflicts=True)
     arguments = parser._actions
-    print(len(arguments))
     list_lines = [obj[-1] for obj in sorted(
         [convert_argument(*ia) for ia in enumerate(arguments)])]
 
@@ -70,6 +71,8 @@ def scan_workflows(debug_imports):
         if skip:
             continue
         for f in files:
+            if f in BLACKLISTED_FILES:
+                continue
             f_path = os.path.join(path, f)
             modname, ext = os.path.splitext(f)
             if ext == '.py':
@@ -89,6 +92,7 @@ def scan_workflows(debug_imports):
                     del sys.path[0]
     gc.collect()
     warnings.simplefilter("default")
+    print(workflows)
     return workflows
 
 
