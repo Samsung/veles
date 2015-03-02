@@ -31,6 +31,9 @@ class DummyLauncher(object):
     def add_ref(self, workflow):
         self.workflow = workflow
 
+    def del_ref(self, unit):
+        pass
+
     def on_workflow_finished(self):
         pass
 

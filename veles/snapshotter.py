@@ -48,7 +48,7 @@ class SnapshotterBase(Unit):
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = kwargs.get("view_group", "SERVICE")
         super(SnapshotterBase, self).__init__(workflow, **kwargs)
-        self.directory = kwargs.get("directory", "/tmp")
+        self.directory = kwargs.get("directory", root.common.snapshot_dir)
         self.prefix = kwargs.get("prefix", "")
         self.compress = kwargs.get("compress", "gz")
         self.compress_level = kwargs.get("compress_level", 6)
