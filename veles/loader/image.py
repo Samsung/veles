@@ -22,6 +22,7 @@ from veles.external.progressbar import ProgressBar
 from veles.loader.base import CLASS_NAME, ILoader, Loader, \
     TRAIN, VALID, TEST, LoaderError
 from veles.memory import Vector
+from veles.prng import RandomGenerator
 
 
 MODE_COLOR_MAP = {
@@ -601,7 +602,8 @@ class ImageLoader(Loader):
         # Perform a quick (unreliable) test to determine if we have labels
         keys = next(k for k in self.class_keys if len(k) > 0)
         self._has_labels = self.load_keys(
-            (keys[self.prng.randint(len(keys))],), None, None, None, None)
+            (keys[RandomGenerator(None).randint(len(keys))],),
+            None, None, None, None)
         self._resize_validation_keys(self.load_labels())
 
     def create_minibatch_data(self):
