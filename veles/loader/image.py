@@ -93,7 +93,6 @@ class ImageLoader(Loader):
     def __init__(self, workflow, **kwargs):
         super(ImageLoader, self).__init__(workflow, **kwargs)
         self.color_space = kwargs.get("color_space", "RGB")
-        self.source_dtype = numpy.float32
         self._original_shape = tuple()
         self.class_keys = [[], [], []]
         self.verify_interface(IImageLoader)
@@ -575,6 +574,7 @@ class ImageLoader(Loader):
         return different_labels, label_key_map
 
     def initialize(self, **kwargs):
+        self.source_dtype = numpy.float32
         self._restored_from_pickle = False
         super(ImageLoader, self).initialize(**kwargs)
 
