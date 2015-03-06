@@ -414,6 +414,9 @@ class FullBatchLoaderMSEMixin(LoaderMSEMixin):
             % (self.original_targets.min(), self.original_targets.max()))
         self.target_normalizer.analyze(self.original_targets.mem)
         self.target_normalizer.normalize(self.original_targets.mem)
+        if self.class_targets:
+            self.target_normalizer.analyze(self.class_targets.mem)
+            self.target_normalizer.normalize(self.class_targets.mem)
         self.debug(
             "Normalized target range: (%.6f, %.6f)"
             % (self.original_targets.min(), self.original_targets.max()))
