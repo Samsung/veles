@@ -112,10 +112,10 @@ class TestInputJoiner(unittest.TestCase):
 
     def multi_device(fn):
         def test_wrapped(self):
-            root.common.engine.backend = "ocl"
+            root.common.engine.backend = "cuda"
             self.device = Device()
             fn(self)
-            root.common.engine.backend = "cuda"
+            root.common.engine.backend = "ocl"
             self.device = Device()
             fn(self)
 

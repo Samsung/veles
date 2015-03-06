@@ -13,10 +13,9 @@ import os
 import threading
 import opencl4py as cl
 
-from veles.compat import from_none
-import veles.error as error
-from veles.distributable import Pickleable
 from veles.backends import Device
+from veles.compat import from_none
+from veles.distributable import Pickleable
 
 
 def max_type(num):
@@ -33,7 +32,7 @@ def assert_addr(a, b):
     """Raises an exception if addresses of the supplied arrays differ.
     """
     if not eq_addr(a, b):
-        raise error.BadFormatError("Addresses of the arrays are not equal.")
+        raise ValueError("Addresses of the arrays are not equal.")
 
 
 def ravel(a):
@@ -75,7 +74,7 @@ def interleave(arr):
         for i in range(last):
             b[:, :, i] = arr[i, :, :]
     else:
-        raise error.BadFormatError("a should be of shape 4 or 3.")
+        raise ValueError("a should be of shape 4 or 3.")
     return b
 
 
@@ -202,14 +201,15 @@ class Vector(Pickleable):
 
     @device.setter
     def device(self, device):
-        self._reset(self.mem)
         if device is None:
+            self._reset(self.mem)
             self._unset_device()
             return
         if not isinstance(device, Device):
             raise TypeError(
-                "device must be an instance of veles.opencl.Device, got %s" %
+                "device must be an instance of veles.backends.Device, got %s" %
                 device)
+        self._reset(self.mem)
         self._device = device
         for suffix in Vector.backend_methods:
             setattr(self, "_backend_" + suffix + "_",
@@ -222,7 +222,7 @@ class Vector(Pickleable):
     @mem.setter
     def mem(self, value):
         if self.devmem is not None and not eq_addr(self.mem, value):
-            raise error.AlreadyExistsError(
+            raise ValueError(
                 "Device buffer has already been assigned, call reset() "
                 "beforehand.")
         if value is not None and not isinstance(value, numpy.ndarray):
@@ -443,7 +443,7 @@ class Vector(Pickleable):
             raise
         if (int(cl.ffi.cast("size_t", self.map_arr_)) !=
                 self._mem.__array_interface__["data"][0]):
-            raise error.OpenCLError("map_buffer returned different pointer")
+            raise RuntimeError("map_buffer returned different pointer")
         self.map_flags = flags
 
     def ocl_map_read(self):

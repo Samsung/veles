@@ -17,10 +17,7 @@ __global__ void warpReduce() {
 
 /// @brief Define for reduce operation on matrix rows or columns.
 /// @author Kazantsev Alexey <a.kazantsev@samsung.com>
-/// @details Kernel should be defined as:
-///          __kernel __attribute__((reqd_work_group_size(REDUCE_SIZE, 1, 1)))
-///
-///          Sizes should be declared externally (values are given for example):
+/// @details Sizes should be declared externally (values are given for example):
 ///          #define REDUCE_SIZE 64
 ///          #define A_WIDTH 10
 ///          #define A_HEIGHT 100500
