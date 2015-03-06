@@ -34,7 +34,8 @@ class ImageLoaderMSEMixin(LoaderMSEMixin):
         super(ImageLoaderMSEMixin, self).load_data()
         if self._restored_from_pickle:
             return
-        self.target_keys.extend(self.get_keys(TARGET))
+        if len(self.target_keys) == 0:
+            self.target_keys.extend(self.get_keys(TARGET))
         length = len(self.target_keys)
         if len(set(self.target_keys)) < length:
             raise error.BadFormatError("Some targets have duplicate keys")
