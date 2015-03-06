@@ -426,7 +426,7 @@ class Loader(Unit):
 
     @property
     def validation_ratio(self):
-        return self._validation_ratio
+        return getattr(self, "_validation_ratio", None)
 
     @validation_ratio.setter
     def validation_ratio(self, value):
