@@ -70,9 +70,7 @@ def scan_workflows(debug_imports):
                 break
         if skip:
             continue
-        for f in files:
-            if f in BLACKLISTED_FILES:
-                continue
+        for f in set(files) - BLACKLISTED_FILES:
             f_path = os.path.join(path, f)
             modname, ext = os.path.splitext(f)
             if ext == '.py':
@@ -92,7 +90,7 @@ def scan_workflows(debug_imports):
                     del sys.path[0]
     gc.collect()
     warnings.simplefilter("default")
-    print(workflows)
+    print("Found workflows:\n", workflows)
     return workflows
 
 
