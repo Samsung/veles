@@ -19,6 +19,8 @@ import shutil
 from six.moves import input
 from six.moves.urllib.parse import urlparse, urlencode
 from six import PY3
+from veles.import_file import try_to_import_file, is_module
+
 if PY3:
     from importlib.util import cache_from_source
 else:
@@ -424,18 +426,15 @@ class ForgeClient(Logger):
     def assist(self):
         metadata = {}
         base = os.path.dirname(self.path)
-        sys.path.insert(0, base)
         modname = os.path.splitext(os.path.basename(self.path))[0]
         print("Importing %s..." % modname)
         sys.stdout.flush()
-        try:
-            module = __import__(modname)
-        except:
-            self.exception("Failed to import %s", self.path)
+        module = try_to_import_file(self.path)
+        if not is_module(module):
+            self.error("Failed to import %s.\npackage: %s\ndirect: %s",
+                       self.path, *module)
             self.return_code = 1
             return
-        finally:
-            del sys.path[0]
 
         # Discover the module's dependencies
         metadata["requires"] = self._scan_deps(module)

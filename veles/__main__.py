@@ -11,6 +11,9 @@ Contact:
 """
 
 import sys
+from veles.import_file import get_file_package_and_module, \
+    import_file_as_package, import_file_as_module
+
 __unittest = "unittest" in sys.modules
 import atexit
 import binascii
@@ -207,26 +210,20 @@ class Main(Logger, CommandLineBase):
         # Daemonization happens in open()
         daemon_context.open()
 
-    def _load_model(self, fname_workflow, fname_snapshot):
+    def _load_model(self, fname_workflow):
         self.debug("Loading the model \"%s\"...", fname_workflow)
-        self.snapshot_file_name = fname_snapshot
         self.load_called = False
         self.main_called = False
-        package_name = os.path.basename(os.path.dirname(fname_workflow))
-        module_name = os.path.splitext(os.path.basename(fname_workflow))[0]
-        sys.path.insert(0, os.path.dirname(os.path.dirname(fname_workflow)))
+        package_name, module_name = get_file_package_and_module(
+            fname_workflow)
         try:
-            package = __import__("%s.%s" % (package_name, module_name))
-            return getattr(package, module_name)
+            return import_file_as_package(fname_workflow)
         except Exception as e:
             self.debug("Failed to import \"%s\" through the parent package "
                        "\"%s\": %s", package_name, e)
-        finally:
-            del sys.path[0]
-
-        sys.path.insert(0, os.path.dirname(fname_workflow))
+        # We failed to load the package => try module approach
         try:
-            return __import__(module_name)
+            return import_file_as_module(fname_workflow)
         except FileNotFoundError:
             self.exception("Workflow does not exist: \"%s\"", fname_workflow)
             sys.exit(errno.ENOENT)
@@ -240,8 +237,6 @@ class Main(Logger, CommandLineBase):
             self.exception("Failed to load the workflow \"%s\"",
                            fname_workflow)
             sys.exit(Main.EXIT_FAILURE)
-        finally:
-            del sys.path[0]
 
     def _apply_config(self, fname_config, config_list):
         self.debug("Applying the configuration from %s...",
@@ -540,6 +535,7 @@ class Main(Logger, CommandLineBase):
         self._dry_run = Main.DRY_RUN_CHOICES.index(args.dry_run)
         self._dump_attrs = args.dump_unit_attributes
         self._disable_acceleration = args.disable_acceleration
+        self.snapshot_file_name = args.snapshot
         self._parse_optimization(args)
 
         Logger.setup(level=Main.LOG_LEVEL_MAP[args.verbosity])
@@ -553,7 +549,7 @@ class Main(Logger, CommandLineBase):
 
         if self.logger.isEnabledFor(logging.DEBUG):
             self._print_config(root)
-        wm = self._load_model(fname_workflow, args.snapshot)
+        wm = self._load_model(fname_workflow)
         self._apply_config(fname_config, args.config_list)
         if self.logger.isEnabledFor(logging.DEBUG):
             self._print_config(root)

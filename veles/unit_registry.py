@@ -29,8 +29,12 @@ class UnitRegistry(type):
     automatically hidden.
     """
     units = set()
+    enabled = True
 
     def __init__(cls, name, bases, clsdict):
+        if not UnitRegistry.enabled:
+            super(UnitRegistry, cls).__init__(name, bases, clsdict)
+            return
         yours = set(cls.mro())
         mine = set(Distributable.mro())
         left = yours - mine
@@ -84,7 +88,7 @@ class UnitRegistry(type):
     def __call__(cls, *args, **kwargs):
         """ Checks for misprints in argument names """
         obj = super(UnitRegistry, cls).__call__(*args, **kwargs)
-        if hasattr(cls, "DISABLE_KWARGS_CHECK"):
+        if hasattr(cls, "DISABLE_KWARGS_CHECK") or not UnitRegistry.enabled:
             return obj
 
         def warning(*largs):

@@ -18,6 +18,8 @@ import warnings
 
 from veles.config import root
 from veles.cmdline import CommandLineBase
+from veles.import_file import try_to_import_file, is_module
+from veles.unit_registry import UnitRegistry
 
 
 WEB_FOLDER = root.common.web.root
@@ -26,7 +28,8 @@ BLACKLISTED_DIRS = {'.', 'gource', 'docs', 'web', 'deploy', "libVeles",
                     "veles/external", "veles/znicz/tests/unit",
                     "veles/znicz/tests/functional"}
 
-BLACKLISTED_FILES = {"boxer.py", "bbox_detection.py", "generate_frontend.py"}
+BLACKLISTED_FILES = {"boxer.py", "bbox_detection.py", "generate_frontend.py",
+                     "__init__.py"}
 
 
 def main(debug_imports=False):
@@ -61,6 +64,7 @@ def scan_workflows(debug_imports):
     workflows = []
     root_path = root.common.veles_dir
     warnings.simplefilter("ignore")
+    UnitRegistry.enabled = False
     for path, _, files in os.walk(root_path, followlinks=True):
         relpath = os.path.relpath(path, root_path)
         skip = False
@@ -74,20 +78,17 @@ def scan_workflows(debug_imports):
             f_path = os.path.join(path, f)
             modname, ext = os.path.splitext(f)
             if ext == '.py':
-                sys.path.insert(0, path)
-                try:
-                    if debug_imports:
-                        print("[%s] importing %s" % (relpath, modname))
-                    mod = __import__(modname)
-                    for func in dir(mod):
-                        if func == "run":
-                            if getargspec(mod.run).args == ["load", "main"]:
-                                wf_path = os.path.relpath(f_path, root_path)
-                                workflows.append(wf_path)
-                except:
-                    pass
-                finally:
-                    del sys.path[0]
+                if debug_imports:
+                    sys.stdout.write("[%s] importing %s... "
+                                     % (relpath, modname))
+                mod = try_to_import_file(f_path)
+                if not is_module(mod):
+                    continue
+                for func in dir(mod):
+                    if func == "run":
+                        if getargspec(mod.run).args == ["load", "main"]:
+                            wf_path = os.path.relpath(f_path, root_path)
+                            workflows.append(wf_path)
     gc.collect()
     warnings.simplefilter("default")
     print("Found workflows:\n", workflows)
