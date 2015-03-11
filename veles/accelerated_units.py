@@ -105,6 +105,7 @@ class AcceleratedUnit(Unit):
             result = fn(device, **kwargs)
             if not result:
                 self._backend_init_()
+                self._after_backend_init()
             return result
 
         wrapped.__name__ = fn.__name__ + "_backend_init"
@@ -151,6 +152,10 @@ class AcceleratedUnit(Unit):
     def force_cpu(self, value):
         self._force_cpu = value
 
+    @property
+    def sync(self):
+        return self._sync
+
     def initialize(self, device, **kwargs):
         try:
             super(AcceleratedUnit, self).initialize(**kwargs)
@@ -178,15 +183,14 @@ class AcceleratedUnit(Unit):
                 self.debug("Jitted cpu_run()")
                 self._cpu_run_jitted_ = True
 
-    def cpu_init(self):
-        pass
-
     def run(self):
         return self._backend_run_()
 
-    @property
-    def sync(self):
-        return self._sync
+    def cpu_init(self):
+        pass
+
+    def _after_backend_init(self):
+        pass
 
     @staticmethod
     def init_parser(parser=None):

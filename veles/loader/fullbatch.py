@@ -10,10 +10,12 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 from __future__ import division
 from collections import Counter
 import numpy
+from opencl4py import CLRuntimeError
 import six
 from zope.interface import implementer, Interface
 
 from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit
+from veles.compat import from_none
 import veles.error as error
 import veles.memory as memory
 from veles.opencl_types import numpy_dtype_to_opencl
@@ -137,7 +139,7 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         if self.device is None:
             return
 
-        self.info("Will load the entire dataset on device")
+        self.info("Will try to store the entire dataset on the device")
         self.init_vectors(self.original_data, self.minibatch_data)
         if self.has_labels:
             self.init_vectors(self._mapped_original_labels_,
@@ -174,6 +176,18 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
                           self._mapped_original_labels_, self.minibatch_labels,
                           self.shuffled_indices, self.minibatch_indices)
 
+    def _after_backend_init(self):
+        try:
+            self.fill_indices(0, self.max_minibatch_size)
+        except CLRuntimeError as e:
+            if e.code == -4:  # CL_MEM_OBJECT_ALLOCATION_FAILURE
+                self.warning("Failed to store the entire dataset on the "
+                             "device")
+                self.force_cpu = True
+                self.device = None
+            else:
+                raise from_none(e)
+
     def cpu_run(self):
         Loader.run(self)
 
@@ -184,17 +198,17 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         self.cpu_run()
 
     def ocl_init(self):
-        self._gpu_init()
         self._global_size = (self.max_minibatch_size,
                              self.minibatch_data.sample_size)
         self._local_size = None
+        self._gpu_init()
 
     def cuda_init(self):
-        self._gpu_init()
         block_size = self.device.suggest_block_size(self._kernel_)
         self._global_size = (int(numpy.ceil(
             self.minibatch_data.size / block_size)), 1, 1)
         self._local_size = (block_size, 1, 1)
+        self._gpu_init()
 
     def on_before_create_minibatch_data(self):
         self._has_labels = len(self.original_labels) > 0
@@ -443,7 +457,6 @@ class FullBatchLoaderMSEMixin(LoaderMSEMixin):
 
     def _gpu_init(self):
         super(FullBatchLoaderMSEMixin, self)._gpu_init()
-
         self.init_vectors(self.original_targets, self.minibatch_targets)
 
         self._kernel_target_ = self.get_kernel("fill_minibatch_target")
