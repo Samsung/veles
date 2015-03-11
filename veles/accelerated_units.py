@@ -91,7 +91,9 @@ class AcceleratedUnit(Unit):
         self.sources_ = {}
         parser = AcceleratedUnit.init_parser()
         args, _ = parser.parse_known_args()
-        self._force_cpu = self.__class__.__name__ in args.force_cpu.split(',')
+        if not hasattr(self, "_force_cpu"):
+            self._force_cpu = \
+                self.__class__.__name__ in args.force_cpu.split(',')
         self._sync = args.sync_run
         self._kernel_ = None
         self._backend_run_ = None
