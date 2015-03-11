@@ -228,7 +228,7 @@ class Workflow(Container):
     def __len__(self):
         """Returns the number of units belonging to this Workflow.
         """
-        if self._units is None:
+        if getattr(self, "_units", None) is None:
             return 0
         return sum([len(units) for units in self._units.values()]) \
             if hasattr(self, "_units") else 0

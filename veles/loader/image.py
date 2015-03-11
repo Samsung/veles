@@ -93,6 +93,7 @@ class ImageLoader(Loader):
     def __init__(self, workflow, **kwargs):
         super(ImageLoader, self).__init__(workflow, **kwargs)
         self.color_space = kwargs.get("color_space", "RGB")
+        self._source_dtype = numpy.float32
         self._original_shape = tuple()
         self.class_keys = [[], [], []]
         self.verify_interface(IImageLoader)
@@ -124,6 +125,10 @@ class ImageLoader(Loader):
                         "%s changed the effective size (now %s, was %s)" %
                         (key, size, self.uncropped_shape))
         self._restored_from_pickle = True
+
+    @property
+    def source_dtype(self):
+        return self._source_dtype
 
     @property
     def color_space(self):
@@ -419,7 +424,7 @@ class ImageLoader(Loader):
         return data, label_value, bbox
 
     def scale_image(self, data, bbox):
-        bbox = numpy.array(bbox)
+        bbox = numpy.array(bbox, float)
         if self.scale_maintain_aspect_ratio:
             if data.shape[1] >= data.shape[0]:
                 dst_width = self.uncropped_shape[:2][1]
@@ -453,7 +458,7 @@ class ImageLoader(Loader):
                 interpolation=cv2.INTER_CUBIC)
             bbox[:2] *= self.uncropped_shape[0] / (bbox[1] - bbox[0])
             bbox[2:] *= self.uncropped_shape[1] / (bbox[3] - bbox[2])
-        return data, tuple(bbox)
+        return data, tuple(bbox.astype(numpy.int32))
 
     def add_sobel_channel(self, data):
         original_data = data
@@ -573,7 +578,6 @@ class ImageLoader(Loader):
         return different_labels, label_key_map
 
     def initialize(self, **kwargs):
-        self.source_dtype = numpy.float32
         self._restored_from_pickle = False
         super(ImageLoader, self).initialize(**kwargs)
 

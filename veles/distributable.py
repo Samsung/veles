@@ -52,7 +52,8 @@ class Pickleable(logger.Logger):
         linked_values = {}
         for k, v in self.__dict__.items():
             if (k[-1] != "_" and (
-                    not callable(v) or isinstance(v, Pickleable))):
+                    (not callable(v) or isinstance(v, type))
+                    or isinstance(v, Pickleable))):
                 # Dereference the linked attributes in case of stripped pickle
                 if (self.stripped_pickle and k[:2] == "__" and
                         isinstance(getattr(self.__class__, k[2:]),
