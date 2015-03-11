@@ -13,7 +13,7 @@ from six import add_metaclass
 from zope.interface import implementer, Interface
 
 from veles.compat import from_none
-from veles.memory import reshape, transpose
+from veles.numpy_ext import reshape, transpose
 from veles.verified import Verified
 
 

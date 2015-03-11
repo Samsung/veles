@@ -21,6 +21,7 @@ from veles.distributable import Distributable, TriviallyDistributable, \
 import veles.error as error
 from veles.external.progressbar import spin
 from veles.mutable import Bool, LinkableAttribute
+from veles.prng.random_generator import RandomGenerator
 import veles.thread_pool as thread_pool
 from veles.timeit import timeit
 from veles.unit_registry import UnitRegistry
@@ -142,6 +143,7 @@ class Unit(Distributable, Verified):
             self.run = self._track_call(self.run, "run_was_called")
             self.run = self._measure_time(self.run, Unit.timers)
         if hasattr(self, "initialize"):
+            self.initialize = self._ensure_reproducible_rg(self.initialize)
             self.initialize = self._retry_call(self.initialize,
                                                "_is_initialized")
             self.initialize = self._check_attrs(self.initialize, self.demanded)
@@ -567,6 +569,34 @@ class Unit(Distributable, Verified):
                          getattr(fn, 'func', wrapped_track_call).__name__)
         wrapped_track_call.__name__ = fnname + '_track_call'
         return wrapped_track_call
+
+    def _ensure_reproducible_rg(self, fn):
+        storage_attribute_name = "_saved_rg_states"
+
+        def wrapped_reproducible_rg(*args, **kwargs):
+            current_states = {}
+            storage = getattr(self, storage_attribute_name, None)
+            if storage is None:
+                storage = {}
+            for key, value in self.__dict__.items():
+                if isinstance(value, RandomGenerator):
+                    state = storage.get(key)
+                    if state is None:
+                        storage[key] = value.state
+                    else:
+                        current_states[key] = value.state
+                        value.state = state
+            if len(storage) > 0:
+                setattr(self, storage_attribute_name, storage)
+            res = fn(*args, **kwargs)
+            for key, value in current_states.items():
+                getattr(self, key).state = value
+            return res
+
+        fnname = getattr(fn, '__name__',
+                         getattr(fn, 'func', wrapped_reproducible_rg).__name__)
+        wrapped_reproducible_rg.__name__ = fnname + '_reproducible_rg'
+        return wrapped_reproducible_rg
 
     def _retry_call(self, fn, name):
         def wrapped_retry_call(*args, **kwargs):

@@ -8,13 +8,14 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import logging
-import numpy.random
 import sys
 import threading
 import time
 import unittest
 
 import veles.thread_pool as thread_pool
+from veles.prng import get as get_prng
+prng = get_prng()
 
 
 class TestThreadPool(unittest.TestCase):
@@ -31,7 +32,7 @@ class TestThreadPool(unittest.TestCase):
     def _job(self, n_jobs, data_lock):
         with data_lock:
             pass
-        time.sleep(numpy.random.rand() + 0.1)
+        time.sleep(prng.rand() + 0.1)
         with data_lock:
             n_jobs[0] -= 1
 

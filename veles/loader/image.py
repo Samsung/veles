@@ -112,7 +112,6 @@ class ImageLoader(Loader):
             "background_color", (0xff, 0x14, 0x93))
         self.smart_crop = kwargs.get("smart_crop", True)
         self.minibatch_label_values = Vector()
-        self._saved_prng_state_for_restoring_from_snapshot = None
 
     def __setstate__(self, state):
         super(ImageLoader, self).__setstate__(state)
@@ -655,19 +654,6 @@ class ImageLoader(Loader):
         overall = sum(len(ck) for ck in self.class_keys[VALID:])
         target_validation_length = int(overall * self.validation_ratio)
 
-        if self._saved_prng_state_for_restoring_from_snapshot is None:
-            old_prng_state = None
-            self._saved_prng_state_for_restoring_from_snapshot = \
-                self.prng.state
-        else:
-            old_prng_state = self.prng.state
-            self.prng.state = \
-                self._saved_prng_state_for_restoring_from_snapshot
-
-        def restore_old_prng_state():
-            if old_prng_state is not None:
-                self.prng.state = old_prng_state
-
         if not self.has_labels:
             keys = list(chain.from_iterable(self.class_keys[VALID:]))
             keys.sort()
@@ -677,7 +663,6 @@ class ImageLoader(Loader):
             del self.class_keys[TRAIN][:]
             self.class_keys[TRAIN].extend(keys[target_validation_length:])
             self._finalize_resizing_validation(different_labels, label_key_map)
-            restore_old_prng_state()
             return
 
         # We must ensure that each set has the same labels
@@ -719,8 +704,6 @@ class ImageLoader(Loader):
         self.class_keys[VALID].extend(left_keys[:offset_val_length])
         self.class_keys[TRAIN].extend(left_keys[offset_val_length:])
         self._finalize_resizing_validation(different_labels, label_key_map)
-
-        restore_old_prng_state()
 
     def _finalize_resizing_validation(self, different_labels, label_key_map):
         for ck in self.class_keys[VALID:]:

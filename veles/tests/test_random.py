@@ -17,6 +17,7 @@ from veles.config import root
 from veles.dummy import DummyWorkflow
 import veles.memory as formats
 import veles.prng as rnd
+from veles.prng.uniform import Uniform
 
 
 class TestRandom1024(unittest.TestCase):
@@ -105,8 +106,8 @@ class TestRandom1024(unittest.TestCase):
         self.assertEqual(numpy.count_nonzero(v_gpu - v_cpu), 0)
 
         # Test Uniform on GPU
-        u = rnd.Uniform(DummyWorkflow(), num_states=self.n_states,
-                        output_bytes=v_cpu.nbytes)
+        u = Uniform(DummyWorkflow(), num_states=self.n_states,
+                    output_bytes=v_cpu.nbytes)
         u.states.mem = stt.copy()
         u.initialize(self.device)
         u.run()
@@ -115,8 +116,8 @@ class TestRandom1024(unittest.TestCase):
         self.assertEqual(numpy.count_nonzero(v - v_cpu), 0)
 
         # Test Uniform on CPU
-        u = rnd.Uniform(DummyWorkflow(), num_states=self.n_states,
-                        output_bytes=v_cpu.nbytes)
+        u = Uniform(DummyWorkflow(), num_states=self.n_states,
+                    output_bytes=v_cpu.nbytes)
         u.states.mem = stt.copy()
         u.initialize(None)
         u.run()

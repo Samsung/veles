@@ -13,7 +13,7 @@ import threading
 
 from veles.config import root
 from veles.distributable import Pickleable
-import veles.memory as formats
+from veles.numpy_ext import ravel
 
 
 # Disable stock numpy.random for great justice
@@ -140,7 +140,7 @@ class RandomGenerator(Pickleable):
             vle_min: minimum value in random distribution.
             vle_max: maximum value in random distribution.
         """
-        arr = formats.ravel(arr)
+        arr = ravel(arr)
         arr[:] = (my_random.rand(arr.size) * (vle_max - vle_min) +
                   vle_min)[:]
 
@@ -156,7 +156,7 @@ class RandomGenerator(Pickleable):
         #    stddev:
         #    min_val, max_val (optional): clipping values of output data.
         """
-        arr = formats.ravel(arr)
+        arr = ravel(arr)
         arr[:] = my_random.normal(loc=mean, scale=stddev, size=arr.size)[:]
 
         numpy.clip(arr, mean - clip_to_sigma * stddev,

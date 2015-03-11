@@ -23,7 +23,6 @@ from veles.cmdline import CommandLineArgumentsRegistry
 from veles.compat import from_none
 from veles.config import root
 from veles.distributable import Pickleable
-from veles.dummy import DummyWorkflow
 from veles.logger import Logger
 import veles.opencl_types as opencl_types
 import veles.external.prettytable as prettytable
@@ -425,6 +424,7 @@ class OpenCLDevice(Device):
         device_info = {}
         krnnme = "matrix_multiplication"
         device_info[krnnme] = {}
+        from veles.dummy import DummyWorkflow
         # FIXME(v.markovtsev): disable R0401 locally when pylint issue is fixed
         # https://bitbucket.org/logilab/pylint/issue/61
         # pylint: disable=R0401

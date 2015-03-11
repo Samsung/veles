@@ -11,6 +11,8 @@ import numpy
 import unittest
 
 from veles.normalization import NormalizerRegistry
+from veles.prng import get as get_prng
+prng = get_prng()
 
 
 class TestNormalizers(unittest.TestCase):
@@ -66,8 +68,8 @@ class TestNormalizers(unittest.TestCase):
     def test_exp(self):
         nclass = NormalizerRegistry.normalizers["exp"]
         ln = nclass()
-        arr = numpy.array([numpy.random.normal(0, 1, 10) for _ in range(4)],
-                          dtype=numpy.float32)
+        arr = numpy.array([prng.normal(0, 1, 10) for _ in range(4)],
+                          numpy.float32)
         ln.analyze(arr)
         ln.normalize(arr)
         self.assertGreater(numpy.min(arr), 0)
