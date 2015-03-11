@@ -80,6 +80,16 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         return self.original_data[0].shape
 
     @property
+    def on_device(self):
+        return not self.force_cpu
+
+    @on_device.setter
+    def on_device(self, value):
+        if not isinstance(value, bool):
+            raise TypeError("on_device must be boolean (got %s)" % type(value))
+        self.force_cpu = not value
+
+    @property
     def validation_ratio(self):
         """
         Returns the ratio between new train and new validation set lengths.
