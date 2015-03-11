@@ -110,7 +110,7 @@ def get(value, default_value=None):
 
 def validate_kwargs(caller, **kwargs):
     for k, v in kwargs.items():
-        if isinstance(v, Config):
+        if isinstance(v, Config) and len(v.__content__) == 0:
             caller.warning("Argument '%s' seems to be undefined at %s",
                            k, v.__path__)
             if root.common.trace_undefined_configs:
