@@ -147,7 +147,7 @@ class PicklesImageFullBatchLoader(PicklesLoader, FullBatchImageLoader):
         return int(self.image_labels[key])
 
     def get_image_info(self, key):
-        return self.image_data[key].shape[1:3], self.color_space
+        return self.image_data[key].shape[:2], self.color_space
 
     def get_image_data(self, key):
         return self.image_data[key]

@@ -32,7 +32,7 @@ class ImageLoaderMSEMixin(LoaderMSEMixin):
 
     def load_data(self):
         super(ImageLoaderMSEMixin, self).load_data()
-        if self._restored_from_pickle:
+        if self._restored_from_pickle_:
             return
         if len(self.target_keys) == 0:
             self.target_keys.extend(self.get_keys(TARGET))

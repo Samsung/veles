@@ -97,7 +97,7 @@ class ImageLoader(Loader):
         self._original_shape = tuple()
         self.class_keys = [[], [], []]
         self.verify_interface(IImageLoader)
-        self._restored_from_pickle = False
+        self._restored_from_pickle_ = False
         self.path_to_mean = kwargs.get("path_to_mean", None)
         self.add_sobel = kwargs.get("add_sobel", False)
         self.mirror = kwargs.get("mirror", False)  # True, False, "random"
@@ -116,15 +116,7 @@ class ImageLoader(Loader):
 
     def __setstate__(self, state):
         super(ImageLoader, self).__setstate__(state)
-        self.info("Scanning for changes...")
-        for keys in self.class_keys:
-            for key in keys:
-                size, _ = self.get_effective_image_info(key)
-                if size != self.uncropped_shape:
-                    raise error.BadFormatError(
-                        "%s changed the effective size (now %s, was %s)" %
-                        (key, size, self.uncropped_shape))
-        self._restored_from_pickle = True
+        self._restored_from_pickle_ = True
 
     @property
     def source_dtype(self):
@@ -578,15 +570,23 @@ class ImageLoader(Loader):
         return different_labels, label_key_map
 
     def initialize(self, **kwargs):
-        self._restored_from_pickle = False
         super(ImageLoader, self).initialize(**kwargs)
+        self._restored_from_pickle_ = False
 
     def load_data(self):
         try:
             super(ImageLoader, self).load_data()
         except AttributeError:
             pass
-        if self._restored_from_pickle:
+        if self._restored_from_pickle_:
+            self.info("Scanning for changes...")
+            for keys in self.class_keys:
+                for key in keys:
+                    size, _ = self.get_effective_image_info(key)
+                    if size != self.uncropped_shape:
+                        raise error.BadFormatError(
+                            "%s changed the effective size (now %s, was %s)" %
+                            (key, size, self.uncropped_shape))
             return
         for keys in self.class_keys:
             del keys[:]
