@@ -25,7 +25,12 @@ import numpy
 import os
 import resource
 import runpy
-from six import print_, StringIO
+from six import print_, StringIO, PY3
+if PY3:
+    from urllib.parse import splittype
+else:
+    from urllib import splittype
+import wget
 
 import veles
 
@@ -341,7 +346,7 @@ class Main(Logger, CommandLineBase):
                 self.workflow = Workflow(self.launcher, **kwargs)
                 self.info("Created %s", self.workflow)
             else:
-                self.info("Loaded the workflow pickle from %s: %s",
+                self.info("Loaded the workflow snapshot from %s: %s",
                           self.snapshot_file_name, self.workflow)
                 if self._visualization_mode:
                     self.workflow.plotters_are_enabled = True
@@ -480,6 +485,19 @@ class Main(Logger, CommandLineBase):
         cfg.print_(file=io)
         self.debug("\n%s", io.getvalue().strip())
 
+    def _fetch_snapshot(self, url):
+        if os.path.exists(url) or splittype(url)[0] not in ("http", "https"):
+            self.snapshot_file_name = url
+            return
+        try:
+            self.info("Downloading %s...", url)
+            self.snapshot_file_name = wget.download(
+                url, root.common.snapshot_dir)
+            print()
+        except:
+            self.exception("Failed to fetch the snapshot at \"%s\"", url)
+            self.snapshot_file_name = ""
+
     @staticmethod
     def format_decimal(val):
         if val < 1000:
@@ -549,6 +567,7 @@ class Main(Logger, CommandLineBase):
 
         if self.logger.isEnabledFor(logging.DEBUG):
             self._print_config(root)
+        self._fetch_snapshot(args.snapshot)
         wm = self._load_model(fname_workflow)
         self._apply_config(fname_config, args.config_list)
         if self.logger.isEnabledFor(logging.DEBUG):
