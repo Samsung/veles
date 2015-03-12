@@ -198,17 +198,17 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         self.cpu_run()
 
     def ocl_init(self):
+        self._gpu_init()
         self._global_size = (self.max_minibatch_size,
                              self.minibatch_data.sample_size)
         self._local_size = None
-        self._gpu_init()
 
     def cuda_init(self):
+        self._gpu_init()
         block_size = self.device.suggest_block_size(self._kernel_)
         self._global_size = (int(numpy.ceil(
             self.minibatch_data.size / block_size)), 1, 1)
         self._local_size = (block_size, 1, 1)
-        self._gpu_init()
 
     def on_before_create_minibatch_data(self):
         self._has_labels = len(self.original_labels) > 0
