@@ -1,0 +1,3 @@
+*.patch
+node_modules
+src/libs

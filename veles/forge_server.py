@@ -309,7 +309,7 @@ class ForgeHandler(web.RequestHandler):
 
 class ImagePageHandler(web.RequestHandler):
     def get(self):
-        self.render("forge-image.html", name=self.get_argument("name"))
+        self.render("forge_image.html", name=self.get_argument("name"))
 
 
 class InterceptingStaticFileHandler(web.StaticFileHandler):
@@ -609,7 +609,7 @@ class ForgeServer(Logger):
             (self.uri("thumbnails/(.*)"), ThumbnailHandler,
              {"path": self.root}),
             (self.uri("images/(.*)"), ImageStaticHandler, {"path": self.root}),
-            (self.uri("((js|css|fonts|img)/.*)"),
+            (self.uri("((js|css|fonts|img|maps)/.*)"),
              web.StaticFileHandler, {'path': root.common.web.root}),
             (self.suburi, web.RedirectHandler,
              {"url": self.uri("forge.html"), "permanent": True}),

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="img/veles.png" />
+
+    <title>VELES Cloud Status</title>
+    <!-- build:css css/status.min.css -->
+    <link href='css/audiowide.css' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css"
+          href="../build/css/bootstrap-sass.css"/>
+    <link rel="stylesheet" type="text/css" href="../build/css/status.css"/>
+    <!-- endbuild -->
+    </head>
+    <body>
+      <div id="indicator"></div>
+      <div id="page">
+        <nav class="navbar navbar-default" role="navigation">
+          <div class="flex-box">
+            <div class="navbar-header">
+              <span class="navbar-brand">
+                VELES Distributed Machine Learning Platform
+              </span>
+            </div>
+            <div class="flex-auto">
+              <ul class="nav navbar-nav pull-center">
+                <li class="active"><a href="#">Workflows</a></li>
+                <li><a href="#">Nodes</a></li>
+                <li><a href="#">Users</a></li>
+              </ul>
+            </div>
+          </div>
+        </nav>
+        <div id="content">
+          <div id="sessions">
+            <ul class="list-group" id="workflows-list"></ul>
+          </div>
+          <div id="details">
+            <div id="workflow-details">
+              <h3 class="media-heading" id="workflow-name"></h3>
+              <span id="workflow-description"></span><br>
+              This workflow is managed by <i class="glyphicon glyphicon-user"><a href="#" id="workflow-owner"></a></i>
+              on <a href="#" id="workflow-master-host"></a> and has <span id="workflow-online-nodes"></span> nodes (<span id="workflow-offline-nodes"></span> offline).<br>
+              Log ID: <a target="_blank" href="#" id="workflow-log-id"></a><br>
+              ØMQ plotting endpoints:<br><strong id="workflow-zeromq-plotting-endpoints"></strong>
+            </div>
+            <div id="workflow-svg-container-fill"><div id="workflow-svg-container"></div></div>
+          </div>
+          <div id="tables">
+            <div class="panel panel-borderless">
+              <div class="panel-heading details-panel-heading">Actions</div>
+                <div class="btn-group btn-group-justified">
+                  <div class="btn-group">
+                    <button type="button" class="btn btn-default" id="button-plots">View plots</button>
+                  </div>
+                  <div class="btn-group">
+                    <button type="button" class="btn btn-default" id="button-logs">View logs</button>
+                  </div>
+                  <div class="btn-group">
+                    <button type="button" class="btn btn-default" id="button-suspend">Suspend</button>
+                  </div>
+                  <div class="btn-group">
+                    <button type="button" class="btn btn-danger" id="button-cancel">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            <div class="panel panel-borderless" id="slaves-panel">
+              <div class="panel-heading details-panel-heading">Slaves</div>
+              <div class="panel panel-default panel-margin-zero" id="slaves-table">
+                <table class="table table-condensed">
+                  <colgroup>
+                     <col span="1" class="slave-id" />
+                     <col span="1" class="slave-host" />
+                     <col span="1" class="slave-power" />
+                     <col span="1" class="slave-status" />
+                     <col span="1" class="slave-actions" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Host</th>
+                      <th class="center-cell">Power</th>
+                      <th class="center-cell">Status</th>
+                      <th class="center-cell">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <footer class="flex-box">
+          <div class="graceful-overflow text-muted">
+            Samsung R&D Institute Russia, Platform Algorithms Group, 2014.
+          </div>
+          <div class="flex-auto"></div>
+          <div class="graceful-overflow text-muted">
+            For internal use only. Confidential.
+          </div>
+      </footer>
+      <!-- build:js js/jquery.min.js -->
+      <script src="libs/jquery/dist/jquery.min.js"></script>
+      <!-- endbuild -->
+      <!-- build:js js/status.min.js -->
+      <script src="../build/js/svg_container.js"></script>
+      <script src="libs/bootstrap-sass/assets/javascripts/bootstrap.js"></script>
+      <script src="../build/js/status.js"></script>
+      <!-- endbuild -->
+      <!-- build:js js/viz.js -->
+      <script src="../../common/src/js/viz.js" async defer></script>
+      <!-- endbuild -->
+  </body>
+</html>

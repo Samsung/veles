@@ -89,6 +89,10 @@ class DummyWorkflow(Workflow):
         super(DummyWorkflow, self).__init__(self.launcher)
         self.end_point.link_from(self.start_point)
 
+    @property
+    def interactive(self):
+        return False
+
 
 @implementer(IUnit)
 class DummyUnit(TrivialUnit):

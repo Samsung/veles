@@ -234,7 +234,7 @@ class Main(Logger, CommandLineBase):
 
         app = web.Application([
             ("/cmdline", CmdlineHandler),
-            (r"/((js|css|fonts|img)/.*)",
+            (r"/((js|css|fonts|img|maps)/.*)",
              web.StaticFileHandler, {'path': root.common.web.root}),
             (r"/frontend\.html", FrontendHandler),
             ("/", web.RedirectHandler, {"url": "/frontend.html",

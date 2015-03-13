@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="img/veles.png" />
+    <title>VELES Command Line Frontend</title>
+    <!-- build:css css/frontend.min.css -->
+    <link rel="stylesheet" type="text/css"
+          href="../build/css/bootstrap-sass.css"/>
+    <link href="libs/bootstrap-switch/dist/css/bootstrap3/bootstrap-switch.css" rel="stylesheet" type="text/css"/>
+    <link href="../build/css/frontend.css" rel="stylesheet" type="text/css" />
+    <!-- endbuild -->
+    </head>
+    <body>
+        <div id="whiteout"></div>
+        <div id="command-line-container" class="input-group">
+            <span class="input-group-btn">
+            <button type="button" class="btn btn-success" onclick="run()">RUN</button>
+            </span>
+            <input type="text" class="form-control standalone master slave" id="command-line" value="{{! cmdline }}">
+        </div>
+        <div class="alert alert-danger" id="error-message" role="alert">
+            <strong>Warning!</strong> Better check yourself, you're not looking too good.
+        </div>
+        <div id="arguments">
+            <div class="panel panel-primary argument master slave standalone">
+                <div class="panel-heading master slave standalone">
+                  <span class="label label-danger argtype">Mandatory</span>
+                  <h3 class="panel-title">Mode</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="pull-right description">
+                      <p>Selects VELES operation mode. Standalone is the best choice for debugging workflows and relatively small tasks. Master mode runs VELES workflow server which accepts slaves. Slave mode is the headless VELES instance which requests jobs from a master and returns results.</p>
+                    </div>
+                    <div class="dropdown">
+                      <button class="btn btn-default dropdown-toggle master slave standalone" type="button" id="dropdownMode" data-toggle="dropdown">
+                        Standalone
+                        <span class="caret"></span>
+                      </button>
+                      <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMode">
+                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#" onclick="select_mode('Standalone')">Standalone</a></li>
+                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#" onclick="select_mode('Master')">Master</a></li>
+                        <li role="presentation"><a role="menuitem" tabindex="-1" href="#" onclick="select_mode('Slave')">Slave</a></li>
+                      </ul>
+                    </div>
+                </div>
+            </div>
+            {% raw arguments %}
+        </div>
+        <!-- build:js js/jquery.min.js -->
+        <script src="libs/jquery/dist/jquery.min.js"></script>
+        <!-- endbuild -->
+
+        <script>
+          var opts = {% raw opts %};
+          var workflows = {% raw workflows %};
+          var cmdline_states = {% raw cmdline_states %};
+          var positional_opts = {% raw positional_opts %};
+          var defaults = {% raw defaults_opt %};
+          var choices = {% raw choices %};
+          var special_opts = {% raw special_opts %};
+        </script>
+
+        <!-- build:js js/frontend.min.js -->
+        <script src="libs/bootstrap-sass/assets/javascripts/bootstrap.min.js"></script>
+        <script src="libs/bootstrap-switch/dist/js/bootstrap-switch.js"></script>
+        <script src="libs/typeahead.js/dist/typeahead.jquery.js"></script>
+        <script src="js/minimist_mod.js"></script>
+        <script src="../build/js/frontend.js"></script>
+        <!-- endbuild -->
+    </body>
+</html>

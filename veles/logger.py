@@ -316,8 +316,8 @@ class MongoLogHandler(logging.Handler):
             del data["caller"]
         data["session"] = self.log_id
         data["node"] = self.node_id
-        data["pathname"] = os.path.normpath(data["pathname"])
-        if os.path.isabs(data["pathname"]):
+        data["pathname"] = pathname = os.path.normpath(data["pathname"])
+        if os.path.isabs(pathname) and pathname.startswith(__root__):
             data["pathname"] = os.path.relpath(data["pathname"], __root__)
         if data["exc_info"] is not None:
             data["exc_info"] = repr(data["exc_info"])

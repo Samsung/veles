@@ -9,6 +9,7 @@
       <excludeFolder url="file://$MODULE_DIR$/debian" />
       <excludeFolder url="file://$MODULE_DIR$/docs/build" />
       <excludeFolder url="file://$MODULE_DIR$/docs/html" />
+      <excludeFolder url="file://$MODULE_DIR$/web" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.4.1 (/usr/bin/python3.4)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

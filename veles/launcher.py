@@ -660,7 +660,8 @@ class Launcher(logger.Logger):
                  "%s.stderr%s" %
                  os.path.splitext(root.common.web.log_file)))
         else:
-            self.info("Discovered an already running web status server")
+            self.info("Web status server %s:%d is already running",
+                      root.common.web.host, root.common.web.port)
 
     def _launch_nodes(self):
         if len(self.slaves) == 0:

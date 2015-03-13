@@ -200,7 +200,7 @@ root.common.update({
         "log_backups": 9,
         "notification_interval": 1,
         "pidfile": "/var/run/veles/web_status",
-        "root": os.path.join(__root__, "web"),
+        "root": os.path.join(__root__, "web", "dist"),
         "drop_time": 30 * 24 * 3600,
     },
     "forge": {

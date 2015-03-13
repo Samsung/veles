@@ -1,0 +1,178 @@
+body {
+  font-family: 'Ubuntu', sans-serif;
+}
+
+h1 {
+  font-family: 'Audiowide', cursive;
+}
+
+h2 {
+margin-top: 0;
+}
+
+#list {
+  width: 75vw;
+  max-width: 80em;
+  min-width: 60em;
+  margin: 1em auto 1em auto;
+}
+
+.flex-row {
+  padding: 1em 0 1em 1em;
+  margin-top: 1em;
+  border: 1px solid;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: row;
+}
+
+.flex-row:first-of-type {
+  margin-top: 0;
+}
+
+.flex-row:target {
+  -webkit-animation: highlight 2s ease;
+  animation: highlight 2s ease;
+}
+
+@keyframes highlight {
+  from {
+    background: gold;
+  }
+  to {
+    background: white;
+  }
+}
+
+@-webkit-keyframes highlight {
+  from {
+    background: gold;
+  }
+  to {
+    background: white;
+  }
+}
+
+.details {
+  overflow: auto;
+  flex: auto;
+  height: 20em;
+}
+
+.img-container {
+  position: relative;
+  margin-right: 1em;
+  width: 20em;
+  height: 20em;
+  min-height: 20em;
+  min-width: 20em;
+  max-height: 20em;
+  max-width: 20em;
+}
+
+.img-rounded {
+  width: 20em;
+  height: 20em;
+  object-fit: contain;
+}
+
+.name {
+  display: flex;
+  align-items: center;
+}
+
+.name > .badge {
+  margin-left: 0.5em;
+  vertical-align: middle;
+}
+
+.details-header {
+  font-weight: bold;
+}
+
+.actions {
+  width: 14em;
+  min-width: 14em;
+  position: relative;
+}
+
+.actions-inner {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+}
+
+.actions-inner > .btn-group {
+  margin-left: calc((100% - (2px + 24px + 4.5em) - (2px + 16px + 0.6em)) / 2)
+}
+
+.download {
+  width: calc(2px + 24px + 4.5em);
+}
+
+.versions {
+  width: calc(2px + 16px + 0.6em);
+}
+
+.dropdown-versions {
+  width: calc((2px + 24px + 4.5em) + (2px + 16px + 0.6em));
+  min-width: calc((2px + 24px + 4.5em) + (2px + 16px + 0.6em));
+}
+
+.actions-inner > .alert {
+  margin: 0 1em 1em 1em;
+}
+
+.alert > div {
+  overflow: auto;
+  white-space: nowrap;
+  max-height: calc(20em - 12px - 1.428571429em - 3em);
+}
+
+.search-container {
+  right: 0;
+  position: fixed;
+  width: 15em;
+  margin-right: 1em;
+}
+
+.search-container > input {
+  position: relative;
+}
+
+.search-container > input:focus {
+  z-index: 3;
+}
+
+.jumbotron {
+  display: flex;
+  flex-direction: row;
+}
+
+.jumbotron-contents {
+  flex: 1;
+}
+
+.jumbotron-contents > p:last-child {
+  margin-bottom: 0;
+}
+
+#image-column {
+  position: relative;
+}
+
+#image-column > div {
+  position: absolute;
+  height: 100%;
+}
+
+#logo {
+  margin-left: -100%;
+  height: 100%;
+}
+
+.dropdown-versions {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

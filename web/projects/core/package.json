@@ -1,0 +1,46 @@
+{
+  "devDependencies": {
+    "bower": ">=1.3.12",
+    "browserify": ">=9.0.0",
+    "babelify": "*",
+    "through2": "*",
+    "shrthnd": ">=0.0.6",
+    "del": "*",
+    "lazypipe": "*",
+    "gulp": ">=3.8.11",
+    "gulp-load-plugins": "*",
+    "gulp-bower": "*",
+    "gulp-concat": "*",
+    "gulp-useref": ">=1.1.2",
+    "gulp-if": "*",
+    "gulp-uglify": "*",
+    "gulp-minify-html": "*",
+    "gulp-minify-css": "*",
+    "gulp-uncss": "*",
+    "gulp-sass": "<2.0.0",
+    "gulp-sourcemaps": "*",
+    "gulp-autoprefixer": "*",
+    "gulp-newer": "*",
+    "gulp-imagemin": "*",
+    "gulp-rename": "*",
+    "gulp-replace": "*",
+    "gulp-util": "*",
+    "gulp-nunjucks-html": ">=1.1.2",
+    "imagemin-pngquant": "*"
+  },
+  "engines": {
+    "node": ">=0.10.0"
+  },
+  "homepage": "https://github.com/samsung/veles",
+  "license": {
+    "type": "Apache 2.0",
+    "url": "https://github.com/samsung/veles/blob/master/LICENSE.md"
+  },
+  "name": "veles-core",
+  "private": true,
+  "scripts": {
+    "gulp": "gulp",
+    "bower": "bower"
+  },
+  "version": "0.7.0"
+}

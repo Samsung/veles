@@ -126,7 +126,7 @@ class WebServer(Logger):
             ("/service", ServiceHandler, {"server": self}),
             ("/update", UpdateHandler, {"server": self}),
             ("/logs.html?.*", LogsHandler, {"server": self}),
-            (r"/((js|css|fonts|img)/.*)",
+            (r"/((js|css|fonts|img|maps)/.*)",
              web.StaticFileHandler, {'path': root.common.web.root}),
             (r"/(.+\.html)",
              web.StaticFileHandler, {'path': root.common.web.root}),

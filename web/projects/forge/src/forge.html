@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="img/veles.png" />
+    <title>VelesForge</title>
+    <!-- build:css css/forge.min.css -->
+      <link href='css/audiowide.css' rel='stylesheet' type='text/css'>
+      <link href='css/ubuntu.css' rel='stylesheet' type='text/css'>
+      <link rel="stylesheet" type="text/css"
+            href="../build/css/bootstrap-sass.css"/>
+    <link href="../build/css/forge.css" rel="stylesheet" type="text/css" />
+    <!-- endbuild -->
+    </head>
+    <body>
+      <div class="search-container input-group">
+          <input type="text" class="form-control" placeholder="Search" id="search" onkeypress="inputKeyPress(event);">
+          <div class="input-group-btn">
+              <button class="btn btn-default" onclick="search();"><i class="glyphicon glyphicon-search"></i></button>
+          </div>
+      </div>
+      <div id="list" class="container">
+        <div class="jumbotron">
+          <div class="jumbotron-contents">
+            <h1>VelesForge</h1>
+            <blockquote class="blockquote">
+              <p>World first! Number one!</p>
+              <footer><cite>Dr. Yong Min Lee.</cite></footer>
+            </blockquote>
+            <p><a class="btn btn-primary btn-lg" href="#" role="button">Learn more</a></p>
+          </div>
+          <div id="image-column">
+            <div>
+              <img src="img/veles_big.png" id="logo">
+            </div>
+          </div>
+        </div>
+        {% for item in items %}
+        <div class="flex-row" id="{{ item["name"] }}">
+          <div class="img-container">
+            <a href="javascript:show_image('{{ item["name"] }}');">
+              <img src="thumbnails/{{ item["name"] }}" class="img-rounded">
+            </a>
+          </div>
+          <div class="details">
+            <h2 class="name">{{ item["name"] }} <span class="badge">{{ item["version"] }}</span></h2>
+            <h4>{{ item["short_description"] }}</h4>
+            <span class="details-header">Author: </span><span class="details-value">{{ item["author"] }}</span><br />
+            <span class="details-header">Updated: </span><span class="details-value">{{ item["updated"] }}</span><br />
+            <span class="details-header">Details: </span> <br />
+            <span class="details-value">
+            {{ item["long_description"] }}
+            </span>
+          </div>
+          <div class="actions">
+            <div class="actions-inner">
+              <div class="alert alert-info" role="alert">
+                <div>
+                  <strong>Requires:</strong><br />
+                  {% for r in item["requires"] %}
+                  {{ r }}<br />
+                  {% end %}
+                </div>
+              </div>
+              <div class="btn-group">
+                <button type="button" class="btn btn-success download" onclick="location.href='fetch?name={{ item["name"] }}&version={{ item["version"] }}'">Download</button>
+                <button type="button" class="btn btn-success dropdown-toggle versions" data-toggle="dropdown" aria-expanded="false">
+                  <span class="caret"></span>
+                  <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu dropdown-versions" role="menu">
+                  {% for ver in item["versions"] %}
+                  <li><a title="{{ ver[1] }}" href="fetch?name={{ item["name"] }}&version={{ ver[0] }}">{{ ver[0] }}</a></li>
+                  {% end %}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% end %}
+      </div>
+    </body>
+    <!-- build:js js/jquery.min.js -->
+    <script src="libs/jquery/dist/jquery.min.js"></script>
+    <!-- endbuild -->
+    <!-- build:js js/forge.min.js -->
+    <script src="libs/bootstrap-sass/assets/javascripts/bootstrap.js"></script>
+    <script src="../build/js/forge.js"></script>
+    <!-- endbuild -->
+    <script>
+      $(function() {
+        // Chrome workaround for issue #438564
+        $("#logo").css("display", "block");
+      });
+    </script>
+</html>
