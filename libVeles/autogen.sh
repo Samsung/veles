@@ -45,15 +45,6 @@ else
 fi
 cd $mypath
 
-if [ ! -e "yaml-cpp/CMakeLists.txt" ]; then
-    hg clone https://code.google.com/p/yaml-cpp
-    cd yaml-cpp
-    xz -cd ../yaml-cpp11.patch.xz >yaml-cpp11.patch
-    hg import yaml-cpp11.patch
-    rm yaml-cpp11.patch
-    cd ..
-fi
-
 echo "CFLAGS=\"-I$mypath/zlib -DHAVE_LIBZ=1\" \
 \$(dirname \$0)/configure \$@ --disable-bsdcpio --without-bz2lib \
 --without-lzmadec --without-iconv --without-lzma --without-nettle \

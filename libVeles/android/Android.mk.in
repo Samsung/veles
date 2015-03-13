@@ -11,8 +11,7 @@ LOCAL_SRC_FILES := $(SOURCES)
 LOCAL_CPP_EXTENSION := .cc
 
 LOCAL_C_INCLUDES := @abs_top_srcdir@ @abs_top_srcdir@/inc @abs_top_builddir@ \
-	@abs_top_srcdir@/simd/inc @abs_top_srcdir@/libarchive/libarchive \
-	@abs_top_srcdir@/yaml-cpp/include
+	@abs_top_srcdir@/simd/inc @abs_top_srcdir@/libarchive/libarchive
 
 LOCAL_CFLAGS := -fopenmp -Wall -Wextra -Wno-comment -Wformat-security \
 	@ANDROID_CFLAGS@
