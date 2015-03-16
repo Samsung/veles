@@ -205,11 +205,20 @@ class LinkableAttribute(object):
         # check if we already have an instance of LinkableAttribute assigned to
         # the attribute args[1] of the type type(args[0])
 
-        # if we unpickle this class unpickle method will try
+        # if we unpickle this class the unpickled method will try
         # to create instance with args = ()
         if len(args) < 2:
             return super(LinkableAttribute, cls).__new__(cls)
-        instance = getattr(type(args[0]), args[1], None)
+        try:
+            instance = getattr(type(args[0]), args[1], None)
+        except TypeError:
+            # Workaround for buggy PyPy
+            for key, val in type(args[0]).__dict__.items():
+                if key == args[1]:
+                    instance = val
+                    break
+            else:
+                instance = None
         if not isinstance(instance, LinkableAttribute):
             return super(LinkableAttribute, cls).__new__(cls)
         # updating the attribute value since the object already exists and thus
