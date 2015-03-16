@@ -8,11 +8,9 @@
     <mapping directory="$PROJECT_DIR$/libSoundFeatureExtraction/fftf" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/libSoundFeatureExtraction/simd" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/libVeles/libarchive" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/libVeles/yaml-cpp" vcs="hg4idea" />
     <mapping directory="$PROJECT_DIR$/libVeles/zlib" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/mastodon" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/veles/znicz" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/web/viz.js" vcs="Git" />
   </component>
 </project>
-

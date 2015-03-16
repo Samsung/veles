@@ -20,6 +20,7 @@ import tempfile
 import time
 import threading
 from zope.interface import implementer
+from veles.compat import from_none
 
 from veles.config import root
 from veles.distributable import IDistributable
@@ -614,7 +615,7 @@ class Workflow(Container):
                       overlap="false", outputorder="edgesfirst")
         g.set_prog("circo")
         visited_units = set()
-        boilerplate = set([self.start_point])
+        boilerplate = {self.start_point}
         while len(boilerplate) > 0:
             unit = boilerplate.pop()
             visited_units.add(unit)
@@ -637,9 +638,15 @@ class Workflow(Container):
                 g.set("root", hex(id(unit)))
             g.add_node(node)
             for link in unit.links_to.keys():
-                g.add_edge(pydot.Edge(hex(id(unit)), hex(id(link)),
-                                      penwidth=3,
-                                      weight=100))
+                src_id = hex(id(unit))
+                dst_id = hex(id(link))
+                if unit.view_group == link.view_group and \
+                        unit.view_group in self.VIP_GROUPS:
+                    # Force units of the same group to be sequential
+                    for _ in range(2):
+                        g.add_edge(pydot.Edge(
+                            src_id, dst_id, color="#ffffff00"))
+                g.add_edge(pydot.Edge(src_id, dst_id, penwidth=3, weight=100))
                 if link not in visited_units and link not in boilerplate:
                     boilerplate.add(link)
         if with_data_links:
@@ -697,7 +704,19 @@ class Workflow(Container):
                     os.path.splitext(filename)[1], "workflow_",
                     dir=os.path.join(root.common.cache_dir, "plots"))
             self.debug("Saving the workflow graph to %s", filename)
-            g.write(filename, format=os.path.splitext(filename)[1][1:])
+            try:
+                g.write(filename, format=os.path.splitext(filename)[1][1:])
+            except pydot.InvocationException as e:
+                if "has no position" not in e.value:
+                    raise from_none(e)
+                error_marker = "Error: node "
+                hex_pos = e.value.find(error_marker) + len(error_marker)
+                buggy_id = e.value[hex_pos:hex_pos + len(hex(id(self)))]
+                buggy_unit = next(u for u in self if hex(id(u)) == buggy_id)
+                self.warning("Looks like %s is not properly linked, unable to "
+                             "draw the data links.", buggy_unit)
+                return self.generate_graph(filename, write_on_disk, False,
+                                           background)
             self.info("Saved the workflow graph to %s", filename)
         desc = g.to_string().strip()
         self.debug("Graphviz workflow scheme:\n%s", desc)
@@ -709,6 +728,8 @@ class Workflow(Container):
                          "TRAINER": "coral",
                          "EVALUATOR": "plum",
                          "SERVICE": "lightgrey"}
+
+    VIP_GROUPS = {"WORKER", "TRAINER"}
 
     HIDDEN_UNIT_ATTRS = {"_workflow"}
 
