@@ -183,6 +183,16 @@ class Test(unittest.TestCase):
             err = False
         self.assertFalse(err, "Two way assignment disabled")
 
+    def testLinkablePickling(self):
+        a = A()
+        a.number = 77
+        b = B()
+        LinkableAttribute(b, "number", (a, "number"))
+        new_a, new_b = pickle.loads(pickle.dumps((a, b)))
+        self.assertEqual(new_b.number, 77)
+        self.assertEqual(new_a.number, 77)
+        new_a.number = 100
+        self.assertEqual(new_b.number, 100)
 
 if __name__ == "__main__":
     unittest.main()
