@@ -50,6 +50,13 @@ class Repeater(TrivialUnit):
         """
         return True
 
+    def link_from(self, *args):
+        super(Repeater, self).link_from(*args)
+        if len(self.links_to) > 2:
+            self.warning(
+                "Repeater has more than 2 incoming links: %s. Are you sure?",
+                tuple(self.links_to))
+
 
 class UttermostPoint(TrivialUnit):
     hide = True
