@@ -10,6 +10,8 @@ import inspect
 import marshal
 import types
 
+from veles.compat import PYPY
+
 
 class Bool(object):
     """
@@ -149,10 +151,14 @@ class Bool(object):
         es = self.__expr = [state["__expr"][0]]
         for expr in state["__expr"][1:]:
             func_code = marshal.loads(expr[2])
-            es.append((expr[0],
-                       types.FunctionType(
-                           func_code, globals(), expr[1],
-                           closure=tuple(cell(c) for c in expr[3]))))
+            if not PYPY:
+                es.append((expr[0],
+                           types.FunctionType(
+                               func_code, globals(), expr[1],
+                               closure=tuple(cell(c) for c in expr[3]))))
+            else:
+                es.append((expr[0],
+                           types.FunctionType(func_code, globals(), expr[1])))
         self.on_true = None
         self.on_false = None
         self.__influences = {self}

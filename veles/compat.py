@@ -6,7 +6,7 @@ This module provides compatibility functions between python2 and python3 code
 Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
 
-
+import platform
 import six
 
 if six.PY3:
@@ -85,3 +85,5 @@ if not six.PY3:
             raise NotImplementedError('sys.implementation.cache_tag is None')
         filename = ''.join([base_filename, sep, tag, suffixes[0]])
         return os.path.join(head, _PYCACHE, filename)
+
+PYPY = platform.python_implementation() == "PyPy"
