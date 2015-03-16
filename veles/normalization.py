@@ -21,6 +21,9 @@ class UninitializedStateError(Exception):
     pass
 
 
+float32 = numpy.zeros(0, numpy.float32).dtype
+
+
 class INormalizer(Interface):
     """
     Each normalization class must conform to this interface.
@@ -101,7 +104,9 @@ class NormalizerBase(Verified):
     def assert_initialized(self, fn):
         def wrapped(data):
             assert self._initialized
-            assert data.dtype in (numpy.float32, numpy.float64)
+            # assert data.dtype in (numpy.float32, numpy.float64) does not work
+            # under PyPy, see https://bitbucket.org/pypy/pypy/issue/1998/numpyzeros-0-numpyfloat32-dtype-in  # nopep8
+            assert data.dtype == numpy.float32 or data.dtype == numpy.float64
             assert isinstance(data.shape, tuple) and len(data.shape) > 1
             return fn(data)
 
