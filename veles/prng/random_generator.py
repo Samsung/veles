@@ -10,6 +10,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 import numpy
 import os
 import threading
+from veles.compat import PYPY
 
 from veles.config import root
 from veles.distributable import Pickleable
@@ -90,7 +91,14 @@ class RandomGenerator(Pickleable):
             my_random.seed(seed)
         except ValueError:
             my_random.seed(seed.view(numpy.uint32))
-        numpy.save(self.seed_file_name, seed)
+        if not PYPY:
+            numpy.save(self.seed_file_name, seed)
+        else:
+            with open(self.seed_file_name, "wb") as fout:
+                if isinstance(seed, numpy.ndarray):
+                    fout.write(bytes(seed.data))
+                else:
+                    fout.write(bytes(numpy.asarray((seed,)).data))
         self.restore_state()
 
     def preserve_state(fn):

@@ -15,7 +15,12 @@ import os
 from zope.interface import implementer
 
 from veles.backends import Device
-from veles.loader.loader_hdf5 import HDF5Loader, FullBatchHDF5Loader
+try:
+    from veles.loader.loader_hdf5 import HDF5Loader, FullBatchHDF5Loader
+    skip_hdf5 = False
+except ImportError:
+    HDF5Loader = FullBatchHDF5Loader = object
+    skip_hdf5 = True
 import veles.prng as rnd
 from veles.loader import IFullBatchLoader, FullBatchLoaderMSE
 from veles.dummy import DummyWorkflow
@@ -85,6 +90,7 @@ class TestFullBatchLoader(unittest.TestCase):
         return res_data, res_labels, res_target
 
 
+@unittest.skipIf(skip_hdf5, "h5py is unavailable")
 class TestHDF5Loader(unittest.TestCase):
     def do(self, klass, **kwargs):
         csd = os.path.dirname(os.path.abspath(__file__))

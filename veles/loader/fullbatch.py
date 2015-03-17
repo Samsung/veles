@@ -257,10 +257,11 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
     def fill_minibatch(self):
         for i, sample_index in enumerate(
                 self.minibatch_indices.mem[:self.minibatch_size]):
-            self.minibatch_data[i] = self.original_data[sample_index]
+            # int() is required by (guess what...) PyPy
+            self.minibatch_data[i] = self.original_data[int(sample_index)]
             if self.has_labels:
                 self.minibatch_labels[i] = \
-                    self._mapped_original_labels_[sample_index]
+                    self._mapped_original_labels_[int(sample_index)]
 
     def map_minibatch_labels(self):
         pass
@@ -492,7 +493,8 @@ class FullBatchLoaderMSEMixin(LoaderMSEMixin):
     def fill_minibatch(self):
         super(FullBatchLoaderMSEMixin, self).fill_minibatch()
         for i, v in enumerate(self.minibatch_indices[:self.minibatch_size]):
-            self.minibatch_targets[i] = self.original_targets[v]
+            # int() is required by PyPy
+            self.minibatch_targets[i] = self.original_targets[int(v)]
 
 
 class FullBatchLoaderMSE(FullBatchLoaderMSEMixin, FullBatchLoader):

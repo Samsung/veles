@@ -9,7 +9,6 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 import bz2
 import gzip
 from io import SEEK_END
-import lzma
 import os
 
 import numpy
@@ -18,7 +17,7 @@ import snappy
 from zope.interface import implementer
 
 from veles import error
-from veles.compat import from_none
+from veles.compat import from_none, lzma
 from veles.config import root
 from veles.loader.base import Loader, ILoader, CLASS_NAME
 from veles.pickle2 import pickle, best_protocol
