@@ -14,6 +14,7 @@ Veles Machine Learning Platform
     manualrst_veles_pycharm
     manualrst_veles_ocl
     manualrst_veles_distributed_setup
+    manualrst_veles_pypy
     manualrst_veles_mongo
     
     manualrst_veles_examples
