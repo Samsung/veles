@@ -11,6 +11,7 @@ from six import print_
 import sys
 import threading
 import unittest
+from veles.compat import from_none
 
 from veles.thread_pool import ThreadPool
 
@@ -89,7 +90,7 @@ def timeout(value=60):
             try:
                 res = fn(self, *args, **kwargs)
             except KeyboardInterrupt:
-                self.fail("Interrupted")
+                raise from_none(self.failureException("KeyboardInterrupt"))
             finally:
                 event.set()
             return res

@@ -360,7 +360,8 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         ThreadPool.shutdown_pools(execute_remaining=False, force=True)
         try:
-            ThreadPool.sigint_initial(sign, frame)
+            # ThreadPool.sigint_initial(sign, frame) does not work on Python 2
+            ThreadPool.__dict__['sigint_initial'](sign, frame)
         except KeyboardInterrupt:
             log = logging.getLogger("ThreadPool")
             if not reactor.running:
