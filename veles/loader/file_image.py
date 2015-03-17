@@ -10,6 +10,7 @@ Copyright (c) 2015 Samsung Electronics Co., Ltd.
 
 from __future__ import division
 from itertools import chain
+import json
 from mimetypes import guess_type
 import os
 import re
@@ -171,6 +172,7 @@ class FileImageLoaderBase(ImageLoader):
         return True
 
 
+@implementer(IImageLoader)
 class FileListImageLoader(FileImageLoaderBase):
     """
     Input: text file, with each line giving an image filename and label
@@ -182,21 +184,30 @@ class FileListImageLoader(FileImageLoaderBase):
         super(FileListImageLoader, self).__init__(workflow, **kwargs)
         self.path_to_test_text_file = kwargs.get("path_to_test_text_file", "")
         self.path_to_val_text_file = kwargs.get("path_to_val_text_file", "")
-        self.path_to_train_text_file = kwargs.get(
-            "path_to_train_text_file", "")
+        self.path_to_train_text_file = kwargs["path_to_train_text_file"]
         self.labels = {}
 
     def scan_files(self, pathname):
         self.info("Scanning %s..." % pathname)
         files = []
-        with open(pathname, "r") as fin:
-            for line in fin:
-                path_to_image, _, label = line.partition(' ')
-                self.labels[path_to_image] = label if label else None
-                files.append(path_to_image)
+        if pathname.endswith(".json"):
+            with open(pathname, "r") as fin:
+                images = json.load(fin)
+                for image in images.values():
+                    if len(image["label"]) > 0:
+                        label = image["label"][0]
+                        self.labels[image["path"]] = label
+                        files.append(image["path"])
+        else:
+            with open(pathname, "r") as fin:
+                for line in fin:
+                    path_to_image, _, label = line.partition(' ')
+                    if label:
+                        self.labels[path_to_image] = label
+                        files.append(path_to_image)
         if not len(files):
             self.warning("No files were taken from %s" % pathname)
-            return [], []
+            return []
         return files
 
     def get_label_from_filename(self, filename):
