@@ -13,6 +13,7 @@ from six import StringIO
 import unittest
 
 from veles.config import root, Config, get, validate_kwargs
+from veles.pickle2 import pickle
 
 
 class TestConfig(unittest.TestCase):
@@ -84,12 +85,29 @@ class TestConfig(unittest.TestCase):
     def test_print(self):
         f = StringIO()
         root.print_(file=f)
-        self.assertGreater(len(f.getvalue()), 0)
+        value = f.getvalue()
+        self.assertGreater(len(value), 0)
+        self.assertTrue("'common'" in value)
+        self.assertTrue("'engine'" in value)
 
     def test_validate(self):
         validate_kwargs(self, first=root.unit_test, second=root.nonexistnt)
         self.assertTrue(self.was_warning)
 
+    def test_pickling(self):
+        test = Config("root")
+        test.a = 10
+        test.b = 20
+        test.update({"c": {"inner": "string"}})
+        self.assertIsInstance(test.c, Config)
+        buffer = pickle.dumps(test)
+        new_test = pickle.loads(buffer)
+        self.assertEqual(new_test.__path__, "root")
+        self.assertEqual(new_test.a, 10)
+        self.assertEqual(new_test.b, 20)
+        self.assertIsInstance(new_test.c, Config)
+        self.assertEqual(new_test.c.__path__, "root.c")
+        self.assertEqual(new_test.c.inner, "string")
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)

@@ -63,32 +63,39 @@ class Config(object):
     @property
     def __content__(self):
         attrs = dict(self.__dict__)
-        del attrs["__path__"]
+        if "__path__" in attrs:
+            del attrs["__path__"]
         return attrs
 
     def __repr__(self):
         return '<Config "%s": %s>' % (self.__path__, repr(self.__content__))
 
     def print_(self, indent=1, width=80, file=sys.stdout):
+        def fix_contents(obj):
+            fixed_contents = content = obj.__content__
+            for k, v in content.items():
+                if isinstance(v, Config):
+                    fixed_contents[k] = fix_contents(v)
+            return fixed_contents
+
         print_('-' * width, file=file)
         print_('Configuration "%s":' % self.__path__, file=file)
-        pprint(self.__getstate__(), indent=indent, width=width, stream=file)
+        pprint(fix_contents(self), indent=indent, width=width, stream=file)
         print_('-' * width, file=file)
 
     def __getstate__(self):
-        def fix_contents(contents):
-            fixed_contents = dict(contents)
-            if "__path__" in fixed_contents:
-                del fixed_contents["__path__"]
-            for k, v in contents.items():
-                if isinstance(v, Config):
-                    fixed_contents[k] = fix_contents(v.__dict__)
-            return fixed_contents
-
-        return fix_contents(self.__dict__)
+        """
+        Do not remove this method, if you think the default one works the same.
+        It actually raises "Config object is not callable" exception.
+        """
+        return self.__dict__
 
     def __setstate__(self, state):
-        self.__update__(state)
+        """
+        Do not remove this method, if you think the default one works the same.
+        It actually leads to "maximum recursion depth exceeded" exception.
+        """
+        self.__dict__.update(state)
 
     if PY2:
         def __getnewargs__(self):
