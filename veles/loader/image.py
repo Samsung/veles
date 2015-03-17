@@ -580,13 +580,17 @@ class ImageLoader(Loader):
             pass
         if self._restored_from_pickle_:
             self.info("Scanning for changes...")
+            progress = ProgressBar(maxval=self.total_samples)
+            progress.start()
             for keys in self.class_keys:
                 for key in keys:
+                    progress.inc()
                     size, _ = self.get_effective_image_info(key)
                     if size != self.uncropped_shape:
                         raise error.BadFormatError(
                             "%s changed the effective size (now %s, was %s)" %
                             (key, size, self.uncropped_shape))
+            progress.finish()
             return
         for keys in self.class_keys:
             del keys[:]

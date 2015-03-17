@@ -53,6 +53,8 @@ from veles.pickle2 import setup_pickle_debug
 from veles import prng
 from veles.snapshotter import Snapshotter
 from veles.thread_pool import ThreadPool
+import veles.accelerated_units  # do not remove or options in accelerated_units
+# (like --force-cpu or --sync-run) will be disabled
 
 unload_unittest()
 
