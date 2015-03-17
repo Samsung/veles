@@ -364,7 +364,8 @@ class MeanNormalizerBase(object):
         self._scale = float(value)
 
     def apply_scale(self, data):
-        data *= self.scale
+        if self.scale != 1:
+            data *= self.scale
 
 
 @implementer(INormalizer)
