@@ -15,6 +15,7 @@ from itertools import chain
 import json
 import os
 import paramiko
+import platform
 from six import BytesIO, add_metaclass
 import socket
 import sys
@@ -104,6 +105,8 @@ class Launcher(logger.Logger):
                                  log_base_name[1]))
             logger.Logger.redirect_all_logging_to_file(log_file)
 
+        self.info("My Python is %s %s", platform.python_implementation(),
+                  platform.python_version())
         self.info("My PID is %d", os.getpid())
         self.info("My time is %s", datetime.datetime.now())
         self.id = str(uuid.uuid4()) if not self.is_slave else None
