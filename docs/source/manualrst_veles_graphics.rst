@@ -37,3 +37,4 @@ There is a feature to write each plot into a PDF file. To activate PDf mode,
 send USR2 signal to ``graphics_client.py`` process, something like::
 
     killall -SIGUSR2 python3
+

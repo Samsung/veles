@@ -11,3 +11,4 @@ Install required Ubuntu packages
     liblapack-dev libblas-dev gfortran libffi-dev libsnappy1 libsnappy-dev \
     libxml2-dev libxslt1-dev lzma-dev bzip2 patch liblzma-dev liblzma5 \
     libreadline-dev libbz2-dev gcc g++ libfreetype6-dev
+

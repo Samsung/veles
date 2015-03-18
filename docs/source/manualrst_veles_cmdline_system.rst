@@ -11,9 +11,11 @@ arguments which are included into the global list. Such class must have
 .. method:: init_parser(**kwargs)
    :noindex:
 
-defined, which first obtain the instance of :class:`argparse.ArgumentParser`::
+defined, which first obtain the instance of :class:`argparse.ArgumentParser`
 
-    parser = kwargs.get("parser", argparse.ArgumentParser())
+.. code-block:: python
+
+   parser = kwargs.get("parser", argparse.ArgumentParser())
     
 and then append arguments with :func:`parser.add_argument()` and return it.
 When an instance of that class wants to find out the argument values,

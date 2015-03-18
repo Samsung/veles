@@ -10,3 +10,4 @@ Install required CentOS packages
     gettext-devel openssl-devel zlib-devel autoconf automake libtool git \
     subversion libpng-devel freetype-devel gcc-gfortran libffi-devel snappy-devel \
     libxml2-devel libxslt-devel gcc perl-ExtUtils-MakeMaker patch gcc-c++ bzip2-devel
+

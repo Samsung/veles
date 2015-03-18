@@ -3,82 +3,111 @@
 Using Configs
 :::::::::::::
 
- Class :class:`veles.config.Config` was designed to set the Model (:doc:`manualrst_veles_models`) parameters.
+Class :class:`veles.config.Config` was designed to set the Model (:doc:`manualrst_veles_models`) parameters.
 
 In order to use it:
 
-1. Import the root configuration node - instance ``root`` of :class:`veles.config.Config`::
+1. Import the root configuration node - instance ``root`` of :class:`veles.config.Config`
 
-    from veles.config import root
+.. code-block:: python
 
-  Or you can create your own configuration object::
+from veles.config import root
 
-    from veles.config import Config
+Or you can create your own configuration object
 
-    my_config = Config()
+.. code-block:: python
 
-  You can use "=" to set the value of configuration object::
+from veles.config import Config
 
-    root.my_workflow.loader.minibatch_size = 100
+my_config = Config()
 
-  This line automatically creates the object ''root.my_workflow.loader.minibatch_size'' and assign to it a value 100. For your config::
+You can use "=" to set the value of configuration object
 
-    my_config = Config()
-    my_config.my_workflow.decision.fail_iteration = 20
+.. code-block:: python
 
-2. Also you can use :meth:`update() <veles.config.Config>`, which can set arguments in a form of tree::
+root.my_workflow.loader.minibatch_size = 100
 
-    root.my_workflow.update({
-        "snapshotter": {"prefix": "my_workflow"},
-        "loader": {"minibatch_size": 88, "on_device": True},
-        "layers": [364, 10]})
+This line automatically creates the object ''root.my_workflow.loader.minibatch_size'' and assign to it a value 100. For your config
 
-  It is a more convenient form which is equivalent to this::
+.. code-block:: python
 
-    root.my_workflow.snapshotter.prefix = "my_workflow"
-    root.my_workflow.loader.minibatch_size = 88
-    root.my_workflow.loader.on_device = True
-    root.my_workflow.layers = [364, 10]
+my_config = Config()
+my_config.my_workflow.decision.fail_iteration = 20
 
-3. ``root.common`` is a set of general parameters of Veles engine. You can see all common arguments in :class:`veles.config.Config` or :doc:`manualrst_veles_workflow_parameters`::
+2. Also you can use :meth:`update() <veles.config.Config>`, which can set arguments in a form of tree
 
-    root.common.update({"precision_type": "float",
-                        "precision_level": 0}) # my_config.py
+.. code-block:: python
 
-4. You can set parameters in workflow file, configuration file and in the command line.
+root.my_workflow.update({
+    "snapshotter": {"prefix": "my_workflow"},
+    "loader": {"minibatch_size": 88, "on_device": True},
+    "layers": [364, 10]})
 
-  Arguments application order:
+It is a more convenient form which is equivalent to this
 
-  1. Workflow. Workflow has default parameters. You can't delete default parameters, but you can move it to first configuration file::
+.. code-block:: python
 
-       root.my_workflow.loader.minibatch_size = 40 # my_workflow.py
+root.my_workflow.snapshotter.prefix = "my_workflow"
+root.my_workflow.loader.minibatch_size = 88
+root.my_workflow.loader.on_device = True
+root.my_workflow.layers = [364, 10]
 
-  2. Configuration files. Arguments in configuration file (my_config.py) update parameters in workflow file (my_workflow.py). You can run Model with many configuration files. They will update each other in the order in which they appear on the command line::
+3. ``root.common`` is a set of general parameters of Veles engine. You can see
+all common arguments in :class:`veles.config.Config` or
+:doc:`manualrst_veles_workflow_parameters`
 
-       veles my_workflow.py my_config1.py my_config2.py
+.. code-block:: python
 
-     Arguments::
+root.common.update({"precision_type": "float",
+                    "precision_level": 0}) # my_config.py
 
-       root.my_workflow.loader.minibatch_size = 40 # my_workflow.py
-       root.my_workflow.loader.minibatch_size = 88 # my_config1.py
-       root.my_workflow.loader.minibatch_size = 30 # my_config2.py
+4. You can set parameters in workflow file, configuration file and in the
+command line.
 
-   Result minibatch_size will be 30.
+Arguments application order:
 
-  3. Command line. Parameters in the command line overwrite arguments in configuration file (my_config.py). You can set the parameters after workflow and configuration files on command line::
+1. Workflow. Workflow has default parameters. You can't delete default
+parameters, but you can move it to first configuration file
 
-       veles my_workflow.py my_config1.py my_config2.py root.my_workflow.loader.minibatch_size=20 root.common.plotters_disabled=True
+.. code-block:: python
 
-   Result minibatch_size will be 20.
+   root.my_workflow.loader.minibatch_size = 40 # my_workflow.py
 
-5. You can use arguments after setting value of configuration objects. For example::
+2. Configuration files. Arguments in configuration file (my_config.py)
+update parameters in workflow file (my_workflow.py). You can run Model with
+many configuration files. They will update each other in the order in which
+they appear on the command line::
 
-    from veles.config import root
+   veles my_workflow.py my_config1.py my_config2.py
 
-    root.my_workflow.update({
-        "decision": {"fail_iterations": 20,
-                     "max_epochs": 300})
+ Arguments
+.. code-block:: python
 
-    print("Fail iterations is ", root.my_workflow.decision.fail_iterations)
+   root.my_workflow.loader.minibatch_size = 40 # my_workflow.py
+   root.my_workflow.loader.minibatch_size = 88 # my_config1.py
+   root.my_workflow.loader.minibatch_size = 30 # my_config2.py
+
+Result minibatch_size will be 30.
+
+3. Command line. Parameters in the command line overwrite arguments in
+configuration file (my_config.py). You can set the parameters after
+workflow and configuration files on command line::
+
+   veles my_workflow.py my_config1.py my_config2.py root.my_workflow.loader.minibatch_size=20 root.common.plotters_disabled=True
+
+Result minibatch_size will be 20.
+
+5. You can use arguments after setting value of configuration objects.
+For example:
+
+.. code-block:: python
+
+from veles.config import root
+
+root.my_workflow.update({
+    "decision": {"fail_iterations": 20,
+                 "max_epochs": 300})
+
+print("Fail iterations is ", root.my_workflow.decision.fail_iterations)
 
 6. You can see all existing parameters in :doc:`manualrst_veles_workflow_parameters`.
