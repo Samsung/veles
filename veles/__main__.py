@@ -343,8 +343,8 @@ class Main(Logger, CommandLineBase):
             sys.exit(Main.EXIT_FAILURE)
         try:
             self.workflow = self._load_workflow(self.snapshot_file_name)
-            snapshot = self.workflow is not None
-            if not snapshot:
+            self.snapshot = self.workflow is not None
+            if not self.snapshot:
                 self.workflow = Workflow(self.launcher, **kwargs)
                 self.info("Created %s", self.workflow)
             else:
@@ -365,7 +365,7 @@ class Main(Logger, CommandLineBase):
             self.workflow.generate_graph(filename=self._workflow_graph,
                                          with_data_links=True,
                                          background='white')
-        return self.workflow, snapshot
+        return self.workflow, self.snapshot
 
     def _main(self, **kwargs):
         if self._dry_run < 2:
@@ -376,6 +376,7 @@ class Main(Logger, CommandLineBase):
             self.critical("Call load() first in run()")
             sys.exit(Main.EXIT_FAILURE)
         self.main_called = True
+        kwargs["snapshot"] = self.snapshot
 
         try:
             self.launcher.initialize(self.acceleration_is_enabled, **kwargs)

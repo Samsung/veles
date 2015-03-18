@@ -299,6 +299,8 @@ class Workflow(Container):
         """Initializes all the units belonging to this Workflow, in dependency
         order.
         """
+        assert "snapshot" in kwargs, \
+            "\"snapshot\" (True/False) must be provided in kwargs"
         if self.is_main:
             self.thread_pool.start()
             self.debug("Started the pool with %d threads",
