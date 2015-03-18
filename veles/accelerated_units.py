@@ -389,7 +389,7 @@ class AcceleratedUnit(Unit):
             my_defines["VECTOR_OPT"] = self.device.device_info.vector_opt
         if "GPU_FORCE_64BIT_PTR" not in my_defines:  # for AMD
             my_defines["GPU_FORCE_64BIT_PTR"] = os.getenv(
-                "GPU_FORCE_64BIT_PTR", 0)
+                "GPU_FORCE_64BIT_PTR", 1)
 
     def _include_file(self, include_dirs, file, lines):
         for include_dir in include_dirs:
@@ -399,6 +399,7 @@ class AcceleratedUnit(Unit):
             lines.append("\n// #include \"%s\"\n" % file)
             with open(path, "r") as fin:
                 lines.extend(fin.readlines())
+            lines.append("\n// END OF \"%s\"\n" % file)
             break
         else:
             raise IncludeError("Unable to include \"%s\"" % file)
@@ -414,17 +415,18 @@ class AcceleratedUnit(Unit):
         def define(cdefs, undef=False):
             for key, value in sorted(cdefs.items()):
                 if not undef:
-                    lines.insert(0, "#define %(key)s %(value)s\n" % locals())
+                    lines.append("#define %(key)s %(value)s\n" % locals())
                 else:
                     lines.append("#undef %(key)s\n" % locals())
 
         my_defines = copy(defines) if defines else {}
-        for name, defs in self.sources_.items():
+        self._adjust_defines(my_defines, dtype)
+        define(my_defines)
+        for name, defs in sorted(self.sources_.items()):
             define(defs)
             if len(template_kwargs) == 0:
                 # No templating
                 lines.append("#include \"%s%s\"\n" % (name, suffix))
-                continue
             else:
                 try:
                     self._include_file(include_dirs, name + jsuffix, lines)
@@ -436,8 +438,7 @@ class AcceleratedUnit(Unit):
                             IncludeError("Unable to include \"%s(%s|%s)\"" %
                                          (name, jsuffix, suffix)))
             define(defs, undef=True)
-        self._adjust_defines(my_defines, dtype)
-        define(my_defines)
+            lines.append("\n")
         source = "".join(lines)
         if len(template_kwargs) == 0:
             return source, my_defines

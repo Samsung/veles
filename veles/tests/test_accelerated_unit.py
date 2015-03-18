@@ -35,15 +35,18 @@ class Test(unittest.TestCase):
         basedir = os.path.dirname(os.path.abspath(__file__))
         include_dirs = [os.path.join(basedir, "res/code")]
         template_kwargs = {"var": [1, 2, 3]}
-        unit.sources_["entry"] = {}
+        unit.sources_["entry"] = {"A": 1, "B": 2}
+        unit.sources_["fourth"] = {"A": 3, "B": 4}
         src, _ = unit._generate_source(
             defines, include_dirs, "float", "cc", template_kwargs)
         self.assertEqual(
-            """#define sizeof_dtype 4
-#define mydef 100500
-#define dtype float
+            """#define GPU_FORCE_64BIT_PTR 1
 #define PRECISION_LEVEL 0
-#define GPU_FORCE_64BIT_PTR 0
+#define dtype float
+#define mydef 100500
+#define sizeof_dtype 4
+#define A 1
+#define B 2
 
 // #include "entry.jcc"
 Some text on top
@@ -63,6 +66,9 @@ Some text on top
 Some text from fourth.jcc
 
 4
+// END OF "fourth.jcc"
+
+// END OF "first.jcc"
 
 
 // #include "second.jcc"
@@ -76,9 +82,26 @@ Contents of second.jcc
 
 13
 
+// END OF "second.jcc"
+
 #include "third.cc"
 
-Some text on bottom""", src)
+Some text on bottom
+// END OF "entry.jcc"
+#undef A
+#undef B
+
+#define A 3
+#define B 4
+
+// #include "fourth.jcc"
+Some text from fourth.jcc
+
+4
+// END OF "fourth.jcc"
+#undef A
+#undef B
+""", src)
 
 
 if __name__ == "__main__":
