@@ -2,7 +2,14 @@
 Basics
 ======
 
-Workflow consists of units. That's it.
+VELES uses modular paradigm for quick and easy development of Machine Learning
+algorithms and models.
+
+.. image:: _static/units_to_workflow.png
+
+User can construct any dataflow algorithm including Neural Network models using
+the predefined elementary building blocks - Units.
+
 
 .. _two_ways_of_running_veles:
 
