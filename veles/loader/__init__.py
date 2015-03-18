@@ -5,8 +5,6 @@ Loader package.
 
 Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
-from veles.compat import from_none, PYPY
-
 from veles.loader.base import ILoader, Loader, CLASS_NAME, TARGET, TRAIN, \
     VALID, TEST
 from veles.loader.fullbatch import IFullBatchLoader, FullBatchLoader, \
@@ -18,8 +16,8 @@ try:
         FullBatchFileImageLoaderMSE, FullBatchAutoLabelFileImageLoader
     from veles.loader.pickles import PicklesImageFullBatchLoader
 except ImportError as e:
-    if not PYPY:
-        raise from_none(e)
+    import warnings
+    warnings.warn("Image loaders will be unavailable: %s" % e)
     IImageLoader = ImageLoader = IFileImageLoader = FileImageLoader = \
         FullBatchFileImageLoader = FullBatchFileImageLoaderMSE = \
         FullBatchAutoLabelFileImageLoader = PicklesImageFullBatchLoader = \

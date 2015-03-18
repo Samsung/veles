@@ -46,6 +46,10 @@ from veles.config import root
 from veles.external.prettytable import PrettyTable
 from veles.forge_common import REQUIRED_MANIFEST_FIELDS, validate_requires
 from veles.logger import Logger
+try:
+    import veles.znicz  # pylint: disable=W0611
+except:
+    pass
 
 
 ACTIONS = set()
@@ -71,7 +75,7 @@ class ForgeClient(Logger):
         self.path = self.path or ""
         if not self.path or (os.path.exists(self.path) and
                              os.path.samefile(self.path, os.getcwd())):
-            self.path = os.path.join(self.path, "%s:%s" % (self.name,
+            self.path = os.path.join(self.path, "%s@%s" % (self.name,
                                                            self.version))
         if os.path.exists(self.path):
             if self.force:
@@ -90,7 +94,8 @@ class ForgeClient(Logger):
         with TarFile.open(fn) as tar:
             tar.extractall(self.path)
         os.remove(fn)
-        self.info("Put %s to %s", os.listdir(self.path), self.path)
+        self.info("Put the following files into %s:\n  %s", self.path,
+                  "\n  ".join(sorted(os.listdir(self.path))))
         metadata = self._parse_metadata(self.path)
         self._check_deps(metadata)
         return self.path, metadata
