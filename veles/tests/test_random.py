@@ -11,7 +11,7 @@ import numpy
 import os
 import unittest
 
-from veles.accelerated_units import TrivialOpenCLUnit
+from veles.accelerated_units import TrivialAcceleratedUnit
 import veles.backends as opencl
 from veles.config import root
 from veles.dummy import DummyWorkflow
@@ -38,7 +38,7 @@ class TestRandom1024(unittest.TestCase):
         output.mem = numpy.zeros(states.mem.shape[0] * 128 // 8 * n_rounds[0],
                                  dtype=numpy.uint64)
 
-        obj = TrivialOpenCLUnit(DummyWorkflow())
+        obj = TrivialAcceleratedUnit(DummyWorkflow())
         obj.initialize(device=self.device)
         states.initialize(self.device)
         output.initialize(self.device)
@@ -141,7 +141,7 @@ class TestRandom128(unittest.TestCase):
         states.mem = self.states.copy()
         output.mem = numpy.zeros(states.mem.size // 2, dtype=numpy.uint64)
 
-        obj = TrivialOpenCLUnit(DummyWorkflow())
+        obj = TrivialAcceleratedUnit(DummyWorkflow())
         obj.initialize(device=self.device)
         states.initialize(self.device)
         output.initialize(self.device)

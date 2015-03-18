@@ -22,9 +22,6 @@ from veles.dummy import DummyWorkflow
 from veles.tests.doubling_reset import patch
 
 
-root.common.engine.backend = "ocl"
-
-
 class PatchedMeanDispNormalizer(MeanDispNormalizer):
     def __init__(self, workflow, **kwargs):
         super(PatchedMeanDispNormalizer, self).__init__(workflow, **kwargs)
@@ -35,7 +32,7 @@ class PatchedMeanDispNormalizer(MeanDispNormalizer):
 class TestMeanDispNormalizer(unittest.TestCase):
     def setUp(self):
         gc.collect()
-        self.device = opencl.Device()
+        self.device = opencl.OpenCLDevice()
         dtype = opencl_types.dtypes[root.common.precision_type]
         self.mean = numpy.zeros([256, 256, 4], dtype=dtype)
         rnd.get().fill(self.mean, 0, 255)

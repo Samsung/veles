@@ -12,10 +12,10 @@ from zope.interface import implementer
 
 from veles.memory import Vector
 import veles.opencl_types as opencl_types
-from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit
+from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit
 
 
-@implementer(IOpenCLUnit)
+@implementer(IOpenCLUnit, ICUDAUnit)
 class InputJoiner(AcceleratedUnit):
     """Joins several minibatch inputs into one continuous minibatch output.
 

@@ -14,7 +14,7 @@ from opencl4py import CLRuntimeError
 import six
 from zope.interface import implementer, Interface
 
-from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit
+from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit
 from veles.compat import from_none
 import veles.error as error
 import veles.memory as memory
@@ -45,7 +45,7 @@ class IFullBatchLoader(Interface):
         """
 
 
-@implementer(ILoader, IOpenCLUnit)
+@implementer(ILoader, IOpenCLUnit, ICUDAUnit)
 class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
     """Loads data entire in memory.
 

@@ -9,11 +9,11 @@ import os
 import unittest
 from zope.interface import implementer
 
-from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit
+from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit
 from veles.dummy import DummyWorkflow
 
 
-@implementer(IOpenCLUnit)
+@implementer(IOpenCLUnit, ICUDAUnit)
 class TestAcceleratedUnit(AcceleratedUnit):
     def cpu_run(self):
         pass
@@ -22,6 +22,12 @@ class TestAcceleratedUnit(AcceleratedUnit):
         pass
 
     def ocl_run(self):
+        pass
+
+    def cuda_init(self):
+        pass
+
+    def cuda_run(self):
         pass
 
     def initialize(self, device, **kwargs):

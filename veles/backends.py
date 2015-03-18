@@ -316,6 +316,10 @@ class OpenCLDevice(Device):
     DEVICE_INFOS_JSON = "device_infos.json"
     skip = cl.skip
 
+    # Allow this class to be created manually
+    def __new__(cls, *args):
+        return object.__new__(cls, *args)
+
     def __init__(self):
         super(OpenCLDevice, self).__init__()
 
@@ -573,6 +577,10 @@ class CUDADevice(Device):
     BACKEND = "cuda"
     PRIORITY = 20
     skip = cu.skip
+
+    # Allow this class to be created manually
+    def __new__(cls, *args):
+        return object.__new__(cls, *args)
 
     def __init__(self):
         super(CUDADevice, self).__init__()

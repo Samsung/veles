@@ -28,7 +28,7 @@ from veles.compat import from_none
 from veles.config import root
 from veles.memory import Vector, roundup
 import veles.opencl_types as opencl_types
-from veles.backends import Device, OpenCLDevice
+from veles.backends import Device, OpenCLDevice, CUDADevice
 from veles.pickle2 import pickle, best_protocol
 from veles.timeit import timeit
 from veles.units import Unit, IUnit, UnitCommandLineArgumentsRegistry
@@ -40,7 +40,7 @@ class IncludeError(Exception):
 
 
 class IOpenCLUnit(Interface):
-    """Requires cpu and ocl run() methods for OpenCLUnit.
+    """Requires cpu and ocl methods for OpenCLUnit descendants.
     """
 
     def cpu_run():
@@ -61,6 +61,31 @@ class IOpenCLUnit(Interface):
         """
 
 
+class ICUDAUnit(Interface):
+    """Requires cpu and cuda methods for CUDAUnit descendants.
+    """
+
+    def cpu_run():
+        """Run on CPU.
+        """
+
+    def cuda_init():
+        """
+        Initialize CUDA-specific stuff. Called inside initialize().
+        """
+
+    def cuda_run():
+        """Run on GPU/any CUDA capable device.
+        """
+
+    def initialize(device, **kwargs):
+        """initialize() with "device" obligatory argument.
+        """
+
+
+INTERFACE_MAPPING = {OpenCLDevice: IOpenCLUnit, CUDADevice: ICUDAUnit}
+
+
 @implementer(IUnit)
 @add_metaclass(UnitCommandLineArgumentsRegistry)
 class AcceleratedUnit(Unit):
@@ -78,7 +103,6 @@ class AcceleratedUnit(Unit):
 
     def __init__(self, workflow, **kwargs):
         super(AcceleratedUnit, self).__init__(workflow, **kwargs)
-        self.verify_interface(IOpenCLUnit)
         self._device = None
         self._cache = kwargs.get("cache", True)
         # Yup, this is right - self._force_cpu is initialized in init_unpickled
@@ -157,6 +181,8 @@ class AcceleratedUnit(Unit):
         return self._sync
 
     def initialize(self, device, **kwargs):
+        if device is not None:
+            self.verify_interface(INTERFACE_MAPPING[type(device)])
         try:
             super(AcceleratedUnit, self).initialize(**kwargs)
         except AttributeError:
@@ -570,8 +596,8 @@ class AcceleratedUnit(Unit):
                            cache_file_name)
 
 
-@implementer(IOpenCLUnit)
-class TrivialOpenCLUnit(AcceleratedUnit):
+@implementer(IOpenCLUnit, ICUDAUnit)
+class TrivialAcceleratedUnit(AcceleratedUnit):
     def cpu_run(self):
         pass
 
@@ -705,7 +731,6 @@ class AcceleratedWorkflow(Workflow):
         self._power_ = 0
         self._last_power_measurement_time = 0
         self.device = None
-        # FIXME(v.markovtsev): remove the line below when Lubov's code is sync
         self._power_measure_time_interval = 120
 
     @property
