@@ -7,12 +7,14 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
 import cuda4py as cu
-import logging
 import numpy
 import six
 import os
 import threading
 import opencl4py as cl
+if six.PY3:
+    import atexit
+    import weakref
 
 from veles.backends import Device
 from veles.compat import from_none
@@ -107,11 +109,26 @@ class Vector(Pickleable):
     backend_methods = ("map_read", "map_write", "map_invalidate", "unmap",
                        "realign_mem", "create_devmem")
 
+    if six.PY3:
+        __vectors__ = set()
+        __registered = False
+
     def __init__(self, data=None):
         super(Vector, self).__init__()
         self._device = None
         self.mem = data
         self._max_value = 1.0
+        if six.PY3:
+            # Workaround for unspecified destructor call order
+            # This is a hard to reduce bug to report it
+            Vector.__vectors__.add(weakref.ref(self))
+            if not Vector.__registered:
+                atexit.register(Vector.reset_all)
+                Vector.__registered = True
+
+    def __setstate__(self, state):
+        super(Vector, self).__setstate__(state)
+        Vector.__vectors__.add(weakref.ref(self))
 
     @property
     def device(self):
@@ -267,6 +284,14 @@ class Vector(Pickleable):
         """
         self._mem[key] = value
 
+    if six.PY3:
+        @staticmethod
+        def reset_all():
+            for ref in Vector.__vectors__:
+                vec = ref()
+                if vec is not None:
+                    vec.reset()
+
     def _unset_device(self):
         def nothing(*args, **kwargs):
             pass
@@ -379,13 +404,13 @@ class Vector(Pickleable):
             return
         # Workaround Python 3.4.0 incorrect destructor order call bug
         if self.device.queue_.handle is None:
-            logging.getLogger("Vector").warning(
-                "OpenCL device queue is None but Vector devmem was not "
-                "explicitly unmapped.")
+            self.warning(
+                "%s: OpenCL device queue is None but Vector devmem was not "
+                "explicitly unmapped.", self)
         elif self.devmem.handle is None:
-            logging.getLogger("Vector").warning(
-                "devmem.handle is None but Vector devmem was not "
-                "explicitly unmapped.")
+            self.warning(
+                "%s: devmem.handle is None but Vector devmem was not "
+                "explicitly unmapped.", self)
         else:
             self.device.queue_.unmap_buffer(self.devmem, map_arr,
                                             need_event=False)
