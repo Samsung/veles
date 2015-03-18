@@ -183,7 +183,7 @@ root.common.update({
         "maxthreads": 2,
     },
     "engine": {
-        "backend": "ocl",
+        "backend": "auto",
         "source_dirs": (os.environ.get("VELES_ENGINE_DIRS", "").split(":") +
                         ["/usr/share/veles"]),
         "device_dirs": ["/usr/share/veles/devices",

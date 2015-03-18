@@ -138,6 +138,24 @@ class DeviceNotFoundError(Exception):
     pass
 
 
+class BackendRegistry(CommandLineArgumentsRegistry):
+    backends = {}
+
+    def __init__(cls, name, bases, clsdict):
+        super(BackendRegistry, cls).__init__(name, bases, clsdict)
+        try:
+            BackendRegistry.backends[clsdict["BACKEND"]] = cls
+        except KeyError:
+            raise from_none(KeyError("%s does not define BACKEND" % cls))
+        assert "PRIORITY" in clsdict, "%s does not define PRIORITY" % cls
+
+    @staticmethod
+    def backends_as_str():
+        return ", ".join("\"%s\" for %s" % (k, v.__name__) for k, v in sorted(
+            BackendRegistry.backends.items()))
+
+
+@add_metaclass(CommandLineArgumentsRegistry)
 class Device(Pickleable):
     """Base device class.
 
@@ -148,7 +166,9 @@ class Device(Pickleable):
         assert issubclass(cls, Device)
         backend = kwargs.get("backend", root.common.engine.backend)
         cls = BackendRegistry.backends[backend]
-        return super(Device, cls).__new__(cls, *args, **kwargs)
+        if cls.__new__ != Device.__new__:
+            return cls.__new__(cls, *args, **kwargs)
+        return object.__new__(cls)
 
     def init_unpickled(self):
         super(Device, self).init_unpickled()
@@ -206,18 +226,83 @@ class Device(Pickleable):
         """
         return False
 
+    @staticmethod
+    def arg_completer(prefix, **kwargs):
+        def format_device(plf, dev):
+            return "%s - %s on %s" % (dev.path, dev.name.strip(), plf.name)
 
-class BackendRegistry(CommandLineArgumentsRegistry):
-    backends = {}
+        if prefix.strip() == "":
+            platforms = cl.Platforms().platforms
+            if len(platforms) == 1 and len(platforms[0].devices) == 1:
+                return ["0:0"]
+            result = []
+            for platform in platforms:
+                for device in platform:
+                    result.append(format_device(platform, device))
+            return result
+        parsed = [p for p in prefix.split(':') if p.strip() != ""]
+        platform = cl.Platforms().platforms[int(parsed[0].strip())]
+        if len(parsed) == 1:
+            if len(platform.devices) == 1:
+                return [platform.devices[0].path]
+            result = []
+            for device in platform:
+                result.append(format_device(platform, device))
+            return result
 
-    def __init__(cls, name, bases, clsdict):
-        super(BackendRegistry, cls).__init__(name, bases, clsdict)
-        BackendRegistry.backends[clsdict["BACKEND"]] = cls
+    @staticmethod
+    def init_parser(**kwargs):
+        parser = kwargs.get("parser", argparse.ArgumentParser())
+
+        def set_backend(name):
+            if name not in BackendRegistry.backends:
+                raise ValueError(
+                    "Insupported backend name: %s. Choose any from %s." %
+                    (name, BackendRegistry.backends_as_str()))
+            root.common.engine.backend = name
+
+        parser.add_argument(
+            "-d", "--device", type=str, default="",
+            help="Device ID to use. E.g. 0:1 for OpenCL or 1 for CUDA.") \
+            .completer = Device.arg_completer
+        parser.add_argument(
+            "-a", "--backend", type=set_backend, default="auto",
+            help="Acceleration backend to use. Currently supported values are "
+                 "%s." % BackendRegistry.backends_as_str())
+        return parser
+
+    @staticmethod
+    def parse_device(**kwargs):
+        parser = Device.init_parser(**kwargs)
+        args, _ = parser.parse_known_args()
+        return args.device
+
+
+@add_metaclass(BackendRegistry)
+class AutoDevice(Device):
+    """
+    Overrides __new__() to automatically select the best available Device type.
+    If no acceleration is available, returns None.
+    """
+    BACKEND = "auto"
+    PRIORITY = 0
+
+    def __new__(cls, *args, **kwargs):
+        for cls in sorted(BackendRegistry.backends.values(),
+                          key=lambda b: b.PRIORITY, reverse=True):
+            if cls.available():
+                return object.__new__(cls, *args)
+        # If we are still here, then no acceleration is available
+        return None
+
+    @staticmethod
+    def available():
+        return False
 
 
 @add_metaclass(BackendRegistry)
 class OpenCLDevice(Device):
-    """OpenCL device helper class.
+    """OpenCL device class.
 
     Attributes:
         device_info: DeviceInfo object.
@@ -227,6 +312,7 @@ class OpenCLDevice(Device):
     """
 
     BACKEND = "ocl"
+    PRIORITY = 10
     DEVICE_INFOS_JSON = "device_infos.json"
     skip = cl.skip
 
@@ -289,40 +375,6 @@ class OpenCLDevice(Device):
         super(OpenCLDevice, self).init_unpickled()
         self.queue_ = None
 
-    @staticmethod
-    def arg_completer(prefix, **kwargs):
-        def format_device(platform, device):
-            return "%s - %s on %s" % (device.path, device.name.strip(),
-                                      platform.name)
-
-        if prefix.strip() == "":
-            platforms = cl.Platforms().platforms
-            if len(platforms) == 1 and len(platforms[0].devices) == 1:
-                return ["0:0"]
-            result = []
-            for platform in platforms:
-                for device in platform:
-                    result.append(format_device(platform, device))
-            return result
-        parsed = [p for p in prefix.split(':') if p.strip() != ""]
-        platform = cl.Platforms().platforms[int(parsed[0].strip())]
-        if len(parsed) == 1:
-            if len(platform.devices) == 1:
-                return [platform.devices[0].path]
-            result = []
-            for device in platform:
-                result.append(format_device(platform, device))
-            return result
-
-    @staticmethod
-    def init_parser(**kwargs):
-        parser = kwargs.get("parser", argparse.ArgumentParser())
-        parser.add_argument(
-            "-d", "--device", type=str, default="",
-            help="OpenCL device to use.").completer = (
-            OpenCLDevice.arg_completer)
-        return parser
-
     @property
     def max_group_size(self):
         return self.queue_.device.max_work_group_size
@@ -331,25 +383,22 @@ class OpenCLDevice(Device):
         """Gets some device from the available OpenCL devices.
         Returns True if any device was selected, otherwise, False.
         """
-        parser = OpenCLDevice.init_parser(**kwargs)
-        args, _ = parser.parse_known_args()
+        device = self.parse_device(**kwargs)
         try:
             platforms = cl.Platforms()
         except cl.CLRuntimeError:
             platforms = None
         if platforms is None or len(platforms.platforms) == 0:
-            self.warning("No OpenCL devices were found")
-            return False
-        if args.device == "":
+            raise DeviceNotFoundError("No OpenCL devices were found")
+        if device == "":
             context = platforms.create_some_context()
         else:
-            platfnum, devnums = args.device.split(':')
+            platfnum, devnums = device.split(':')
             try:
                 platform = platforms.platforms[int(platfnum)]
             except IndexError:
                 raise from_none(
-                    DeviceNotFoundError("Device %s was not found." %
-                                        args.device))
+                    DeviceNotFoundError("Device %s was not found." % device))
             context = platform.create_context(
                 [platform.devices[int(devnum)]
                  for devnum in devnums.split(',')])
@@ -429,7 +478,7 @@ class OpenCLDevice(Device):
         # https://bitbucket.org/logilab/pylint/issue/61
         # pylint: disable=R0401
         opencl_units = __import__("veles.accelerated_units").accelerated_units
-        OpenCLBenchmark = opencl_units.DeviceBenchmark
+        benchmark = opencl_units.DeviceBenchmark
         for dtype in sorted(opencl_types.dtypes.keys()):
             device_info[krnnme][dtype] = {}
             for precision_level in ("0", "1", "2"):  # json wants strings
@@ -449,7 +498,7 @@ class OpenCLDevice(Device):
                         krnnme, dtype, precision_level, block_size)
                     try:
                         with DummyWorkflow() as wf:
-                            u = OpenCLBenchmark(
+                            u = benchmark(
                                 wf, size=3001, repeats=3,
                                 dtype=dtype, precision_level=precision_level,
                                 block_size=block_size)
@@ -504,10 +553,17 @@ class OpenCLDevice(Device):
         self.queue_.flush()
         self.queue_.finish()
 
+    @staticmethod
+    def available():
+        try:
+            return len(cl.Platforms().platforms) > 0
+        except:
+            return False
+
 
 @add_metaclass(BackendRegistry)
 class CUDADevice(Device):
-    """CUDA device helper class.
+    """CUDA device class.
 
     Attributes:
         _context_: CUDA context handle.
@@ -515,6 +571,7 @@ class CUDADevice(Device):
     """
 
     BACKEND = "cuda"
+    PRIORITY = 20
     skip = cu.skip
 
     def __init__(self):
@@ -543,6 +600,7 @@ class CUDADevice(Device):
         ab_best = krn.max_active_blocks_per_multiprocessor(block_size)
         ab = ab_best
         min_size = self.context.device.warp_size
+        best_block_size = None
         while (ab >= ab_best and not (block_size & 1) and
                block_size >= min_size):
             ab_best = ab
@@ -591,10 +649,10 @@ class CUDADevice(Device):
 
     @staticmethod
     def arg_completer(prefix, **kwargs):
-        def format_device(device):
+        def format_device(dev):
             return "%d: %s - %s, %dMb, compute_%d%d, pci %s" % ((
-                device.handle, device.name, device.total_mem) +
-                device.compute_capability + (device.pci_bus_id,))
+                dev.handle, dev.name, dev.total_mem) +
+                dev.compute_capability + (dev.pci_bus_id,))
 
         devices = cu.Devices()
         if len(devices) == 1:
@@ -604,39 +662,36 @@ class CUDADevice(Device):
             result.append(format_device(device))
         return result
 
-    @staticmethod
-    def init_parser(**kwargs):
-        parser = kwargs.get("parser", argparse.ArgumentParser())
-        parser.add_argument(
-            "-D", "--cuda-device", type=str, default="",
-            help="CUDA device to use.").completer = CUDADevice.arg_completer
-        return parser
-
     def _get_some_device(self, **kwargs):
         """Gets some device from the available CUDA devices.
         Returns True if any device was selected, otherwise, False.
         """
-        parser = CUDADevice.init_parser(**kwargs)
-        args, _ = parser.parse_known_args()
+        device = self.parse_device(**kwargs)
         try:
             devices = cu.Devices()
         except (OSError, cu.CUDARuntimeError):
             devices = None
         if devices is None or not len(devices):
-            self.warning("No CUDA devices were found")
-            return False
-        if args.cuda_device == "":
+            raise DeviceNotFoundError("No CUDA devices were found")
+        if device == "":
             context = devices.create_some_context()
         else:
             try:
-                device = devices[int(args.cuda_device)]
+                device = devices[int(device)]
             except IndexError:
                 raise from_none(
-                    DeviceNotFoundError("CUDA device %s was not found." %
-                                        args.cuda_device))
+                    DeviceNotFoundError(
+                        "CUDA device %s was not found." % device))
             context = device.create_context()
         self._context_ = context
         return True
 
     def sync(self):
         self.context.synchronize()
+
+    @staticmethod
+    def available():
+        try:
+            return len(cu.Devices()) > 0
+        except:
+            return False

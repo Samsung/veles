@@ -6,8 +6,12 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 import logging
 import unittest
 
-import veles.backends as opencl
 import veles.accelerated_units as opencl_units
+import veles.backends as opencl
+from veles.config import root
+
+
+root.common.engine.backend = "ocl"
 
 
 class Test(unittest.TestCase):
