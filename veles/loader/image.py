@@ -580,7 +580,7 @@ class ImageLoader(Loader):
             pass
         if self._restored_from_pickle_:
             self.info("Scanning for changes...")
-            progress = ProgressBar(maxval=self.total_samples)
+            progress = ProgressBar(maxval=self.total_samples, term_width=40)
             progress.start()
             for keys in self.class_keys:
                 for key in keys:
