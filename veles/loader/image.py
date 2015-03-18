@@ -97,7 +97,6 @@ class ImageLoader(Loader):
         self._original_shape = tuple()
         self.class_keys = [[], [], []]
         self.verify_interface(IImageLoader)
-        self._restored_from_pickle_ = False
         self.path_to_mean = kwargs.get("path_to_mean", None)
         self.add_sobel = kwargs.get("add_sobel", False)
         self.mirror = kwargs.get("mirror", False)  # True, False, "random"
@@ -113,10 +112,6 @@ class ImageLoader(Loader):
             "background_color", (0xff, 0x14, 0x93))
         self.smart_crop = kwargs.get("smart_crop", True)
         self.minibatch_label_values = Vector()
-
-    def __setstate__(self, state):
-        super(ImageLoader, self).__setstate__(state)
-        self._restored_from_pickle_ = True
 
     @property
     def source_dtype(self):
@@ -570,8 +565,9 @@ class ImageLoader(Loader):
         return different_labels, label_key_map
 
     def initialize(self, **kwargs):
+        self._restored_from_pickle_ = kwargs["snapshot"]
         super(ImageLoader, self).initialize(**kwargs)
-        self._restored_from_pickle_ = False
+        del self._restored_from_pickle_
 
     def load_data(self):
         try:

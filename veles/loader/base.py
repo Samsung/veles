@@ -138,7 +138,7 @@ class Loader(Unit):
         self.train_ended = Bool(False)
 
         self.samples_served = 0
-        self.global_offset = 0
+        self._global_offset = 0
 
         self.minibatch_class = 0
         self.minibatch_data = memory.Vector()
@@ -149,8 +149,7 @@ class Loader(Unit):
 
         self.failed_minibatches = []
         self._total_failed = 0
-        self._unpickled = False
-        self._on_unique_labels_counted = self.nothing
+        self._on_initialized = self.nothing
         self._unique_labels_count = 0
 
         self.shuffled_indices = memory.Vector()
@@ -164,7 +163,6 @@ class Loader(Unit):
         self._minibatch_size_ = 0
         self.pending_minibatches_ = defaultdict(list)
         self._minibatch_serve_timestamp_ = time.time()
-        self._unpickled = True
 
     def __getstate__(self):
         state = super(Loader, self).__getstate__()
@@ -175,29 +173,29 @@ class Loader(Unit):
                 state["failed_minibatches"].extend(pmb)
         else:
             state["failed_minibatches"] = []
-        ulc = self._on_unique_labels_counted
-        if ulc == self.nothing:
-            state["_on_unique_labels_counted"] = None
+        oni = self._on_initialized
+        if oni == self.nothing:
+            state["_on_initialized"] = None
         else:
-            state["_on_unique_labels_counted"] = (
-                ulc.__name__, marshal.dumps(ulc.__code__),
-                tuple(c.cell_contents for c in ulc.__closure__))
+            state["_on_initialized"] = (
+                oni.__name__, marshal.dumps(oni.__code__),
+                tuple(c.cell_contents for c in oni.__closure__))
         return state
 
     def __setstate__(self, state):
-        ulc_tuple = state.pop("_on_unique_labels_counted")
+        oni_tuple = state.pop("_on_initialized")
         super(Loader, self).__setstate__(state)
-        if ulc_tuple is not None:
+        if oni_tuple is not None:
             def cell(obj):
                 return (lambda: obj).__closure__[0]
 
-            name, code, closure = ulc_tuple
+            name, code, closure = oni_tuple
             closure = tuple(cell(c) for c in closure)
-            self._on_unique_labels_counted = \
+            self._on_initialized = \
                 types.FunctionType(
                     marshal.loads(code), globals(), name, closure=closure)
         else:
-            self._on_unique_labels_counted = self.nothing
+            self._on_initialized = self.nothing
 
     @property
     def has_labels(self):
@@ -236,17 +234,16 @@ class Loader(Unit):
             return
         self.info("There are %d unique labels", value)
         self.__unique_labels_count = value
-        self.on_unique_labels_counted()  # pylint: disable=E1102
 
     @property
-    def on_unique_labels_counted(self):
-        return self._on_unique_labels_counted
+    def on_initialized(self):
+        return self._on_initialized
 
-    @on_unique_labels_counted.setter
-    def on_unique_labels_counted(self, value):
+    @on_initialized.setter
+    def on_initialized(self, value):
         if not hasattr(value, "__call__"):
-            raise TypeError("on_unique_labels_counted must be callable")
-        self._on_unique_labels_counted = value
+            raise TypeError("on_initializedmust be callable")
+        self._on_initialized = value
 
     @property
     def dtype(self):
@@ -284,6 +281,21 @@ class Loader(Unit):
             self._normalizer = normalization.NormalizerRegistry.normalizers[
                 self.normalization_type](**self.normalization_parameters)
         return self._normalizer
+
+    @property
+    def global_offset(self):
+        return self._global_offset
+
+    @global_offset.setter
+    def global_offset(self, value):
+        if not isinstance(value, int):
+            raise TypeError(
+                "global_offset must be an integer (got %s)" % type(value))
+        if value < 0 or value > self.total_samples:
+            raise ValueError(
+                "global_offset must be in [0, %d] (got %d)" % (
+                    self.total_samples, value))
+        self._global_offset = value
 
     @property
     def shuffled_indices(self):
@@ -504,10 +516,10 @@ class Loader(Unit):
             raise error.BadFormatError("minibatch_data MUST be initialized in "
                                        "create_minibatch_data()")
         self.analyze_dataset()
-        if not self._unpickled:
+        if not kwargs["snapshot"]:
             self.shuffle()
-        else:
-            self._unpickled = False
+
+        self.on_initialized()  # pylint: disable=E1102
 
     def run(self):
         """Prepares the minibatch.
@@ -743,8 +755,8 @@ class Loader(Unit):
             return self.minibatch_offset, self.minibatch_size
         # Shuffle again when the end of data is reached.
         if self.global_offset >= self.total_samples:
-            self.shuffle()
             self.global_offset = 0
+            self.shuffle()
 
         # Compute next minibatch class and size, updating epoch_ended and
         # last_minibatch
@@ -877,12 +889,16 @@ class LoaderMSEMixin(Unit):
     def __init__(self, workflow, **kwargs):
         super(LoaderMSEMixin, self).__init__(workflow, **kwargs)
         self.class_targets = memory.Vector()
-        self.minibatch_targets = memory.Vector()
-        self.targets_shape = kwargs.get("targets_shape")
+        self._minibatch_targets = memory.Vector()
+        self._targets_shape = kwargs.get("targets_shape", tuple())
         self.target_normalization_type = kwargs.get(
             "target_normalization_type", "none")
         self.target_normalization_parameters = kwargs.get(
             "target_normalization_parameters", {})
+
+    @property
+    def targets_shape(self):
+        return self._targets_shape
 
     @property
     def target_normalization_type(self):
@@ -921,11 +937,19 @@ class LoaderMSEMixin(Unit):
 
     @property
     def minibatch_targets(self):
-        return self._minibatch_target
+        return self._minibatch_targets
 
-    @minibatch_targets.setter
-    def minibatch_targets(self, value):
-        self._minibatch_target = value
+    def analyze_dataset(self):
+        super(LoaderMSEMixin, self).analyze_dataset()
+        if self.targets_shape == tuple():
+            self._targets_shape = self.minibatch_targets.shape[1:]
+        elif numpy.prod(self.targets_shape) != numpy.prod(
+                self.minibatch_targets.shape[1:]):
+            raise ValueError(
+                "targets_shape is %s but minibatch_targets has shape %s: "
+                "products do not match" % (self.targets_shape,
+                                           self.minibatch_targets.shape[1:]))
+        self.info("Target shape is set to %s", self.targets_shape)
 
     def on_before_create_minibatches(self):
         super(LoaderMSEMixin, self).on_before_create_minibatches()

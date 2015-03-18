@@ -71,7 +71,7 @@ class TestFullBatchLoader(unittest.TestCase):
     def _test_random(self, device, force_cpu, N=1000):
         rnd.get().seed(123)
         unit = Loader(DummyWorkflow(), force_cpu=force_cpu, prng=rnd.get())
-        unit.initialize(device)
+        unit.initialize(device, snapshot=False)
         self.assertTrue(unit.has_labels)
         res_data = numpy.zeros((N,) + unit.minibatch_data.shape,
                                dtype=unit.minibatch_data.dtype)
@@ -97,6 +97,7 @@ class TestHDF5Loader(unittest.TestCase):
         loader = klass(DummyWorkflow(),
                        validation_path=os.path.join(csd, "res", "test.h5"),
                        train_path=os.path.join(csd, "res", "train.h5"))
+        kwargs["snapshot"] = False
         loader.initialize(**kwargs)
         while not loader.train_ended:
             loader.run()
