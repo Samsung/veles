@@ -13,32 +13,45 @@ the predefined elementary building blocks - Units.
 
 .. _two_ways_of_running_veles:
 
-Three ways of running Veles
-:::::::::::::::::::::::::::
+What is a Model?
+::::::::::::::::
 
-You can run Veles in either of these two ways:
+The Model or Workflow - a collection of Units connected to each other
+implementing required algorithms. The class :class:`veles.workflow.Workflow`
+is the container for the Model.
 
-    * ``veles/scripts/velescli.py ...``
+The Workflow can be very complex and can execute algorithms iteratively on the dataset.
+In order to set start and end points in the algorithms the Workflow has a start
+point and an end point (:class:`StartPoint <veles.workflow.StartPoint>`
+and :class:`EndPoint <veles.workflow.EndPoint>`), so that when
+:meth:`run() <veles.workflow.Workflow.run>` is called, the start point begins
+the party and the end point's run ends the party, triggering
+:meth:`on_workflow_finished() <veles.workflow.Workflow.on_workflow_finished>`.
+
+Two ways of running Veles
+:::::::::::::::::::::::::
+
+You can start Veles by two methods:
+
     * ``python3 -m veles ...``
     * ``veles ...`` (**only** in case of :doc:`manualrst_veles_ubuntu_user_setup`)
     
-The second method executes :mod:`veles.__main__`, which in turn calls
-``scripts/velescli.py``, and so basically does the third (it is an easy_install entry point)
-so all these methods are totally equivalent.
+Both methods execute :mod:`veles.__main__`, and they are absolutely equivalent.
 
 Three execution modes
 :::::::::::::::::::::
 
-Veles model can run in three modes (actually, four, but the fourth is a
-combination of the previous three):
+Veles model can be executed in three modes (actually, four, but the fourth one
+is a combination of the previous three):
 
     * Standalone (default)
     * Master (``-l/--listen-address``)
     * Slave (``-m/--master-address``)
     
-Standalone mode is a single node workflow run, useful for debugging and simple
-models which are not so computationally expensive. To understand the remaining two modes,
-look at the scheme of how distributed Veles works:
+Standalone mode execute Model(Workflow) on a single computing node, which is
+particularly useful for debugging and simple models which are not so computationally
+expensive. To understand the remaining two modes, look at the scheme of how
+distributed Veles works:
 
 .. image:: _static/master-slave.png
 
@@ -58,5 +71,4 @@ the same raw TCP socket which is used for talking to slaves. The special communi
 is used based on JSON.
 
 .. include:: manualrst_veles_units.rst
-.. include:: manualrst_veles_workflow.rst
 .. include:: manualrst_veles_distributed_units.rst

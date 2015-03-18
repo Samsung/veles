@@ -3,7 +3,7 @@
 Using Configs
 :::::::::::::
 
-Class :class:`veles.config.Config` was designed to set the Model (:doc:`manualrst_veles_models`) parameters.
+Class :class:`veles.config.Config` was designed to set the Model (:doc:`manualrst_veles_basics`) parameters.
 
 In order to use it:
 

@@ -32,24 +32,85 @@ by :class:`IDistributable <veles.distributable.IDistributable>` (see :doc:`manua
 How to link Units?
 ------------------
 
+There are two types of connections in workflow: Control and Data.
 
-Control flow
-~~~~~~~~~~~~
-To make one unit run after another, use :py:meth:`veles.units.Unit.link_from` ::
+Control flow connections
+~~~~~~~~~~~~~~~~~~~~~~~~
+Control flow connections defines execution order of units in the workflow.
 
-    second_unit.link_from(first_unit)
+Each unit can be linked with multiple number of units. In order to make this
+method atomic, the reverse (``link_from``) linkage order was implemented in
+contorary to ``link_to``.
+The method :py:meth:`veles.units.Unit.link_from` set execution order of current
+unit instance after the execution of units given as argument (any itteratable).
 
-To see, after whom is given unit run, use  :py:meth:`veles.units.Unit.links_from` 
+.. code-block:: python
 
-To remove control flow link (not data link), use :py:meth:`veles.units.Unit.unlink_from` and :py:meth:`veles.units.Unit.unlink_all`
+   second_unit.link_from(first_unit)
+
+.. image:: _static/linking_control1.png
+
+.. code-block:: python
+
+   third_unit.link_from([first_unit, second_init])
+
+.. image:: _static/linking_control2.png
+
+To remove control flow link use :py:meth:`veles.units.Unit.unlink_from` and
+:py:meth:`veles.units.Unit.unlink_all`
 
 
-Data flow
-~~~~~~~~~
-For example, if you want to pass convolutional layer output to pooling layer input ::
+Data flow connections
+~~~~~~~~~~~~~~~~~~~~~
+Data flow connections defines data propagation from unit to unit.
 
-    # conv_layer.output --> pooling_layer.input
-    pooling_layer.link_attrs(conv_layer, ("input", "output")) 
+The content of the attribute of one unit can be assigned (linked) to attribute
+of another unit using :meth:`veles.units.Unit.link_attrs` method.
+
+
+For example, if you want to pass convolutional layer attribute named
+`conv_attr` to pooling layer attribute named `pool_attr`:
+
+.. code-block:: python
+
+   pooling_layer.link_attrs(conv_layer, ("pool_attr", "conv_attr"))
+
+.. image:: _static/linking_data1.png
+
+The same effect can be achieved by using assignement operator ``=``. But if assing
+attribute holding immutable or simple object like integer it must be
+marked using :class:`veles.mutable.LinkableAttribute` at any place in the program
+before this point.
+
+.. code-block:: python
+
+  pooling_layer.pool_attr = conv_layer.conv_attr
+
+If attributes have a one name, attributes can be written as one string:
+
+.. code-block:: python
+
+  pooling_layer.link_attr(conv_layer, "some_attr")
+
+It is equivalent to this:
+
+.. code-block:: python
+
+  pooling_layer.link_attr(conv_layer, ("some_attr", "some_attr"))
+
+And this:
+
+.. code-block:: python
+
+  pooling_layer.some_attr = conv_layer.some_attr
+
+.. image:: _static/linking_data2.png
+
+Some text about iterable argument:
+
+.. code-block:: python
+
+  pooling_layer.link_attr(conv_layer, ("pool_attr", "conv_attr"), "some_attr")
 
 The passing data will be **shared** between those units.
 
