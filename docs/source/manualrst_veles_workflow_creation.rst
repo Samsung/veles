@@ -7,22 +7,29 @@ How to create Workflow with StandardWorkflow help
 
 Classes :class:`veles.znicz.standard_workflow.StandardWorkflow` and
 :class:`veles.znicz.standard_workflow.StandardWorkflowBase` are auxiliary
-classes to easily create a Fully Connected or Convolutional Models.
+classes for easy creation of Fully Connected or Convolutional Models.
+
+The biggest problem for the beginner is the absence of knowledge about Units,
+their parameters, properties and linking abilities. The class :class:`veles.znicz.standard_workflow.StandardWorkflow`
+is designed to help users by automating the process of Units integration.
+
 
 Using StandardWorkflow. Setting parameters.
 -------------------------------------------
 
-The easiest way to create your own model is to use Standard Workflow. First,
-create the file named "my_worflow.py" and import StandardWorkflow
+The simplest way to create a Model (:doc:`manualrst_veles_basics`) which
+implements an algorithm (:doc:`manualrst_veles_algorithms`) is to use
+:class:`veles.znicz.standard_workflow.StandardWorkflow`. Create the file
+named "my_worflow.py" and import :class:`veles.znicz.standard_workflow.StandardWorkflow`:
 
 .. code-block:: python
 
    from veles.znicz.standard_workflow import StandardWorkflow
 
-Next, you need to create :func:`run` function with :func:`load` and
-:func:`main` methods. It is obligatory for each workflow file. :func:`load`
+First, create :func:`run` function with :func:`load` and
+:func:`main` methods. It is mandatory for each workflow file. :func:`load`
 creates the instance of the specified workflow type and returns tuple
-(workflow, snapshot). :func:`main` initializes and runs it
+(workflow, snapshot). :func:`main` initializes and runs it.
 
 .. code-block:: python
 
@@ -30,13 +37,17 @@ creates the instance of the specified workflow type and returns tuple
        load(StandardWorkflow)
        main()
 
-Workflow is almost ready. We can set it's parameters in
-:func:`load`. For the StandardWorkflow obligatory parameters are:
-``layers``, ``loader_name`` and ``loader_config``.
-``layers`` defines structure of Model and parameters for each layer.
-``loader_name`` defines the name of Loader, which will be used to read data.
-Finally, ``loader_config`` defines loader parameters. To define parameters,
-we need to add them in :func:`load` function
+Second, set workflow parameters.
+For the StandardWorkflow obligatory parameters are: ``layers`` or ``mcdnnic_topology``,
+``loader_name`` and ``loader_config``. ``layers`` or ``mcdnnic_topology``
+defines structure of Model. ``mcdnnic_topology`` is a way to set topology like
+in artical http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.
+``layers`` is a list of dictionary with layers of Model. ``layers`` also
+defines parameters for each layer. To set parameters for ``mcdnnic_topology``,
+use ``mcdnnic_parameters`` (see :mod:`veles.znicz.samples.lines` and :mod:`veles.znicz.samples.lines_config`).
+``loader_name`` defines the name of Loader, which will be used to read the data.
+``loader_config`` defines loader parameters. To set parameters, add them
+in :func:`load` function
 
 .. code-block:: python
 
@@ -47,10 +58,11 @@ we need to add them in :func:`load` function
             layers=[{"type": "all2all_tanh"}, {"type": "softmax"}])
        main()
 
-You can find all the supported parameters with descriptions and default
-values in :doc:`manualrst_veles_workflow_parameters`. Passing parameters
-via :class:`veles.config.Config` instances is supported as well (see
-:doc:`manualrst_veles_config`)
+See supported parameters with descriptions and default
+values in :doc:`manualrst_veles_workflow_parameters`.
+
+Alternatively, it is possible to pass parameters using :class:`veles.config.Config` (see
+:doc:`manualrst_veles_config`) like in the example below.
 
 .. code-block:: python
 
@@ -62,11 +74,11 @@ via :class:`veles.config.Config` instances is supported as well (see
       load(StandardWorkflow,
            loader_name=root.my_workflow.loader_name,
            loader_config=root.my_workflow.loader,
-            layers=root.my_workflow.layers)
+           layers=root.my_workflow.layers)
       main()
 
 
-Create my_workflow_config.py file and define parameters there.
+For that define the parameters in my_workflow_config.py file.
 
 .. code-block:: python
 
@@ -79,18 +91,26 @@ Create my_workflow_config.py file and define parameters there.
       "layers": [{"type": "all2all_tanh"}, {"type": "softmax"}]})
 
 
-The workflow and the configuration are ready.
+The workflow and the configuration file are ready to use.
 
-.. note:: if you set loader_config (or any other something_config) as config object (like root.my_workflow.loader), all parameter names in this config object must exactly match with parameters of Class, which they are assigned (:class:`veles.znicz.loader.loader_lmdb.LMDBLoader` in example case). If this Class gets any other or wrong parameters, you will see a warning or error.
+.. note:: The parameters of the workflow (the regardless method used to set them)
+   shall exactly match the parameters defined in the related class instance to which they
+   are assigned. (in our example :class:`veles.znicz.loader.loader_lmdb.LMDBLoader`)
+   If wrong parameters are assigned to the Class instance, Veles will generate a
+   warning or error.
 
 
 Overriding :func:`create_workflow()` in subclass of StandardWorkflow.
 ---------------------------------------------------------------------
 
-You can change :func:`create_workflow()` to link existing units in different
-order or to add `link_functions` (see below) in Workflow. You can see the
-default :func:`create_workflow()` in
-:class:`veles.znicz.standard_workflow.StandardWorkflow`
+If, for some reason, you are not satisfied with the topology created by StandardWorkflow
+based on configuration parameters, the method
+:func:`veles.znicz.standard_workflow.StandardWorkflow.create_workflow()`
+can be overridden to link Units in different order.
+
+The default implementation of
+:func:`veles.znicz.standard_workflow.StandardWorkflow.create_workflow()` in
+:class:`veles.znicz.standard_workflow.StandardWorkflow` is presented below.
 
 .. code-block:: python
 
@@ -124,11 +144,13 @@ default :func:`create_workflow()` in
 
 .. image:: _static/standard_workflow_create_workflow.png
 
-:func:`create_workflow()` consists of `link functions` calls, which link each unit
-with the previous one.
-Previous unit (unit to link with) is passed as `link function` argument.
+The method :func:`veles.znicz.standard_workflow.StandardWorkflow.create_workflow()`
+consists of `link functions` calls, which
+links each unit with the previous one (the is an architectural and logical reason
+to link current unit with the previous one which explaned later). Previous unit
+(unit to link with) is passed as `link function` argument.
 Here is an example of `link function`, which links
-:class:`veles.znicz.mean_disp_normalizer.MeanDispNormalizer` unit
+:class:`veles.znicz.mean_disp_normalizer.MeanDispNormalizer` unit.
 
 .. code-block:: python
 
@@ -148,27 +170,31 @@ Here is an example of `link function`, which links
 
 .. image:: _static/standard_workflow_meandispnorm.png
 
-`link function` creates an instance of the unit, makes some of it's attributes
-reference the other, belonging to the existing units (in this case, loader's)
-and defines the control flow order. `link function` returns
-an instance of the freshly linked unit.
+`link function` creates an instance of the unit ('MeanDispNormalizer'), link some
+attributes to other existing in workflow units (in this case, loader's, because
+MeanDispNormalizer designed to work with 'Loader') and links the control flow order ('link_from').
+`link function` returns the instance of the freshly created and linked unit.
 
 Read more about linking units at :doc:`manualrst_veles_units`
 
-One `link function` links exactly one instance of the unit.
+One `link function` links exactly one unit instance.
 
-.. note:: Useful convention: the names of instances always correspond to the names of `link functions`. For example, `self.meandispnorm` corresponds to :func:`link_meandispnorm`.
+.. note:: Useful convention: the names of `link functions` is
+   correspond to the names of linked Units instances. For example,
+   `self.meandispnorm` corresponds to :func:`link_meandispnorm`.
 
 To create Workflow with custom topology, import a
 :class:`veles.znicz.standard_workflow.StandardWorkflow`, create a subclass of
-StandardWorkflow and redefine :func:`create_workflow()` function.
+:class:`veles.znicz.standard_workflow.StandardWorkflow` and redefine
+:func:`veles.znicz.standard_workflow.StandardWorkflow.create_workflow()` function.
 
 1. Serial linking.
-To add a unit (e.g., image_saver) sequentially
-(snapshotter -> image_saver -> gds),  you need to add that unit with
-`link function` (self.link_image_saver) and pass the previous unit
+
+To add a unit (e.g., ImageSaver) sequentially (Snapshotter -> ImageSaver ->
+GradientDescent), add that unit (ImageSaver) with
+`link function` (self.link_image_saver) and pass the previous unit's instance
 (self.snapshotter) as an argument to this  `link function`. The next unit
-(gds) links with our unit (image_saver) by self.link_gds `link function`
+(GradientDescent) links with current unit (ImageSaver) by self.link_gds `link function`
 with self.image_saver argument
 
 .. code-block:: python
@@ -192,10 +218,12 @@ with self.image_saver argument
 
 .. image:: _static/standard_workflow_consecutive_linking.png
 
-2. Parallel linking. You need the full list of parental units for link_gds
-with 2 `link functions`: link_image_saver and link_snapshotter with self.decision
-argument (previous unit) to add units (image_saver and snapshotter) parallel
-between decision and gds.
+2. Parallel linking.
+
+For execution Units in parallel, provide
+the list of the linked Units to `link functions` as an argument. In this example
+'Snapshotter' and 'ImageSaver' will be linked with 'GradientDescend' Unit in
+parallel to 'GradientDescend' Unit.
 
 .. code-block:: python
 
@@ -220,11 +248,12 @@ between decision and gds.
 .. image:: _static/standard_workflow_parallel_linking.png
 
 3. Loop linking.
-You need Repeater unit and ``link_loop`` function to loop units (e.g.
-repeater, loader, datasaver) in the workflow.
-You should add a repeater, loader, datasaver consecutively and then add
-``link_loop``, which links argument (self.datasaver) unit with repeater to
-add 3 units (repeater, loader, datasaver) as a loop.
+
+The loops linking allows to execute the algorithm many times achieving sequential
+data processing or iterative model training. Usually this achieved by using
+'Repeater' unit. In the example below execution flow returns back to 'Repeater' unit
+by applying ``link_loop`` function at the end of execution. The method ``link_loop``
+programmed to find 'Repeater' unit in the workflow.
 
 .. code-block:: python
 
@@ -240,16 +269,390 @@ add 3 units (repeater, loader, datasaver) as a loop.
 
 .. image:: _static/standard_workflow_loop_linking.png
 
-List of all existing `link functions` with descriptions you
-can see here: :class:`veles.znicz.standard_workflow.StandardWorkflow`.
+See list of all existing `link functions` with descriptions at :class:`veles.znicz.standard_workflow.StandardWorkflow`.
+
+Rules for linking Units in StandardWorkflow
+-------------------------------------------
+
+1. Do not link units with Snapshotter (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_snapshotter`)
+in parallel, except for plotting Units.
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+       # GOOD CODE
+       parallel_units = [link(self.decision)
+                         for link in (self.link_snapshotter,
+                                      self.link_error_plotter,
+                                      self.link_weights_plotter)]
+       self.link_gds(*parallel_units)
+       ...
+
+.. image:: _static/rules_snapshotter_linking1.png
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+       # WRONG CODE!!!
+       parallel_units = [link(self.decision)
+                         for link in (self.snapshotter,
+                                      self.link_image_saver,
+                                      self.link_ipython)]
+       self.link_gds(*parallel_units)
+       ...
+
+
+.. image:: _static/rules_snapshotter_linking2.png
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+       # GOOD CODE
+       parallel_units = [link(self.snapshotter)
+                         for link in (self.link_image_saver,
+                                      self.link_ipython)]
+       self.link_gds(*parallel_units)
+       ...
+
+.. image:: _static/rules_snapshotter_linking3.png
+
+2. If Units are linked in parallel, EndPoint (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_end_point`)
+could be linked from list of this Units to speed up the process of execition.
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+       end_units = [link(self.decision)
+                     for link in (self.link_snapshotter,
+                                  self.link_error_plotter,
+                                  self.link_weights_plotter)]
+       self.link_gds(*end_units)
+       self.link_end_point(*end_units)
+       ...
+
+.. image:: _static/rules_end_point_linking.png
+
+3. To link Forwards units (:func:`veles.znicz.standard_workflow.StandardWorkflowBase.link_forwards`),
+link Loader first (:func:`veles.znicz.standard_workflow.StandardWorkflowBase.link_loader`).
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+
+       self.link_loader()
+
+       ...
+
+       self.link_forwards()
+       ...
+
+4. To link EndPoint (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_end_point`)
+unit, link Decision unit (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_decision`) first.
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+
+       self.link_decision()
+
+       ...
+
+       self.link_end_point()
+       ...
+
+5. To link GradientDescent units (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_gds`),
+link Forwards (:func:`veles.znicz.standard_workflow.StandardWorkflowBase.link_forwards`),
+Evaluator (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_evaluator`),
+and Decision (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_decision`) units first.
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+
+       self.link_decision()
+       self.link_evaluator()
+       self.link_forwards()
+
+       ...
+
+       self.link_gds()
+       ...
+
+6. To link Avatar unit (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_avatar`),
+link Loader first. If you link Avatar Unit, link Loader from Start Point, not from Repeater.
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+
+       self.link_loader(self.start_point)
+
+       ...
+
+       self.link_avatar()
+       ...
+
+7. To link Evaluator unit (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_evaluator`),
+link Forwards (:func:`veles.znicz.standard_workflow.StandardWorkflowBase.link_forwards`)
+and Loader (:func:`veles.znicz.standard_workflow.StandardWorkflowBase.link_loader`) first.
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+
+       self.link_loader()
+       self.link_forwards()
+
+       ...
+
+       self.link_evaluator()
+       ...
+
+8. To link Decision unit (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_decision`),
+link Evaluator (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_evaluator`),
+Loader (:func:`veles.znicz.standard_workflow.StandardWorkflowBase.link_loader`) and
+Repeater (:func:`veles.znicz.standard_workflow.StandardWorkflowBase.link_repeater`) units first.
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+
+       self.link_loader()
+       self.link_repeater()
+       self.link_evaluator()
+
+       ...
+
+       self.link_decision()
+       ...
+
+9. To link Snapshotter unit (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_snapshotter`), link
+Decision (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_decision`) first.
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+
+       self.link_decision()
+
+       ...
+
+       self.link_snapshotter()
+       ...
+
+10. To link ImageSaver unit (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_image_saver`),
+link Forwards (:func:`veles.znicz.standard_workflow.StandardWorkflowBase.link_forwards`),
+Loader (:func:`veles.znicz.standard_workflow.StandardWorkflowBase.link_loader`),
+Snapshotter (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_snapshotter`) and
+Decision (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_decision`) units.
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+
+       self.link_loader()
+       self.link_forwards()
+       self.link_decision()
+       self.link_snapshotter()
+
+       ...
+
+       self.link_image_saver()
+       ...
+
+11. To link LRAdjuster unit (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_lr_adjuster`),
+link GradientDescent units (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_gds`) first
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+
+       self.link_gds()
+
+       ...
+
+       self.link_lr_adjuster()
+       ...
+
+12. To link MeanDispNormalizer (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_meandispnorm`),
+link Loader unit (:func:`veles.znicz.standard_workflow.StandardWorkflowBase.link_loader`) first.
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+
+       self.link_loader()
+
+       ...
+
+       self.link_meandispnorm()
+       ...
+
+13. To link Shell unit (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_ipython`),
+link Decision unit (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_decision`) first.
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+
+       self.link_decision()
+
+       ...
+
+       self.link_ipython()
+       ...
+
+14. To link ForwardWorkflowExtractor (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_result_unit`),
+link Decision unit (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_decision`) first.
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+
+       self.link_decision()
+
+       ...
+
+       self.link_result_unit()
+       ...
+
+15. To link DataSaver unit (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_data_saver`),
+link Loader (:func:`veles.znicz.standard_workflow.StandardWorkflowBase.link_loader`) unit first.
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+
+       self.link_loader()
+
+       ...
+
+       self.link_data_saver()
+       ...
+
+16. To link Errors or Matrix Plotting units (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_error_plotter`, :func:`veles.znicz.standard_workflow.StandardWorkflow.link_conf_matrix_plotter`, :func:`veles.znicz.standard_workflow.StandardWorkflow.link_err_y_plotter`, :func:`veles.znicz.standard_workflow.StandardWorkflow.link_mse_plotter`, :func:`veles.znicz.standard_workflow.StandardWorkflow.link_min_max_plotter`, :func:`veles.znicz.standard_workflow.StandardWorkflow.link_multi_hist_plotter`), link Decision (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_decision`) unit first.
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+
+       self.link_decision()
+
+       ...
+
+       self.link_error_plotter()
+       self.link_conf_matrix_plotter()
+       self.link_err_y_plotter()
+       self.link_mse_plotter()
+       self.link_min_max_plotter()
+       self.link_multi_hist_plotter()
+       ...
+
+17. To link ImmediatePlotter unit (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_immediate_plotter`)
+or WeightsPlotter units (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_weights_plotter`),
+link Forwards (:func:`veles.znicz.standard_workflow.StandardWorkflowBase.link_forwards`),
+Loader (:func:`veles.znicz.standard_workflow.StandardWorkflowBase.link_loader`) and
+Decision (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_decision`) units first.
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+
+       self.link_decision()
+       self.link_forwards()
+       self.link_loader()
+
+       ...
+
+       self.link_immediate_plotter()
+       self.link_weights_plotter()
+       ...
+
+18. To link SimilarWeightsPlotter unit (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_similar_weights_plotter`),
+link WeightsPlotter (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_weights_plotter`),
+Loader (:func:`veles.znicz.standard_workflow.StandardWorkflowBase.link_loader`),
+Decision (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_decision`)
+and Forwards (:func:`veles.znicz.standard_workflow.StandardWorkflowBase.link_forwards`) units first.
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+
+       self.link_decision()
+       self.link_forwards()
+       self.link_loader()
+       self.link_weights_plotter()
+
+       ...
+
+       self.link_similar_weights_plotter()
+       ...
+
+19. To link ImagePlotter (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_image_plotter`),
+link Decision (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_decision`)
+and Forwards (:func:`veles.znicz.standard_workflow.StandardWorkflowBase.link_forwards`) units first.
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+
+       self.link_decision()
+       self.link_forwards()
+
+       ...
+
+       self.link_image_plotter()
+       ...
+
+20. To link TablePlotter (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_table_plotter`),
+link Forwards (:func:`veles.znicz.standard_workflow.StandardWorkflowBase.link_forwards`),
+Decision (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_decision`)
+and GradientDescent units (:func:`veles.znicz.standard_workflow.StandardWorkflow.link_gds`) units first.
+
+.. code-block:: python
+
+   def create_workflow(self):
+       ...
+
+       self.link_decision()
+       self.link_forwards()
+       self.link_gds()
+
+       ...
+
+       self.link_table_plotter()
+       ...
+
+
 
 Redefining and creating `link_functions`
 ----------------------------------------
 
-Also, you can redefine any `link function` or can create your own
+Also, you can redefine any `link function` or can create custom
 `link functions` for existing or custom units. For example, if your data is
 in exotic format, you can add custom Loader and link it in
-:func:`create_workflow()`
+:func:`veles.znicz.standard_workflow.StandardWorkflow.create_workflow`
 
 .. code-block:: python
 
@@ -283,11 +686,11 @@ Class :class:`veles.znicz.nn_units.NNWorkflow` is a base class to create any
 abstract Workflow (Model).
 
 For creating a unique Model (like Recurrent Neural Network or any other not
-trivial linked Workflow), you can use
-:class:`veles.znicz.nn_units.NNWorkflow` class. The rules are the same: we
-create instances of units, link them by control flow using :meth:`link_from`
-and link their attributes using :meth:`link_attr`. We can link anything
-to anything and transmit any data from any unit to any unit. Example:
+trivial linked Workflow), use
+:class:`veles.znicz.nn_units.NNWorkflow` class. The rules are the same:
+create instances of units, link the control flow using :meth:`veles.units.Unit.link_from`
+and link their attributes using :meth:`veles.units.Unit.link_attr`. It is possible to link anything
+to anything and transmit any data from any unit to any other unit. Example:
 
 .. code-block:: python
 
@@ -331,18 +734,19 @@ to anything and transmit any data from any unit to any unit. Example:
           self.end_point.link_from(self.my_new_super_unit)
           ...
 
-We construct this Workflow:
+This code will construct the following Workflow:
 
 .. image:: _static/abstract_workflow.png
 
 Take a closer look at this example. Instances of Repeater, StartPoint and
-EndPoint is created by default. First, we link repeater with start point.
+EndPoint is created by default in :class:`veles.znicz.nn_units.NNWorkflow`.
+First, link repeater with the start point.
 
 .. code-block:: python
 
   self.repeater.link_from(self.start_point)
 
-Next, we create an instance of MyLoader and link it with Repeater.
+Next, create an instance of MyLoader and link it with Repeater.
 
 .. code-block:: python
 
@@ -350,9 +754,8 @@ Next, we create an instance of MyLoader and link it with Repeater.
   self.loader.link_from(self.repeater)
 
 .. image:: _static/abstract_workflow1.png
-
-Next, we create an instance of MyNewUnit, link it with Repeater and
-associate Loader's and MyNewUnit's attributes.
+Then, create an instance of MyNewUnit and links it with Repeater and
+associates Loader's and MyNewUnit's attributes.
 
 .. code-block:: python
 
@@ -365,8 +768,8 @@ associate Loader's and MyNewUnit's attributes.
 
 .. image:: _static/abstract_workflow2.png
 
-Finally, we create MyNewSuperUnit, link it with Loader and with MyNewUnit,
-transmit attributes from Repeater and MyNewUnit and link MyNewSuperUnit
+Finally, create MyNewSuperUnit, link it with Loader and with MyNewUnit,
+propagates attributes from Repeater and MyNewUnit and links MyNewSuperUnit
 with Repeater.
 
 .. code-block:: python
@@ -390,7 +793,7 @@ with Repeater.
 More about linking units: :doc:`manualrst_veles_units`
 
 
-How to stop, pause or skip the run of unit
+How to stop, pause or skip the execution of the unit
 ::::::::::::::::::::::::::::::::::::::::::
 
 .. code-block:: python
@@ -428,11 +831,11 @@ Example:
 
    self.snapshotter.gate_skip = ~self.decision.epoch_ended
 
-While self.decision.epoch_ended is not True, self.snapshotter.gate_skip is True,
-so Snapshotter runs when self.decision.epoch_ended is True and only then.
+While 'self.decision.epoch_ended' is not True, 'self.snapshotter.gate_skip' is True,
+so Snapshotter will not executes while 'self.decision.epoch_ended' is False.
 
 .. code-block:: python
 
    self.end_point.gate_block = ~self.loader.train_ended
 
-End_point runs when self.loader.train_ended is True and only then.
+'End_point' finishes execution of the workflow when 'self.loader.train_ended' is True.
