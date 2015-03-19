@@ -63,9 +63,9 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         Creates a new thread pool and starts it.
         """
-        self.on_shutdowns = []
-        self.on_thread_enters = []
-        self.on_thread_exits = []
+        self.on_shutdowns = set()
+        self.on_thread_enters = set()
+        self.on_thread_exits = set()
         if six.PY3:
             super(ThreadPool, self).__init__(
                 minthreads=minthreads, maxthreads=maxthreads, name=name)
@@ -179,14 +179,14 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         Adds the specified function to the list of callbacks which are
         executed just after the new thread created in the thread pool.
         """
-        self.on_thread_enters.append(weakref.ref(func) if weak else func)
+        self.on_thread_enters.add(weakref.ref(func) if weak else func)
 
     def register_on_thread_exit(self, func, weak=True):
         """
         Adds the specified function to the list of callbacks which are
         executed just before the thread terminates.
         """
-        self.on_thread_exits.append(weakref.ref(func) if weak else func)
+        self.on_thread_exits.add(weakref.ref(func) if weak else func)
 
     def register_on_shutdown(self, func, weak=True):
         """
@@ -196,7 +196,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         thread and a graceful shutdown is desired. Then on_shutdown() function
         shall terminate that loop using the corresponding foreign API.
         """
-        self.on_shutdowns.append(weakref.ref(func) if weak else func)
+        self.on_shutdowns.add(weakref.ref(func) if weak else func)
 
     @staticmethod
     def _put(self, item):
@@ -230,7 +230,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                 self.exception("Ignored the following exception in shutdowner "
                                "%s:", on_shutdown)
         self.debug("Skipped %d dead refs. Requesting threads to quit", skipped)
-        del self.on_shutdowns[:]
+        self.on_shutdowns.clear()
         self.joined = True
         self.started = False
         threads = copy.copy(self.threads)

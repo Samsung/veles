@@ -408,8 +408,6 @@ class Launcher(logger.Logger):
 
         try:
             self._device = Device() if acceleration_is_enabled else None
-            if self.device is not None:
-                self.device.thread_pool_attach(self.workflow.thread_pool)
         except Exception as e:
             self.error("Failed to create the OpenCL device.")
             raise from_none(e)

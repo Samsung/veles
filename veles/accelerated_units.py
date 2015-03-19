@@ -751,6 +751,8 @@ class AcceleratedWorkflow(Workflow):
         return self._power_
 
     def initialize(self, device, **kwargs):
+        if device is not None:
+            device.thread_pool_attach(self.thread_pool)
         super(AcceleratedWorkflow, self).initialize(device=device, **kwargs)
         self.device = device
 
