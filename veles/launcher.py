@@ -401,13 +401,13 @@ class Launcher(logger.Logger):
             self.device.thread_pool_detach()
 
     @threadsafe
-    def initialize(self, acceleration_is_enabled, **kwargs):
+    def initialize(self, **kwargs):
         if not self.is_slave and self.reports_web_status:
             self.workflow_graph, _ = self.workflow.generate_graph(
                 filename=None, write_on_disk=False, with_data_links=True)
 
         try:
-            self._device = Device() if acceleration_is_enabled else None
+            self._device = Device() if not self.is_master else None
         except Exception as e:
             self.error("Failed to create the OpenCL device.")
             raise from_none(e)

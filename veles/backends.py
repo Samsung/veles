@@ -313,7 +313,7 @@ class OpenCLDevice(Device):
     """
 
     BACKEND = "ocl"
-    PRIORITY = 10
+    PRIORITY = 20
     DEVICE_INFOS_JSON = "device_infos.json"
     skip = cl.skip
 
@@ -576,7 +576,7 @@ class CUDADevice(Device):
     """
 
     BACKEND = "cuda"
-    PRIORITY = 20
+    PRIORITY = 30
     skip = cu.skip
 
     # Allow this class to be created manually
@@ -704,3 +704,19 @@ class CUDADevice(Device):
             return len(cu.Devices()) > 0
         except:
             return False
+
+
+@add_metaclass(BackendRegistry)
+class NumpyDevice(Device):
+    """Python numpy pseudo device class.
+    """
+
+    BACKEND = "numpy"
+    PRIORITY = 10
+
+    def __new__(cls, *args):
+        return None
+
+    @staticmethod
+    def available():
+        return True

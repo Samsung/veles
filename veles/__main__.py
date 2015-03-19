@@ -84,10 +84,6 @@ class Main(Logger, CommandLineBase):
             return
         self._optimization = "no"
 
-    @property
-    def acceleration_is_enabled(self):
-        return not (self.launcher.is_master or self._disable_acceleration)
-
     def _process_special_args(self):
         if len(sys.argv) > 1 and sys.argv[1] == "forge":
             from veles.forge_client import __run__ as forge_run
@@ -379,7 +375,7 @@ class Main(Logger, CommandLineBase):
         kwargs["snapshot"] = self.snapshot
 
         try:
-            self.launcher.initialize(self.acceleration_is_enabled, **kwargs)
+            self.launcher.initialize(**kwargs)
         except:
             self.exception("Failed to initialize the launcher.")
             self.launcher.stop()
@@ -555,7 +551,6 @@ class Main(Logger, CommandLineBase):
         self._workflow_graph = args.workflow_graph
         self._dry_run = Main.DRY_RUN_CHOICES.index(args.dry_run)
         self._dump_attrs = args.dump_unit_attributes
-        self._disable_acceleration = args.disable_acceleration
         self.snapshot_file_name = args.snapshot
         self._parse_optimization(args)
 
