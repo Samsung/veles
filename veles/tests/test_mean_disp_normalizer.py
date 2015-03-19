@@ -22,6 +22,9 @@ from veles.dummy import DummyWorkflow
 from veles.tests.doubling_reset import patch
 
 
+root.common.engine.backend = "ocl"
+
+
 class PatchedMeanDispNormalizer(MeanDispNormalizer):
     def __init__(self, workflow, **kwargs):
         super(PatchedMeanDispNormalizer, self).__init__(workflow, **kwargs)

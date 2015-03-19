@@ -3,7 +3,7 @@
 #endif
 
 #include <stdint.h>
-#include "highlight.cuh"
+#include "highlight.cu"
 
 /*
 @brief Generates equidistributed random numbers.

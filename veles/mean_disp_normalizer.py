@@ -15,10 +15,10 @@ import veles.error as error
 from veles.memory import Vector
 from veles.distributable import IDistributable, TriviallyDistributable
 from veles.opencl_types import numpy_dtype_to_opencl
-from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit
+from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit
 
 
-@implementer(IOpenCLUnit, IDistributable)
+@implementer(IDistributable, IOpenCLUnit, ICUDAUnit)
 class MeanDispNormalizer(AcceleratedUnit, TriviallyDistributable):
     """Normalizes multichannel byte images according to
     dataset mean and dispersion.
@@ -69,7 +69,7 @@ class MeanDispNormalizer(AcceleratedUnit, TriviallyDistributable):
 
         self.init_vectors(self.input, self.mean, self.rdisp, self.output)
 
-    def ocl_init(self):
+    def _gpu_init(self):
         dtype = self.rdisp.dtype
         sample_size = self.mean.size
 
@@ -82,11 +82,24 @@ class MeanDispNormalizer(AcceleratedUnit, TriviallyDistributable):
         self.assign_kernel("normalize_mean_disp")
         self.set_args(self.input, self.mean, self.rdisp, self.output)
 
-        self.global_size = [sample_size, self.input.shape[0]]
+    def ocl_init(self):
+        self._gpu_init()
+        self.global_size = [self.mean.size, self.input.shape[0]]
 
-    def ocl_run(self):
+    def cuda_init(self):
+        self._gpu_init()
+        self.local_size = 1, 1, 1
+        self.global_size = self.mean.size, self.input.shape[0], 1
+
+    def _gpu_run(self):
         self.unmap_vectors(self.input, self.mean, self.rdisp, self.output)
         self.execute_kernel(self.global_size, self.local_size)
+
+    def ocl_run(self):
+        self._gpu_run()
+
+    def cuda_run(self):
+        self._gpu_run()
 
     def cpu_run(self):
         self.input.map_read()

@@ -1,11 +1,13 @@
 #ifndef _DEFINES_
 #define _DEFINES_
 
-#include <highlight.cuh>
+#include "highlight.cu"
 
 #ifndef dtype
 #define dtype int
 #endif
+
+typedef unsigned char uchar;
 
 #ifndef FLT_MAX
 #define FLT_MAX 1E+37

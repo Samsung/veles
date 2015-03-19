@@ -1,5 +1,4 @@
 #include "defines.cu"
-#include "highlight.cuh"
 
 __device__ inline void copy(const etype *input, const int size, etype *output) {
   for (int i = 0; i < size; i++) {
