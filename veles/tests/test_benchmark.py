@@ -6,8 +6,8 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 import logging
 import unittest
 
-import veles.accelerated_units as opencl_units
-import veles.backends as opencl
+from veles.accelerated_units import DeviceBenchmark
+from veles.backends import Device
 from veles.config import root
 
 
@@ -19,8 +19,8 @@ class Test(unittest.TestCase):
         pass
 
     def testBenchmark(self):
-        self.bench = opencl_units.DeviceBenchmark(self)
-        self.bench.initialize(device=opencl.Device())
+        self.bench = DeviceBenchmark(self)
+        self.bench.initialize(device=Device())
         logging.info("Result: %d points", self.bench.estimate())
 
 

@@ -7,18 +7,15 @@ Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
 
 
-import gc
-import logging
 import numpy
-import unittest
 
 from veles.config import root
 from veles.memory import Vector
-import veles.backends as opencl
 import veles.opencl_types as opencl_types
 import veles.prng as rnd
 from veles.mean_disp_normalizer import MeanDispNormalizer
 from veles.dummy import DummyWorkflow
+from veles.tests import AcceleratedTest, assign_backend
 from veles.tests.doubling_reset import patch
 
 
@@ -32,10 +29,11 @@ class PatchedMeanDispNormalizer(MeanDispNormalizer):
               lambda: self.rdisp.dtype)
 
 
-class TestMeanDispNormalizer(unittest.TestCase):
+class TestMeanDispNormalizer(AcceleratedTest):
+    ABSTRACT = True
+
     def setUp(self):
-        gc.collect()
-        self.device = opencl.OpenCLDevice()
+        super(TestMeanDispNormalizer, self).setUp()
         dtype = opencl_types.dtypes[root.common.precision_type]
         self.mean = numpy.zeros([256, 256, 4], dtype=dtype)
         rnd.get().fill(self.mean, 0, 255)
@@ -72,7 +70,15 @@ class TestMeanDispNormalizer(unittest.TestCase):
         return unit.output.mem.copy()
 
 
+@assign_backend("ocl")
+class OpenCLTestMeanDispNormalizer(TestMeanDispNormalizer):
+    pass
+
+
+@assign_backend("cuda")
+class CUDATestMeanDispNormalizer(TestMeanDispNormalizer):
+    pass
+
+
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    # import sys;sys.argv = ['', 'Test.testName']
-    unittest.main()
+    AcceleratedTest.main()

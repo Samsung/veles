@@ -179,7 +179,7 @@ class Device(Pickleable):
     def backend_name(self):
         """Returns name of the backend.
         """
-        raise NotImplementedError()
+        return type(self).BACKEND
 
     @property
     def pid(self):
@@ -367,10 +367,6 @@ class OpenCLDevice(Device):
                           self.device_info.get_block_size(dtype=dtype),
                           self.device_info.version)
         self.info(log_configs + str(table))
-
-    @property
-    def backend_name(self):
-        return "ocl"
 
     @property
     def exists(self):
@@ -624,10 +620,6 @@ class CUDADevice(Device):
 
     def thread_pool_detach(self):
         self.context.pop_current()
-
-    @property
-    def backend_name(self):
-        return "cuda"
 
     @property
     def context(self):
