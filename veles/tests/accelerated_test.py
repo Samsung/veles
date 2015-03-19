@@ -18,15 +18,21 @@ if PY3:
 from veles.opencl_types import dtypes
 
 
-def multi_device(fn):
-    def test_wrapped(self):
-        for cls in self.backends:
-            self.device = cls()
-            self.info("Selected %s", cls.__name__)
-            fn(self)
+def multi_device(numpy=False):
+    def real_multi_device(fn):
+        def test_wrapped(self):
+            backends = list(self.backends)
+            if numpy:
+                backends.append(None)
+            for cls in backends:
+                self.device = cls() if cls is not None else None
+                self.info("Selected %s",
+                          cls.__name__ if cls is not None else "numpy")
+                fn(self)
 
-    test_wrapped.__name__ = fn.__name__
-    return test_wrapped
+        test_wrapped.__name__ = fn.__name__
+        return test_wrapped
+    return real_multi_device
 
 
 def assign_backend(backend):
@@ -40,7 +46,7 @@ def assign_backend(backend):
 
 class AcceleratedTest(unittest.TestCase, Logger):
     backends = [v for k, v in sorted(BackendRegistry.backends.items())
-                if k != "auto"]
+                if k not in ("auto", "numpy")]
     DEVICE = Device
     ABSTRACT = False
 
