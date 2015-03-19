@@ -164,7 +164,8 @@ class Device(Pickleable):
     """
     def __new__(cls, *args, **kwargs):
         assert issubclass(cls, Device)
-        backend = kwargs.get("backend", root.common.engine.backend)
+        backend = kwargs.get(
+            "backend", os.getenv("VELES_BACKEND", root.common.engine.backend))
         cls = BackendRegistry.backends[backend]
         if cls.__new__ != Device.__new__:
             return cls.__new__(cls, *args, **kwargs)
