@@ -128,7 +128,8 @@ class Vector(Pickleable):
 
     def __setstate__(self, state):
         super(Vector, self).__setstate__(state)
-        Vector.__vectors__.add(weakref.ref(self))
+        if six.PY3:
+            Vector.__vectors__.add(weakref.ref(self))
 
     @property
     def device(self):
