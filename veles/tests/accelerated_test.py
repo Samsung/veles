@@ -6,6 +6,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 
 import gc
+import inspect
 import logging
 from six import PY3
 import unittest
@@ -53,10 +54,6 @@ class AcceleratedTest(unittest.TestCase, Logger):
     def __init__(self, *args, **kwargs):
         Logger.__init__(self)
         unittest.TestCase.__init__(self, *args, **kwargs)
-        if not type(self).ABSTRACT:
-            self.run = unittest.TestCase.run.__get__(self, self.__class__)
-        else:
-            self.run = lambda _self, *_args, **_kwargs: None
 
     def setUp(self):
         self.device = self.DEVICE()
@@ -71,6 +68,15 @@ class AcceleratedTest(unittest.TestCase, Logger):
             Vector.reset_all()
         del self.device
         gc.collect()
+
+    def run(self, result=None):
+        failure = getattr(type(self), "__unittest_expecting_failure__", False)
+        for m in inspect.getmembers(type(self), predicate=inspect.isfunction):
+            m[1].__unittest_expecting_failure__ = failure
+        if not type(self).ABSTRACT:
+            return unittest.TestCase.run(self, result)
+        else:
+            return None
 
     @staticmethod
     def main():
