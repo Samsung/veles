@@ -157,8 +157,9 @@ class AcceleratedUnit(Unit):
             self._backend_run_ = self._run_synchronized
 
     def _run_synchronized(self):
-        self._original_run_()
+        ret = self._original_run_()
         self.device.sync()
+        return ret
 
     @property
     def cache(self):
@@ -614,7 +615,7 @@ class TrivialAcceleratedUnit(AcceleratedUnit):
         pass
 
 
-@implementer(IOpenCLUnit)
+@implementer(IOpenCLUnit, ICUDAUnit)
 class DeviceBenchmark(AcceleratedUnit):
     """
     Executes an OpenCL benchmark to estimate the computing power of the device.
@@ -622,56 +623,59 @@ class DeviceBenchmark(AcceleratedUnit):
 
     def __init__(self, workflow, **kwargs):
         super(DeviceBenchmark, self).__init__(workflow, **kwargs)
-        self.dtype = kwargs.get("dtype", root.common.precision_type)
-        dtype = opencl_types.dtypes[self.dtype]
+        self.precision = kwargs.get("dtype", root.common.precision_type)
+        self.dtype = opencl_types.dtypes[self.precision]
         self.size = kwargs.get("size", 1500)
         self.repeats = kwargs.get("repeats", 10)
-        self.input_A_ = Vector()
-        self.input_B_ = Vector()
+        self._input_A_ = Vector()
+        self._input_B_ = Vector()
         msize = self.size * self.size
         from veles.prng.random_generator import RandomGenerator
         rnd = RandomGenerator(None)
-        genmem = lambda: rnd.rand(msize).astype(dtype) - 0.5
-        self.input_A_.mem = genmem()
-        self.input_B_.mem = genmem()
+        genmem = lambda: rnd.rand(msize).astype(self.dtype) - 0.5
+        self._input_A_.mem = genmem()
+        self._input_B_.mem = genmem()
         self.block_size = kwargs.get("block_size")
         self.precision_level = kwargs.get("precision_level",
                                           root.common.precision_level)
+        self.return_time = kwargs.get("return_time", False)
+        self.dry_run_first = kwargs.get("dry_run_first", False)
 
     def initialize(self, device, **kwargs):
         """Compiles the benchmarking kernel.
         """
         super(DeviceBenchmark, self).initialize(device=device, **kwargs)
         if device is None:
-            self.input_A_.mem = self.input_A_.mem.reshape(self.size, self.size)
-            self.input_B_.mem = self.input_B_.mem.reshape(self.size, self.size)
-            return
+            self._input_A_.mem = self._input_A_.mem.reshape(
+                self.size, self.size)
+            self._input_B_.mem = self._input_B_.mem.reshape(
+                self.size, self.size)
 
     def ocl_init(self):
-        if self.block_size is None and self.device is not None:
-            self.block_size = self.device.device_info.get_block_size(
-                kernel="matrix_multiplication", dtype=self.dtype)
+        self.block_size = self.device.device_info.get_block_size(
+            kernel="matrix_multiplication", dtype=self.precision)
         self.sources_["benchmark"] = {}
         defines = {
             "BLOCK_SIZE": self.block_size,
             "SIZE": self.size,
-            "PRECISION_LEVEL": self.precision_level
-        }
-        self.build_program(defines, dtype=self.dtype)
+            "PRECISION_LEVEL": self.precision_level}
+        self.build_program(defines, dtype=self.precision)
         self.assign_kernel("benchmark")
-        self.input_A_.initialize(self.device)
-        self.input_B_.initialize(self.device)
-        self.set_args(self.input_A_, self.input_A_, self.input_B_)
+        self.init_vectors(self._input_A_, self._input_B_)
+        self.set_args(self._input_A_, self._input_A_, self._input_B_)
 
-    def estimate(self, return_time=False, dry_run_first=False):
-        """
-        Launches and waits for the benchmark to finish.
-        """
-        if self.device is not None:
-            dt = self._estimate_ocl(dry_run_first)
-        else:
-            dt = self._estimate_cpu(dry_run_first)
-        if return_time:
+    def cuda_init(self):
+        import cuda4py.blas as cublas
+        self.gemm_ = cublas.CUBLAS.gemm(self.dtype)
+        self.np_one = numpy.ones(1, self.dtype)
+        self.np_zero = numpy.zeros(1, self.dtype)
+        self.init_vectors(self._input_A_, self._input_B_)
+
+    def run(self):
+        self.debug("Running %d repetitions of size %d on %s...",
+                   self.repeats, self.size, self.precision)
+        dt = super(DeviceBenchmark, self).run()
+        if self.return_time:
             res = dt / self.repeats
             self.debug("Avg time is %.6f", res)
         else:
@@ -679,23 +683,20 @@ class DeviceBenchmark(AcceleratedUnit):
             self.debug("Result is %.2f", res)
         return res
 
-    def _estimate_cpu(self, dry_run_first):
+    def cpu_run(self):
         def execute(repeats):
             for _ in range(repeats):
-                numpy.dot(self.input_A_.mem, self.input_A_.mem,
-                          self.input_B_.mem)
+                numpy.dot(self._input_A_.mem, self._input_A_.mem,
+                          self._input_B_.mem)
 
-        if dry_run_first:
+        if self.dry_run_first:
             execute(1)
 
         return timeit(execute, self.repeats)[1]
 
-    def _estimate_ocl(self, dry_run_first):
-        self.debug("Running %d repetitions of size %d on %s...",
-                   self.repeats, self.size, self.dtype)
-        global_size = [roundup(self.size, self.block_size),
-                       roundup(self.size, self.block_size)]
-        local_size = [self.block_size, self.block_size]
+    def ocl_run(self):
+        global_size = (roundup(self.size, self.block_size),) * 2
+        local_size = (self.block_size,) * 2
         self.device.queue_.flush()
         self.device.queue_.finish()
 
@@ -705,16 +706,28 @@ class DeviceBenchmark(AcceleratedUnit):
             self.device.queue_.flush()
             self.device.queue_.finish()
 
-        if dry_run_first:
+        if self.dry_run_first:
             execute(1)
 
         return timeit(execute, self.repeats)[1]
 
-    def cpu_run(self):
-        self.estimate()
+    def cuda_run(self):
+        import cuda4py.blas as cublas
+        self.device.sync()
 
-    def ocl_run(self):
-        self.estimate()
+        def execute(repeats):
+            for _ in range(repeats):
+                self.gemm_(
+                    self.device.blas, cublas.CUBLAS_OP_T, cublas.CUBLAS_OP_N,
+                    self.size, self.size, self.size,
+                    self.np_one, self._input_A_.devmem, self._input_A_.devmem,
+                    self.np_zero, self._input_B_.devmem)
+            self.device.sync()
+
+        if self.dry_run_first:
+            execute(1)
+
+        return timeit(execute, self.repeats)[1]
 
 
 class AcceleratedWorkflow(Workflow):

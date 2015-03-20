@@ -502,9 +502,10 @@ class OpenCLDevice(Device):
                             u = benchmark(
                                 wf, size=3001, repeats=3,
                                 dtype=dtype, precision_level=precision_level,
-                                block_size=block_size)
+                                block_size=block_size,
+                                return_time=True, dry_run_first=True)
                             u.initialize(self)
-                            dt = u.estimate(True, True)
+                            dt = u.run()
                     except cl.CLRuntimeError as e:
                         self.exception("Failed to evaluate block size %d",
                                        block_size)
