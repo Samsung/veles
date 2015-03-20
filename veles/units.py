@@ -298,14 +298,13 @@ class Unit(Distributable, Verified):
 
     @property
     def thread_pool(self):
-        Unit._pool_lock_.acquire()
-        try:
+        with Unit._pool_lock_:
             if Unit._pool_ is None:
                 Unit._pool_ = thread_pool.ThreadPool(
                     minthreads=root.common.ThreadPool.minthreads,
                     maxthreads=root.common.ThreadPool.maxthreads)
-        finally:
-            Unit._pool_lock_.release()
+            if self.is_initialized and not Unit._pool_.started:
+                Unit._pool_.start()
         return Unit._pool_
 
     @property

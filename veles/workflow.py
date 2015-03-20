@@ -301,10 +301,6 @@ class Workflow(Container):
         """
         assert "snapshot" in kwargs, \
             "\"snapshot\" (True/False) must be provided in kwargs"
-        if self.is_main:
-            self.thread_pool.start()
-            self.debug("Started the pool with %d threads",
-                       len(self.thread_pool.threads))
         units_number = len(self)
         fin_text = "%d units were initialized" % units_number
         maxlen = max([len(u.name) for u in self] + [len(fin_text)])

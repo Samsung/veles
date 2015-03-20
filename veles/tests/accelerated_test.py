@@ -68,6 +68,7 @@ class AcceleratedTest(unittest.TestCase, Logger):
             Vector.reset_all()
         del self.device
         gc.collect()
+        assert len(gc.garbage) == 0
 
     def run(self, result=None):
         failure = getattr(type(self), "__unittest_expecting_failure__", False)

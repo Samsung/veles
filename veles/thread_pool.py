@@ -61,7 +61,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     def __init__(self, minthreads=2, maxthreads=1024, queue_size=2048,
                  name=None):
         """
-        Creates a new thread pool and starts it.
+        Initializes a new thread pool.
         """
         self.on_shutdowns = set()
         self.on_thread_enters = set()
@@ -143,6 +143,11 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             super(ThreadPool, self).callInThreadWithCallback(
                 functools.partial(self._on_result, onResult),
                 func, *args, **kw)
+
+    def start(self):
+        super(ThreadPool, self).start()
+        self.debug("ThreadPool with %d threads has been started",
+                   len(self.threads))
 
     def pause(self):
         self._not_paused.clear()
