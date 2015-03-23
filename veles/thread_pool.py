@@ -54,7 +54,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     """
 
     sigint_initial = None
-    pools = []
+    pools = None
     _manhole = None
     _sigint_printed = False
     _can_start = True
@@ -81,7 +81,9 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         self._not_paused = threading.Event()
         self._not_paused.set()
 
-        if not ThreadPool.pools:
+        if ThreadPool.pools is None:
+            # Initialize for the very first time
+            ThreadPool.pools = []
             global sysexit_initial
             sysexit_initial = sys.exit
             sys.exit = ThreadPool.exit
@@ -104,6 +106,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                         pass
             ThreadPool.sigint_initial = \
                 signal.signal(signal.SIGINT, ThreadPool.sigint_handler)
+            assert ThreadPool.sigint_initial != ThreadPool.sigint_handler
             if not ThreadPool.manhole:
                 signal.signal(signal.SIGUSR1, ThreadPool.sigusr1_handler)
             else:
@@ -368,11 +371,15 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         Private method - handler for SIGINT.
         """
         ThreadPool.shutdown_pools(execute_remaining=False, force=True)
+        log = logging.getLogger("ThreadPool")
         try:
             # ThreadPool.sigint_initial(sign, frame) does not work on Python 2
-            ThreadPool.__dict__['sigint_initial'](sign, frame)
+            sigint_initial = ThreadPool.__dict__['sigint_initial']
+            if sigint_initial == ThreadPool.sigint_handler:
+                log.warning("Prevented an infinite recursion: sigint_initial")
+            else:
+                sigint_initial(sign, frame)
         except KeyboardInterrupt:
-            log = logging.getLogger("ThreadPool")
             if not reactor.running:
                 if not ThreadPool._sigint_printed:
                     log.warning("Raising KeyboardInterrupt since "
