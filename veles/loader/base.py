@@ -869,12 +869,12 @@ class Loader(Unit):
         if chisquare is not None:
             _, p = chisquare(other_dist, train_dist)
             is_the_same = p > 0.95
-            msg = ("TRAIN and %s labels have %s "
-                   "distributions (Χ-square test's p-value is %.3f)")
+            msg = (u"TRAIN and %s labels have %s "
+                   u"distributions (Χ-square test's p-value is %.3f)")
             if is_the_same:
-                self.info("OK: " + msg, other_name, "the same", p)
+                self.info(u"OK: " + msg, other_name, u"the same", p)
             else:
-                self.warning(msg, other_name, "different", p)
+                self.warning(msg, other_name, u"different", p)
 
 
 class LoaderMSEMixin(Unit):

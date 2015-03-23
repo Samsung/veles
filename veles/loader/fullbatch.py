@@ -131,8 +131,6 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
     def initialize(self, device, **kwargs):
         super(FullBatchLoader, self).initialize(device=device, **kwargs)
         assert self.total_samples > 0
-
-        self.info("Normalizing to %s...", self.normalization_type)
         self.analyze_original_dataset()
         self._map_original_labels()
 
@@ -279,6 +277,7 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         pass
 
     def analyze_original_dataset(self):
+        self.info("Normalizing to %s...", self.normalization_type)
         self.debug(
             "Data range: (%.6f, %.6f), "
             % (self.original_data.min(), self.original_data.max()))
