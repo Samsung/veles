@@ -77,11 +77,11 @@ class UnitRegistry(type):
                 except TypeError:
                     continue
                 kwarg_re = re.compile(
-                    r"%(kwargs)s\.get\(([^\s,\)]+)|%(kwargs)s\[([^\]]+)" %
-                    {"kwargs": kw_var})
+                    r"%(kwargs)s\.(get|pop)\(([^\s,\)]+)|%(kwargs)s\[([^\]]+)"
+                    % {"kwargs": kw_var})
                 src = "".join((l.strip() for l in src)).replace('\n', '')
                 for match in kwarg_re.finditer(src):
-                    kwattrs.add((match.group(1) or match.group(2))[1:-1])
+                    kwattrs.add((match.group(2) or match.group(3))[1:-1])
         cls.KWATTRS = kwattrs
         super(UnitRegistry, cls).__init__(name, bases, clsdict)
 

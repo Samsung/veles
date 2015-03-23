@@ -77,7 +77,8 @@ class AcceleratedTest(unittest.TestCase, Logger):
     def tearDown(self):
         if PY3:
             Vector.reset_all()
-        del self.parent
+        if sys.exc_info() == (None,) * 3:
+            del self.parent
         del self.device
         gc.collect()
         if PY3:
