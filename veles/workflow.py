@@ -350,7 +350,11 @@ class Workflow(Container):
             self.event("run", "begin")
         if not self.is_master:
             self.start_point.run_dependent()
-        self._sync_event_.wait()
+        if six.PY3:
+            self._sync_event_.wait()
+        else:
+            while not self._sync_event_.wait(1):
+                pass
         if self.is_running and self.run_is_blocking:
             self.thread_pool.shutdown(False)
             raise RuntimeError("Workflow synchronization internal failure")
