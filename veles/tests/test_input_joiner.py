@@ -106,7 +106,7 @@ class TestInputJoiner(AcceleratedTest):
                 obj.output.mem.shape[1] -
                 (a.mem.shape[1] + b.mem.shape[1])), "Failed")
 
-    @multi_device
+    @multi_device()
     def testGPU(self):
         self.info("Will test InputJoiner() on GPU.")
         self._do_test(self.device)
@@ -115,7 +115,7 @@ class TestInputJoiner(AcceleratedTest):
         self.info("Will test InputJoiner() on CPU.")
         self._do_test(None)
 
-    @multi_device
+    @multi_device()
     def testGPU2(self):
         self.info("Will test InputJoiner() on GPU "
                   "with output size greater than inputs.")
@@ -126,7 +126,7 @@ class TestInputJoiner(AcceleratedTest):
                   "with output size greater than inputs.")
         self._do_tst2(None)
 
-    @multi_device
+    @multi_device()
     def testGPU3(self):
         self.info("Will test InputJoiner() on GPU "
                   "with output size less than inputs.")

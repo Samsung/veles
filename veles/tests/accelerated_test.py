@@ -32,6 +32,7 @@ def multi_device(numpy=False):
                 self.device = cls() if cls is not None else None
                 self.info("Selected %s",
                           cls.__name__ if cls is not None else "numpy")
+                self.seed()
                 fn(self)
 
         test_wrapped.__name__ = fn.__name__
@@ -69,6 +70,9 @@ class AcceleratedTest(unittest.TestCase, Logger):
 
     def debug(self, msg, *args, **kwargs):
         Logger.debug(self, msg, *args, **kwargs)
+
+    def seed(self):
+        pass
 
     def tearDown(self):
         if PY3:
