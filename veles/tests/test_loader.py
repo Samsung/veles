@@ -6,15 +6,13 @@ Will test correctness of Loader.
 Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
 
-import gc
 from itertools import product
-import logging
 import unittest
 import numpy
 import os
 from zope.interface import implementer
 
-from veles.backends import Device
+from veles.tests import AcceleratedTest, assign_backend
 try:
     from veles.loader.loader_hdf5 import HDF5Loader, FullBatchHDF5Loader
     skip_hdf5 = False
@@ -23,7 +21,6 @@ except ImportError:
     skip_hdf5 = True
 import veles.prng as rnd
 from veles.loader import IFullBatchLoader, FullBatchLoaderMSE
-from veles.dummy import DummyWorkflow
 
 
 @implementer(IFullBatchLoader)
@@ -52,14 +49,8 @@ class Loader(FullBatchLoaderMSE):
         self.class_lengths[2] = N - self.class_lengths[1]
 
 
-class TestFullBatchLoader(unittest.TestCase):
-    def setUp(self):
-        self.device = Device()
-
-    def tearDown(self):
-        gc.collect()
-        del self.device
-
+@assign_backend("cuda")
+class TestFullBatchLoader(AcceleratedTest):
     def test_random(self):
         results = [self._test_random(*p) for p in
                    product((self.device, None), (True, False))]
@@ -70,7 +61,7 @@ class TestFullBatchLoader(unittest.TestCase):
 
     def _test_random(self, device, force_cpu, N=1000):
         rnd.get().seed(123)
-        unit = Loader(DummyWorkflow(), force_cpu=force_cpu, prng=rnd.get())
+        unit = Loader(self.parent, force_cpu=force_cpu, prng=rnd.get())
         unit.initialize(device, snapshot=False)
         self.assertTrue(unit.has_labels)
         res_data = numpy.zeros((N,) + unit.minibatch_data.shape,
@@ -91,10 +82,11 @@ class TestFullBatchLoader(unittest.TestCase):
 
 
 @unittest.skipIf(skip_hdf5, "h5py is unavailable")
-class TestHDF5Loader(unittest.TestCase):
+@assign_backend("ocl")
+class TestHDF5Loader(AcceleratedTest):
     def do(self, klass, **kwargs):
         csd = os.path.dirname(os.path.abspath(__file__))
-        loader = klass(DummyWorkflow(),
+        loader = klass(self.parent,
                        validation_path=os.path.join(csd, "res", "test.h5"),
                        train_path=os.path.join(csd, "res", "train.h5"))
         kwargs["snapshot"] = False
@@ -110,9 +102,7 @@ class TestHDF5Loader(unittest.TestCase):
         self.do(HDF5Loader)
 
     def test_hdf5_fullbatch(self):
-        self.do(FullBatchHDF5Loader, device=Device())
+        self.do(FullBatchHDF5Loader, device=self.device)
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    # import sys;sys.argv = ['', 'Test.testName']
-    unittest.main()
+    AcceleratedTest.main()

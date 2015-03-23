@@ -82,7 +82,7 @@ class Logger(object):
                 return s
 
     @staticmethod
-    def setup(level):
+    def setup_logging(level):
         if Logger.SET_UP:
             raise Logger.LoggerHasBeenAlreadySetUp()
         Logger.SET_UP = True

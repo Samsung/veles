@@ -93,7 +93,7 @@ def print_table(diffs):
 
 def main():
     args = parse_args()
-    Logger.setup(logging.INFO if not args.quiet else logging.WARNING)
+    Logger.setup_logging(logging.INFO if not args.quiet else logging.WARNING)
     logger = logging.getLogger(os.path.splitext(os.path.basename(__file__))[0])
     logger.info("Loading snapshots...")
     first, second = tuple(load_snapshot(p) for p in (args.first, args.second))

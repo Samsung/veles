@@ -15,6 +15,7 @@ import unittest
 
 from veles.backends import Device, BackendRegistry
 from veles.config import root
+from veles.dummy import DummyWorkflow
 from veles.logger import Logger
 if PY3:
     from veles.memory import Vector
@@ -59,15 +60,20 @@ class AcceleratedTest(unittest.TestCase, Logger):
 
     def setUp(self):
         self.device = self.DEVICE()
+        self.parent = DummyWorkflow()
         self._dtype = dtypes[root.common.precision_type]
 
     @property
     def dtype(self):
         return self._dtype
 
+    def debug(self, msg, *args, **kwargs):
+        Logger.debug(self, msg, *args, **kwargs)
+
     def tearDown(self):
         if PY3:
             Vector.reset_all()
+        del self.parent
         del self.device
         gc.collect()
         if PY3:
@@ -84,7 +90,7 @@ class AcceleratedTest(unittest.TestCase, Logger):
 
     @staticmethod
     def main():
-        logging.basicConfig(level=logging.DEBUG)
+        Logger.setup_logging(logging.DEBUG)
         unittest.main()
 
 

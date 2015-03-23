@@ -95,11 +95,11 @@ class Unit(Distributable, Verified):
         self.view_group = kwargs.get("view_group")
         self._demanded = []
         self._id = str(uuid.uuid4())
+        self._links_from = {}
+        self._links_to = {}
         super(Unit, self).__init__(**kwargs)
         validate_kwargs(self, **kwargs)
         self.verify_interface(IUnit)
-        self._links_from = {}
-        self._links_to = {}
         self._gate_block = Bool(False)
         self._gate_skip = Bool(False)
         self._run_calls = 0
@@ -109,7 +109,6 @@ class Unit(Distributable, Verified):
         else:
             timings = False
         self._timings = kwargs.get("timings", timings)
-        self._workflow = None
         self.workflow = workflow
         self.add_method_to_storage("initialize")
         self.add_method_to_storage("run")
@@ -148,6 +147,15 @@ class Unit(Distributable, Verified):
                                                "_is_initialized")
             self.initialize = self._check_attrs(self.initialize, self.demanded)
         Unit.timers[self.id] = 0
+        self._workflow_ = lambda: None
+        links = "_links_from", "_links_to"
+        for this, other in links, reversed(links):
+            for unit, value in getattr(self, this).items():
+                if isinstance(unit, weakref.ReferenceType):
+                    continue
+                partner = getattr(unit, other, None)
+                if partner is not None and self not in partner:
+                    partner[weakref.ref(self)] = value
 
     def __del__(self):
         if self.id in Unit.timers:
@@ -165,15 +173,13 @@ class Unit(Distributable, Verified):
 
     def __getstate__(self):
         state = super(Unit, self).__getstate__()
-        if isinstance(self.workflow, weakref.ProxyTypes):
-            self.warning("Parent workflow %s was discarded during pickling "
-                         "because it was weakly referenced (did you call "
-                         "detach()?)", self.workflow)
-            state["_workflow"] = None
         if self.stripped_pickle:
             state["_links_from"] = {}
             state["_links_to"] = {}
-            state["_workflow"] = None
+        else:
+            for name in "_links_from", "_links_to":
+                state[name] = {u: v for u, v in getattr(self, name).items()
+                               if not isinstance(u, weakref.ReferenceType)}
         return state
 
     def __repr__(self):
@@ -245,7 +251,7 @@ class Unit(Distributable, Verified):
 
     @property
     def workflow(self):
-        return self._workflow
+        return self._workflow_()
 
     @workflow.setter
     def workflow(self, value):
@@ -258,13 +264,10 @@ class Unit(Distributable, Verified):
                 " any unit's constructor must be a workflow. Use veles.dummy."
                 "DummyWorkflow if you want to create a standalone unit." %
                 (self, value))
-        if self._workflow is not None:
-            self._workflow.del_ref(self)
-        self._workflow = value
-        self._workflow.add_ref(self)
-
-    def detach(self):
-        self._workflow = weakref.proxy(self._workflow)
+        if self.workflow is not None:
+            self.workflow.del_ref(self)
+        self._workflow_ = weakref.ref(value)
+        value.add_ref(self)
 
     @property
     def name(self):
@@ -361,7 +364,7 @@ class Unit(Distributable, Verified):
     def run_dependent(self):
         """Invokes run() on dependent units on different threads.
         """
-        for dst in self.links_to.keys():
+        for dst in self._enumerate_links(self.links_to):
             if dst.gate_block:
                 continue
             if len(self.links_to) == 1:
@@ -373,7 +376,7 @@ class Unit(Distributable, Verified):
         units = [self]
         walk = []
         visited = {self}
-        for child in sorted(self.links_to.keys()):
+        for child in sorted(self._enumerate_links(self.links_to)):
             walk.append((child, self))
         # flatten the dependency tree by doing breadth first search
         while len(walk) > 0:
@@ -383,7 +386,7 @@ class Unit(Distributable, Verified):
                 continue
             units.append(node)
             visited.add(node)
-            for child in sorted(node.links_to.keys()):
+            for child in sorted(self._enumerate_links(node.links_to)):
                 walk.append((child, node))
         return units
 
@@ -398,12 +401,12 @@ class Unit(Distributable, Verified):
             if not len(self.links_from):
                 return True
             for src in args:
-                if src in self.links_from:
-                    self.links_from[src] = True
-                if not all(self.links_from.values()):
-                    return False
-                for src in self.links_from:  # reset activation flags
-                    self.links_from[src] = False
+                self._set_links_value(self.links_from, src, True)
+            if not all(self.links_from.values()):
+                return False
+            # reset activation flags
+            for src in self.links_from:
+                self.links_from[src] = False
         return True
 
     def link_from(self, *args):
@@ -412,8 +415,14 @@ class Unit(Distributable, Verified):
         with self._gate_lock_:
             for src in args:
                 self.links_from[src] = False
-                with src._gate_lock_:
-                    src.links_to[self] = False
+                if self._find_reference_cycle():
+                    del self.links_from[src]
+                    self.links_from[weakref.ref(src)] = False
+                    with src._gate_lock_:
+                        src.links_to[self] = False
+                else:
+                    with src._gate_lock_:
+                        src.links_to[weakref.ref(self)] = False
 
     def unlink_from(self, *args):
         """Unlinks self from src.
@@ -421,10 +430,8 @@ class Unit(Distributable, Verified):
         with self._gate_lock_:
             for src in args:
                 with src._gate_lock_:
-                    if self in src.links_to:
-                        del src.links_to[self]
-                if src in self.links_from:
-                    del self.links_from[src]
+                    self._del_link(src.links_to, self)
+                self._del_link(self.links_from, src)
 
     def unlink_all(self):
         """Unlinks self from other units.
@@ -437,9 +444,9 @@ class Unit(Distributable, Verified):
         Detaches all previous units from this one.
         """
         with self._gate_lock_:
-            for src in self.links_from:
+            for src in self._enumerate_links(self.links_from):
                 with src._gate_lock_:
-                    del src.links_to[self]
+                    self._del_link(src.links_to, self)
             self.links_from.clear()
 
     def unlink_after(self):
@@ -447,9 +454,9 @@ class Unit(Distributable, Verified):
         Detaches all subsequent units from this one.
         """
         with self._gate_lock_:
-            for dst in self.links_to:
+            for dst in self._enumerate_links(self.links_to):
                 with dst._gate_lock_:
-                    del dst.links_from[self]
+                    self._del_link(dst.links_from, self)
             self.links_to.clear()
 
     def insert_after(self, *chain):
@@ -462,7 +469,7 @@ class Unit(Distributable, Verified):
             first = chain[0]
             last = chain[-1]
             first.link_from(self)
-            for dst in links_to:
+            for dst in self._enumerate_links(links_to):
                 with dst._gate_lock_:
                     dst.link_from(last)
 
@@ -498,10 +505,10 @@ class Unit(Distributable, Verified):
         res += "\033[1;36mClass:\033[0m %s.%s\n" % (self.__class__.__module__,
                                                     self.__class__.__name__)
         res += "\033[1;36mIncoming links:\033[0m\n"
-        for link in self.links_from:
+        for link in self._enumerate_links(self.links_from):
             res += "\t%s" % repr(link)
         res += "\n\033[1;36mOutgoing links:\033[0m\n"
-        for link in self.links_to:
+        for link in self._enumerate_links(self.links_to):
             res += "\t%s" % repr(link)
         print(res)
 
@@ -510,6 +517,52 @@ class Unit(Distributable, Verified):
         return (isinstance(value, tuple) or isinstance(value, int) or
                 isinstance(value, float) or isinstance(value, complex) or
                 isinstance(value, bool) or isinstance(value, str))
+
+    @staticmethod
+    def _set_links_value(container, obj, value):
+        if obj in container:
+            container[obj] = value
+        else:
+            ref = weakref.ref(obj)
+            if ref in container:
+                container[ref] = value
+
+    @staticmethod
+    def _enumerate_links(container):
+        for obj in container:
+            if isinstance(obj, weakref.ReferenceType):
+                yield obj()
+            else:
+                yield obj
+
+    def _find_reference_cycle(self):
+        pending = set(self.links_from)
+        visited = set()
+        while len(pending) > 0:
+            item = pending.pop()
+            if isinstance(item, weakref.ReferenceType):
+                continue
+            if item is self:
+                return True
+            if item in visited:
+                continue
+            visited.add(item)
+            pending.update(item.links_from)
+        return False
+
+    @staticmethod
+    def _del_link(container, obj):
+        if obj in container:
+            del container[obj]
+        else:
+            ref = weakref.ref(obj)
+            if ref in container:
+                del container[ref]
+
+    def _break_cyclic_refs(self, other):
+        if other in self.links_from:
+            del self.links_from[other]
+            self.links_from[weakref.ref(other)] = False
 
     def _link_attr(self, other, mine, yours, two_way):
         if isinstance(other, Container) and not hasattr(other, yours):

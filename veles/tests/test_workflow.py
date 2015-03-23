@@ -181,11 +181,13 @@ class Test(unittest.TestCase):
         self.assertEqual(valid, dot)
 
     def testStartPoint(self):
-        sp = StartPoint(DummyWorkflow())
+        dwf = DummyWorkflow()
+        sp = StartPoint(dwf)
         verifyObject(IDistributable, sp)
         sp = pickle.loads(pickle.dumps(sp))
         verifyObject(IDistributable, sp)
-        self.assertIsInstance(sp.workflow, DummyWorkflow)
+        self.assertEqual(sp.workflow, None)
+        del dwf
 
     if six.PY3:
         def testWithDestruction(self):
@@ -206,7 +208,7 @@ class Test(unittest.TestCase):
 
             self.assertEqual(len(wf), 2)
             self.assertEqual(u.workflow, wf)
-            self.assertIsInstance(u.workflow, weakref.ProxyTypes)
+            self.assertIsInstance(u._workflow_, weakref.ReferenceType)
             del wf
             gc.collect()
             self.assertTrue(flag[1])
@@ -235,18 +237,12 @@ class Test(unittest.TestCase):
             self.assertTrue(flag[0])
             self.assertTrue(flag[1])
 
-    def testPicklingWeak(self):
-        with Workflow(DummyLauncher()) as wf:
-            u = TrivialUnit(wf)
-
-        warned = [False]
-
-        def warning(self, *args, **kwargs):
-            warned[0] = True
-
-        u.warning = warning
-        pickle.loads(pickle.dumps(u))
-        self.assertTrue(warned[0])
+    def testPickling(self):
+        dl = DummyLauncher()
+        wf = Workflow(dl)
+        TrivialUnit(wf)
+        w2 = pickle.loads(pickle.dumps(wf))
+        self.assertEqual(len(w2), len(wf))
 
 
 if __name__ == "__main__":

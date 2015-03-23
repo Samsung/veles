@@ -559,7 +559,8 @@ class ForgeClient(Logger):
         for k, v in getattr(args, "__dict__", args).items():
             setattr(self, k, v)
         try:
-            Logger.setup(level=logging.DEBUG if self.verbose else logging.INFO)
+            Logger.setup_logging(
+                logging.DEBUG if self.verbose else logging.INFO)
         except Logger.LoggerHasBeenAlreadySetUp:
             pass
         if self.action not in ("assist",):

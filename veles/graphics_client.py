@@ -350,7 +350,7 @@ if __name__ == "__main__":
     cmdargs = parser.parse_args()
 
     log_level = LOG_LEVEL_MAP[cmdargs.verbose]
-    Logger.setup(level=log_level)
+    Logger.setup_logging(level=log_level)
     if log_level == logging.DEBUG:
         setup_pickle_debug()
 

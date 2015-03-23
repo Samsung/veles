@@ -554,7 +554,7 @@ class Main(Logger, CommandLineBase):
         self.snapshot_file_name = args.snapshot
         self._parse_optimization(args)
 
-        Logger.setup(level=Main.LOG_LEVEL_MAP[args.verbosity])
+        Logger.setup_logging(level=Main.LOG_LEVEL_MAP[args.verbosity])
         self._print_logo(args)
         for name in filter(str.strip, args.debug.split(',')):
             logging.getLogger(name).setLevel(logging.DEBUG)

@@ -14,7 +14,6 @@ from veles.memory import Vector
 import veles.opencl_types as opencl_types
 import veles.prng as rnd
 from veles.mean_disp_normalizer import MeanDispNormalizer
-from veles.dummy import DummyWorkflow
 from veles.tests import AcceleratedTest, assign_backend
 from veles.tests.doubling_reset import patch
 
@@ -55,7 +54,7 @@ class TestMeanDispNormalizer(AcceleratedTest):
         self.assertLess(max_diff, 1.0e-5)
 
     def _test_random(self, device):
-        unit = PatchedMeanDispNormalizer(DummyWorkflow())
+        unit = PatchedMeanDispNormalizer(self.parent)
         unit.input = Vector(self.input.copy())
         unit.mean = Vector(self.mean.copy())
         unit.rdisp = Vector(self.rdisp.copy())

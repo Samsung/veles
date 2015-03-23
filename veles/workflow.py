@@ -136,7 +136,7 @@ class Workflow(Container):
         self._plotters_are_enabled = kwargs.get(
             "enable_plotters", not root.common.disable_plotting)
         self._sync = kwargs.get("sync", True)  # do not move down
-        self._units = None  # do not move down
+        self._units = tuple()
         super(Workflow, self).__init__(workflow,
                                        generate_data_for_slave_threadsafe=True,
                                        apply_data_from_slave_threadsafe=True,
@@ -165,9 +165,8 @@ class Workflow(Container):
         del Unit.timers[self.id]
         units = self._units
         self._units = MultiMap()
-        if units is not None:
-            for unit in units:
-                self.add_ref(unit)
+        for unit in units:
+            unit.workflow = self
 
     def __getstate__(self):
         state = super(Workflow, self).__getstate__()
@@ -180,9 +179,9 @@ class Workflow(Container):
         return self
 
     def __exit__(self, type, value, traceback):
-        for unit in list(self._context_units):
+        for unit in self._context_units:
             self.del_ref(unit)
-        self._context_units = None
+        del self._context_units
 
     def __repr__(self):
         return super(Workflow, self).__repr__() + \
@@ -399,7 +398,6 @@ class Workflow(Container):
             self._units[unit.name].remove(unit)
         if self._context_units is not None and unit in self._context_units:
             self._context_units.remove(unit)
-        unit.detach()
 
     def index_of(self, unit):
         for index, child in enumerate(self):
@@ -642,7 +640,7 @@ class Workflow(Container):
             if isinstance(unit, Repeater):
                 g.set("root", hex(id(unit)))
             g.add_node(node)
-            for link in unit.links_to.keys():
+            for link in self._enumerate_links(unit.links_to):
                 src_id = hex(id(unit))
                 dst_id = hex(id(link))
                 if unit.view_group == link.view_group and \

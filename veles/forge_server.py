@@ -338,7 +338,7 @@ class ForgeServer(Logger):
         if args is None:
             parser = ForgeServer.init_parser_()
             args = parser.parse_args()
-        Logger.setup(logging.INFO)
+        Logger.setup_logging(logging.INFO)
         self.root = args.root
         self.port = args.port
         self.suburi = getattr(args, "suburi", "/")

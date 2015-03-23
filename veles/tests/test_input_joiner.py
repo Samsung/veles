@@ -9,7 +9,6 @@ import numpy
 
 import veles.memory as formats
 import veles.input_joiner as input_joiner
-from veles.dummy import DummyWorkflow
 from veles.tests import AcceleratedTest, multi_device
 
 
@@ -24,7 +23,7 @@ class TestInputJoiner(AcceleratedTest):
         b.mem = numpy.arange(50, dtype=numpy.float32).reshape(10, 5)
         c = formats.Vector()
         c.mem = numpy.arange(350, dtype=numpy.float32).reshape(10, 35)
-        obj = input_joiner.InputJoiner(DummyWorkflow(), inputs=[a, b, c])
+        obj = input_joiner.InputJoiner(self.parent, inputs=[a, b, c])
         obj.initialize(device=device)
         obj.run()
         obj.output.map_read()
@@ -48,7 +47,7 @@ class TestInputJoiner(AcceleratedTest):
         b.mem = numpy.arange(50, dtype=numpy.float32).reshape(10, 5)
         c = formats.Vector()
         c.mem = numpy.arange(350, dtype=numpy.float32).reshape(10, 35)
-        obj = input_joiner.InputJoiner(DummyWorkflow(), inputs=[a, b, c])
+        obj = input_joiner.InputJoiner(self.parent, inputs=[a, b, c])
         obj.initialize(device=device)
         a.initialize(device)
         b.initialize(device)
@@ -83,7 +82,7 @@ class TestInputJoiner(AcceleratedTest):
         b.mem = numpy.arange(50, dtype=numpy.float32).reshape(10, 5)
         c = formats.Vector()
         c.mem = numpy.arange(350, dtype=numpy.float32).reshape(10, 35)
-        obj = input_joiner.InputJoiner(DummyWorkflow(), inputs=[a, b, c])
+        obj = input_joiner.InputJoiner(self.parent, inputs=[a, b, c])
         obj.initialize(device=device)
         a.initialize(device)
         b.initialize(device)

@@ -280,9 +280,9 @@ if __name__ == "__main__":
         with daemon.DaemonContext(pidfile=pidfile, stderr=sys.stderr,
                                   uid=args.user, gid=args.group):
             log_file = root.common.web.log_file
-            Logger.setup(level=logging.INFO)
+            Logger.setup_logging(level=logging.INFO)
             Logger.redirect_all_logging_to_file(log_file, backups=9)
             main(port=args.port)
     else:
-        Logger.setup(level=logging.DEBUG)
+        Logger.setup_logging(level=logging.DEBUG)
         main(port=args.port)

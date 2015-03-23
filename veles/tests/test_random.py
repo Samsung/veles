@@ -5,29 +5,22 @@ Will test correctness of OpenCL random xor-shift generator.
 
 Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
-import gc
-import logging
+
 import numpy
 import os
-import unittest
 
 from veles.accelerated_units import TrivialAcceleratedUnit
-import veles.backends as opencl
 from veles.config import root
-from veles.dummy import DummyWorkflow
 import veles.memory as formats
 import veles.prng as rnd
 from veles.prng.uniform import Uniform
+from veles.tests import AcceleratedTest
 
 
-class TestRandom1024(unittest.TestCase):
+class TestRandom1024(AcceleratedTest):
     def setUp(self):
-        self.device = opencl.Device()
+        super(TestRandom1024, self).setUp()
         self.chunk = 4
-
-    def tearDown(self):
-        gc.collect()
-        del self.device
 
     def _gpu(self):
         states = formats.Vector()
@@ -38,7 +31,7 @@ class TestRandom1024(unittest.TestCase):
         output.mem = numpy.zeros(states.mem.shape[0] * 128 // 8 * n_rounds[0],
                                  dtype=numpy.uint64)
 
-        obj = TrivialAcceleratedUnit(DummyWorkflow())
+        obj = TrivialAcceleratedUnit(self.parent)
         obj.initialize(device=self.device)
         states.initialize(self.device)
         output.initialize(self.device)
@@ -62,8 +55,8 @@ class TestRandom1024(unittest.TestCase):
             krn((n, 1, 1), (l, 1, 1))
 
         output.map_read()
-        logging.debug("gpu output:")
-        logging.debug(output.mem)
+        self.debug("gpu output:")
+        self.debug(output.mem)
 
         return output.mem
 
@@ -79,8 +72,8 @@ class TestRandom1024(unittest.TestCase):
                 for _ in range(16):
                     output[offs] = self._next_rand(s)
                     offs += self.n_states
-        logging.debug("cpu output:")
-        logging.debug(output)
+        self.debug("cpu output:")
+        self.debug(output)
         return output
 
     def _next_rand(self, s):
@@ -106,7 +99,7 @@ class TestRandom1024(unittest.TestCase):
         self.assertEqual(numpy.count_nonzero(v_gpu - v_cpu), 0)
 
         # Test Uniform on GPU
-        u = Uniform(DummyWorkflow(), num_states=self.n_states,
+        u = Uniform(self.parent, num_states=self.n_states,
                     output_bytes=v_cpu.nbytes)
         u.states.mem = stt.copy()
         u.initialize(self.device)
@@ -116,7 +109,7 @@ class TestRandom1024(unittest.TestCase):
         self.assertEqual(numpy.count_nonzero(v - v_cpu), 0)
 
         # Test Uniform on CPU
-        u = Uniform(DummyWorkflow(), num_states=self.n_states,
+        u = Uniform(self.parent, num_states=self.n_states,
                     output_bytes=v_cpu.nbytes)
         u.states.mem = stt.copy()
         u.initialize(None)
@@ -126,14 +119,10 @@ class TestRandom1024(unittest.TestCase):
         self.assertEqual(numpy.count_nonzero(v - v_cpu), 0)
 
 
-class TestRandom128(unittest.TestCase):
+class TestRandom128(AcceleratedTest):
     def setUp(self):
-        self.device = opencl.Device()
+        super(TestRandom128, self).setUp()
         self.chunk = 4
-
-    def tearDown(self):
-        gc.collect()
-        del self.device
 
     def _gpu(self):
         states = formats.Vector()
@@ -141,7 +130,7 @@ class TestRandom128(unittest.TestCase):
         states.mem = self.states.copy()
         output.mem = numpy.zeros(states.mem.size // 2, dtype=numpy.uint64)
 
-        obj = TrivialAcceleratedUnit(DummyWorkflow())
+        obj = TrivialAcceleratedUnit(self.parent)
         obj.initialize(device=self.device)
         states.initialize(self.device)
         output.initialize(self.device)
@@ -164,8 +153,8 @@ class TestRandom128(unittest.TestCase):
             obj.execute_kernel((n, 1, 1), (l, 1, 1))
 
         output.map_read()
-        logging.debug("gpu output:")
-        logging.debug(output.mem)
+        self.debug("gpu output:")
+        self.debug(output.mem)
         return output.mem
 
     def _cpu(self):
@@ -175,8 +164,8 @@ class TestRandom128(unittest.TestCase):
         for i in range(0, states.size, 2):
             output[i // 2] = rnd.xorshift128plus(states, i)
         numpy.seterr(over='warn')
-        logging.debug("cpu output:")
-        logging.debug(output)
+        self.debug("cpu output:")
+        self.debug(output)
         return output
 
     def test(self):
@@ -190,5 +179,4 @@ class TestRandom128(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    unittest.main()
+    AcceleratedTest.main()

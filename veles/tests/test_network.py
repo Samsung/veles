@@ -28,7 +28,8 @@ class TestWorkflow(Workflow):
     sync = threading.Event()
 
     def __init__(self, **kwargs):
-        super(TestWorkflow, self).__init__(DummyLauncher(), **kwargs)
+        self.launcher = DummyLauncher()
+        super(TestWorkflow, self).__init__(self.launcher, **kwargs)
         self.is_running = True
 
     @Workflow.run_timed
