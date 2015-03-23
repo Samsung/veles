@@ -57,6 +57,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     pools = []
     _manhole = None
     _sigint_printed = False
+    _can_start = True
 
     def __init__(self, minthreads=2, maxthreads=1024, queue_size=2048,
                  name=None):
@@ -145,6 +146,8 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                 func, *args, **kw)
 
     def start(self):
+        if not self._can_start:
+            return
         super(ThreadPool, self).start()
         self.debug("ThreadPool with %d threads has been started",
                    len(self.threads))
@@ -307,9 +310,10 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         Private method to shut down all the pools.
         """
+        ThreadPool._can_start = False
         pools = copy.copy(ThreadPool.pools)
-        logging.getLogger("ThreadPool").debug("Shutting down %d pools...",
-                                              len(pools))
+        logging.getLogger("ThreadPool").debug(
+            "Shutting down %d pools...", len(pools))
         for pool in pools:
             pool.shutdown(execute_remaining, force, timeout)
 
@@ -379,6 +383,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             else:
                 if not ThreadPool._sigint_printed:
                     log.critical("KeyboardInterrupt")
+                    ThreadPool.debug_deadlocks()
                     ThreadPool._sigint_printed = True
                 else:
                     ThreadPool._warn_about_sigint_hysteria(log)
