@@ -20,6 +20,7 @@ from veles.logger import Logger
 if PY3:
     from veles.memory import Vector
 from veles.opencl_types import dtypes
+from veles.units import Unit
 
 
 def multi_device(numpy=False):
@@ -75,6 +76,8 @@ class AcceleratedTest(unittest.TestCase, Logger):
         pass
 
     def tearDown(self):
+        Unit._pool_.shutdown()
+        Unit._pool_ = None
         if PY3:
             Vector.reset_all()
         if sys.exc_info() == (None,) * 3:
