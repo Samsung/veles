@@ -151,6 +151,9 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     def start(self):
         if not self._can_start:
             return
+        with self._shutting_down_lock_:
+            if self._shutting_down:
+                return
         super(ThreadPool, self).start()
         self.debug("ThreadPool with %d threads has been started",
                    len(self.threads))
@@ -216,7 +219,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         self.queue.appendleft(item)
 
-    def shutdown(self, execute_remaining=True, force=False, timeout=0.25):
+    def shutdown(self, execute_remaining=True, force=False, timeout=1.0):
         """Safely brings thread pool down.
         """
         with self._shutting_down_lock_:
