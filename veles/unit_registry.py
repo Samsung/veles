@@ -77,7 +77,7 @@ class UnitRegistry(type):
         if "DISABLE_KWARGS_CHECK" in clsdict:
             super(UnitRegistry, cls).__init__(name, bases, clsdict)
             return
-        kwattrs = getattr(cls, "KWATTRS", set())
+        kwattrs = set(getattr(cls, "KWATTRS", set()))
         for base in cls.__mro__:
             try:
                 kw_var = inspect.getargspec(base.__init__).keywords

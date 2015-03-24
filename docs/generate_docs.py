@@ -11,11 +11,25 @@ import os
 import subprocess
 import sys
 
+try:
+    from .generate_units_args import UnitsKeywordArgumentsGenerator, \
+        docs_source_dir, result_file_name_base
+except SystemError:
+    from generate_units_args import UnitsKeywordArgumentsGenerator, \
+        docs_source_dir, result_file_name_base
 
-if __name__ == "__main__":
+
+def main():
     parser = argparse.ArgumentParser(description="VELES documentation builder")
     parser.add_argument("--skip-deps", default=False,
                         help="Do not generate the module dependency diagrams.",
+                        action='store_true')
+    parser.add_argument("--skip-units-kwargs", default=False,
+                        help="Do not generate the keyword arguments list for "
+                             "all units.",
+                        action='store_true')
+    parser.add_argument("--skip-build", default=False,
+                        help="Do not generate the documentation with Sphinx.",
                         action='store_true')
     args = parser.parse_args()
     docs_path = os.path.dirname(os.path.realpath(__file__))
@@ -27,6 +41,11 @@ if __name__ == "__main__":
 
     if not args.skip_deps:
         subprocess.call(["./deps.sh"])
+    if not args.skip_units_kwargs:
+        UnitsKeywordArgumentsGenerator().run(
+            os.path.join(docs_source_dir, result_file_name_base + ".rst"))
+    if args.skip_build:
+        return
     subprocess.call([
         "sphinx-apidoc", "-e", "-f", "-H", "Source Code", "-o",
         docs_source_path, project_path,
@@ -39,3 +58,6 @@ if __name__ == "__main__":
     subprocess.call(["sphinx-build", "-b", "html", "-d",
                      os.path.join(docs_path, "build/doctrees"),
                      docs_source_path, os.path.join(docs_path, "build/html")])
+
+if __name__ == "__main__":
+    main()

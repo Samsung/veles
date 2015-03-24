@@ -1,0 +1,100 @@
+{% set root_kwattrs = root_kwattrs %}
+{% set all_units = all_units %}
+{% macro render_kwargs(condition, units=all_units) %}
+  {% set index = 1 %}
+  {% for unit in units %}
+    {% if origin["get_condition_" + condition](unit) %}
+{{ index }}. :class:`{{ (unit|string())[8:-2] }}`
+      {% for arg in (unit.KWATTRS - root_kwattrs)|sort %}
+    {{ arg }}
+      {% endfor %}
+      {% set index = index + 1 %}
+    {% endif %}
+  {% endfor %}
+  {{ caller() }}
+{% endmacro %}
+Parameters of Units
+:::::::::::::::::::
+
+All existing Units with parameters
+
+
+Basic parameters for all Units
+------------------------------
+
+{% for arg in root_kwattrs|sort %}
+{{ loop.index }}. {{ arg }}
+{% endfor %}
+
+
+Data Loaders with labels
+------------------------
+
+Units for loading data. Loaders contains data and labels.
+
+{% call render_kwargs("loader_with_labels") %}{% endcall %}
+
+Data Loaders with targets
+-------------------------
+
+Units for loading data. Loaders contains data, labels and targets.
+
+{% call render_kwargs("loader_with_targets") %}{% endcall %}
+
+Layers of Model. Forward propagation
+------------------------------------
+
+Units for forward propagation of Neural Networks.
+
+{% call render_kwargs("forwards") %}{% endcall %}
+
+Layers of Model. Backward propagation
+-------------------------------------
+
+Units for backward propagation of Neural Networks
+
+{% call render_kwargs("backwards") %}{% endcall %}
+
+Activation Functions. Forward propagation
+-----------------------------------------
+
+{% call render_kwargs("forward_activations") %}{% endcall %}
+
+Activation Functions. Backward propagation
+------------------------------------------
+
+{% call render_kwargs("backward_activations") %}{% endcall %}
+
+Plotters
+--------
+
+Units for visualizing of data, errors, matrix, etc
+
+{% call render_kwargs("plotters") %}{% endcall %}
+
+Kohonen Units
+-------------
+
+Kohonen Map units.
+
+{% call render_kwargs("kohonen") %}{% endcall %}
+
+RBM Units
+---------
+
+{% call render_kwargs("rbm") %}{% endcall %}
+
+Working Units
+-------------
+
+Units, which can be used in Workflows.
+
+{% call render_kwargs("working_units") %}{% endcall %}
+
+Base Units
+----------
+
+Base Units, which are parents for working units. They can not be used in
+Workflows.
+
+{% call render_kwargs("base_units", units=hidden_units) %}{% endcall %}
