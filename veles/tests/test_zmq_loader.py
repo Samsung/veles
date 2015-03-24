@@ -4,13 +4,13 @@ Created on May 28, 2014
 Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 """
 
-
-from twisted.internet import reactor
 import threading
 import unittest
+
+from twisted.internet import reactor
 import zmq
 
-from veles.external.txzmq import ZmqConnection
+from veles.txzmq import ZmqConnection
 from veles.workflow import Workflow
 from veles.zmq_loader import ZeroMQLoader
 from veles.tests import timeout

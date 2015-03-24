@@ -24,8 +24,7 @@ from pyparsing import (
     nestedExpr, Literal, CaselessLiteral, Word, OneOrMore,
     Forward, Group, Optional, Combine, nums, restOfLine,
     cStyleComment, alphanums, printables, ParseException,
-    ParseResults, CharsNotIn, QuotedString
-    )
+    ParseResults, CharsNotIn, QuotedString)
 
 
 PY3 = not sys.version_info < (3, 0, 0)

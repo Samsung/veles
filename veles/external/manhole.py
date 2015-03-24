@@ -8,7 +8,6 @@ import struct
 import sys
 import os
 import atexit
-import code
 import signal
 import errno
 import platform
@@ -285,6 +284,8 @@ def interact():
         shell.workflow.del_ref(shell)
         shell.thread_pool.resume()
     """
+    import code
+
     code.InteractiveConsole({
         'dump_stacktraces': dump_stacktraces,
         'sys': sys,

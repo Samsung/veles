@@ -1,35 +1,38 @@
 """
+This file is a part of (almost) compeletely rewritten original txZmq project.
+
 ZeroMQ connection.
+
+Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
+
 from collections import deque, namedtuple
 import gzip
 import zlib
-import sys
-import six
-from six.moves import cPickle as pickle
 import os
-import snappy
 import time
-
-from zmq import constants, error
-from zmq import Socket
-
-from zope.interface import implementer
-
 from tempfile import mkstemp
 
+import six
+from six.moves import cPickle as pickle
+import snappy
+from zmq import constants, error
+from zmq import Socket
+from zope.interface import implementer
 from twisted.internet import reactor
 from twisted.internet.interfaces import IFileDescriptor, IReadDescriptor
 from twisted.python import log
-
 from zmq import zmq_version_info
+
+
 ZMQ3 = zmq_version_info()[0] >= 3
 
-from .manager import ZmqContextManager
-from .sharedio import SharedIO
+from veles.txzmq.manager import ZmqContextManager
+from veles.txzmq.sharedio import SharedIO
 
 from veles.compat import lzma, from_none
 from veles.logger import Logger
+from veles.pickle2 import best_protocol
 
 
 class ZmqEndpointType(object):
@@ -495,9 +498,7 @@ class ZmqConnection(Logger):
                              constants.NOBLOCK | constants.SNDMORE)
 
         def dump(file):
-            pickle.dump(message, file,
-                        protocol=(4 if sys.version_info > (3, 4)
-                                  else sys.version_info[0]))
+            pickle.dump(message, file, protocol=best_protocol)
 
         def send_pickle_end_marker():
             self.socket.send(
@@ -521,7 +522,7 @@ class ZmqConnection(Logger):
                 new_pos = io.tell()
                 send_pickle_beg_marker(b'\x00')
                 io.seek(initial_pos)
-                self.socket.send(pickle.dumps(io),
+                self.socket.send(pickle.dumps(io, protocol=best_protocol),
                                  constants.NOBLOCK | constants.SNDMORE)
                 io.seek(new_pos)
                 send_pickle_end_marker()

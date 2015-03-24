@@ -4,25 +4,25 @@ Created on Jan 14, 2014
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
-
 import argparse
 from collections import namedtuple
 import json
-import numpy
-import six
 import socket
 import time
+import uuid
+
+import numpy
+import six
 from twisted.internet import reactor, threads, task
 from twisted.internet.protocol import ServerFactory
 from twisted.names import client as dns
 from twisted.python.failure import Failure
-import uuid
 import zmq
 
 from veles.cmdline import CommandLineArgumentsRegistry
 from veles.config import root
 import veles.external.fysom as fysom
-from veles.external.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
+from veles.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
 from veles.logger import Logger
 from veles.network_common import NetworkAgent, StringLineReceiver, IDLogger
 from veles.thread_pool import errback

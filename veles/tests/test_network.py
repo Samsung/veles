@@ -4,15 +4,15 @@ Created on Jan 23, 2014
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
-
 import logging
-from six import BytesIO, PY3
 import threading
-from twisted.internet import reactor
 import unittest
 
+from six import BytesIO, PY3
+from twisted.internet import reactor
+
 import veles.client as client
-from veles.external.txzmq.connection import ZmqConnection
+from veles.txzmq.connection import ZmqConnection
 from veles.prng import get as get_rg
 import veles.server as server
 from veles.tests import DummyLauncher

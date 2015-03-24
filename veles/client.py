@@ -4,14 +4,14 @@ Created on Jan 22, 2014
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
-
 import argparse
 from copy import copy
 import datetime
 import json
+import time
+
 import six
 from six import add_metaclass
-import time
 from twisted.internet import reactor, threads
 from twisted.internet.defer import CancelledError
 from twisted.internet.protocol import ReconnectingClientFactory
@@ -23,7 +23,7 @@ from veles.config import root
 import veles.error as error
 import veles.external.fysom as fysom
 from veles.external.prettytable import PrettyTable
-from veles.external.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
+from veles.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
 from veles.network_common import NetworkAgent, StringLineReceiver, IDLogger
 from veles.prng import get as get_rg
 from veles.thread_pool import errback

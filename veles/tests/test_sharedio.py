@@ -4,11 +4,10 @@ Created on Jul 16, 2014
 Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 """
 
-
 from multiprocessing import Process
 import unittest
 
-from veles.external.txzmq import SharedIO
+from veles.txzmq import SharedIO
 from veles.pickle2 import pickle
 
 

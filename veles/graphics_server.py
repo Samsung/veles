@@ -6,23 +6,23 @@ Graphics server which uses ZeroMQ PUB socket to publish updates.
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
-
 import argparse
 import errno
 import os
-import six
-from six.moves import cPickle as pickle, zip
-import snappy
 import subprocess
 import sys
 from tempfile import mkdtemp
+
+import six
+import snappy
 from twisted.internet import reactor
 import zmq
 
+from six.moves import cPickle as pickle, zip
 from veles.cmdline import CommandLineArgumentsRegistry
 from veles.compat import from_none
 from veles.config import root
-from veles.external.txzmq import ZmqConnection, ZmqEndpoint
+from veles.txzmq import ZmqConnection, ZmqEndpoint
 import veles.graphics_client as graphics_client
 from veles.logger import Logger
 from veles.network_common import interfaces

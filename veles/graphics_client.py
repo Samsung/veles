@@ -7,7 +7,6 @@ graphics window
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
-
 import argparse
 import datetime
 import errno
@@ -15,16 +14,17 @@ import gc
 import logging
 import os
 import signal
-import snappy
 import socket
 import threading
+
+import snappy
 import tornado.ioloop as ioloop
 from twisted.internet.error import ReactorNotRunning
 from twisted.internet import reactor
 import zmq
 
 from veles.config import root
-from veles.external.txzmq import ZmqConnection, ZmqEndpoint
+from veles.txzmq import ZmqConnection, ZmqEndpoint
 from veles.iplotter import IPlotter
 from veles.logger import Logger
 from veles.pickle2 import pickle, setup_pickle_debug

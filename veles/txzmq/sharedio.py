@@ -1,5 +1,9 @@
 """
-Created on Jul 3, 2014
+This file is a part of (almost) compeletely rewritten original txZmq project.
+
+Created on Jul 3, 2014.
+
+Buffer exchange via the shared memory.
 
 Copyright (c) 2014, Samsung Electronics, Co., Ltd.
 """

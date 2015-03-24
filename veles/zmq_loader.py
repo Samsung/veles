@@ -4,12 +4,11 @@ Created on Apr 2, 2014
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
-
-from six.moves import queue
-from veles.external.txzmq import ZmqConnection, ZmqEndpoint
 import zmq
 from zope.interface import implementer
 
+from six.moves import queue
+from veles.txzmq import ZmqConnection, ZmqEndpoint
 from veles.distributable import IDistributable
 from veles.units import Unit, IUnit
 

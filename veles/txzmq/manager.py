@@ -1,5 +1,7 @@
 """
 ZeroMQ Twisted factory which is controlling ZeroMQ context.
+
+Copyright (c) 2014 Samsung Electronics Co., Ltd.
 """
 from zmq import Context
 
