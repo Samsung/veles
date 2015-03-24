@@ -61,8 +61,11 @@ class AcceleratedTest(unittest.TestCase, Logger):
 
     def setUp(self):
         self.device = self.DEVICE()
-        self.parent = DummyWorkflow()
+        self.parent = self.getParent()
         self._dtype = dtypes[root.common.precision_type]
+
+    def getParent(self):
+        return DummyWorkflow()
 
     @property
     def dtype(self):
