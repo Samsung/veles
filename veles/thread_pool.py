@@ -251,28 +251,32 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             self.q.put(threadpool.WorkerStop)
             self.workers -= 1
         self.debug("Joining threads")
+        quant = timeout / 10
         for thread in threads:
             if threading.current_thread() == thread:
                 continue
-            if not force:
-                thread.join()
-            else:
-                thread.join(timeout)
-                if thread.is_alive():
-                    if not self.silent:
-                        self.warning("Stack trace of probably deadlocked #%d:",
-                                     thread.ident)
-                        print_stack(sys._current_frames()[thread.ident],
-                                    file=sys.stdout)
-                    self.force_thread_to_stop(thread)
-                    if not self.silent:
-                        self.warning(
-                            "Failed to join with thread #%d since the  timeout"
-                            " (%.2f sec) was exceeded.%s",
-                            thread.ident, timeout, " It was killed."
-                            if ThreadPool.thread_can_be_forced_to_stop(thread)
-                            else " It was not killed due to the lack of _stop "
-                            "in Thread class from Python's stdlib.")
+            attempts = 1
+            thread.join(quant)
+            while thread.is_alive() and attempts < 10:
+                if self.q.empty():
+                    self.q.put_nowait(threadpool.WorkerStop)
+                thread.join(quant)
+                attempts += 1
+            if force and thread.is_alive():
+                if not self.silent:
+                    self.warning("Stack trace of probably deadlocked #%d:",
+                                 thread.ident)
+                    print_stack(sys._current_frames()[thread.ident],
+                                file=sys.stdout)
+                self.force_thread_to_stop(thread)
+                if not self.silent:
+                    self.warning(
+                        "Failed to join with thread #%d since the  timeout"
+                        " (%.2f sec) was exceeded.%s",
+                        thread.ident, timeout, " It was killed."
+                        if ThreadPool.thread_can_be_forced_to_stop(thread)
+                        else " It was not killed due to the lack of _stop "
+                        "in Thread class from Python's stdlib.")
         ThreadPool.pools.remove(self)
         if not len(ThreadPool.pools):
             global sysexit_initial
@@ -400,7 +404,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         Private method - handler for SIGUSR1.
         """
-        print("SIGUSR1 was received, dumping current frames...")
+        print("SIGUSR1 was received, dumping the current frames...")
         ThreadPool.print_thread_stacks()
 
     @staticmethod
