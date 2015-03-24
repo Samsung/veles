@@ -1,7 +1,12 @@
 #!/bin/sh -e
 
-PYVER=3.4.1
-COMPRESSION=xz
+PYVER=3.4.3
+# The following is only used in do_pre()
+if [ -z "$2" ]; then
+  COMPRESSION=xz
+else
+  COMPRESSION=$2
+fi
 
 if [ -z "$1" ]; then
   echo "You must specify either \"pre\" or \"post\" command" 1>&2
