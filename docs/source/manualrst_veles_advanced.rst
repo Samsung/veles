@@ -26,7 +26,7 @@ Here is the description of what happens after you execute velescli.py:
     #. The specified configuration file is imported. Command line overrides the
        current configuration tree (see :class:`veles.config.Config`). If ``--dump-config``
        option was specified, the resulting configuration is printed to standard output.
-    #. If ``--dry-run`` was set to "load", execution finishes.
+    #. If ``--dry-run`` was set to "load", execution finishes just after instantiation.
     #. Otherwise, if ``-b / --background`` was passed, the process turns into a
        `daemon <https://en.wikipedia.org/wiki/Daemon_(computing)>`_ process,
        which is independent of it's parent. Many operations are performed in that case,
@@ -34,7 +34,7 @@ Here is the description of what happens after you execute velescli.py:
     #. If ``--optimize`` was passed, the parameters optimization procedure begins
        via the genetic algorithm, see :doc:`manualrst_veles_genetic_optimization`.
     #. Otherwise, :func:`run()` is called from the specified workflow module.
-       Two :class:`Main` methods are passed in, :meth:`_load <scripts.Main._load>` and
+       Two :class:`Main` methods are executed :meth:`_load <scripts.Main._load>` and
        :meth:`_main <scripts.Main._main>`
     #. :meth:`_load` constructs an instance of :class:`Launcher <veles.launcher.Launcher>`
        creates the workflow (corresponding class is specified as the first function argument)
