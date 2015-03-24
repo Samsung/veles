@@ -15,8 +15,8 @@ for d in $(cat requirements.txt); do yolk -f license,name -M $(echo "$d" | sed '
 | scipy                 | BSD                                        |
 | Pillow                | Standard PIL License                       |
 | six                   | MIT                                        |
-| tornado               | http://www.apache.org/licenses/LICENSE-2.0 |
-| motor                 | http://www.apache.org/licenses/LICENSE-2.0 |
+| tornado               | Apache License, Version 2.0                |
+| motor                 | Apache License, Version 2.0                |
 | pymongo               | Apache License, Version 2.0                |
 | Twisted               | MIT                                        |
 | ply                   | BSD                                        |
@@ -42,3 +42,14 @@ for d in $(cat requirements.txt); do yolk -f license,name -M $(echo "$d" | sed '
 | h5py                  | BSD                                        |
 | Jinja2                | BSD                                        |
 | pycparser             | BSD                                        |
+| progressbar (bundled) | LGPL                                       |
+| fysom (bundled)       | BSD                                        |
+| freetype (bundled)    | BSD                                        |
+| daemon (bundled)      | PSF                                        |
+| freetype (bundled)    | BSD                                        |
+| pydot (bundled)       | MIT                                        |
+| manhole (bundled)     | BSD                                        |
+| prettytable (bundled) | BSD                                        |
+| pytrie (bundled)      | BSD                                        |
+| txzmq (rewritten)     | default, was GPL                           |
+| xmltodict (bundled)   | BSD                                        |
