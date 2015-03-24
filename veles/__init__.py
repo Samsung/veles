@@ -109,10 +109,10 @@ class VelesModule(ModuleType):
                 modname, ext = os.path.splitext(file)
                 if ext != '.py':
                     continue
+                modpath = os.path.relpath(root, __root__).replace(
+                    os.path.sep, '.')
                 try:
-                    sys.path.insert(0, root)
-                    yield __import__(modname)
-                    del sys.path[0]
+                    yield __import__("%s.%s" % (modpath, modname))
                 except Exception as e:
                     stdout.write("%s: %s\n" % (
                         os.path.relpath(os.path.join(root, file),
