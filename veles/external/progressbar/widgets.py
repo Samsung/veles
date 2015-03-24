@@ -3,6 +3,7 @@
 #
 # progressbar  - Text progress bar library for Python.
 # Copyright (c) 2005 Nilton Volpato
+#           (c) 2015 Samsung Electronics Co., Ltd.
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -35,8 +36,10 @@ else:
 
 
 def format_updatable(updatable, pbar):
-    if hasattr(updatable, 'update'): return updatable.update(pbar)
-    else: return updatable
+    if hasattr(updatable, 'update'):
+        return updatable.update(pbar)
+    else:
+        return updatable
 
 
 class Widget(AbstractWidget):

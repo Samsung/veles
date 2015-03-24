@@ -3,6 +3,7 @@
 #
 # progressbar  - Text progress bar library for Python.
 # Copyright (c) 2005 Nilton Volpato
+#           (c) 2015 Samsung Electronics Co., Ltd.
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -39,10 +40,11 @@ The progressbar module is very easy to use, yet very powerful. It will also
 automatically enable features like auto-resizing when the system supports it.
 """
 
-__author__ = 'Nilton Volpato'
-__author_email__ = 'first-name dot last-name @ gmail.com'
-__date__ = '2011-05-14'
-__version__ = '2.3'
+__author__ = 'Nilton Volpato, Vadim Markovtsev'
+__author_email__ = 'first-name dot last-name @ gmail.com;' \
+                   'v.markovtsev@samsung.com'
+__date__ = '2015-03-24'
+__version__ = '3.0'
 
 from .compat import *
 from .widgets import *

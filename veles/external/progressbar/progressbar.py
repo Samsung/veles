@@ -3,6 +3,7 @@
 #
 # progressbar  - Text progress bar library for Python.
 # Copyright (c) 2005 Nilton Volpato
+#           (c) 2015 Samsung Electronics Co., Ltd.
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -23,7 +24,6 @@
 from __future__ import division
 
 import logging
-import math
 import os
 import signal
 import sys
