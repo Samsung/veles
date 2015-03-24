@@ -154,8 +154,17 @@ class Unit(Distributable, Verified):
                 if isinstance(unit, weakref.ReferenceType):
                     continue
                 partner = getattr(unit, other, None)
-                if partner is not None and self not in partner:
+                if partner is None:
+                    partner = {}
+                    setattr(unit, "_recovered%s_" % other, partner)
+                if self not in partner:
                     partner[weakref.ref(self)] = value
+        for link in links:
+            attr = "_recovered%s_" % link
+            recovered = getattr(self, attr, None)
+            if recovered is not None:
+                getattr(self, link).update(recovered)
+                delattr(self, attr)
 
     def __del__(self):
         if self.id in Unit.timers:
@@ -304,6 +313,7 @@ class Unit(Distributable, Verified):
         with Unit._pool_lock_:
             if Unit._pool_ is None:
                 Unit._pool_ = thread_pool.ThreadPool(
+                    name="units",
                     minthreads=root.common.ThreadPool.minthreads,
                     maxthreads=root.common.ThreadPool.maxthreads)
             if self.is_initialized and not Unit._pool_.started:
