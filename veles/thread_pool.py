@@ -61,7 +61,6 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     pools = None
     _manhole = None
     _sigint_printed = False
-    _can_start = True
 
     def __init__(self, minthreads=2, maxthreads=1024, queue_size=2048,
                  name=None):
@@ -84,7 +83,8 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         logger.Logger.__init__(self)
         self.q = queue.Queue(queue_size)
         self.silent = False
-        self._locked = False
+        self._dead = False
+        self._stopping = False
         self._lock = threading.Lock()
         self._not_paused = threading.Event()
         self._not_paused.set()
@@ -150,16 +150,20 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         Overrides threadpool.ThreadPool.callInThreadWithCallback().
         """
         self._not_paused.wait()
+        if self._stopping:
+            return
         with self._lock:
-            if self._locked or not self.started:
+            if self._dead:
                 return
             super(ThreadPool, self).callInThreadWithCallback(
                 functools.partial(self._on_result, onResult),
                 func, *args, **kw)
 
     def start(self):
+        if self._stopping:
+            return
         with self._lock:
-            if self._locked or not self._can_start:
+            if self._dead:
                 return
             super(ThreadPool, self).start()
         self.debug("ThreadPool with %d threads has been started",
@@ -178,24 +182,6 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     @property
     def paused(self):
         return not self._not_paused.is_set()
-
-    def _on_result(self, original, success, result):
-        if original is not None:
-            return original(success, result)
-        if not success:
-            errback(result, self)
-
-    def _worker(self):
-        """
-        Overrides threadpool.ThreadPool._worker().
-        """
-        for on_thread_enter in set(self.on_thread_enters):
-            on_thread_enter()
-        try:
-            super(ThreadPool, self)._worker()
-        finally:
-            for on_thread_exit in set(self.on_thread_exits):
-                on_thread_exit()
 
     def register_on_thread_enter(self, func, weak=True):
         """
@@ -238,6 +224,30 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     def unregister_on_shutdown(self, func):
         self._remove_callback(self.on_shutdowns, func)
 
+    def stop(self, execute_remaining=True, force=False, timeout=1.0):
+        self._stopping_call(self._stop, execute_remaining, force, timeout)
+
+    def shutdown(self, execute_remaining=True, force=False, timeout=1.0):
+        self._stopping_call(self._shutdown, execute_remaining, force, timeout)
+
+    def _on_result(self, original, success, result):
+        if original is not None:
+            return original(success, result)
+        if not success:
+            errback(result, self)
+
+    def _worker(self):
+        """
+        Overrides threadpool.ThreadPool._worker().
+        """
+        for on_thread_enter in set(self.on_thread_enters):
+            on_thread_enter()
+        try:
+            super(ThreadPool, self)._worker()
+        finally:
+            for on_thread_exit in set(self.on_thread_exits):
+                on_thread_exit()
+
     @staticmethod
     def _add_callback(where, func, weak):
         where.add(weakref.ref(func) if weak else func)
@@ -259,13 +269,17 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         self.queue.appendleft(item)
 
-    def stop(self, execute_remaining=True, force=False, timeout=1.0):
+    def _stopping_call(self, method, *args, **kwargs):
         with self._lock:
-            self._stop(execute_remaining, force, timeout)
+            self._stopping = True
+        with self._lock:
+            method(*args, **kwargs)
+            self._stopping = False
 
     def _stop(self, execute_remaining, force, timeout):
         self._not_paused.set()
         self.started = False
+        self._stopping = True
         threads = copy.copy(self.threads)
         if not execute_remaining:
             self.q._put = types.MethodType(ThreadPool._put, self.q)
@@ -273,19 +287,10 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             self.q.put(threadpool.WorkerStop)
         tmap = {thr.ident: thr.name for thr in threading.enumerate()}
         self.debug("Joining %d threads", self.workers)
-        retries = 10
-        quant = timeout / retries if timeout is not None else None
         for thread in threads:
             if threading.current_thread() == thread:
                 continue
-            thread.join(quant)
-            if quant is not None and quant > 0:
-                attempts = 1
-                while thread.is_alive() and attempts < retries:
-                    if self.q.empty():
-                        self.q.put_nowait(threadpool.WorkerStop)
-                    thread.join(quant)
-                    attempts += 1
+            thread.join(timeout)
             if thread.is_alive():
                 if force:
                     if not self.silent:
@@ -308,14 +313,12 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                 self.workers -= 1
         self.joined = True
 
-    def shutdown(self, execute_remaining=True, force=False, timeout=1.0):
+    def _shutdown(self, execute_remaining, force, timeout):
         """Safely brings thread pool down.
         """
-        with self._lock:
-            if self not in ThreadPool.pools or self._locked:
-                return
-            self._locked = True
-            self._can_start = False
+        if self not in ThreadPool.pools or self._dead:
+            return
+        self._dead = True
         sdl = len(self.on_shutdowns)
         self.debug("Running %d shutdown-ers", sdl)
         skipped = 0
@@ -334,7 +337,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                                "%s:", on_shutdown)
         self.debug("Skipped %d dead refs", skipped)
         self.on_shutdowns.clear()
-        self.stop(execute_remaining, force, timeout)
+        self._stop(execute_remaining, force, timeout)
         ThreadPool.pools.remove(self)
         if not len(ThreadPool.pools):
             global sysexit_initial
@@ -355,7 +358,6 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                 except:
                     pass
         self.debug("%s was shutted down", repr(self))
-        self._locked = False
 
     @staticmethod
     def thread_can_be_forced_to_stop(thread):
@@ -375,7 +377,6 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         Private method to shut down all the pools.
         """
-        ThreadPool._can_start = False
         pools = copy.copy(ThreadPool.pools)
         logging.getLogger("ThreadPool").debug(
             "Shutting down %d pools...", len(pools))

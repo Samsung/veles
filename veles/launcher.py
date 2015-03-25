@@ -22,6 +22,7 @@ import sys
 import threading
 import time
 from twisted.internet import reactor
+from twisted.internet.error import ReactorNotRunning
 from twisted.web.html import escape
 from twisted.web.client import (Agent, HTTPConnectionPool, FileBodyProducer,
                                 getPage)
@@ -341,7 +342,16 @@ class Launcher(logger.Logger):
             workflow.plotters_are_enabled = False
 
         def shutdown():
-            reactor.callLater(0, reactor.sigInt)
+            original_stop = reactor.stop
+
+            def stop():
+                try:
+                    original_stop()
+                except ReactorNotRunning:
+                    pass
+
+            reactor.stop = stop
+            reactor.sigInt()
 
         # Ensure reactor stops in some rare cases when it does not normally
         self.workflow.thread_pool.register_on_shutdown(shutdown, weak=False)
@@ -462,10 +472,10 @@ class Launcher(logger.Logger):
         if not running:
             self._on_stop()
             return
-        if not reactor.running:
-            return
         try:
             reactor.stop()
+        except ReactorNotRunning:
+            pass
         except:
             self.exception("Failed to stop the reactor. There is going to be "
                            "a meltdown unless you immediately activate the "
