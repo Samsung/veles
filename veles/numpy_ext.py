@@ -43,6 +43,14 @@ def reshape(a, shape):
     return b
 
 
+def reshape_transposed(w):
+    """Reshapes weights as if they were transposed.
+    """
+    a = w.reshape(w.shape[1], w.shape[0])
+    assert_addr(a, w)
+    return a
+
+
 def transpose(a):
     """numpy.transpose() with address check.
     """

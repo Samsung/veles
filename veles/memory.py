@@ -20,7 +20,7 @@ from veles.backends import Device
 from veles.compat import from_none
 from veles.distributable import Pickleable
 from veles.numpy_ext import (  # pylint: disable=W0611
-    max_type, eq_addr, assert_addr, ravel, reshape,
+    max_type, eq_addr, assert_addr, ravel, reshape, reshape_transposed,
     transpose, interleave, roundup, NumDiff)
 
 
