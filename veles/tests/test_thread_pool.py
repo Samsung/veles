@@ -104,7 +104,7 @@ class TestThreadPool(unittest.TestCase):
         logging.info("Added to queue in %.3f seconds,"
                      " Shutdowned in %.3f seconds." % (t1 - t0, t2 - t1))
         self.assertEqual(
-            n_jobs[0], 10, "ThreadPool::shutdown(execute_remaining=False)"
+            n_jobs[0], n, "ThreadPool::shutdown(execute_remaining=False)"
             "is not working as expected.")
         self.assert_exit()
 

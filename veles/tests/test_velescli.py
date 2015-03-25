@@ -43,7 +43,7 @@ class Test(unittest.TestCase):
 
     def testRun(self):
         argv = sys.argv
-        sys.argv = [argv[0], "-s", "-p", "", __file__, __file__]
+        sys.argv = [argv[0], "-s", "-p", "", "-v", "debug", __file__, __file__]
         self.main.run()
         self.assertTrue(Workflow.run_was_called)
 

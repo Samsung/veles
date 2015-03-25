@@ -43,7 +43,11 @@ def errback(failure, thread_pool=None):
     if reactor.running:
         reactor.callFromThread(failure.raiseException)
     else:
+        tmap = {thr.ident: thr.name for thr in threading.enumerate()}
+        thread_pool.error("Unhandled error inside %s",
+                          tmap[threading.current_thread().ident])
         failure.printTraceback()
+        thread_pool.failure = failure
         thread_pool.shutdown()
 
 
@@ -67,6 +71,10 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         self.on_shutdowns = set()
         self.on_thread_enters = set()
         self.on_thread_exits = set()
+        if name is None:
+            name = str(id(self))
+        name += str(len(ThreadPool.pools) + 1) \
+            if ThreadPool.pools is not None else "1"
         if six.PY3:
             super(ThreadPool, self).__init__(
                 minthreads=minthreads, maxthreads=maxthreads, name=name)
@@ -76,10 +84,11 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         logger.Logger.__init__(self)
         self.q = queue.Queue(queue_size)
         self.silent = False
-        self._shutting_down = False
-        self._shutting_down_lock_ = threading.Lock()
+        self._locked = False
+        self._lock = threading.Lock()
         self._not_paused = threading.Event()
         self._not_paused.set()
+        self.failure = None
 
         if ThreadPool.pools is None:
             # Initialize for the very first time
@@ -141,20 +150,18 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         Overrides threadpool.ThreadPool.callInThreadWithCallback().
         """
         self._not_paused.wait()
-        with self._shutting_down_lock_:
-            if self._shutting_down or not self.started:
+        with self._lock:
+            if self._locked or not self.started:
                 return
             super(ThreadPool, self).callInThreadWithCallback(
                 functools.partial(self._on_result, onResult),
                 func, *args, **kw)
 
     def start(self):
-        if not self._can_start:
-            return
-        with self._shutting_down_lock_:
-            if self._shutting_down:
+        with self._lock:
+            if self._locked or not self._can_start:
                 return
-        super(ThreadPool, self).start()
+            super(ThreadPool, self).start()
         self.debug("ThreadPool with %d threads has been started",
                    len(self.threads))
 
@@ -182,25 +189,41 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         Overrides threadpool.ThreadPool._worker().
         """
-        for on_thread_enter in self.on_thread_enters:
+        for on_thread_enter in set(self.on_thread_enters):
             on_thread_enter()
-        super(ThreadPool, self)._worker()
-        for on_thread_exit in self.on_thread_exits:
-            on_thread_exit()
+        try:
+            super(ThreadPool, self)._worker()
+        finally:
+            for on_thread_exit in set(self.on_thread_exits):
+                on_thread_exit()
 
     def register_on_thread_enter(self, func, weak=True):
         """
         Adds the specified function to the list of callbacks which are
         executed just after the new thread created in the thread pool.
         """
-        self.on_thread_enters.add(weakref.ref(func) if weak else func)
+        self._add_callback(self.on_thread_enters, func, weak)
+
+    def unregister_on_thread_enter(self, func):
+        """
+        Removes the specified function from the list of callbacks which are
+        executed just after the new thread created in the thread pool.
+        """
+        self._remove_callback(self.on_thread_enters, func)
 
     def register_on_thread_exit(self, func, weak=True):
         """
         Adds the specified function to the list of callbacks which are
         executed just before the thread terminates.
         """
-        self.on_thread_exits.add(weakref.ref(func) if weak else func)
+        self._add_callback(self.on_thread_exits, func, weak)
+
+    def unregister_on_thread_exit(self, func):
+        """
+        Removes the specified function from the list of callbacks which are
+        executed just before the thread terminates.
+        """
+        self._remove_callback(self.on_thread_exits, func)
 
     def register_on_shutdown(self, func, weak=True):
         """
@@ -210,7 +233,24 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         thread and a graceful shutdown is desired. Then on_shutdown() function
         shall terminate that loop using the corresponding foreign API.
         """
-        self.on_shutdowns.add(weakref.ref(func) if weak else func)
+        self._add_callback(self.on_shutdowns, func, weak)
+
+    def unregister_on_shutdown(self, func):
+        self._remove_callback(self.on_shutdowns, func)
+
+    @staticmethod
+    def _add_callback(where, func, weak):
+        where.add(weakref.ref(func) if weak else func)
+
+    def _remove_callback(self, cont, func):
+        if func in cont:
+            cont.remove(func)
+            return
+        ref = weakref.ref(func)
+        if ref in cont:
+            cont.remove(ref)
+            return
+        self.warning("%s was not found in %s", func, cont)
 
     @staticmethod
     def _put(self, item):
@@ -219,14 +259,63 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         self.queue.appendleft(item)
 
+    def stop(self, execute_remaining=True, force=False, timeout=1.0):
+        with self._lock:
+            self._stop(execute_remaining, force, timeout)
+
+    def _stop(self, execute_remaining, force, timeout):
+        self._not_paused.set()
+        self.started = False
+        threads = copy.copy(self.threads)
+        if not execute_remaining:
+            self.q._put = types.MethodType(ThreadPool._put, self.q)
+        for _ in range(self.workers):
+            self.q.put(threadpool.WorkerStop)
+        tmap = {thr.ident: thr.name for thr in threading.enumerate()}
+        self.debug("Joining %d threads", self.workers)
+        retries = 10
+        quant = timeout / retries if timeout is not None else None
+        for thread in threads:
+            if threading.current_thread() == thread:
+                continue
+            thread.join(quant)
+            if quant is not None and quant > 0:
+                attempts = 1
+                while thread.is_alive() and attempts < retries:
+                    if self.q.empty():
+                        self.q.put_nowait(threadpool.WorkerStop)
+                    thread.join(quant)
+                    attempts += 1
+            if thread.is_alive():
+                if force:
+                    if not self.silent:
+                        self.warning("Stack trace of probably deadlocked #%d:",
+                                     thread.ident)
+                        print_stack(sys._current_frames()[thread.ident],
+                                    file=sys.stdout)
+                    self.force_thread_to_stop(thread)
+                    if not self.silent:
+                        self.warning(
+                            "Failed to join with thread #%d since the  timeout"
+                            " (%.2f sec) was exceeded.%s",
+                            thread.ident, timeout, " It was killed."
+                            if ThreadPool.thread_can_be_forced_to_stop(thread)
+                            else " It was not killed due to the lack of _stop "
+                                 "in Thread class from Python's stdlib.")
+                else:
+                    self.warning("Failed to join %s", tmap[thread.ident])
+            else:
+                self.workers -= 1
+        self.joined = True
+
     def shutdown(self, execute_remaining=True, force=False, timeout=1.0):
         """Safely brings thread pool down.
         """
-        with self._shutting_down_lock_:
-            if self not in ThreadPool.pools or self._shutting_down:
+        with self._lock:
+            if self not in ThreadPool.pools or self._locked:
                 return
-            self._shutting_down = True
-        self._not_paused.set()
+            self._locked = True
+            self._can_start = False
         sdl = len(self.on_shutdowns)
         self.debug("Running %d shutdown-ers", sdl)
         skipped = 0
@@ -243,43 +332,9 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             except:
                 self.exception("Ignored the following exception in shutdowner "
                                "%s:", on_shutdown)
-        self.debug("Skipped %d dead refs. Requesting threads to quit", skipped)
+        self.debug("Skipped %d dead refs", skipped)
         self.on_shutdowns.clear()
-        self.joined = True
-        self.started = False
-        threads = copy.copy(self.threads)
-        if not execute_remaining:
-            self.q._put = types.MethodType(ThreadPool._put, self.q)
-        while self.workers:
-            self.q.put(threadpool.WorkerStop)
-            self.workers -= 1
-        self.debug("Joining threads")
-        quant = timeout / 10
-        for thread in threads:
-            if threading.current_thread() == thread:
-                continue
-            attempts = 1
-            thread.join(quant)
-            while thread.is_alive() and attempts < 10:
-                if self.q.empty():
-                    self.q.put_nowait(threadpool.WorkerStop)
-                thread.join(quant)
-                attempts += 1
-            if force and thread.is_alive():
-                if not self.silent:
-                    self.warning("Stack trace of probably deadlocked #%d:",
-                                 thread.ident)
-                    print_stack(sys._current_frames()[thread.ident],
-                                file=sys.stdout)
-                self.force_thread_to_stop(thread)
-                if not self.silent:
-                    self.warning(
-                        "Failed to join with thread #%d since the  timeout"
-                        " (%.2f sec) was exceeded.%s",
-                        thread.ident, timeout, " It was killed."
-                        if ThreadPool.thread_can_be_forced_to_stop(thread)
-                        else " It was not killed due to the lack of _stop "
-                        "in Thread class from Python's stdlib.")
+        self.stop(execute_remaining, force, timeout)
         ThreadPool.pools.remove(self)
         if not len(ThreadPool.pools):
             global sysexit_initial
@@ -300,7 +355,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                 except:
                     pass
         self.debug("%s was shutted down", repr(self))
-        self._shutting_down = False
+        self._locked = False
 
     @staticmethod
     def thread_can_be_forced_to_stop(thread):

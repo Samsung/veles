@@ -184,6 +184,8 @@ class AcceleratedUnit(Unit):
     def initialize(self, device, **kwargs):
         if device is not None:
             self.verify_interface(INTERFACE_MAPPING[type(device)])
+            if not device.attached(self.thread_pool):
+                device.thread_pool_attach(self.thread_pool)
         try:
             super(AcceleratedUnit, self).initialize(**kwargs)
         except AttributeError:
@@ -358,11 +360,11 @@ class AcceleratedUnit(Unit):
             return self._backend_execute_kernel_(
                 kernel or self._kernel_, global_size, local_size,
                 need_event=need_event)
-        except RuntimeError:
+        except RuntimeError as e:
             self.error("execute_kernel(%s) has failed. global_size = %s, "
                        "local_size = %s", str(kernel or self._kernel_),
                        str(global_size), str(local_size))
-            raise
+            raise from_none(e)
 
     def cpu_execute_kernel(self, kernel, global_size, local_size, need_event):
         return None
@@ -764,8 +766,6 @@ class AcceleratedWorkflow(Workflow):
         return self._power_
 
     def initialize(self, device, **kwargs):
-        if device is not None:
-            device.thread_pool_attach(self.thread_pool)
         super(AcceleratedWorkflow, self).initialize(device=device, **kwargs)
         self.device = device
 

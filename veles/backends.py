@@ -160,7 +160,7 @@ class Device(Pickleable):
     """Base device class.
 
     Attributes:
-        _pid: process id.
+        _pid_: process id.
     """
     def __new__(cls, *args, **kwargs):
         assert issubclass(cls, Device)
@@ -173,7 +173,8 @@ class Device(Pickleable):
 
     def init_unpickled(self):
         super(Device, self).init_unpickled()
-        self._pid = os.getpid()
+        self._pid_ = os.getpid()
+        self._thread_pool_detach_callbacks_ = {}
 
     @property
     def backend_name(self):
@@ -185,7 +186,7 @@ class Device(Pickleable):
     def pid(self):
         """Process ID.
         """
-        return self._pid
+        return self._pid_
 
     @property
     def blas(self):
@@ -198,17 +199,37 @@ class Device(Pickleable):
         """
         pass
 
+    def attached(self, thread_pool):
+        return thread_pool in self._thread_pool_detach_callbacks_
+
     def thread_pool_attach(self, thread_pool):
-        self.register_thread_pool_callbacks(thread_pool)
+        if thread_pool in self._thread_pool_detach_callbacks_:
+            self.warning("Already attached to %s", thread_pool)
+            return
+        self._register_thread_pool_callbacks(thread_pool)
 
-    def thread_pool_detach(self):
-        pass
+        def detach():
+            self.thread_pool_detach(thread_pool)
 
-    def register_thread_pool_callbacks(self, pool):
+        self._thread_pool_detach_callbacks_[thread_pool] = detach
+        thread_pool.register_on_shutdown(detach)
+
+    def thread_pool_detach(self, thread_pool):
+        if thread_pool not in self._thread_pool_detach_callbacks_:
+            self.warning("Unable to detach from %s: not attached", thread_pool)
+            return
+        del self._thread_pool_detach_callbacks_[thread_pool]
+        self._unregister_thread_pool_callbacks(thread_pool)
+
+    def _register_thread_pool_callbacks(self, pool):
         """Registers callbacks for the thread pool.
         """
         pool.register_on_thread_enter(self._on_thread_enter, False)
         pool.register_on_thread_exit(self._on_thread_exit, False)
+
+    def _unregister_thread_pool_callbacks(self, pool):
+        pool.unregister_on_thread_enter(self._on_thread_enter)
+        pool.unregister_on_thread_exit(self._on_thread_exit)
 
     def _on_thread_enter(self):
         """Called justed after the new thread has been created
@@ -615,11 +636,12 @@ class CUDADevice(Device):
             ab = krn.max_active_blocks_per_multiprocessor(block_size)
         return best_block_size
 
-    def thread_pool_attach(self, thread_pool):
+    def _register_thread_pool_callbacks(self, pool):
+        super(CUDADevice, self)._register_thread_pool_callbacks(pool)
         self.context.push_current()
-        super(CUDADevice, self).thread_pool_attach(thread_pool)
 
-    def thread_pool_detach(self):
+    def _unregister_thread_pool_callbacks(self, pool):
+        super(CUDADevice, self)._unregister_thread_pool_callbacks(pool)
         self.context.pop_current()
 
     @property

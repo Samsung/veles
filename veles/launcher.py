@@ -397,8 +397,9 @@ class Launcher(logger.Logger):
         reactor.callFromThread(self.stop)
 
     def device_thread_pool_detach(self):
-        if self.device is not None:
-            self.device.thread_pool_detach()
+        if self.device is not None and self.device.attached(
+                self.workflow.thread_pool):
+            self.device.thread_pool_detach(self.workflow.thread_pool)
 
     @threadsafe
     def initialize(self, **kwargs):
