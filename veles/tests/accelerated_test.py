@@ -49,6 +49,12 @@ def assign_backend(backend):
     return wrapped
 
 
+if "nose" in sys.modules:
+    import nose.proxy
+    nose.proxy.ResultProxy.addExpectedFailure = \
+        lambda this, other, *_: this.addSuccess(other)
+
+
 class AcceleratedTest(unittest.TestCase, Logger):
     backends = [v for k, v in sorted(BackendRegistry.backends.items())
                 if k not in ("auto", "numpy")]
