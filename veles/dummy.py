@@ -12,6 +12,9 @@ from veles.workflow import Workflow
 
 
 class DummyLauncher(object):
+    def __init__(self):
+        self.stopped = False
+
     @property
     def is_slave(self):
         return False

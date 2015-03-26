@@ -183,7 +183,7 @@ class Workflow(Container):
         self._context_units = []
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, _type, value, traceback):
         for unit in self._context_units:
             self.del_ref(unit)
         del self._context_units
@@ -265,6 +265,12 @@ class Workflow(Container):
     @run_is_blocking.setter
     def run_is_blocking(self, value):
         self._sync = value
+
+    @Unit.stopped.setter
+    def stopped(self, value):
+        for unit in self:
+            unit.stopped = value
+        Unit.stopped.fset(self, value)
 
     @property
     def plotters_are_enabled(self):

@@ -34,6 +34,7 @@ def multi_device(numpy=False):
                           cls.__name__ if cls is not None else "numpy")
                 self.seed()
                 fn(self)
+                self.parent.stopped = False
 
         test_wrapped.__name__ = fn.__name__
         return test_wrapped
