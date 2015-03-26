@@ -204,9 +204,11 @@ class AcceleratedUnit(Unit):
                               device.device_info.is_cpu))
         if self.device is None and not self._cpu_run_jitted_ and \
                 not root.common.disable_numba:
-            if jit is None:
-                self.warning("Numba (http://numba.pydata.org) was not found, "
-                             "cpu_run() is going to be slow.")
+            if jit is None and root.common.warnings.numba:
+                self.warning(
+                    "Numba (http://numba.pydata.org) was not found, cpu_run() "
+                    "is going to be slow. Ignore this by setting "
+                    "root.common.warnings.numba to False.")
             else:
                 self.cpu_run = jit(nopython=True, nogil=True)(self.cpu_run)
                 self.debug("Jitted cpu_run()")

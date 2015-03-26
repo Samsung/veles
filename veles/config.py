@@ -162,6 +162,9 @@ root.common.update({
     "veles_dir": __root__,
     "veles_user_dir": __home__,
     "help_dir": "/usr/share/doc/python3-veles",
+    "warnings": {
+        "numba": True
+    },
     "web": {
         "host": "0.0.0.0",
         "port": 8080,
