@@ -49,7 +49,7 @@ def errback(failure, thread_pool=None):
                           tmap[threading.current_thread().ident])
         failure.printTraceback()
         thread_pool.failure = failure
-        thread_pool.shutdown()
+        thread_pool.stop(execute_remaining=False)
 
 
 @add_metaclass(CommandLineArgumentsRegistry)
@@ -309,12 +309,12 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                 continue
             thread.join(timeout)
             if thread.is_alive():
+                if not self.silent:
+                    self.warning("Stack trace of probably deadlocked #%d:",
+                                 thread.ident)
+                    print_stack(sys._current_frames()[thread.ident],
+                                file=sys.stdout)
                 if force:
-                    if not self.silent:
-                        self.warning("Stack trace of probably deadlocked #%d:",
-                                     thread.ident)
-                        print_stack(sys._current_frames()[thread.ident],
-                                    file=sys.stdout)
                     self.force_thread_to_stop(thread)
                     if not self.silent:
                         self.warning(

@@ -114,6 +114,10 @@ class Loader(Unit):
 
     LABEL_DTYPE = numpy.int32
     INDEX_DTYPE = numpy.int32
+    exports = "epoch_ended", "epoch_number", "train_ended", "class_lengths", \
+        "minibatch_data", "minibatch_class", "minibatch_data", \
+        "minibatch_labels", "minibatch_size", "total_samples", \
+        "last_minibatch", "class_lengths"
 
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = "LOADER"
@@ -524,6 +528,8 @@ class Loader(Unit):
     def run(self):
         """Prepares the minibatch.
         """
+        if None in self.pending_minibatches_:
+            del self.pending_minibatches_[None]
         self.serve_next_minibatch(None)
         self._on_successful_serve()
 
@@ -610,14 +616,12 @@ class Loader(Unit):
 
     def serve_next_minibatch(self, slave_id):
         try:
-            minibatch_offset, minibatch_size = self.failed_minibatches.pop()
+            minibatch_def = self.failed_minibatches.pop()
         except IndexError:
-            minibatch_offset, minibatch_size = self._advance_global_offset()
-        if self.is_master:
-            self.pending_minibatches_[slave_id].append(
-                (minibatch_offset, minibatch_size))
-        self.minibatch_offset, self.minibatch_size = \
-            minibatch_offset, minibatch_size
+            minibatch_def = self._advance_global_offset()
+        minibatch_offset, minibatch_size = minibatch_def
+        self.pending_minibatches_[slave_id].append(minibatch_def)
+        self.minibatch_offset, self.minibatch_size = minibatch_def
 
         if self.fill_indices(minibatch_offset - minibatch_size,
                              minibatch_size):
@@ -739,9 +743,10 @@ class Loader(Unit):
         if self.is_slave:
             # The flags will be explicitly set in apply_data_from_master()
             return
-        last_mb = (self.class_ended and
-                   not self.pending_minibatches_count and
-                   not len(self.failed_minibatches))
+        last_mb = (
+            self.class_ended and
+            (not self.pending_minibatches_count or not self.is_master) and
+            not len(self.failed_minibatches))
         self.last_minibatch <<= last_mb
         self.epoch_ended <<= last_mb and (
             self.minibatch_class == VALID or
@@ -758,8 +763,7 @@ class Loader(Unit):
             self.global_offset = 0
             self.shuffle()
 
-        # Compute next minibatch class and size, updating epoch_ended and
-        # last_minibatch
+        # Compute next minibatch class and size
         self.minibatch_class, remainder = self.class_index_by_sample_index(
             self.global_offset)
         minibatch_size = min(remainder, self.max_minibatch_size)

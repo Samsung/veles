@@ -37,6 +37,9 @@ class WatcherMeta(type):
     def __exit__(cls, *args, **kwargs):
         cls._mutex.release()
 
+    def __eq__(self, other):  # pylint: disable=C0203
+        return self.mem == other.mem
+
     def threadsafe(method):
         def wrapped(cls, *args, **kwargs):
             with cls:

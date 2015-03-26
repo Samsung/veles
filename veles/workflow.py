@@ -43,12 +43,8 @@ class Repeater(TrivialUnit):
 
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = kwargs.get("view_group", "PLUMBING")
+        kwargs["ignore_gate"] = True
         super(Repeater, self).__init__(workflow, **kwargs)
-
-    def open_gate(self, src):
-        """Gate is always open.
-        """
-        return True
 
     def link_from(self, *args):
         super(Repeater, self).link_from(*args)
@@ -290,7 +286,7 @@ class Workflow(Container):
 
     @property
     def units_in_dependency_order(self):
-        return self.start_point.dependent_list()
+        return self.start_point.dependent_units()
 
     @property
     def history(self):
@@ -309,8 +305,11 @@ class Workflow(Container):
         """Initializes all the units belonging to this Workflow, in dependency
         order.
         """
-        assert "snapshot" in kwargs, \
-            "\"snapshot\" (True/False) must be provided in kwargs"
+        try:
+            snapshot = kwargs["snapshot"]
+        except KeyError:
+            raise from_none(KeyError(
+                "\"snapshot\" (True/False) must be provided in kwargs"))
         units_number = len(self)
         fin_text = "%d units were initialized" % units_number
         maxlen = max([len(u.name) for u in self] + [len(fin_text)])
@@ -323,7 +322,7 @@ class Workflow(Container):
         progress.widgets[0].TIME_SENSITIVE = True
         self.info("Initializing units in %s...", self.name)
         progress.start()
-        units_in_dependency_order = self.units_in_dependency_order
+        units_in_dependency_order = list(self.units_in_dependency_order)
         iqueue = list(units_in_dependency_order)
         while len(iqueue) > 0:
             unit = iqueue.pop(0)
@@ -342,12 +341,16 @@ class Workflow(Container):
             if partially:
                 iqueue.append(unit)
             else:
+                if snapshot and not unit._remembers_gates:
+                    unit.close_gate()
+                    unit.close_upstream()
                 progress.inc()
         progress.widgets[-1] = fin_text + ' ' * (maxlen - len(fin_text))
         progress.finish()
-        if len(units_in_dependency_order) < units_number:
+        initialized_units_number = len(units_in_dependency_order)
+        if initialized_units_number < units_number:
             self.warning("Not all units were initialized (%d left): %s",
-                         units_number - len(units_in_dependency_order),
+                         units_number - initialized_units_number,
                          set(self) - set(units_in_dependency_order))
 
     def run(self):

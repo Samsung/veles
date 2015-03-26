@@ -112,7 +112,8 @@ class Test(unittest.TestCase):
         self.assertEqual("unit2", units[5].name)
         self.assertEqual("aaa", units[6].name)
         units = wf.units_in_dependency_order
-        self.assertTrue(isinstance(units, list))
+        self.assertTrue(hasattr(units, "__iter__"))
+        units = list(units)
         self.assertEqual(7, len(units))
         self.assertEqual("Start", units[0].name)
         self.assertEqual("unit1", units[1].name)

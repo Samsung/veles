@@ -47,10 +47,6 @@ class IUnit(Interface):
         """Do the job here.
         """
 
-    def stop():
-        """If run() blocks, interrupt it here.
-        """
-
 
 class UnitCommandLineArgumentsRegistry(UnitRegistry,
                                        CommandLineArgumentsRegistry):
@@ -112,8 +108,10 @@ class Unit(Distributable, Verified):
         self.verify_interface(IUnit)
         self._gate_block = Bool(False)
         self._gate_skip = Bool(False)
+        self._ignores_gate = Bool(kwargs.get("ignore_gate", False))
         self._run_calls = 0
         self._stopped = False
+        self._remembers_gates = True
         timings = get(root.common.timings, None)
         if timings is not None and isinstance(timings, set):
             timings = self.__class__.__name__ in timings
@@ -274,6 +272,16 @@ class Unit(Distributable, Verified):
         self._gate_skip = value
 
     @property
+    def ignores_gate(self):
+        return self._ignores_gate
+
+    @ignores_gate.setter
+    def ignores_gate(self, value):
+        if not isinstance(value, Bool):
+            raise TypeError("veles.mutable.Bool type was expected")
+        self._ignores_gate = value
+
+    @property
     def workflow(self):
         return self._workflow_()
 
@@ -382,14 +390,16 @@ class Unit(Distributable, Verified):
             if self._run_calls > 0 else 0
 
     def stop(self):
-        """By default, do nothing and consider run() to always finish.
+        """
+        If run() blocks, interrupt it here.
+        By default, do nothing and consider run() to always finish in time.
         """
         pass
 
     def initialize_dependent(self):
         """Invokes initialize() on dependent units on the same thread.
         """
-        for unit in self.dependent_list():
+        for unit in self.dependent_units():
             unit.initialize()
 
     def run_dependent(self):
@@ -405,8 +415,8 @@ class Unit(Distributable, Verified):
                     self.thread_pool.start()
                 self.thread_pool.callInThread(dst._check_gate_and_run, self)
 
-    def dependent_list(self, with_open_gate=False):
-        units = [self]
+    def dependent_units(self, with_open_gate=False):
+        yield self
         walk = []
         visited = {self}
         for child in sorted(self._iter_links(self.links_to)):
@@ -417,19 +427,21 @@ class Unit(Distributable, Verified):
             if node in visited or (with_open_gate and
                                    not node.open_gate(parent)):
                 continue
-            units.append(node)
+            yield node
             visited.add(node)
             for child in sorted(self._iter_links(node.links_to)):
                 walk.append((child, node))
-        return units
 
     def open_gate(self, *args):
-        """Called before run() or initialize().
+        """Called before run() or initialize_dependent().
 
         Returns:
             True: gate is open, can call run() or initialize().
-            False: gate is closed, run() and initialize() shouldn't be called.
+            False: gate is closed, run() and initialize() are ignored.
         """
+        if self.ignores_gate:
+            # Gate is always open.
+            return True
         with self._gate_lock_:
             if not len(self.links_from):
                 return True
@@ -438,9 +450,16 @@ class Unit(Distributable, Verified):
             if not all(self.links_from.values()):
                 return False
             # reset activation flags
-            for src in self.links_from:
-                self.links_from[src] = False
+            self._close_gate()
         return True
+
+    def close_gate(self):
+        with self._gate_lock_:
+            self._close_gate()
+
+    def close_upstream(self):
+        for other in self._iter_links(self.links_to):
+            self._set_links_value(other.links_from, self, False)
 
     def link_from(self, *args):
         """Adds notification link.
@@ -551,6 +570,11 @@ class Unit(Distributable, Verified):
                 isinstance(value, float) or isinstance(value, complex) or
                 isinstance(value, bool) or isinstance(value, str))
 
+    def _close_gate(self):
+        for unit in self._iter_links(self.links_from):
+            self._set_links_value(self.links_from, unit, False)
+            self._set_links_value(unit.links_to, self, False)
+
     @staticmethod
     def _set_links_value(container, obj, value):
         if obj in container:
@@ -624,7 +648,8 @@ class Unit(Distributable, Verified):
             try:
                 if not self._is_initialized:
                     self.error("%s is not initialized", self.name)
-                    raise Unit.NotInitializedError(self)
+                    raise NotInitializedError(
+                        self, "%s is not initialized" % self)
                 self.run()
             finally:
                 self._run_lock_.release()

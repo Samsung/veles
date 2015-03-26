@@ -27,6 +27,7 @@ class Plotter(Unit, TriviallyDistributable):
         super(Plotter, self).__init__(workflow, **kwargs)
         self.redraw_threshold = 0.5
         self._last_run_ = 0
+        self._remembers_gates = False
         self._server_ = None
 
     def __getstate__(self):

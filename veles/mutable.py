@@ -63,9 +63,7 @@ class Bool(object):
         if len(self.__expr) > 1:
             raise RuntimeError("Derived expressions cannot be assigned to.")
         if isinstance(value, Bool):
-            self.__expr[0][0] = bool(value)
-            self.touch()
-            return self
+            value = bool(value)
         if isinstance(value, bool) or callable(value):
             self.__expr[0][0] = value
             self.touch()
