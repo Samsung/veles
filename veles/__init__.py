@@ -110,7 +110,7 @@ class VelesModule(ModuleType):
                 modname, ext = os.path.splitext(file)
                 if ext != '.py':
                     continue
-                modpath = os.path.relpath(root, __root__).replace(
+                modpath = os.path.relpath(root, self.__root__).replace(
                     os.path.sep, '.')
                 try:
                     yield __import__("%s.%s" % (modpath, modname))
