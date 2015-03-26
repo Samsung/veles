@@ -176,6 +176,10 @@ class Device(Pickleable):
         self._pid_ = os.getpid()
         self._thread_pool_detach_callbacks_ = {}
 
+    def __del__(self):
+        for pool in dict(self._thread_pool_detach_callbacks_):
+            self.thread_pool_detach(pool)
+
     @property
     def backend_name(self):
         """Returns name of the backend.
@@ -218,14 +222,20 @@ class Device(Pickleable):
         if thread_pool not in self._thread_pool_detach_callbacks_:
             self.warning("Unable to detach from %s: not attached", thread_pool)
             return
+        thread_pool.unregister_on_shutdown(
+            self._thread_pool_detach_callbacks_[thread_pool])
         del self._thread_pool_detach_callbacks_[thread_pool]
         self._unregister_thread_pool_callbacks(thread_pool)
 
     def _register_thread_pool_callbacks(self, pool):
         """Registers callbacks for the thread pool.
         """
-        pool.register_on_thread_enter(self._on_thread_enter, False)
-        pool.register_on_thread_exit(self._on_thread_exit, False)
+        # Important! Save the bound method to variable to avoid dead weak refs
+        # See http://stackoverflow.com/questions/19443440/weak-reference-to-python-class-method  # nopep8
+        self._on_thread_enter_ = self._on_thread_enter
+        self._on_thread_exit_ = self._on_thread_exit
+        pool.register_on_thread_enter(self._on_thread_enter_)
+        pool.register_on_thread_exit(self._on_thread_exit_)
 
     def _unregister_thread_pool_callbacks(self, pool):
         pool.unregister_on_thread_enter(self._on_thread_enter)

@@ -6,7 +6,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 
 from __future__ import print_function
 import argparse
-import copy
+from copy import copy
 import functools
 import logging
 import signal
@@ -29,6 +29,7 @@ from veles.compat import from_none
 sysexit_initial = None
 exit_initial = None
 quit_initial = None
+interrupted = False
 
 
 class classproperty(object):
@@ -240,17 +241,25 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         Overrides threadpool.ThreadPool._worker().
         """
-        for on_thread_enter in set(self.on_thread_enters):
+        for on_thread_enter in self._iter_weak(self.on_thread_enters):
             on_thread_enter()
         try:
             super(ThreadPool, self)._worker()
         finally:
-            for on_thread_exit in set(self.on_thread_exits):
+            for on_thread_exit in self._iter_weak(self.on_thread_exits):
                 on_thread_exit()
 
     @staticmethod
-    def _add_callback(where, func, weak):
-        where.add(weakref.ref(func) if weak else func)
+    def _iter_weak(iterable):
+        for obj in copy(iterable):
+            if isinstance(obj, weakref.ReferenceType):
+                yield obj()
+            else:
+                yield obj
+
+    @staticmethod
+    def _add_callback(cont, func, weak):
+        cont.add(weakref.ref(func) if weak else func)
 
     def _remove_callback(self, cont, func):
         if func in cont:
@@ -260,7 +269,15 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         if ref in cont:
             cont.remove(ref)
             return
-        self.warning("%s was not found in %s", func, cont)
+        refhash = hash(ref)
+        gc = False
+        for key in set(cont):
+            if hash(key) == refhash and \
+                    isinstance(key, weakref.ReferenceType) and key() is None:
+                cont.remove(key)
+                gc = True
+        if not gc:
+            self.warning("%s was not found in %s", func, cont)
 
     @staticmethod
     def _put(self, item):
@@ -280,7 +297,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         self._not_paused.set()
         self.started = False
         self._stopping = True
-        threads = copy.copy(self.threads)
+        threads = copy(self.threads)
         if not execute_remaining:
             self.q._put = types.MethodType(ThreadPool._put, self.q)
         for _ in range(self.workers):
@@ -322,13 +339,11 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         sdl = len(self.on_shutdowns)
         self.debug("Running %d shutdown-ers", sdl)
         skipped = 0
-        for ind, on_shutdown in enumerate(self.on_shutdowns):
-            if isinstance(on_shutdown, weakref.ReferenceType):
-                on_shutdown = on_shutdown()
-                if on_shutdown is None:
-                    # The weakly referenced object no longer exists
-                    skipped += 1
-                    continue
+        for ind, on_shutdown in enumerate(self._iter_weak(self.on_shutdowns)):
+            if on_shutdown is None:
+                # The weakly referenced object no longer exists
+                skipped += 1
+                continue
             self.debug("%d/%d - %s", ind, sdl, str(on_shutdown))
             try:
                 on_shutdown()
@@ -377,7 +392,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         Private method to shut down all the pools.
         """
-        pools = copy.copy(ThreadPool.pools)
+        pools = copy(ThreadPool.pools)
         logging.getLogger("ThreadPool").debug(
             "Shutting down %d pools...", len(pools))
         for pool in pools:
@@ -433,6 +448,8 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         Private method - handler for SIGINT.
         """
+        global interrupted
+        interrupted = True
         ThreadPool.shutdown_pools(execute_remaining=False, force=True)
         log = logging.getLogger("ThreadPool")
         try:

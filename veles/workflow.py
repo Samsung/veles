@@ -168,6 +168,11 @@ class Workflow(Container):
         for unit in units:
             unit.workflow = self
 
+    def __del__(self):
+        super(Workflow, self).__del__()
+        if Unit._pool_ is not None:
+            self.thread_pool.unregister_on_shutdown(self._stop_)
+
     def __getstate__(self):
         state = super(Workflow, self).__getstate__()
         # workaround for Python 2.7 MultiMap pickle incompatibility
@@ -355,9 +360,6 @@ class Workflow(Container):
         else:
             while not self._sync_event_.wait(1):
                 pass
-        if self.is_running and self.run_is_blocking:
-            self.thread_pool.shutdown(False)
-            raise RuntimeError("Workflow synchronization internal failure")
 
     def stop(self):
         """Manually interrupts the execution, calling stop() on each bound
@@ -644,7 +646,7 @@ class Workflow(Container):
             if isinstance(unit, Repeater):
                 g.set("root", hex(id(unit)))
             g.add_node(node)
-            for link in self._enumerate_links(unit.links_to):
+            for link in self._iter_links(unit.links_to):
                 src_id = hex(id(unit))
                 dst_id = hex(id(link))
                 if unit.view_group == link.view_group and \

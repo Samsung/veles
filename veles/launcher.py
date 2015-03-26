@@ -491,6 +491,7 @@ class Launcher(logger.Logger):
             self._notify_update_last_time = self.start_time
             self._notify_status()
         if not self.is_slave:
+            self.workflow.thread_pool.start()
             self.workflow.thread_pool.callInThread(self.workflow.run)
 
     @threadsafe

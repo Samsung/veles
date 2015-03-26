@@ -18,7 +18,6 @@ from veles.compat import from_none
 from veles.config import root, get, validate_kwargs
 from veles.distributable import Distributable, TriviallyDistributable, \
     IDistributable
-import veles.error as error
 from veles.external.progressbar import spin
 from veles.mutable import Bool, LinkableAttribute
 from veles.prng.random_generator import RandomGenerator
@@ -66,6 +65,20 @@ def nothing(*args, **kwargs):
     return {}
 
 
+class UnitException(Exception):
+    def __init__(self, unit, *args, **kwargs):
+        super(UnitException, self).__init__(*args, **kwargs)
+        self.unit = unit
+
+
+class NotInitializedError(UnitException):
+    pass
+
+
+class RunAfterStopError(UnitException):
+    pass
+
+
 @six.add_metaclass(UnitRegistry)
 class Unit(Distributable, Verified):
     """General unit in data stream model.
@@ -87,9 +100,6 @@ class Unit(Distributable, Verified):
     timers = {}
     visible = True
 
-    class NotInitializedError(Exception):
-        pass
-
     def __init__(self, workflow, **kwargs):
         self.name = kwargs.get("name")
         self.view_group = kwargs.get("view_group")
@@ -103,6 +113,7 @@ class Unit(Distributable, Verified):
         self._gate_block = Bool(False)
         self._gate_skip = Bool(False)
         self._run_calls = 0
+        self._stopped = False
         timings = get(root.common.timings, None)
         if timings is not None and isinstance(timings, set):
             timings = self.__class__.__name__ in timings
@@ -112,6 +123,7 @@ class Unit(Distributable, Verified):
         self.workflow = workflow
         self.add_method_to_storage("initialize")
         self.add_method_to_storage("run")
+        self.add_method_to_storage("stop")
         if hasattr(self, "generate_data_for_master"):
             self.add_method_to_storage("generate_data_for_master")
         if hasattr(self, "apply_data_from_master"):
@@ -139,6 +151,7 @@ class Unit(Distributable, Verified):
         self._run_lock_ = threading.Lock()
         self._is_initialized = False
         if hasattr(self, "run"):
+            self.run = self._check_stopped(self.run)
             self.run = self._track_call(self.run, "run_was_called")
             self.run = self._measure_time(self.run, Unit.timers)
         if hasattr(self, "initialize"):
@@ -146,6 +159,8 @@ class Unit(Distributable, Verified):
             self.initialize = self._retry_call(self.initialize,
                                                "_is_initialized")
             self.initialize = self._check_attrs(self.initialize, self.demanded)
+        if hasattr(self, "stop"):
+            self.stop = self._track_call(self.stop, "_stopped")
         Unit.timers[self.id] = 0
         self._workflow_ = lambda: None
         links = "_links_from", "_links_to"
@@ -265,7 +280,7 @@ class Unit(Distributable, Verified):
     @workflow.setter
     def workflow(self, value):
         if value is None:
-            raise error.VelesException("Unit must have a hosting Workflow")
+            raise ValueError("Unit must have a hosting Workflow")
         if not hasattr(value, "add_ref"):
             raise TypeError(
                 "Attempted to set %s's workflow to something which is not a "
@@ -316,8 +331,6 @@ class Unit(Distributable, Verified):
                     name="units",
                     minthreads=root.common.ThreadPool.minthreads,
                     maxthreads=root.common.ThreadPool.maxthreads)
-            if self.is_initialized and not Unit._pool_.started:
-                Unit._pool_.start()
         return Unit._pool_
 
     @property
@@ -352,6 +365,14 @@ class Unit(Distributable, Verified):
             raise ValueError("You can not reset run_was_called flag.")
 
     @property
+    def stopped(self):
+        return self._stopped
+
+    @stopped.setter
+    def stopped(self, value):
+        self._stopped = value
+
+    @property
     def total_run_time(self):
         return Unit.timers[self.id]
 
@@ -374,19 +395,21 @@ class Unit(Distributable, Verified):
     def run_dependent(self):
         """Invokes run() on dependent units on different threads.
         """
-        for dst in self._enumerate_links(self.links_to):
+        for dst in self._iter_links(self.links_to):
             if dst.gate_block:
                 continue
             if len(self.links_to) == 1:
                 dst._check_gate_and_run(self)
             else:
+                if not self.thread_pool.started:
+                    self.thread_pool.start()
                 self.thread_pool.callInThread(dst._check_gate_and_run, self)
 
     def dependent_list(self, with_open_gate=False):
         units = [self]
         walk = []
         visited = {self}
-        for child in sorted(self._enumerate_links(self.links_to)):
+        for child in sorted(self._iter_links(self.links_to)):
             walk.append((child, self))
         # flatten the dependency tree by doing breadth first search
         while len(walk) > 0:
@@ -396,7 +419,7 @@ class Unit(Distributable, Verified):
                 continue
             units.append(node)
             visited.add(node)
-            for child in sorted(self._enumerate_links(node.links_to)):
+            for child in sorted(self._iter_links(node.links_to)):
                 walk.append((child, node))
         return units
 
@@ -454,7 +477,7 @@ class Unit(Distributable, Verified):
         Detaches all previous units from this one.
         """
         with self._gate_lock_:
-            for src in self._enumerate_links(self.links_from):
+            for src in self._iter_links(self.links_from):
                 with src._gate_lock_:
                     self._del_link(src.links_to, self)
             self.links_from.clear()
@@ -464,7 +487,7 @@ class Unit(Distributable, Verified):
         Detaches all subsequent units from this one.
         """
         with self._gate_lock_:
-            for dst in self._enumerate_links(self.links_to):
+            for dst in self._iter_links(self.links_to):
                 with dst._gate_lock_:
                     self._del_link(dst.links_from, self)
             self.links_to.clear()
@@ -479,7 +502,7 @@ class Unit(Distributable, Verified):
             first = chain[0]
             last = chain[-1]
             first.link_from(self)
-            for dst in self._enumerate_links(links_to):
+            for dst in self._iter_links(links_to):
                 with dst._gate_lock_:
                     dst.link_from(last)
 
@@ -515,10 +538,10 @@ class Unit(Distributable, Verified):
         res += "\033[1;36mClass:\033[0m %s.%s\n" % (self.__class__.__module__,
                                                     self.__class__.__name__)
         res += "\033[1;36mIncoming links:\033[0m\n"
-        for link in self._enumerate_links(self.links_from):
+        for link in self._iter_links(self.links_from):
             res += "\t%s" % repr(link)
         res += "\n\033[1;36mOutgoing links:\033[0m\n"
-        for link in self._enumerate_links(self.links_to):
+        for link in self._iter_links(self.links_to):
             res += "\t%s" % repr(link)
         print(res)
 
@@ -538,7 +561,7 @@ class Unit(Distributable, Verified):
                 container[ref] = value
 
     @staticmethod
-    def _enumerate_links(container):
+    def _iter_links(container):
         for obj in container:
             if isinstance(obj, weakref.ReferenceType):
                 yield obj()
@@ -601,7 +624,7 @@ class Unit(Distributable, Verified):
             try:
                 if not self._is_initialized:
                     self.error("%s is not initialized", self.name)
-                    raise Unit.NotInitializedError()
+                    raise Unit.NotInitializedError(self)
                 self.run()
             finally:
                 self._run_lock_.release()
@@ -620,6 +643,24 @@ class Unit(Distributable, Verified):
                        getattr(fn, 'func', wrapped_measure_time).__name__)
         wrapped_measure_time.__name__ = name + '_measure_time'
         return wrapped_measure_time
+
+    def _check_stopped(self, fn):
+        def wrapped_check_stopped(*args, **kwargs):
+            if self.stopped:
+                if thread_pool.interrupted:
+                    for unit in self._iter_links(self.links_from):
+                        unit.gate_block <<= True
+                    return
+                raise RunAfterStopError(
+                    self,
+                    "%s's run() was called after stop(). Looks like you made "
+                    "an error with setting control flow links." % self)
+            return fn(*args, **kwargs)
+
+        fnname = getattr(fn, '__name__',
+                         getattr(fn, 'func', wrapped_check_stopped).__name__)
+        wrapped_check_stopped.__name__ = fnname + '_track_call'
+        return wrapped_check_stopped
 
     def _track_call(self, fn, name):
         def wrapped_track_call(*args, **kwargs):
