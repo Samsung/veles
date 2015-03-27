@@ -8,6 +8,13 @@ Contact:
     * g.kuznetsov@samsung.com
     * v.markovtsev@samsung.com
 
+
+.. argparse::
+   :module: veles.__main__
+   :func: create_args_parser_sphinx
+   :prog: veles
+
+   ::
 """
 
 import sys
@@ -62,6 +69,17 @@ if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
     FileNotFoundError = IOError  # pylint: disable=W0622
     IsADirectoryError = IOError  # pylint: disable=W0622
     PermissionError = IOError  # pylint: disable=W0622
+
+__doc__ += (" " * 7 +  # pylint: disable=W0622
+            ("\n" + " " * 7).join(veles.__logo__.split('\n')) +
+            u"\u200B\n")
+
+
+def create_args_parser_sphinx():
+    """
+    This is a top-level function to please Sphinx.
+    """
+    return CommandLineBase.init_parser(True)
 
 
 class Main(Logger, CommandLineBase):
