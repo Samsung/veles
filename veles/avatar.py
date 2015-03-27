@@ -80,6 +80,7 @@ class Avatar(AcceleratedUnit, TriviallyDistributable):
         super(Avatar, self).initialize(device, **kwargs)
         self.clone()
         self.init_vectors(*self.vectors.values())
+        self.init_vectors(*self.vectors.keys())
 
     def run(self):
         self.clone()
