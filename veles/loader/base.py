@@ -34,7 +34,7 @@ import veles.normalization as normalization
 from veles.opencl_types import dtypes
 import veles.prng as random_generator
 from veles.units import Unit, IUnit, nothing
-from veles.unit_registry import UnitRegistry
+from veles.unit_registry import MappedUnitRegistry
 
 TARGET = 3
 TRAIN = 2
@@ -47,16 +47,9 @@ TRIAGE = {"train": TRAIN,
 CLASS_NAME = ["test", "validation", "train"]
 
 
-class UserLoaderRegistry(UnitRegistry):
-    loaders = {}
-
-    def __init__(cls, name, bases, clsdict):
-        yours = set(cls.mro())
-        mine = set(Unit.mro())
-        left = yours - mine
-        if len(left) > 1 and "MAPPING" in clsdict:
-            UserLoaderRegistry.loaders[clsdict["MAPPING"]] = cls
-        super(UserLoaderRegistry, cls).__init__(name, bases, clsdict)
+class UserLoaderRegistry(MappedUnitRegistry):
+    mapping = "loaders"
+    base = Unit
 
 
 class LoaderError(Exception):

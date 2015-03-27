@@ -132,3 +132,18 @@ class UnitRegistry(type):
                     "Creating %s: ignored the following keyword arguments: %s",
                     obj, ", ".join(ignored_kwargs))
         return obj
+
+
+class MappedUnitRegistry(UnitRegistry):
+    mapping = "You must define \"mapping\" static attribute in your metaclass"
+    base = Distributable
+
+    def __init__(cls, name, bases, clsdict):
+        yours = set(cls.mro())
+        mine = set(cls.base.mro())
+        left = yours - mine
+        mapping = getattr(type(cls), cls.mapping, {})
+        if len(left) > 1 and "MAPPING" in clsdict:
+            mapping[clsdict["MAPPING"]] = cls
+        setattr(type(cls), cls.mapping, mapping)
+        super(MappedUnitRegistry, cls).__init__(name, bases, clsdict)
