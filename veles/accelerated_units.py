@@ -95,7 +95,7 @@ class AcceleratedUnit(Unit):
         device: Device object.
         program_: OpenCL program.
         sources_: OpenCL source files: file => defines.
-        cache: whether to cache the compiled OpenCL programs.
+        cache: whether to cache the compiled OpenCL/CUDA programs.
     """
     backend_methods = ("run", "init", "build_program", "get_kernel",
                        "execute_kernel")
@@ -167,6 +167,8 @@ class AcceleratedUnit(Unit):
 
     @cache.setter
     def cache(self, value):
+        if not isinstance(value, bool):
+            raise TypeError("cache must be boolean (got %s)" % type(value))
         self._cache = value
 
     @property
@@ -175,6 +177,8 @@ class AcceleratedUnit(Unit):
 
     @force_cpu.setter
     def force_cpu(self, value):
+        if not isinstance(value, bool):
+            raise TypeError("force_cpu must be boolean (got %s)" % type(value))
         self._force_cpu = value
 
     @property

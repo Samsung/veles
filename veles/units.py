@@ -119,6 +119,7 @@ class Unit(Distributable, Verified):
         else:
             timings = False
         self._timings = kwargs.get("timings", timings)
+        assert isinstance(self._timings, bool)
         self.workflow = workflow
         self.add_method_to_storage("initialize")
         self.add_method_to_storage("run")

@@ -649,7 +649,7 @@ class Workflow(Container):
             node.set("shape", "rect")
             node.add_style("rounded")
             node.add_style("filled")
-            color = Workflow.UNIT_GROUP_COLORS.get(unit.view_group, "white")
+            color = Workflow.VIEW_GROUP_COLORS.get(unit.view_group, "white")
             node.set("fillcolor", color)
             node.set("gradientangle", "90")
             if isinstance(unit, Repeater):
@@ -740,7 +740,7 @@ class Workflow(Container):
         self.debug("Graphviz workflow scheme:\n%s", desc)
         return desc, filename
 
-    UNIT_GROUP_COLORS = {"PLOTTER": "gold",
+    VIEW_GROUP_COLORS = {"PLOTTER": "gold",
                          "WORKER": "greenyellow",
                          "LOADER": "cyan",
                          "TRAINER": "coral",
