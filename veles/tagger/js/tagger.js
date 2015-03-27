@@ -212,7 +212,7 @@ function loadCanvasImage(index) {
             addSelection(sel);
           });
         }
-      },
+      }
   });
 }
 
@@ -244,11 +244,16 @@ function showSelections() {
   selections_hidden = false;
 }
 
+function calcSelectionInputVisibility(rect) {
+  return rect.width >= 130 && rect.height >= 30;
+}
+
 function addSelection(rect) {
   var color = "rgb({})".$(selection_colors[selections.length].join(", "));
-  return selections.push($("<div class=\"selection\">" +
-                           "<input type=\"text\" class=\"selection-name\" placeholder=\"enter name\">" +
-                           "</div>")
+  var selection = $(
+      "<div class=\"selection\">" +
+      "<input type=\"text\" class=\"selection-name\" placeholder=\"enter name\">" +
+      "</div>")
       .appendTo($("#image-container"))
       .css("left", rect.left * 100 / (ratio * canvas.offsetWidth) + "%")
       .css("top", rect.top * 100 / (ratio * canvas.offsetHeight) + "%")
@@ -257,18 +262,31 @@ function addSelection(rect) {
       .css("border-color", color).css("color", color)
       .css("background-color",
            "rgba({}, 0.15)".$(selection_colors[selections.length].join(", ")))
-      .resizable().draggable().bind("contextmenu", function(e) {
+      .resizable({resize: resizeSelection})
+      .draggable().bind("contextmenu", function(e) {
         selections.splice(selections.indexOf($(this)), 1);
         $(this).remove();
         return false;
       })
       .data("rect", rect)
       .find("input").keyup(resizeSelectionNameInput)
-                    .change(function() { rect.name = $(this).val(); })
-                    .attr('size', 10)
-                    .val(rect.name)
-                    .parent()
-  );
+      .change(function() { rect.name = $(this).val(); })
+      .attr('size', 10)
+      .val(rect.name)
+      .parent();
+  if (!calcSelectionInputVisibility({width: rect.width / ratio,
+                                     height: rect.height / ratio})) {
+    selection.find("input").hide();
+  }
+  return selections.push(selection);
+}
+
+function resizeSelection(event, ui) {
+  if (calcSelectionInputVisibility(ui.size)) {
+    ui.element.find("input").show();
+  } else {
+    ui.element.find("input").hide();
+  }
 }
 
 function resizeSelectionNameInput() {
