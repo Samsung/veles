@@ -49,7 +49,7 @@ def errback(failure, thread_pool=None):
                           tmap[threading.current_thread().ident])
         failure.printTraceback()
         thread_pool.failure = failure
-        thread_pool.stop(execute_remaining=False)
+        thread_pool.shutdown(execute_remaining=False, force=True)
 
 
 @add_metaclass(CommandLineArgumentsRegistry)
