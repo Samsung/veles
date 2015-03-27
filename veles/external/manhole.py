@@ -86,7 +86,7 @@ SOL_LOCAL = 0
 LOCAL_PEERCRED = 1
 
 SO_PEERCRED = 17
-COLOR_YELLOW = "\033[1;33m" if sys.stdout.isatty() else ""
+COLOR_HIGHLIGHT = "\033[1;35m" if sys.stdout.isatty() else ""
 COLOR_RESET = "\033[0m" if sys.stdout.isatty() else ""
 
 
@@ -96,7 +96,7 @@ def cry(message):
     """
     if VERBOSE:
         try:
-            _STDERR.write("%sMANHOLE:%s%s\n" % (COLOR_YELLOW, COLOR_RESET,
+            _STDERR.write("%sMANHOLE:%s%s\n" % (COLOR_HIGHLIGHT, COLOR_RESET,
                                                 message))
         except:  # pylint: disable=W0702
             pass
