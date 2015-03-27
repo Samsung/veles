@@ -18,6 +18,7 @@ from veles.compat import from_none
 from veles.distributable import IDistributable
 from veles.mutable import Bool
 from veles.plotter import Plotter, IPlotter
+from veles.units import nothing
 
 
 @implementer(IPlotter)
@@ -72,7 +73,7 @@ class AccumulatingPlotter(Plotter):
         self.values = []
         self.input_offset = 0
         self.pp = None
-        self.show_figure = self.nothing
+        self.show_figure = nothing
         self.input_field = None
         self.demand("input")
 
@@ -171,7 +172,7 @@ class MatrixPlotter(Plotter):
         self.pp = None
         self.patches = None
         self.lines = None
-        self.show_figure = self.nothing
+        self.show_figure = nothing
         self.demand("input", "input_field")
 
     def redraw(self):
@@ -350,7 +351,7 @@ class ImagePlotter(Plotter):
         self.yuv = Bool(kwargs.get("yuv", False))
         self.cm = None
         self.pp = None
-        self.show_figure = self.nothing
+        self.show_figure = nothing
         self.demand("inputs", "input_fields")
         self.inputs = []
         self.input_fields = []
@@ -473,7 +474,7 @@ class ImmediatePlotter(Plotter):
         self.input_styles = []
         self.ylim = kwargs.get("ylim")
         self.pp = None
-        self.show_figure = self.nothing
+        self.show_figure = nothing
 
     def redraw(self):
         figure = self.pp.figure(self.name)
@@ -512,7 +513,7 @@ class Histogram(Plotter):
         self.gl_max = 1
         self.demand("x", "y")
         self.pp = None
-        self.show_figure = self.nothing
+        self.show_figure = nothing
 
     def redraw(self):
         fig = self.pp.figure(self.name)
@@ -624,7 +625,7 @@ class MultiHistogram(Plotter):
         super(MultiHistogram, self).__init__(workflow, **kwargs)
         self.limit = limit
         self.pp = None
-        self.show_figure = self.nothing
+        self.show_figure = nothing
         self.input = None  # formats.Vector()
         self.value = formats.Vector()
         self.n_bars = n_bars
@@ -719,7 +720,7 @@ class TableMaxMin(Plotter):
         self.y = []
         self.values = formats.Vector()
         self.pp = None
-        self.show_figure = self.nothing
+        self.show_figure = nothing
 
     def initialize(self, **kwargs):
         super(TableMaxMin, self).initialize(**kwargs)

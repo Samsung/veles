@@ -17,7 +17,7 @@ from veles.config import Config, root
 from veles.distributable import IDistributable
 from veles.genetics.simple import Chromosome, Population
 from veles.mutable import Bool
-from veles.units import IUnit, Unit
+from veles.units import IUnit, Unit, nothing
 from veles.workflow import Workflow, Repeater, NoMoreJobs
 from veles.launcher import Launcher, filter_argv
 from veles.plotting_units import AccumulatingPlotter
@@ -106,7 +106,7 @@ class GeneticsContainer(Unit):
             self.pending_chromos = []
             self.retry_chromos = []
             self.scheduled_chromos = {}
-            self._on_evaluation_finished = self.nothing
+            self._on_evaluation_finished = nothing
         self.max_fitness = -numpy.inf
         self.generation_evolved = Bool(False)
 

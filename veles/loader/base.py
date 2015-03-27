@@ -33,7 +33,7 @@ from veles.mutable import Bool
 import veles.normalization as normalization
 from veles.opencl_types import dtypes
 import veles.prng as random_generator
-from veles.units import Unit, IUnit
+from veles.units import Unit, IUnit, nothing
 from veles.unit_registry import UnitRegistry
 
 TARGET = 3
@@ -153,7 +153,7 @@ class Loader(Unit):
 
         self.failed_minibatches = []
         self._total_failed = 0
-        self._on_initialized = self.nothing
+        self._on_initialized = nothing
         self._unique_labels_count = 0
 
         self.shuffled_indices = memory.Vector()
@@ -178,7 +178,7 @@ class Loader(Unit):
         else:
             state["failed_minibatches"] = []
         oni = self._on_initialized
-        if oni == self.nothing:
+        if oni == nothing:
             state["_on_initialized"] = None
         else:
             state["_on_initialized"] = (
@@ -199,7 +199,7 @@ class Loader(Unit):
                 types.FunctionType(
                     marshal.loads(code), globals(), name, closure=closure)
         else:
-            self._on_initialized = self.nothing
+            self._on_initialized = nothing
 
     @property
     def has_labels(self):

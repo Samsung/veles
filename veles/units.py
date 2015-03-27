@@ -11,6 +11,7 @@ import six
 import threading
 import uuid
 import weakref
+import sys
 from zope.interface import Interface, implementer
 
 from veles.cmdline import CommandLineArgumentsRegistry
@@ -460,6 +461,7 @@ class Unit(Distributable, Verified):
     def close_upstream(self):
         for other in self._iter_links(self.links_to):
             self._set_links_value(other.links_from, self, False)
+        return self
 
     def link_from(self, *args):
         """Adds notification link.
@@ -475,6 +477,7 @@ class Unit(Distributable, Verified):
                 else:
                     with src._gate_lock_:
                         src.links_to[weakref.ref(self)] = False
+        return self
 
     def unlink_from(self, *args):
         """Unlinks self from src.
@@ -484,12 +487,14 @@ class Unit(Distributable, Verified):
                 with src._gate_lock_:
                     self._del_link(src.links_to, self)
                 self._del_link(self.links_from, src)
+        return self
 
     def unlink_all(self):
         """Unlinks self from other units.
         """
         self.unlink_before()
         self.unlink_after()
+        return self
 
     def unlink_before(self):
         """
@@ -500,6 +505,7 @@ class Unit(Distributable, Verified):
                 with src._gate_lock_:
                     self._del_link(src.links_to, self)
             self.links_from.clear()
+        return self
 
     def unlink_after(self):
         """
@@ -510,6 +516,7 @@ class Unit(Distributable, Verified):
                 with dst._gate_lock_:
                     self._del_link(dst.links_from, self)
             self.links_to.clear()
+        return self
 
     def insert_after(self, *chain):
         """
@@ -524,6 +531,7 @@ class Unit(Distributable, Verified):
             for dst in self._iter_links(links_to):
                 with dst._gate_lock_:
                     dst.link_from(last)
+        return self
 
     def link_attrs(self, other, *args, **kwargs):
         """
@@ -543,15 +551,9 @@ class Unit(Distributable, Verified):
                 self._link_attr(other, arg, arg, two_way)
             else:
                 raise TypeError(repr(arg) + " is not a valid attributes pair")
+        return self
 
-    def nothing(self, *args, **kwargs):
-        """Function that do nothing.
-
-        It may be used to overload some methods to do nothing.
-        """
-        pass
-
-    def describe(self):
+    def describe(self, file=sys.stdout):
         real_name = self.name if self._name is not None else "<not set>"
         res = "\n\033[1;36mUnit:\033[0m \"%s\"\n" % real_name
         res += "\033[1;36mClass:\033[0m %s.%s\n" % (self.__class__.__module__,
@@ -562,7 +564,7 @@ class Unit(Distributable, Verified):
         res += "\n\033[1;36mOutgoing links:\033[0m\n"
         for link in self._iter_links(self.links_to):
             res += "\t%s" % repr(link)
-        print(res)
+        six.print_(res, file=file)
 
     @staticmethod
     def is_immutable(value):
