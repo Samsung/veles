@@ -29,6 +29,7 @@ if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
 
 @implementer(IUnit, IDistributable)
 class SnapshotterBase(Unit):
+    hide_from_registry = True
     """Base class for various data exporting units.
 
     Defines:

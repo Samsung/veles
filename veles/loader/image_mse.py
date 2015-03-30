@@ -18,6 +18,7 @@ from veles.loader.file_image import FileImageLoader
 
 
 class ImageLoaderMSEMixin(LoaderMSEMixin):
+    hide_from_registry = True
     """
     Implementation of ImageLoaderMSE for parallel inheritance.
 
@@ -97,6 +98,7 @@ class ImageLoaderMSE(ImageLoaderMSEMixin, ImageLoader):
 
 
 class FileImageLoaderMSEMixin(ImageLoaderMSEMixin):
+    hide_from_registry = True
     """
     FileImageLoaderMSE implementation for parallel inheritance.
 

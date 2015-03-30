@@ -78,6 +78,7 @@ class RunAfterStopError(UnitException):
 
 @six.add_metaclass(UnitRegistry)
 class Unit(Distributable, Verified):
+    hide_from_registry = True
     """General unit in data stream model.
 
     Attributes:
@@ -771,4 +772,4 @@ class TrivialUnit(Unit, TriviallyDistributable):
 
 
 class Container(Unit):
-    pass
+    hide_from_registry = True

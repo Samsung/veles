@@ -55,7 +55,7 @@ class Repeater(TrivialUnit):
 
 
 class UttermostPoint(TrivialUnit):
-    hide = True
+    hide_from_registry = True
 
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = kwargs.get("view_group", "SERVICE")
@@ -65,7 +65,7 @@ class UttermostPoint(TrivialUnit):
 class StartPoint(UttermostPoint):
     """Workflow execution normally starts from this unit.
     """
-    hide = True
+    hide_from_registry = True
 
     def __init__(self, workflow, **kwargs):
         kwargs["name"] = kwargs.get("name", "Start")
@@ -75,7 +75,7 @@ class StartPoint(UttermostPoint):
 class EndPoint(UttermostPoint):
     """Ends the pipeline execution, normally is the last unit in a workflow.
     """
-    hide = True
+    hide_from_registry = True
 
     def __init__(self, workflow, **kwargs):
         kwargs["name"] = kwargs.get("name", "End")
@@ -126,7 +126,7 @@ class Workflow(Container):
                       decorator. Used mainly to profile master-slave.
         fitness: numeric fitness or None (used by genetic optimization).
     """
-    hide_all = True
+    hide_from_registry_all = True
 
     def __init__(self, workflow, **kwargs):
         self._plotters_are_enabled = kwargs.get(

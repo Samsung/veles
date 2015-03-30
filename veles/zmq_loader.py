@@ -4,12 +4,15 @@ Created on Apr 2, 2014
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 
+
+import six
 import zmq
 from zope.interface import implementer
 
 from six.moves import queue
 from veles.txzmq import ZmqConnection, ZmqEndpoint
 from veles.distributable import IDistributable
+from veles.loader.base import UserLoaderRegistry
 from veles.units import Unit, IUnit
 
 
@@ -38,6 +41,7 @@ class ZmqRouter(ZmqConnection):
         self.send(self.routing.pop(cid), cid, message)
 
 
+@six.add_metaclass(UserLoaderRegistry)
 @implementer(IUnit, IDistributable)
 class ZeroMQLoader(Unit):
     """

@@ -875,6 +875,7 @@ class Loader(Unit):
 
 
 class LoaderMSEMixin(Unit):
+    hide_from_registry = True
     """
     Loader MSE implementation for parallel inheritance.
 

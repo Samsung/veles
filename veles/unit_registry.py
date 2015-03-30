@@ -23,12 +23,13 @@ class UnitRegistry(type):
     analytical purposes.
     Classes derived from Unit may contain 'hide' attribute which specifies
     whether it should not appear in the list of registered units. Usually
-    hide = True is applied to base units which must not be used directly, only
-    subclassed. There is also a 'hide_all' attribute, do disable the
-    registration of the whole inheritance tree, so that all the children are
-    automatically hidden.
+    hide_from_registry = True is applied to base units which must not be used
+    directly, only subclassed. There is also a 'hide_from_registry_all'
+    attribute, do disable the registration of the whole inheritance tree, so
+    that all the children are automatically hidden.
     """
     units = set()
+    hidden_units = set()
     enabled = True
 
     def __init__(cls, name, bases, clsdict):
@@ -38,10 +39,12 @@ class UnitRegistry(type):
         yours = set(cls.mro())
         mine = set(Distributable.mro())
         left = yours - mine
-        if len(left) > 1 and not name.endswith('Base') and \
-                not clsdict.get('hide', False) and \
-                not getattr(cls, 'hide_all', False):
-            UnitRegistry.units.add(cls)
+        if len(left) > 1:
+            if (not clsdict.get('hide_from_registry', False) and
+                    not getattr(cls, 'hide_from_registry_all', False)):
+                UnitRegistry.units.add(cls)
+            else:
+                UnitRegistry.hidden_units.add(cls)
         if "DISABLE_KWARGS_CHECK" in clsdict:
             super(UnitRegistry, cls).__init__(name, bases, clsdict)
             return

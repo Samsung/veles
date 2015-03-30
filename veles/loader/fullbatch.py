@@ -403,6 +403,7 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
 
 
 class FullBatchLoaderMSEMixin(LoaderMSEMixin):
+    hide_from_registry = True
     """FullBatchLoader for MSE workflows.
     Attributes:
         original_targets: original target (Vector).

@@ -150,6 +150,7 @@ class FullBatchImageLoader(ImageLoader, FullBatchLoader):
 
 class FullBatchImageLoaderMSEMixin(ImageLoaderMSEMixin,
                                    FullBatchLoaderMSEMixin):
+    hide_from_registry = True
     """
     FullBatchImageLoaderMSE implementation for parallel inheritance.
     """
@@ -222,7 +223,7 @@ class FullBatchFileImageLoader(FileImageLoader, FullBatchImageLoader):
 
 class FullBatchFileImageLoaderMSEMixin(FullBatchImageLoaderMSEMixin,
                                        FileImageLoaderMSEMixin):
-    pass
+    hide_from_registry = True
 
 
 class FullBatchFileImageLoaderMSE(FullBatchFileImageLoaderMSEMixin,

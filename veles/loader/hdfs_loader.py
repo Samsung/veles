@@ -1,11 +1,16 @@
+
+
+import six
 from snakebite.client import Client
 from zope.interface import implementer
 
 from veles.distributable import TriviallyDistributable
+from veles.loader.base import UserLoaderRegistry
 from veles.mutable import Bool
 from veles.units import IUnit, Unit
 
 
+@six.add_metaclass(UserLoaderRegistry)
 @implementer(IUnit)
 class HDFSTextLoader(Unit, TriviallyDistributable):
     def __init__(self, workflow, **kwargs):

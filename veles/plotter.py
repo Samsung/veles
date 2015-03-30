@@ -19,6 +19,7 @@ from veles.units import Unit, IUnit
 class Plotter(Unit, TriviallyDistributable):
     """Base class for all plotters.
     """
+    hide_from_registry = True
     server_shutdown_registered = False
 
     def __init__(self, workflow, **kwargs):

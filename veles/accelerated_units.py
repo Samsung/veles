@@ -99,7 +99,7 @@ class AcceleratedUnit(Unit):
     """
     backend_methods = ("run", "init", "build_program", "get_kernel",
                        "execute_kernel")
-    hide = True
+    hide_from_registry = True
 
     def __init__(self, workflow, **kwargs):
         super(AcceleratedUnit, self).__init__(workflow, **kwargs)
