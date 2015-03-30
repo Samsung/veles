@@ -88,7 +88,7 @@ class TestClientServer(unittest.TestCase):
         self.master.thread_pool.start()
 
     def stop(self):
-        TestWorkflow.sync.wait(0.1)
+        TestWorkflow.sync.wait(1.0)
         reactor.callFromThread(reactor.stop)
 
     def tearDown(self):
