@@ -407,6 +407,8 @@ class Unit(Distributable, Verified):
     def run_dependent(self):
         """Invokes run() on dependent units on different threads.
         """
+        if self.stopped:
+            return
         for dst in self._iter_links(self.links_to):
             if dst.gate_block:
                 continue
