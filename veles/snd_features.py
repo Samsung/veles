@@ -8,11 +8,11 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 from itertools import groupby
 import logging
 import os
-from six.moves import cPickle as pickle
 
 from libSoundFeatureExtraction.python.sound_feature_extraction import extractor
 from libSoundFeatureExtraction.python.sound_feature_extraction import feature
 import veles.units as units
+from veles.pickle2 import pickle, best_protocol
 
 
 class SoundFeatures(units.Unit):
@@ -103,4 +103,4 @@ class SoundFeatures(units.Unit):
                 file_element["features"][features.name] = feat_element
             root["files"][label] = file_element
         fout = open(file_name, "wb")
-        pickle.dump(root, fout)
+        pickle.dump(root, fout, protocol=best_protocol)

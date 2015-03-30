@@ -17,6 +17,8 @@ It uses libSoundFeatureExtraction as the calculation backend.
 @deffield    updated: 23.05.2013
 '''
 
+from argparse import ArgumentParser
+from argparse import RawDescriptionHelpFormatter
 from itertools import chain
 import logging
 import multiprocessing as mp
@@ -24,20 +26,18 @@ import os
 import re
 import sys
 import time
-import traceback
-import veles.units as units
-from veles.snd_features import SoundFeatures
-from veles.audio_file_loader import AudioFileLoader
-from sound_feature_extraction.library import Library
-from sound_feature_extraction.features_xml import FeaturesXml
 
-from argparse import ArgumentParser
-from argparse import RawDescriptionHelpFormatter
+from veles.loader.libsndfile_loader import SndFileMixin
+from veles.snd_features import SoundFeatures
+from libSoundFeatureExtraction.python.sound_feature_extraction.library import \
+    Library
+from libSoundFeatureExtraction.python.sound_feature_extraction.features_xml \
+    import FeaturesXml
 
 __all__ = []
 __version__ = 1.0
 __date__ = '2013-05-22'
-__updated__ = '2013-05-23'
+__updated__ = '2015-03-30'
 
 
 class CLIError(Exception):
@@ -55,20 +55,14 @@ class CLIError(Exception):
 
 def mp_run(files, extr):
     try:
-        sizestr = str(len(files))
-        logging.debug("Reading " + sizestr + " files...")
-        loader = AudioFileLoader(None)
-        loader.files_list = files
-        loader.initialize()
-        logging.debug("Decoding " + sizestr + " files...")
-        loader.run()
-
-        extr.inputs = loader.outputs
-        logging.debug("Extracting features from " + sizestr + " files...")
+        logging.debug("Reading %d files...", len(files))
+        loader = SndFileMixin()
+        extr.inputs = [loader.decode_file(f) for f in files]
+        logging.debug("Extracting features from %d files...", len(files))
         extr.run()
         return extr.outputs
     except:
-        logging.critical("Subprocess failed: %s", traceback.format_exc())
+        logging.exception("Subprocess failed")
 
 
 def filter_files(files, root, prefix, inpat, expat):
@@ -101,8 +95,8 @@ def main(argv=None):  # IGNORE:C0111
   Licensed under Samsung Proprietary License
 
 USAGE
-''' % (program_shortdesc)
-# -o /tmp/result.xml /home/markhor/Development/GTZAN
+''' % program_shortdesc
+
     try:
         # Setup argument parser
         parser = ArgumentParser(description=program_license,
@@ -200,8 +194,8 @@ USAGE
             else:
                 files = [f for f in os.listdir(inpath)
                          if os.path.isfile(os.path.join(inpath, f))]
-                found_files.extend(filter_files(files, root,
-                                                "", inpat, expat))
+                found_files.extend(filter_files(
+                    files, root, "", inpat, expat))
 
         if len(found_files) == 0:
             logging.warn("No files were found")
@@ -238,7 +232,6 @@ USAGE
         extr.save_to_file(output, list(chain(*splitted_found_files)))
 
         logging.info("Finished in %f", (time.time() - start_timer))
-        units.pool.shutdown()
         return 0
     except KeyboardInterrupt:
         logging.critical("Interrupted")

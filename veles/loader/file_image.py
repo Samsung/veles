@@ -10,78 +10,29 @@ Copyright (c) 2015 Samsung Electronics Co., Ltd.
 
 from __future__ import division
 from itertools import chain
-import json
-from mimetypes import guess_type
-import os
-import re
 import cv2
 import numpy
 from PIL import Image
-from zope.interface import implementer, Interface
+from zope.interface import implementer
 
 from veles.compat import from_none
 import veles.error as error
+from veles.loader.file_loader import AutoLabelFileLoader, FileFilter, \
+    FileLoaderBase, FileListLoaderBase
 from veles.loader.image import ImageLoader, IImageLoader, MODE_COLOR_MAP, \
     COLOR_CHANNELS_MAP
 
 
-class IFileImageLoader(Interface):
-    def get_label_from_filename(filename):
-        """Retrieves label for the specified file path.
-        """
-
-
-class FileImageLoaderBase(ImageLoader):
+class FileImageLoaderBase(ImageLoader, FileFilter):
     """
     Base class for loading something from files. Function is_valid_fiename()
     should be used in child classes as filter for loading data.
     """
 
     def __init__(self, workflow, **kwargs):
+        kwargs["file_type"] = "image"
+        kwargs["file_subtypes"] = kwargs.get("file_subtypes", ["jpeg", "png"])
         super(FileImageLoaderBase, self).__init__(workflow, **kwargs)
-        self._filename_types = kwargs.get("filename_types", ["jpeg"])
-        self._ignored_files = kwargs.get("ignored_files", [])
-        self._included_files = kwargs.get("included_files", [".*"])
-        self._blacklist_regexp = re.compile(
-            "^%s$" % "|".join(self.ignored_files))
-        self._whitelist_regexp = re.compile(
-            "^%s$" % "|".join(self.included_files))
-
-    @property
-    def filename_types(self):
-        return self._filename_types
-
-    @filename_types.setter
-    def filename_types(self, value):
-        del self._filename_types[:]
-        if isinstance(value, str):
-            self._filename_types.append(value)
-        else:
-            self._filename_types.extend(value)
-
-    @property
-    def ignored_files(self):
-        return self._ignored_files
-
-    @ignored_files.setter
-    def ignored_files(self, value):
-        del self._ignored_files[:]
-        if isinstance(value, str):
-            self._ignored_files.append(value)
-        else:
-            self._ignored_files.extend(value)
-
-    @property
-    def included_files(self):
-        return self._included_files
-
-    @included_files.setter
-    def included_files(self, value):
-        del self._included_files[:]
-        if isinstance(value, str):
-            self._included_files.append(value)
-        else:
-            self._included_files.extend(value)
 
     def get_image_info(self, key):
         """
@@ -147,72 +98,14 @@ class FileImageLoaderBase(ImageLoader):
                 uniform_files.append(file)
         return uniform_files
 
-    def is_valid_filename(self, filename):
-        """Filters the file names. Return True if the specified file path must
--        be included, otherwise, False.
-        """
-        if self._blacklist_regexp.match(filename):
-            self.debug("Ignored %s (in black list)", filename)
-            return False
-        if not self._whitelist_regexp.match(filename):
-            self.debug("Ignored %s (not in white list)", filename)
-            return False
-        mime = guess_type(filename)[0]
-        if mime is None:
-            self.debug("Could not determine MIME type of %s", filename)
-            return False
-        if not mime.startswith("image/"):
-            self.debug("Ignored %s (MIME is not an image)", filename)
-            return False
-        mime_type_name = mime[len("image/"):]
-        if mime_type_name not in self.filename_types:
-            self.debug("Ignored %s (MIME %s not in the list)",
-                       filename, mime_type_name)
-            return False
-        return True
-
 
 @implementer(IImageLoader)
-class FileListImageLoader(FileImageLoaderBase):
+class FileListImageLoader(FileImageLoaderBase, FileListLoaderBase):
     """
     Input: text file, with each line giving an image filename and label
     As with ImageLoader, it is useful for large datasets.
     """
     MAPPING = "file_list_image"
-
-    def __init__(self, workflow, **kwargs):
-        super(FileListImageLoader, self).__init__(workflow, **kwargs)
-        self.path_to_test_text_file = kwargs.get("path_to_test_text_file", "")
-        self.path_to_val_text_file = kwargs.get("path_to_val_text_file", "")
-        self.path_to_train_text_file = kwargs["path_to_train_text_file"]
-        self.labels = {}
-
-    def scan_files(self, pathname):
-        self.info("Scanning %s..." % pathname)
-        files = []
-        if pathname.endswith(".json"):
-            with open(pathname, "r") as fin:
-                images = json.load(fin)
-                for image in images.values():
-                    if len(image["label"]) > 0:
-                        label = image["label"][0]
-                        self.labels[image["path"]] = label
-                        files.append(image["path"])
-        else:
-            with open(pathname, "r") as fin:
-                for line in fin:
-                    path_to_image, _, label = line.partition(' ')
-                    if label:
-                        self.labels[path_to_image] = label
-                        files.append(path_to_image)
-        if not len(files):
-            self.warning("No files were taken from %s" % pathname)
-            return []
-        return files
-
-    def get_label_from_filename(self, filename):
-        label = self.labels[filename]
-        return label
 
     def get_keys(self, index):
         paths = (
@@ -227,7 +120,7 @@ class FileListImageLoader(FileImageLoaderBase):
 
 
 @implementer(IImageLoader)
-class FileImageLoader(FileImageLoaderBase):
+class FileImageLoader(FileImageLoaderBase, FileLoaderBase):
     """Loads images from multiple folders. As with ImageLoader, it is useful
     for large datasets.
 
@@ -244,57 +137,6 @@ class FileImageLoader(FileImageLoaderBase):
         is_valid_filename()
     """
 
-    def __init__(self, workflow, **kwargs):
-        super(FileImageLoader, self).__init__(workflow, **kwargs)
-        self.test_paths = kwargs.get("test_paths", [])
-        self.validation_paths = kwargs.get("validation_paths", [])
-        self.train_paths = kwargs.get("train_paths", [])
-        self.verify_interface(IFileImageLoader)
-
-    def _check_paths(self, paths):
-        if not hasattr(paths, "__iter__"):
-            raise TypeError("Paths must be iterable, e.g., a list or a tuple")
-
-    @property
-    def test_paths(self):
-        return self._test_paths
-
-    @test_paths.setter
-    def test_paths(self, value):
-        self._check_paths(value)
-        self._test_paths = value
-
-    @property
-    def validation_paths(self):
-        return self._validation_paths
-
-    @validation_paths.setter
-    def validation_paths(self, value):
-        self._check_paths(value)
-        self._validation_paths = value
-
-    @property
-    def train_paths(self):
-        return self._train_paths
-
-    @train_paths.setter
-    def train_paths(self, value):
-        self._check_paths(value)
-        self._train_paths = value
-
-    def scan_files(self, pathname):
-        self.info("Scanning %s..." % pathname)
-        files = []
-        for basedir, _, filelist in os.walk(pathname):
-            for name in filelist:
-                full_name = os.path.join(basedir, name)
-                if self.is_valid_filename(full_name):
-                    files.append(full_name)
-        if not len(files):
-            self.warning("No files were taken from %s" % pathname)
-            return [], []
-        return files
-
     def get_keys(self, index):
         paths = (self.test_paths, self.validation_paths,
                  self.train_paths)[index]
@@ -305,26 +147,10 @@ class FileImageLoader(FileImageLoaderBase):
                 self.analyze_images(self.scan_files(p), p) for p in paths))
 
 
-@implementer(IFileImageLoader)
-class AutoLabelFileImageLoader(FileImageLoader):
+class AutoLabelFileImageLoader(FileImageLoader, AutoLabelFileLoader):
     """
-    FileImageLoader modification which takes labels by regular expression from
+    FileImageLoader extension which takes labels by regular expression from
     file names. Unique selection groups are tracked and enumerated.
     """
 
     MAPPING = "auto_label_file_image"
-
-    def __init__(self, workflow, **kwargs):
-        super(AutoLabelFileImageLoader, self).__init__(workflow, **kwargs)
-        # The default label is the parent directory
-        self.label_regexp = re.compile(kwargs.get(
-            "label_regexp", ".*%(sep)s([^%(sep)s]+)%(sep)s[^%(sep)s]+$" %
-            {"sep": "\\" + os.sep}))
-
-    def get_label_from_filename(self, filename):
-        match = self.label_regexp.search(filename)
-        if match is None:
-            raise error.BadFormatError(
-                "%s does not match label RegExp %s" %
-                (filename, self.label_regexp.pattern))
-        return match.group(1)

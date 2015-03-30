@@ -9,7 +9,7 @@ import os
 import unittest
 
 from veles import __root__
-from veles.loader.libsndfile_loader import SndFileLoader
+from veles.loader.libsndfile_loader import SndFileMixin
 
 
 class Test(unittest.TestCase):
@@ -18,7 +18,7 @@ class Test(unittest.TestCase):
         pass
 
     def testSndFileLoader(self):
-        loader = SndFileLoader()
+        loader = SndFileMixin()
         data = loader.decode_file(
             os.path.join(__root__, "veles", "tests", "res", "sawyer.flac"))
         logging.info("%d samples at %d Hz" % (data["data"].size,

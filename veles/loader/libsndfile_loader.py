@@ -10,28 +10,21 @@ from ctypes import byref, c_short, c_char_p, POINTER
 import numpy
 
 import veles.error as error
+from veles.loader.file_loader import FileLoaderBase, FileListLoaderBase
 from veles.loader.libsndfile import SF_INFO, libsndfile
 
 
-class SndFileLoader(object):
-    """
-    Decodes the specified audio file to the raw signed PCM 16 bit format
-    using libsndfile.
-    """
-
-    def __init__(self):
-        super(SndFileLoader, self).__init__()
-
+class SndFileMixin(object):
     @staticmethod
     def open_file(file_name):
         info = SF_INFO()
         info.format = 0
-        handle = libsndfile().sf_open(c_char_p(file_name.encode()),
-                                      libsndfile.SFM_READ,
-                                      byref(info))
+        handle = libsndfile().sf_open(
+            c_char_p(file_name.encode()), libsndfile.SFM_READ, byref(info))
         if not handle:
-            raise error.BadFormatError("Audio file " + file_name + " does not "
-                                       "exist or is in an unsupported format.")
+            raise error.BadFormatError(
+                "Audio file %s does not exist or is in an unsupported format" %
+                file_name)
 
         if info.channels > 2:
             raise error.BadFormatError("Audio file " + file_name +
@@ -47,7 +40,7 @@ class SndFileLoader(object):
 
     @staticmethod
     def decode_file(file_name):
-        opened_data = SndFileLoader.open_file(file_name)
+        opened_data = SndFileLoaderBase.open_file(file_name)
         handle = opened_data["handle"]
         info = opened_data["info"]
         data = numpy.zeros(info.frames * info.channels, dtype=numpy.int16)
@@ -67,4 +60,20 @@ class SndFileLoader(object):
     def file_format(opened_data):
         return opened_data["info"].str_format()
 
-    supported_extensions = ["wav", "flac", "ogg", "au"]
+
+class SndFileLoaderBase(SndFileMixin, FileLoaderBase):
+    """
+    Decodes the specified audio file to the raw signed PCM 16 bit format
+    using libsndfile.
+    """
+
+    def __init__(self, workflow, **kwargs):
+        kwargs["file_type"] = "audio"
+        kwargs["file_subtypes"] = kwargs.get(
+            "file_subtypes", ["basic", "ogg", "wav", "wave", "x-wav",
+                              "x-flac"])
+        super(SndFileLoaderBase, self).__init__(workflow, **kwargs)
+
+
+class SndFileListLoaderBase(SndFileMixin, FileListLoaderBase):
+    pass

@@ -14,10 +14,11 @@ from zope.interface import implementer
 
 from veles import error
 from veles.external.progressbar import ProgressBar, Percentage, Bar
+from veles.loader.file_loader import IFileLoader
 from veles.loader.fullbatch import IFullBatchLoader, FullBatchLoader, \
     FullBatchLoaderMSEMixin
 from veles.loader.image import ImageLoader
-from veles.loader.file_image import IFileImageLoader, \
+from veles.loader.file_image import \
     FileListImageLoader, AutoLabelFileImageLoader, FileImageLoader
 from veles.loader.image_mse import ImageLoaderMSEMixin, FileImageLoaderMSEMixin
 from veles.memory import Vector
@@ -200,7 +201,7 @@ class FullBatchImageLoaderMSE(FullBatchImageLoaderMSEMixin,
     pass
 
 
-@implementer(IFileImageLoader)
+@implementer(IFileLoader)
 class FullBatchFileListImageLoader(FileListImageLoader, FullBatchImageLoader):
     MAPPING = "full_batch_file_list_image"
 
@@ -232,7 +233,7 @@ class FullBatchFileImageLoaderMSE(FullBatchFileImageLoaderMSEMixin,
     pass
 
 
-@implementer(IFileImageLoader)
+@implementer(IFileLoader)
 class FullBatchAutoLabelFileImageLoaderMSE(
         AutoLabelFileImageLoader, FullBatchFileImageLoaderMSE):
     MAPPING = "full_batch_auto_label_file_image_mse"

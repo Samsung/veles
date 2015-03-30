@@ -7,7 +7,7 @@ Copyright (c) 2013 Samsung Electronics Co., Ltd.
 """
 from zope.interface import implementer
 
-from veles.units import IUnit, Unit
+from veles.units import IUnit, TrivialUnit
 from veles.workflow import Workflow
 
 
@@ -58,7 +58,7 @@ class DummyWorkflow(Workflow):
 
 
 @implementer(IUnit)
-class DummyUnit(Unit):
+class DummyUnit(TrivialUnit):
     """
     Dummy unit.
     """
@@ -67,9 +67,3 @@ class DummyUnit(Unit):
     def __init__(self, **kwargs):
         super(DummyUnit, self).__init__(DummyWorkflow())
         self.__dict__.update(kwargs)
-
-    def initialize(self, **kwargs):
-        pass
-
-    def run(self):
-        pass

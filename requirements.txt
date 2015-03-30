@@ -31,3 +31,4 @@ pyxDamerauLevenshtein>=1.2
 h5py>=2.2
 jinja2>=2.7.2
 pycparser>=2.10
+pyinotify>=0.9.4
