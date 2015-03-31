@@ -684,7 +684,8 @@ class Unit(Distributable, Verified):
                 raise RunAfterStopError(
                     self,
                     "%s's run() was called after stop(). Looks like you made "
-                    "an error with setting control flow links." % self)
+                    "an error with setting control flow links. Workflow: %s." %
+                    (self, self.workflow))
             return fn(*args, **kwargs)
 
         fnname = getattr(fn, '__name__',
