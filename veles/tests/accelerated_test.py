@@ -35,6 +35,8 @@ def multi_device(numpy=False):
                 self.seed()
                 fn(self)
                 self.parent.stopped = False
+                self.device = None
+                gc.collect()
 
         test_wrapped.__name__ = fn.__name__
         return test_wrapped
