@@ -38,6 +38,7 @@ import veles.graphics_server as graphics_server
 from veles.plotter import Plotter
 import veles.logger as logger
 import veles.server as server
+from veles.thread_pool import ThreadPool
 from veles.error import MasterSlaveCommunicationError
 from veles.external.pytrie import StringTrie
 
@@ -83,10 +84,13 @@ class Launcher(logger.Logger):
         log_file              Duplicate all logging to this file.
     """
 
-    def __init__(self, **kwargs):
+    graphics_client = None
+    graphics_server = None
+
+    def __init__(self, interactive=False, **kwargs):
         super(Launcher, self).__init__()
         parser = Launcher.init_parser(**kwargs)
-        self.args, _ = parser.parse_known_args()
+        self.args, _ = parser.parse_known_args(self.argv)
         self.args.master_address = self.args.master_address.strip()
         self.args.listen_address = self.args.listen_address.strip()
         self.args.matplotlib_backend = self.args.matplotlib_backend.strip()
@@ -128,8 +132,8 @@ class Launcher(logger.Logger):
         self._running = False
         self._start_time = None
         self._device = None
-        self.graphics_client = None
-        self.graphics_server = None
+        self._interactive = interactive
+        self._reactor_thread = None
         self._notify_update_interval = kwargs.get(
             "status_update_interval",
             root.common.web.notification_interval)
@@ -223,6 +227,10 @@ class Launcher(logger.Logger):
         return parser
 
     @property
+    def interactive(self):
+        return self._interactive
+
+    @property
     def id(self):
         return self._id
 
@@ -314,8 +322,8 @@ class Launcher(logger.Logger):
 
     @property
     def plots_endpoints(self):
-        return (self.graphics_server.endpoints["epgm"] +
-                [self.graphics_server.endpoints["ipc"]]) \
+        return (Launcher.graphics_server.endpoints["epgm"] +
+                [Launcher.graphics_server.endpoints["ipc"]]) \
             if getattr(self, "graphics_server", None) is not None else []
 
     @property
@@ -340,21 +348,13 @@ class Launcher(logger.Logger):
         workflow.run_is_blocking = False
         if self.is_slave or self.matplotlib_backend == "":
             workflow.plotters_are_enabled = False
-
-        def shutdown():
-            original_stop = reactor.stop
-
-            def stop():
-                try:
-                    original_stop()
-                except ReactorNotRunning:
-                    pass
-
-            reactor.stop = stop
-            reactor.sigInt()
-
         # Ensure reactor stops in some rare cases when it does not normally
-        self.workflow.thread_pool.register_on_shutdown(shutdown, weak=False)
+        if not self.interactive:
+            self.workflow.thread_pool.register_on_shutdown(
+                Launcher._reactor_shutdown)
+        else:
+            self._interactive_shutdown_ref = self._interactive_shutdown
+            ThreadPool.register_atexit(self._interactive_shutdown_ref)
         if self.is_slave:
             self._agent = client.Client(self.args.master_address, workflow)
 
@@ -374,9 +374,10 @@ class Launcher(logger.Logger):
                     connectTimeout=timeout)
                 # Launch the status server if it's not been running yet
                 self._launch_status()
-            if workflow.plotters_are_enabled:
+            if workflow.plotters_are_enabled and \
+                    (not self.interactive or Launcher.graphics_client is None):
                 try:
-                    self.graphics_server, self.graphics_client = \
+                    Launcher.graphics_server, Launcher.graphics_client = \
                         graphics_server.GraphicsServer.launch(
                             workflow.thread_pool,
                             self.matplotlib_backend,
@@ -423,6 +424,7 @@ class Launcher(logger.Logger):
             self.error("Failed to create the OpenCL device.")
             raise from_none(e)
 
+        self.workflow.reset_thread_pool()
         try:
             self.workflow.initialize(device=self.device, **kwargs)
         except Exception as e:
@@ -432,13 +434,25 @@ class Launcher(logger.Logger):
 
         if not self.is_standalone:
             self._agent.initialize()
-        reactor.addSystemEventTrigger('before', 'shutdown', self._on_stop)
-        reactor.addSystemEventTrigger('after', 'shutdown', self._print_stats)
-        reactor.addSystemEventTrigger('after', 'shutdown', self.event,
-                                      "work", "end", height=0.1)
+        if not self.interactive:
+            trigger = reactor.addSystemEventTrigger
+            trigger('before', 'shutdown', self._on_stop)
+            trigger('after', 'shutdown', self._print_stats)
+            trigger('after', 'shutdown', self.event, "work", "end", height=0.1)
+        else:
+            register = self.workflow.thread_pool.register_on_shutdown
+            self._on_stop_ref = self._on_stop
+            register(self._on_stop_ref)
+            self._print_stats_ref = self._print_stats
+            register(self._print_stats_ref)
+
+            def work_end():
+                self.event("work", "end", height=0.1)
+            self._work_end = work_end
+            register(self._work_end)
         for unit in self.workflow:
             if isinstance(unit, Plotter):
-                unit.graphics_server = self.graphics_server
+                unit.graphics_server = Launcher.graphics_server
         self._initialized = True
 
     def run(self):
@@ -447,6 +461,14 @@ class Launcher(logger.Logger):
         self._pre_run()
         reactor.callLater(0, self.info, "Reactor is running")
         self.event("work", "begin", height=0.1)
+        if self.interactive:
+            if not reactor.running and self._reactor_thread is None:
+                reactor._handleSignals()
+                self._reactor_thread = threading.Thread(
+                    name="TwistedReactor", target=reactor.run,
+                    kwargs={"installSignalHandlers": False})
+                self._reactor_thread.start()
+            return
         try:
             reactor.run()
         except:
@@ -472,6 +494,8 @@ class Launcher(logger.Logger):
         if not running:
             self._on_stop()
             return
+        if self.interactive:
+            return
         try:
             reactor.stop()
         except ReactorNotRunning:
@@ -480,6 +504,12 @@ class Launcher(logger.Logger):
             self.exception("Failed to stop the reactor. There is going to be "
                            "a meltdown unless you immediately activate the "
                            "emergency graphite protection.")
+
+    def pause(self):
+        self.workflow.thread_pool.pause()
+
+    def resume(self):
+        self.workflow.thread_pool.resume()
 
     @threadsafe
     def _pre_run(self):
@@ -496,7 +526,7 @@ class Launcher(logger.Logger):
 
     @threadsafe
     def _on_stop(self):
-        if self.workflow is None:
+        if self.workflow is None or not self._initialized:
             return
         self.info("Stopping everything (%s mode)", self.mode)
         self._initialized = False
@@ -512,15 +542,43 @@ class Launcher(logger.Logger):
 
     threadsafe = staticmethod(threadsafe)
 
-    def _stop_graphics(self):
-        if self.graphics_client is not None:
+    @staticmethod
+    def _prepare_reactor_shutdown():
+        original_stop = reactor.stop
+
+        def stop():
+            try:
+                original_stop()
+            except ReactorNotRunning:
+                pass
+
+        reactor.stop = stop
+
+    @staticmethod
+    def _reactor_shutdown():
+        Launcher._prepare_reactor_shutdown()
+        reactor.sigInt()
+
+    def _interactive_shutdown(self):
+        assert self.interactive
+        Launcher._prepare_reactor_shutdown()
+        reactor.callFromThread(reactor.stop)
+        self._stop_graphics(True)
+        if self._reactor_thread is not None and \
+                self._reactor_thread.is_alive():
+            self._reactor_thread.join()
+
+    def _stop_graphics(self, interactive_stop=False):
+        if self.interactive and not interactive_stop:
+            return
+        if Launcher.graphics_client is not None:
             attempt = 0
-            while self.graphics_client.poll() is None and attempt < 10:
-                self.graphics_server.shutdown()
+            while Launcher.graphics_client.poll() is None and attempt < 10:
+                Launcher.graphics_server.shutdown()
                 attempt += 1
                 time.sleep(0.2)
-            if self.graphics_client.poll() is None:
-                self.graphics_client.terminate()
+            if Launcher.graphics_client.poll() is None:
+                Launcher.graphics_client.terminate()
                 self.info("Graphics client has been terminated")
             else:
                 self.info("Graphics client returned normally")

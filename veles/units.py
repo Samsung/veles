@@ -361,6 +361,10 @@ class Unit(Distributable, Verified):
         return self.workflow.is_standalone
 
     @property
+    def interactive(self):
+        return self.workflow.interactive
+
+    @property
     def run_was_called(self):
         return self._run_calls > 0
 
@@ -391,6 +395,10 @@ class Unit(Distributable, Verified):
     def average_run_time(self):
         return self.total_run_time / self._run_calls \
             if self._run_calls > 0 else 0
+
+    @staticmethod
+    def reset_thread_pool():
+        Unit._pool_ = None
 
     def stop(self):
         """
@@ -678,7 +686,7 @@ class Unit(Distributable, Verified):
     def _check_stopped(self, fn):
         def wrapped_check_stopped(*args, **kwargs):
             if self.stopped:
-                if thread_pool.interrupted:
+                if thread_pool.ThreadPool.interrupted:
                     for unit in self._iter_links(self.links_from):
                         unit.gate_block <<= True
                     return

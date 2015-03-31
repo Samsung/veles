@@ -19,7 +19,7 @@ from veles.workflow import Workflow
 
 class Test(unittest.TestCase):
     def setUp(self):
-        self.main = Main()
+        self.main = Main(True, "workflow", "config")
 
     def testSeeding(self):
         _, fname = tempfile.mkstemp(prefix="veles-test-seed-")
@@ -44,6 +44,7 @@ class Test(unittest.TestCase):
     def testRun(self):
         argv = sys.argv
         sys.argv = [argv[0], "-s", "-p", "", "-v", "debug", __file__, __file__]
+        self.main = Main()
         self.main.run()
         self.assertTrue(Workflow.run_was_called)
 
@@ -59,6 +60,11 @@ class Test(unittest.TestCase):
         self.assertEqual(res, "1 145")
         res = fd(12345)
         self.assertEqual(res, "12 345")
+
+    def testSetupLogging(self):
+        # Multiple calls test
+        self.main.setup_logging("debug")
+        self.main.setup_logging("debug")
 
 
 def run(load, main):

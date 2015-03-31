@@ -63,7 +63,7 @@ class GraphicsServer(Logger):
             "GraphicsServer was not previously initialized")
         super(GraphicsServer, self).__init__()
         parser = GraphicsServer.init_parser()
-        args, _ = parser.parse_known_args()
+        args, _ = parser.parse_known_args(self.argv)
         self._debug_pickle = args.graphics_pickle_debug
         zmq_endpoints = [ZmqEndpoint("bind", "inproc://veles-plots"),
                          ZmqEndpoint("bind", "rndipc://veles-ipc-plots-:")]

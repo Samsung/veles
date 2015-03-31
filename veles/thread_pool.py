@@ -22,22 +22,8 @@ from twisted.python import threadpool
 import weakref
 
 import veles.logger as logger
-from veles.cmdline import CommandLineArgumentsRegistry
+from veles.cmdline import CommandLineArgumentsRegistry, classproperty
 from veles.compat import from_none
-
-
-sysexit_initial = None
-exit_initial = None
-quit_initial = None
-interrupted = False
-
-
-class classproperty(object):
-    def __init__(self, getter):
-        self.getter = getter
-
-    def __get__(self, instance, owner):
-        return self.getter(owner)
 
 
 def errback(failure, thread_pool=None):
@@ -59,9 +45,14 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     """
 
     sigint_initial = None
+    sysexit_initial = None
+    exit_initial = None
+    quit_initial = None
     pools = None
+    atexits = set()
+    interrupted = False
     _manhole = None
-    _sigint_printed = False
+    sigint_printed = False
 
     def __init__(self, minthreads=2, maxthreads=1024, queue_size=2048,
                  name=None):
@@ -94,26 +85,9 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         if ThreadPool.pools is None:
             # Initialize for the very first time
             ThreadPool.pools = []
-            global sysexit_initial
-            sysexit_initial = sys.exit
+            ThreadPool.sysexit_initial = sys.exit
             sys.exit = ThreadPool.exit
-            if not sys.__stdin__.closed and sys.__stdin__.isatty():
-                global exit_initial
-                global quit_initial
-                try:
-                    __IPYTHON__  # pylint: disable=E0602
-                    from IPython.core.autocall import ExitAutocall
-                    exit_initial = ExitAutocall.__call__
-                    ExitAutocall.__call__ = ThreadPool.builtin_exit
-                except NameError:
-                    try:
-                        import builtins
-                        exit_initial = builtins.exit
-                        quit_initial = builtins.quit
-                        builtins.exit = ThreadPool.builtin_exit
-                        builtins.quit = ThreadPool.builtin_quit
-                    except:
-                        pass
+            ThreadPool.setup_interactive_exit()
             ThreadPool.sigint_initial = \
                 signal.signal(signal.SIGINT, ThreadPool.sigint_handler)
             assert ThreadPool.sigint_initial != ThreadPool.sigint_handler
@@ -142,7 +116,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     def manhole(cls):
         if cls._manhole is None:
             parser = cls.init_parser()
-            args, _ = parser.parse_known_args()
+            args, _ = parser.parse_known_args(cls.class_argv)
             cls._manhole = args.manhole
         return cls._manhole
 
@@ -225,6 +199,10 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     def unregister_on_shutdown(self, func):
         self._remove_callback(self.on_shutdowns, func)
 
+    @staticmethod
+    def register_atexit(func, weak=True):
+        ThreadPool._add_callback(ThreadPool.atexits, func, weak)
+
     def stop(self, execute_remaining=True, force=False, timeout=1.0):
         self._stopping_call(self._stop, execute_remaining, force, timeout)
 
@@ -287,6 +265,8 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         self.queue.appendleft(item)
 
     def _stopping_call(self, method, *args, **kwargs):
+        if self._stopping:
+            return
         with self._lock:
             self._stopping = True
         with self._lock:
@@ -355,23 +335,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         self._stop(execute_remaining, force, timeout)
         ThreadPool.pools.remove(self)
         if not len(ThreadPool.pools):
-            global sysexit_initial
-            sys.exit = sysexit_initial
-
-        if not sys.__stdin__.closed and sys.__stdin__.isatty():
-            global exit_initial
-            global quit_initial
-            try:
-                __IPYTHON__  # pylint: disable=E0602
-                from IPython.core.autocall import ExitAutocall
-                ExitAutocall.__call__ = exit_initial
-            except NameError:
-                try:
-                    import builtins
-                    builtins.exit = exit_initial
-                    builtins.quit = quit_initial
-                except:
-                    pass
+            sys.exit = ThreadPool.__dict__["sysexit_initial"]
         self.debug("%s was shutted down", repr(self))
 
     @staticmethod
@@ -392,6 +356,8 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         Private method to shut down all the pools.
         """
+        if ThreadPool.pools is None:
+            return
         pools = copy(ThreadPool.pools)
         logging.getLogger("ThreadPool").debug(
             "Shutting down %d pools...", len(pools))
@@ -399,9 +365,15 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             pool.shutdown(execute_remaining, force, timeout)
 
     @staticmethod
+    def run_atexits():
+        for atexit in ThreadPool._iter_weak(ThreadPool.atexits):
+            atexit()
+
+    @staticmethod
     def _exit():
         ThreadPool.shutdown_pools()
         ThreadPool.debug_deadlocks()
+        ThreadPool.run_atexits()
 
     @staticmethod
     def exit(retcode=0):
@@ -409,6 +381,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         Terminates the running program safely.
         """
         ThreadPool._exit()
+        sysexit_initial = ThreadPool.__dict__["sysexit_initial"]
         if sys.exit == ThreadPool.exit:
             print("Detected an infinite recursion in sys.exit(), "
                   "restoring %s" % sysexit_initial,
@@ -418,12 +391,17 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         sys.exit(retcode)
 
     @staticmethod
+    def reset():
+        ThreadPool.interrupted = False
+        ThreadPool.sigint_printed = False
+
+    @staticmethod
     def builtin_exit(*args, **kwargs):
         """
         Terminates the interactive shell safely.
         """
         ThreadPool._exit()
-        exit_initial(*args, **kwargs)
+        ThreadPool.exit_initial(*args, **kwargs)
 
     @staticmethod
     def builtin_quit(*args, **kwargs):
@@ -431,7 +409,12 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         Terminates the interactive shell safely.
         """
         ThreadPool._exit()
-        quit_initial(*args, **kwargs)
+        ThreadPool.quit_initial(*args, **kwargs)
+
+    @staticmethod
+    def _ipython_ask_exit(self):
+        ThreadPool._exit()
+        ThreadPool._ipython_ask_exit_initial(self)
 
     @staticmethod
     def _warn_about_sigint_hysteria(log):
@@ -448,8 +431,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         Private method - handler for SIGINT.
         """
-        global interrupted
-        interrupted = True
+        ThreadPool.interrupted = True
         ThreadPool.shutdown_pools(execute_remaining=False, force=True)
         log = logging.getLogger("ThreadPool")
         try:
@@ -461,17 +443,17 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                 sigint_initial(sign, frame)
         except KeyboardInterrupt:
             if not reactor.running:
-                if not ThreadPool._sigint_printed:
+                if not ThreadPool.sigint_printed:
                     log.warning("Raising KeyboardInterrupt since "
                                 "Twisted reactor is not running")
-                    ThreadPool._sigint_printed = True
+                    ThreadPool.sigint_printed = True
                     raise from_none(KeyboardInterrupt())
                 ThreadPool._warn_about_sigint_hysteria(log)
             else:
-                if not ThreadPool._sigint_printed:
+                if not ThreadPool.sigint_printed:
                     log.critical("KeyboardInterrupt")
                     ThreadPool.debug_deadlocks()
-                    ThreadPool._sigint_printed = True
+                    ThreadPool.sigint_printed = True
                 else:
                     ThreadPool._warn_about_sigint_hysteria(log)
 
@@ -500,18 +482,66 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             print_stack(stack, file=sys.stdout)
         sys.stdout.flush()
 
+    KNOWN_RUNNING_THREADS = {"IPythonHistorySavingThread", "TwistedReactor",
+                             "MainThread"}
+
     @staticmethod
     def debug_deadlocks():
         if threading.active_count() > 1:
-            if threading.active_count() == 2:
-                for thread in threading.enumerate():
-                    if (thread.name.startswith('timeout') or
-                            thread.name == "IPythonHistorySavingThread"):
-                        # veles.tests.timeout registers atexit
-                        return
+            for thread in threading.enumerate():
+                if (thread.name.startswith('timeout') or
+                        thread.name in ThreadPool.KNOWN_RUNNING_THREADS):
+                    # veles.tests.timeout registers atexit
+                    continue
+                break
+            else:
+                return
             logging.warning("There are currently more than 1 threads still "
                             "running. A deadlock is likely to happen.\n%s",
                             str(threading.enumerate())
                             if hasattr(threading, "_active")
                             else "<unable to list active threads>")
             ThreadPool.print_thread_stacks()
+
+    @staticmethod
+    def setup_interactive_exit():
+        if not sys.__stdin__.closed and sys.__stdin__.isatty():
+            try:
+                __IPYTHON__  # pylint: disable=E0602
+                from IPython.core.autocall import ExitAutocall
+                from IPython.terminal.interactiveshell import \
+                    TerminalInteractiveShell
+                ThreadPool.exit_initial = ExitAutocall.__call__
+                ExitAutocall.__call__ = ThreadPool.builtin_exit
+                ThreadPool._ipython_ask_exit_initial = \
+                    TerminalInteractiveShell.ask_exit
+                TerminalInteractiveShell.ask_exit = \
+                    ThreadPool._ipython_ask_exit
+            except NameError:
+                try:
+                    import builtins
+                    ThreadPool.exit_initial = builtins.exit
+                    ThreadPool.quit_initial = builtins.quit
+                    builtins.exit = ThreadPool.builtin_exit
+                    builtins.quit = ThreadPool.builtin_quit
+                except:
+                    pass
+
+    @staticmethod
+    def restore_initial_interactive_exit():
+        if not sys.__stdin__.closed and sys.__stdin__.isatty():
+            try:
+                __IPYTHON__  # pylint: disable=E0602
+                from IPython.core.autocall import ExitAutocall
+                from IPython.terminal.interactiveshell import \
+                    TerminalInteractiveShell
+                ExitAutocall.__call__ = ThreadPool.exit_initial
+                TerminalInteractiveShell.ask_exit = \
+                    ThreadPool._ipython_ask_exit_initial
+            except NameError:
+                try:
+                    import builtins
+                    builtins.exit = ThreadPool.exit_initial
+                    builtins.quit = ThreadPool.quit_initial
+                except:
+                    pass

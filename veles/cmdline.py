@@ -12,13 +12,22 @@ try:
     import argcomplete
 except:
     pass
-from argparse import RawDescriptionHelpFormatter, ArgumentParser, ArgumentError
+from argparse import RawDescriptionHelpFormatter, ArgumentParser, \
+    ArgumentError, _StoreConstAction
 from email.utils import formatdate
 import logging
 import sys
 
 import veles
 from veles.compat import from_none
+
+
+class classproperty(object):
+    def __init__(self, getter):
+        self.getter = getter
+
+    def __get__(self, instance, owner):
+        return self.getter(owner)
 
 
 class CommandLineArgumentsRegistry(type):
@@ -34,11 +43,16 @@ class CommandLineArgumentsRegistry(type):
         init_parser = clsdict.get('init_parser', None)
         if init_parser is None:
             return
+        cls.argv = property(lambda _: CommandLineBase.argv)
         # early check for the method existence
         if not isinstance(init_parser, staticmethod):
             raise TypeError("init_parser must be a static method since the "
                             "class has CommandLineArgumentsRegistry metaclass")
         CommandLineArgumentsRegistry.classes.append(cls)
+
+    @property
+    def class_argv(cls):
+        return CommandLineBase.argv
 
 
 class CommandLineBase(object):
@@ -72,6 +86,7 @@ class CommandLineBase(object):
                      "warning": logging.WARNING, "error": logging.ERROR}
     SPECIAL_OPTS = ["--help", "--html-help", "--version", "--frontend",
                     "--dump-config"]
+    _argv = tuple()
 
     class SortingRawDescriptionHelpFormatter(RawDescriptionHelpFormatter):
         def add_arguments(self, actions):
@@ -179,3 +194,38 @@ class CommandLineBase(object):
         except:
             pass
         return parser
+
+    @staticmethod
+    def map_parser_keyword_arguments():
+        parser = CommandLineBase.init_parser()
+        return {action.dest: action for action in parser._actions}
+
+    @classproperty
+    def argv(cls):
+        if cls._argv is None:
+            cls.setup_argv()
+        return cls._argv
+
+    @staticmethod
+    def setup_argv(sys_argv=True, reset_argv=False, *args, **kwargs):
+        argv = list(CommandLineBase._argv)
+        if reset_argv:
+            del argv[:]
+        if len(argv) == 0:
+            if sys_argv:
+                argv.extend(sys.argv[1:])
+            if len(kwargs) > 0:
+                available = CommandLineBase.map_parser_keyword_arguments()
+                if not set(kwargs).issubset(set(available)):
+                    raise ValueError(
+                        "The following keyword arguments are not supported: "
+                        "%s" % ",".join(set(kwargs) - set(available)))
+                for key, val in kwargs.items():
+                    action = available[key]
+                    argv.append(action.option_strings[-1])
+                    if not isinstance(action, _StoreConstAction):
+                        argv.append(str(val))
+            argv.extend(args)
+        if not sys_argv:
+            assert len(args) >= 2
+        CommandLineBase._argv = tuple(argv)

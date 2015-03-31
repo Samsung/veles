@@ -592,7 +592,7 @@ class Server(NetworkAgent, ServerFactory):
     def __init__(self, configuration, workflow, **kwargs):
         super(Server, self).__init__(configuration, workflow)
         parser = Server.init_parser(**kwargs)
-        self.args, _ = parser.parse_known_args()
+        self.args, _ = parser.parse_known_args(self.argv)
         self.job_timeout = self.args.job_timeout * 60
         self.nodes = {}
         self.protocols = {}

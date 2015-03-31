@@ -93,6 +93,17 @@ class VelesModule(ModuleType):
         self.__units_cache__ = None
         self.__modules_cache_ = None
 
+    def __call__(self, workflow, config=None, **kwargs):
+        # FIXME(v.markovtsev): disable R0401 locally when pylint issue is fixed
+        # https://bitbucket.org/logilab/pylint/issue/61
+        # from veles.__main__ import Main  # pylint: disable=R0401
+        Main = __import__("veles.__main__").__main__.Main
+        if config is None:
+            config = "-"
+        main = Main(True, workflow, config, **kwargs)
+        main.run()
+        return main.launcher
+
     def __scan(self):
         import os
         import sys

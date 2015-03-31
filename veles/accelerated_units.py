@@ -114,7 +114,7 @@ class AcceleratedUnit(Unit):
         self.program_ = None
         self.sources_ = {}
         parser = AcceleratedUnit.init_parser()
-        args, _ = parser.parse_known_args()
+        args, _ = parser.parse_known_args(self.argv)
         if not hasattr(self, "_force_cpu"):
             self._force_cpu = \
                 self.__class__.__name__ in args.force_cpu.split(',')

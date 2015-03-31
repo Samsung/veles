@@ -368,7 +368,7 @@ class Client(NetworkAgent, ReconnectingClientFactory):
                  reconnection_interval=1, reconnection_attempts=60):
         super(Client, self).__init__(configuration, workflow)
         parser = Client.init_parser()
-        args, _ = parser.parse_known_args()
+        args, _ = parser.parse_known_args(self.argv)
         self._async = args.async
         self._death_probability = args.death_probability
         self._initial_data = None

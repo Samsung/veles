@@ -89,6 +89,16 @@ class Main(Logger, CommandLineBase):
 
     EXIT_SUCCESS = 0
     EXIT_FAILURE = 1
+    registered_print_max_rss = False
+
+    def __init__(self, interactive=False, *args, **kwargs):
+        Main.setup_argv(not interactive, True, *args, **kwargs)
+        super(Main, self).__init__()
+        self._interactive = interactive
+
+    @property
+    def interactive(self):
+        return self._interactive
 
     @property
     def optimization(self):
@@ -103,6 +113,18 @@ class Main(Logger, CommandLineBase):
         self._optimization = "no"
 
     def _process_special_args(self):
+        if "--frontend" in sys.argv:
+            try:
+                self._open_frontend()
+            except KeyboardInterrupt:
+                return Main.EXIT_FAILURE
+            return self._process_special_args()
+        if self.interactive:
+            for opt in "forge", "--version", "--help", "--dump-config":
+                if opt in self.argv:
+                    raise ValueError(
+                        "\"%s\" is not supported in interactive mode" % opt)
+            return None
         if len(sys.argv) > 1 and sys.argv[1] == "forge":
             from veles.forge_client import __run__ as forge_run
             del sys.argv[1]
@@ -115,12 +137,6 @@ class Main(Logger, CommandLineBase):
                     raise from_none(e)
                 self.exception("Failed to run forge %s", action)
                 return Main.EXIT_FAILURE
-        if "--frontend" in sys.argv:
-            try:
-                self._open_frontend()
-            except KeyboardInterrupt:
-                return Main.EXIT_FAILURE
-            return self._process_special_args()
         if "--version" in sys.argv:
             self._print_version()
             return Main.EXIT_SUCCESS
@@ -145,7 +161,12 @@ class Main(Logger, CommandLineBase):
         frontend.start()
         cmdline = connection.get()
         frontend.join()
+        if self.interactive:
+            argv_backup = list(sys.argv)
         sys.argv[1:] = cmdline.split()
+        Main.setup_argv(True, True)
+        if self.interactive:
+            sys.argv = argv_backup
         print("Running with the following command line: %s" % sys.argv)
 
     def _open_frontend_process(self, connection, argv):
@@ -351,7 +372,7 @@ class Main(Logger, CommandLineBase):
                    str(Workflow))
         self.load_called = True
         try:
-            self.launcher = Launcher()
+            self.launcher = Launcher(self.interactive)
         except:
             self.exception("Failed to create the launcher")
             sys.exit(Main.EXIT_FAILURE)
@@ -515,6 +536,18 @@ class Main(Logger, CommandLineBase):
             self.exception("Failed to fetch the snapshot at \"%s\"", url)
             self.snapshot_file_name = ""
 
+    def setup_logging(self, verbosity):
+        try:
+            super(Main, self).setup_logging(Main.LOG_LEVEL_MAP[verbosity])
+        except Logger.LoggerHasBeenAlreadySetUp as e:
+            if not self.interactive:
+                raise from_none(e)
+
+    def _register_print_max_rss(self):
+        if not Main.registered_print_max_rss:
+            atexit.register(self.print_max_rss)
+            Main.registered_print_max_rss = True
+
     @staticmethod
     def format_decimal(val):
         if val < 1000:
@@ -559,7 +592,7 @@ class Main(Logger, CommandLineBase):
             return ret
 
         parser = Main.init_parser()
-        args = parser.parse_args()
+        args = parser.parse_args(self.argv)
         fname_config = args.config
         if fname_config == "-":
             fname_config = "%s_config%s" % os.path.splitext(args.workflow)
@@ -572,14 +605,15 @@ class Main(Logger, CommandLineBase):
         self.snapshot_file_name = args.snapshot
         self._parse_optimization(args)
 
-        Logger.setup_logging(level=Main.LOG_LEVEL_MAP[args.verbosity])
+        self.setup_logging(args.verbosity)
         self._print_logo(args)
         for name in filter(str.strip, args.debug.split(',')):
             logging.getLogger(name).setLevel(logging.DEBUG)
         self._seed_random(args.random_seed)
         if args.debug_pickle:
             setup_pickle_debug()
-        atexit.register(self.print_max_rss)
+        ThreadPool.reset()
+        self._register_print_max_rss()
 
         if self.logger.isEnabledFor(logging.DEBUG):
             self._print_config(root)
@@ -591,7 +625,10 @@ class Main(Logger, CommandLineBase):
 
         self._run_core(wm, args.background)
 
-        self.info("End of job")
+        if not self.interactive:
+            self.info("End of job")
+        else:
+            self.info("\033[1;35mReturned the control\033[0m")
         return Main.EXIT_SUCCESS
 
 

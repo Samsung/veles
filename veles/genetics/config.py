@@ -413,7 +413,7 @@ class ConfigPopulation(Population):
 
     def evolve_multi(self):
         parser = Launcher.init_parser()
-        args, _ = parser.parse_known_args()
+        args, _ = parser.parse_known_args(self.argv)
         self.is_slave = bool(args.master_address.strip())
         if self.is_slave:
             # Fork before creating the GPU device

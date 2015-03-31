@@ -31,6 +31,8 @@ class Shell(Unit, TriviallyDistributable):
         self.cfg.HistoryManager.enabled = False
 
     def initialize(self, **kwargs):
+        if self.interactive:
+            return
         self.shell_ = InteractiveShellEmbed(config=self.cfg,
                                             banner1=Shell.BANNER1,
                                             banner2=Shell.BANNER2)
@@ -51,7 +53,7 @@ class Shell(Unit, TriviallyDistributable):
                 colors[key] = val.replace('\x01', '').replace('\x02', '')
 
     def run(self):
-        if not sys.stdin.isatty():
+        if self.interactive or not sys.stdin.isatty():
             return
         key = ''
         i, _, _ = select.select([sys.stdin], [], [], 0)

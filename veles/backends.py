@@ -306,7 +306,7 @@ class Device(Pickleable):
     @staticmethod
     def parse_device(**kwargs):
         parser = Device.init_parser(**kwargs)
-        args, _ = parser.parse_known_args()
+        args, _ = parser.parse_known_args(Device.class_argv)
         return args.device
 
 
