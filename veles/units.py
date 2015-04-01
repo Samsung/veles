@@ -255,6 +255,14 @@ class Unit(Distributable, Verified):
         return self._links_to
 
     @property
+    def links_from_sorted(self):
+        return Unit._sorted_links(self.links_from)
+
+    @property
+    def links_to_sorted(self):
+        return Unit._sorted_links(self.links_to)
+
+    @property
     def gate_block(self):
         return self._gate_block
 
@@ -373,7 +381,8 @@ class Unit(Distributable, Verified):
         if value:
             self._run_calls += 1
             if root.common.trace_run:
-                self.debug("call #%d", self._run_calls)
+                self.debug("Call #%d finished @%s", self._run_calls,
+                           threading.current_thread().name)
             if root.common.spinning_run_progress:
                 spin()
         else:
@@ -416,11 +425,18 @@ class Unit(Distributable, Verified):
     def run_dependent(self):
         """Invokes run() on dependent units on different threads.
         """
-        if self.stopped:
+        if self.stopped and not isinstance(self, Container):
             return
-        for dst in self._iter_links(self.links_to):
-            if dst.gate_block:
+        links = self.links_to_sorted
+        # We must create a copy of gate_block-s because they can change
+        # while the loop is working
+        gate_blocks = [bool(dst.gate_block) for dst in links]
+        for index, dst in enumerate(links):
+            if gate_blocks[index]:
                 continue
+            if root.common.trace_run:
+                self.debug("%s -> %s (%d/%d) @%s", self, dst, index + 1,
+                           len(links), threading.current_thread().name)
             if len(self.links_to) == 1:
                 dst._check_gate_and_run(self)
             else:
@@ -606,6 +622,12 @@ class Unit(Distributable, Verified):
             else:
                 yield obj
 
+    @staticmethod
+    def _sorted_links(links):
+        links = list(Unit._iter_links(links))
+        links.sort(key=lambda u: u.name)
+        return links
+
     def _find_reference_cycle(self):
         pending = set(self.links_from)
         visited = set()
@@ -652,7 +674,10 @@ class Unit(Distributable, Verified):
     def _check_gate_and_run(self, src):
         """Check gate state and run if it is open.
         """
-        if not self.open_gate(src):  # gate has a priority over skip
+        if not self.open_gate(src):  # gate has priority over skip
+            return
+        if self.thread_pool.failure is not None:
+            # something went wrong in the thread pool
             return
         # Optionally skip the execution
         if not self.gate_skip:

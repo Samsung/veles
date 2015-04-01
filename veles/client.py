@@ -263,7 +263,8 @@ class VelesProtocol(StringLineReceiver, IDLogger):
             self.host.launcher.stop()
             return
         try:
-            if self.rand.random() < self.host.death_probability:
+            if self.host.death_probability > 0 and \
+                    self.rand.random() < self.host.death_probability:
                 raise error.Bug("This slave has randomly crashed (death "
                                 "probability was %f)" %
                                 self.host.death_probability)

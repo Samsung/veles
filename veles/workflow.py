@@ -25,7 +25,8 @@ from veles.compat import from_none
 from veles.config import root
 from veles.distributable import IDistributable
 from veles.mutable import LinkableAttribute
-from veles.units import Unit, TrivialUnit, IUnit, Container
+from veles.units import Unit, IUnit, Container
+from veles.plumbing import StartPoint, EndPoint, Repeater
 from veles.external.prettytable import PrettyTable
 from veles.external.progressbar import ProgressBar, Percentage, Bar
 import veles.external.pydot as pydot
@@ -34,67 +35,6 @@ from veles.timeit import timeit
 
 if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
     FileExistsError = OSError  # pylint: disable=W0622
-
-
-class Repeater(TrivialUnit):
-    """Completes a typical control flow cycle, usually joining the first unit
-    with the last one.
-    """
-
-    def __init__(self, workflow, **kwargs):
-        kwargs["view_group"] = kwargs.get("view_group", "PLUMBING")
-        kwargs["ignore_gate"] = True
-        super(Repeater, self).__init__(workflow, **kwargs)
-
-    def link_from(self, *args):
-        super(Repeater, self).link_from(*args)
-        if len(self.links_to) > 2:
-            self.warning(
-                "Repeater has more than 2 incoming links: %s. Are you sure?",
-                tuple(self.links_to))
-
-
-class UttermostPoint(TrivialUnit):
-    hide_from_registry = True
-
-    def __init__(self, workflow, **kwargs):
-        kwargs["view_group"] = kwargs.get("view_group", "SERVICE")
-        super(UttermostPoint, self).__init__(workflow, **kwargs)
-
-
-class StartPoint(UttermostPoint):
-    """Workflow execution normally starts from this unit.
-    """
-    hide_from_registry = True
-
-    def __init__(self, workflow, **kwargs):
-        kwargs["name"] = kwargs.get("name", "Start")
-        super(StartPoint, self).__init__(workflow, **kwargs)
-
-
-class EndPoint(UttermostPoint):
-    """Ends the pipeline execution, normally is the last unit in a workflow.
-    """
-    hide_from_registry = True
-
-    def __init__(self, workflow, **kwargs):
-        kwargs["name"] = kwargs.get("name", "End")
-        super(EndPoint, self).__init__(workflow, **kwargs)
-
-    def init_unpickled(self):
-        super(EndPoint, self).init_unpickled()
-        # on_workflow_finished() applies to Workflow's run time
-        del Unit.timers[self.id]
-
-    def run(self):
-        self.workflow.on_workflow_finished()
-
-    def generate_data_for_master(self):
-        return True
-
-    def apply_data_from_slave(self, data, slave):
-        if not self.gate_block:
-            self.workflow.on_workflow_finished()
 
 
 class MultiMap(OrderedDict, defaultdict):
@@ -265,8 +205,12 @@ class Workflow(Container):
     @Unit.stopped.setter
     def stopped(self, value):
         for unit in self:
-            unit.stopped = value
+            if value:
+                unit.stop()
+            else:
+                unit.stopped = value
         Unit.stopped.fset(self, value)
+        self.debug("stopped -> %s", self.stopped)
 
     @property
     def plotters_are_enabled(self):
@@ -358,6 +302,9 @@ class Workflow(Container):
         if run_is_blocking, otherwise it returns immediately and the
         parent's on_workflow_finished() method will be called.
         """
+        for unit in self:
+            assert not unit.stopped, "%s is stopped inside %s" % (unit, self)
+        self.debug("Started")
         self._run_time_started_ = time.time()
         self.is_running = True
         if not self.is_master:
@@ -376,19 +323,19 @@ class Workflow(Container):
         """
         self.on_workflow_finished(True)
 
-    def on_workflow_finished(self, force_propagate=False):
+    def on_workflow_finished(self, propagate=False):
         if not self.is_running:
             # Break an infinite loop if Workflow belongs to Workflow
             return
-        for unit in self:
-            unit.stop()
+        self.debug("Finished")
+        self.stopped = True
         run_time = time.time() - self._run_time_started_
         self._run_time_ += run_time
         self._method_time_["run"] += run_time
         self.is_running = False
         if not self.is_master:
             self.event("run", "end")
-        if (self.is_standalone or force_propagate) and self.is_main:
+        if (self.is_standalone or propagate) and self.is_main:
             self.workflow.on_workflow_finished()
         elif self.is_slave:
             self._do_job_callback_(self.generate_data_for_master())
@@ -560,6 +507,7 @@ class Workflow(Container):
         if update is not None:
             self.apply_data_from_slave(update, None)
         self._do_job_callback_ = callback
+        self.stopped = False
         try:
             self.run()
         except:

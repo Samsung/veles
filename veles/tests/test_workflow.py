@@ -42,8 +42,8 @@ class Test(unittest.TestCase):
         self.assertEqual(7, len(wf))
         units = list(wf)
         self.assertEqual(7, len(units))
-        self.assertEqual("Start", units[0].name)
-        self.assertEqual("End", units[1].name)
+        self.assertEqual("Start of Workflow", units[0].name)
+        self.assertEqual("End of Workflow", units[1].name)
         self.assertEqual("unit1", units[2].name)
         self.assertEqual("unit1", units[3].name)
         self.assertEqual("unit1", units[4].name)
@@ -75,9 +75,9 @@ class Test(unittest.TestCase):
             raises = True
         self.assertTrue(raises)
         unit = wf[0]
-        self.assertEqual("Start", unit.name)
+        self.assertEqual("Start of Workflow", unit.name)
         unit = wf[1]
-        self.assertEqual("End", unit.name)
+        self.assertEqual("End of Workflow", unit.name)
         unit = wf[2]
         self.assertEqual(0, unit.tag)
         self.assertEqual("unit1", unit.name)
@@ -104,8 +104,8 @@ class Test(unittest.TestCase):
         units = wf.units
         self.assertTrue(isinstance(units, list))
         self.assertEqual(7, len(units))
-        self.assertEqual("Start", units[0].name)
-        self.assertEqual("End", units[1].name)
+        self.assertEqual("Start of Workflow", units[0].name)
+        self.assertEqual("End of Workflow", units[1].name)
         self.assertEqual("unit1", units[2].name)
         self.assertEqual("unit1", units[3].name)
         self.assertEqual("unit1", units[4].name)
@@ -115,13 +115,13 @@ class Test(unittest.TestCase):
         self.assertTrue(hasattr(units, "__iter__"))
         units = list(units)
         self.assertEqual(7, len(units))
-        self.assertEqual("Start", units[0].name)
+        self.assertEqual("Start of Workflow", units[0].name)
         self.assertEqual("unit1", units[1].name)
         self.assertEqual("unit1", units[2].name)
         self.assertEqual("unit1", units[3].name)
         self.assertEqual("unit2", units[4].name)
         self.assertEqual("aaa", units[5].name)
-        self.assertEqual("End", units[6].name)
+        self.assertEqual("End of Workflow", units[6].name)
 
     def testGraph(self):
         wf = Workflow(DummyLauncher())
@@ -143,9 +143,9 @@ class Test(unittest.TestCase):
                  'outputorder=edgesfirst;\n'
                  'overlap=false;\n'
                  '"%s" [fillcolor=lightgrey, gradientangle=90, '
-                 'label=<<b><font point-size="18">Start</font></b><br/>'
-                 '<font point-size="14">'
-                 'veles/workflow.py</font>>, shape=rect, '
+                 'label=<<b><font point-size="18">Start of Workflow</font>'
+                 '</b><br/><font point-size="14">'
+                 'veles/plumbing.py</font>>, shape=rect, '
                  'style="rounded,filled"];\n'
                  '"%s" -> "%s"  [penwidth=3, weight=100];\n'
                  '"%s" [fillcolor=white, gradientangle=90, '
@@ -174,8 +174,8 @@ class Test(unittest.TestCase):
                  '</font>>, shape=rect, style="rounded,filled"];\n'
                  '"%s" -> "%s"  [penwidth=3, weight=100];\n'
                  '"%s" [fillcolor=lightgrey, gradientangle=90, '
-                 'label=<<b><font point-size="18">End</font></b><br/>'
-                 '<font point-size="14">veles/workflow.py'
+                 'label=<<b><font point-size="18">End of Workflow</font>'
+                 '</b><br/><font point-size="14">veles/plumbing.py'
                  '</font>>, shape=rect, style="rounded,filled"];\n'
                  '}') % tuple(ids)
         self.maxDiff = None
