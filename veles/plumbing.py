@@ -88,6 +88,11 @@ class EndPoint(UttermostPoint):
 
 @implementer(IDistributable, IUnit)
 class FireStarter(Unit, TriviallyDistributable):
+    """
+    Resets :py:attr:`veles.units.Unit.stopped` of the associated units
+    exposed as :py:attr:`veles.plumbing.FireStarter.units`.
+    """
+
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = kwargs.get("view_group", "SERVICE")
         super(FireStarter, self).__init__(workflow, **kwargs)
