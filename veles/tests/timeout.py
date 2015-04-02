@@ -29,6 +29,7 @@ def wait():
         if not event.wait(seconds):
             print_("Timeout %.1f sec - sending SIGINT and praying for all "
                    "threads to join." % seconds, file=sys.stderr)
+            ThreadPool.interrupted = True
             os.kill(os.getpid(), signal.SIGINT)
             # SIGTERM is useless in most real world scenarious with nosetests
 
@@ -85,7 +86,7 @@ def timeout(value=60):
             event = threading.Event()
             global thread_args
             thread_args = (event, value)
-            thread.name = 'timeout@%s' % name
+            thread.name = 'test_timeout@%s' % name
             new_event.set()
             try:
                 res = fn(self, *args, **kwargs)

@@ -97,6 +97,9 @@ class NetworkAgent(Logger):
     def launcher(self):
         return self._launcher
 
+    def initialize(self):
+        self.workflow.thread_pool.start()
+
 
 class StringLineReceiver(LineReceiver, object):
     def sendLine(self, line):

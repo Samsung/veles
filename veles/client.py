@@ -409,6 +409,7 @@ class Client(NetworkAgent, ReconnectingClientFactory):
         return self._death_probability
 
     def initialize(self):
+        super(Client, self).initialize()
         self._initial_data = self.workflow.generate_initial_data_for_master()
 
     def print_stats(self):

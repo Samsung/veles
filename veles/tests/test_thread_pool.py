@@ -74,7 +74,7 @@ class TestThreadPool(unittest.TestCase):
         n_jobs = [n]
         for _ in range(n):
             pool.callInThread(self._job, n_jobs, data_lock)
-        pool.shutdown(execute_remaining=True)
+        pool.shutdown(execute_remaining=True, timeout=None)
         self.assertEqual(n_jobs[0], 0, "ThreadPool::shutdown(execute_remaining"
                          "=True) is not working as expected.")
         self.assert_exit()

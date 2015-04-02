@@ -767,7 +767,7 @@ class AcceleratedWorkflow(Workflow):
             with self:
                 bench = DeviceBenchmark(self)
                 bench.initialize(self.device)
-                self._power_ = bench.estimate()
+                self._power_ = bench.run()
             self.info("Computing power is %.2f", self._power_)
         return self._power_
 

@@ -483,14 +483,15 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         sys.stdout.flush()
 
     KNOWN_RUNNING_THREADS = {"IPythonHistorySavingThread", "TwistedReactor",
-                             "MainThread"}
+                             "MainThread", "twisted.internet.reactor",
+                             "test_timeout"}
 
     @staticmethod
     def debug_deadlocks():
         if threading.active_count() > 1:
             for thread in threading.enumerate():
-                if (thread.name.startswith('timeout') or
-                        thread.name in ThreadPool.KNOWN_RUNNING_THREADS):
+                if any(name in thread.name
+                       for name in ThreadPool.KNOWN_RUNNING_THREADS):
                     # veles.tests.timeout registers atexit
                     continue
                 break

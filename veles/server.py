@@ -665,9 +665,6 @@ class Server(NetworkAgent, ServerFactory):
         except KeyError:
             self.warning("Slave %s was not paused, so not resumed", slave_id)
 
-    def initialize(self):
-        pass
-
     def print_stats(self):
         pass
 
