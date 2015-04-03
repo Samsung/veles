@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 .. container:: flexbox
 
    .. image:: _static/veles_big.png
@@ -8,7 +8,7 @@
    .. container::
 
       %s
-'''
+"""
 
 
 from email.utils import parsedate_tz, mktime_tz, formatdate

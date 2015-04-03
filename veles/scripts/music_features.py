@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-'''
+"""
 This script extracts music features from audio files.
 
 This script scans the given directories for files with the specified name
@@ -15,7 +15,7 @@ It uses libSoundFeatureExtraction as the calculation backend.
 
 @contact:    v.markovtsev@samsung.com
 @deffield    updated: 23.05.2013
-'''
+"""
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -41,7 +41,7 @@ __updated__ = '2015-03-30'
 
 
 class CLIError(Exception):
-    '''Generic exception to raise and log different fatal errors.'''
+    """Generic exception to raise and log different fatal errors."""
     def __init__(self, msg):
         super(CLIError).__init__(type(self))
         self.msg = "E: %s" % msg
@@ -75,7 +75,7 @@ def filter_files(files, root, prefix, inpat, expat):
 
 
 def main(argv=None):  # IGNORE:C0111
-    '''Command line options.'''
+    """Command line options."""
 
     if argv is None:
         argv = sys.argv
@@ -88,14 +88,14 @@ def main(argv=None):  # IGNORE:C0111
     program_version_message = \
         '%%(prog)s %s (%s)' % (program_version, program_build_date)
     program_shortdesc = __import__('__main__').__doc__.split("\n")[1]
-    program_license = '''%s
+    program_license = """%s
 
   Copyright 2013 Samsung R&D Institute Russia. All rights reserved.
 
-  Licensed under Samsung Proprietary License
+  Licensed under Apache 2.0
 
 USAGE
-''' % program_shortdesc
+""" % program_shortdesc
 
     try:
         # Setup argument parser

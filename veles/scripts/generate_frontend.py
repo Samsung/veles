@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-'''
+"""
 This scripts generates the HTML page with all velescli's command line
 arguments, allowing for fast command line composition
-
-'''
+"""
 
 
 import argparse

@@ -1,8 +1,8 @@
-'''
+"""
 Created on Mar 21, 2013
 
 Copyright (c) 2013 Samsung Electronics Co., Ltd.
-'''
+"""
 
 
 from ctypes import cdll, POINTER, c_char_p, c_short, c_int, c_int64, Structure
@@ -61,9 +61,9 @@ class SNDFILE(Structure):
 
 
 class libsndfile(Logger):
-    '''
+    """
     Loads the libsndfile.so shared library and wraps the handle.
-    '''
+    """
 
     def __init__(self, path=None):
         if self._handle is not None:
