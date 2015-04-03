@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
   _   _ _____ _     _____ _____
  | | | |  ___| |   |  ___/  ___|
@@ -377,7 +378,11 @@ Successfully deleted First
 
     @sync
     def test_upload_good(self):
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         this = self
+        print(root.common.forge.manifest)
+        print(os.path.join(__root__, "veles/tests/forge/First/%s" %
+                           root.common.forge.manifest))
         manifest_size = os.path.getsize(
             os.path.join(__root__, "veles/tests/forge/First/%s" %
                          root.common.forge.manifest)) + 1

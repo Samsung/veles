@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 from setuptools import setup, find_packages
 from veles import __root__, __project__, __version__, __license__,\
