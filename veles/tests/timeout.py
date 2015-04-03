@@ -33,7 +33,7 @@ def wait():
             os.kill(os.getpid(), signal.SIGINT)
             # SIGTERM is useless in most real world scenarious with nosetests
 
-thread = threading.Thread(target=wait, name='timeout')
+thread = threading.Thread(target=wait, name='test_timeout')
 sysexit = sys.exit
 
 
