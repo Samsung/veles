@@ -1,7 +1,33 @@
 """
+  _   _ _____ _     _____ _____
+ | | | |  ___| |   |  ___/  ___|
+ | | | | |__ | |   | |__ \ `--.
+ | | | |  __|| |   |  __| `--. \
+ \ \_/ / |___| |___| |___/\__/ /
+  \___/\____/\_____|____/\____/
+
 Created on Nov 10, 2014
 
-Copyright (c) 2014 Samsung Electronics Co., Ltd.
+███████████████████████████████████████████████████████████████████████████████
+
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+
+███████████████████████████████████████████████████████████████████████████████
 """
 
 
@@ -19,7 +45,7 @@ import tempfile
 import threading
 from twisted.internet import reactor
 from twisted.internet.error import CannotListenError
-from twisted.web.server import Site
+from twisted.web.server import Site, Request
 from twisted.web.resource import Resource
 import unittest
 
@@ -66,10 +92,20 @@ class TestForgeClient(unittest.TestCase):
         cls.thread.join()
 
     def setUp(self):
+        self.original_processing_failed = Request.processingFailed
+
+        def processingFailed(request_self, failure):
+            self.sync.success = False
+            self.sync.set()
+            self.original_processing_failed(request_self, failure)
+
+        Request.processingFailed = processingFailed
+
         self.sync = threading.Event()
         self.sync.success = None
 
     def tearDown(self):
+        Request.processingFailed = self.original_processing_failed
         TestForgeClient.router.page_class = None
         TestForgeClient.router.callback = lambda name, request: None
 
