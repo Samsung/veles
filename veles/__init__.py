@@ -42,7 +42,7 @@ under the License.
 
 
 from email.utils import parsedate_tz, mktime_tz, formatdate
-from sys import version_info, modules
+from sys import version_info, modules, stdin
 from types import ModuleType
 from warnings import warn
 from veles.paths import __root__
@@ -124,13 +124,31 @@ class VelesModule(ModuleType):
         self.__modules_cache_ = None
 
     def __call__(self, workflow, config=None, **kwargs):
+        """
+        Launcher the specified workflow and returns the corresponding
+        :class:`veles.launcher.Launcher` instance.
+        If there exists a standard input, returns immediately after the
+        workflow is initialized; otherwise, blocks until it finishes.
+        If this command runs under IPython, it's local variables are passed
+        into the workflow's :meth:`__init__()`.
+
+        Arguments:
+            workflow: path to the Python file with workflow definition.
+            config: path to the workflow configuration. If None, *_config.py
+                    is taken.
+            kwargs: arguments to be passed as if "veles" is executed from the
+                    command line. They match the command line arguments except
+                    that "-" must be substituted with "_". For example,
+                    "backend" -> "--backend", random_seed -> "--random-seed".
+                    See "veles --help" for the complete list.
+        """
         # FIXME(v.markovtsev): disable R0401 locally when pylint issue is fixed
         # https://bitbucket.org/logilab/pylint/issue/61
         # from veles.__main__ import Main  # pylint: disable=R0401
         Main = __import__("veles.__main__").__main__.Main
         if config is None:
             config = "-"
-        main = Main(True, workflow, config, **kwargs)
+        main = Main(stdin.isatty(), workflow, config, **kwargs)
         main.run()
         return main.launcher
 

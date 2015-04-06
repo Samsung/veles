@@ -439,9 +439,9 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         ThreadPool.quit_initial(*args, **kwargs)
 
     @staticmethod
-    def _ipython_ask_exit(self):
+    def _ipython_ask_exit(*args, **kwargs):
         ThreadPool._exit()
-        ThreadPool._ipython_ask_exit_initial(self)
+        ThreadPool._ipython_ask_exit_initial(*args, **kwargs)
 
     @staticmethod
     def _warn_about_sigint_hysteria(log):
@@ -536,15 +536,12 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         if not sys.__stdin__.closed and sys.__stdin__.isatty():
             try:
                 __IPYTHON__  # pylint: disable=E0602
-                from IPython.core.autocall import ExitAutocall
-                from IPython.terminal.interactiveshell import \
-                    TerminalInteractiveShell
-                ThreadPool.exit_initial = ExitAutocall.__call__
-                ExitAutocall.__call__ = ThreadPool.builtin_exit
-                ThreadPool._ipython_ask_exit_initial = \
-                    TerminalInteractiveShell.ask_exit
-                TerminalInteractiveShell.ask_exit = \
-                    ThreadPool._ipython_ask_exit
+                from IPython.terminal.interactiveshell import InteractiveShell
+                shell = InteractiveShell.instance()
+                ThreadPool.exit_initial = shell.exiter.__call__
+                shell.exiter.__call__ = ThreadPool.builtin_exit
+                ThreadPool._ipython_ask_exit_initial = shell.ask_exit
+                shell.ask_exit = ThreadPool._ipython_ask_exit
             except NameError:
                 try:
                     import builtins
@@ -560,12 +557,10 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         if not sys.__stdin__.closed and sys.__stdin__.isatty():
             try:
                 __IPYTHON__  # pylint: disable=E0602
-                from IPython.core.autocall import ExitAutocall
-                from IPython.terminal.interactiveshell import \
-                    TerminalInteractiveShell
-                ExitAutocall.__call__ = ThreadPool.exit_initial
-                TerminalInteractiveShell.ask_exit = \
-                    ThreadPool._ipython_ask_exit_initial
+                from IPython.terminal.interactiveshell import InteractiveShell
+                shell = InteractiveShell.instance()
+                shell.exiter.__call__ = ThreadPool.exit_initial
+                shell.ask_exit = ThreadPool._ipython_ask_exit_initial
             except NameError:
                 try:
                     import builtins

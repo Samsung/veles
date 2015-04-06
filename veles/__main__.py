@@ -282,6 +282,22 @@ class Main(Logger, CommandLineBase):
         # Daemonization happens in open()
         daemon_context.open()
 
+    @staticmethod
+    def _get_interactive_locals():
+        """
+        If we are running under IPython, extracts the local variables;
+        otherwise, returns an empty dict.
+        """
+        try:
+            __IPYTHON__  # pylint: disable=E0602
+            from IPython.core.interactiveshell import InteractiveShell
+            return {k: v for k, v in
+                    InteractiveShell.instance().user_ns.items()
+                    if k[0] != '_' and k not in (
+                        "Out", "In", "exit", "quit", "get_ipython")}
+        except NameError:
+            return {}
+
     def _load_model(self, fname_workflow):
         self.debug("Loading the model \"%s\"...", fname_workflow)
         self.load_called = False
@@ -410,7 +426,9 @@ class Main(Logger, CommandLineBase):
             self.workflow = self._load_workflow(self.snapshot_file_name)
             self.snapshot = self.workflow is not None
             if not self.snapshot:
-                self.workflow = Workflow(self.launcher, **kwargs)
+                wfkw = self._get_interactive_locals()
+                wfkw.update(kwargs)
+                self.workflow = Workflow(self.launcher, **wfkw)
                 self.info("Created %s", self.workflow)
             else:
                 self.info("Loaded the workflow snapshot from %s: %s",
