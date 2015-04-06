@@ -164,7 +164,7 @@ class UnitRegistry(type):
         return obj
 
 
-class MappedUnitRegistry(UnitRegistry):
+class MappedObjectsRegistry(type):
     mapping = "You must define \"mapping\" static attribute in your metaclass"
     base = Distributable
 
@@ -176,4 +176,8 @@ class MappedUnitRegistry(UnitRegistry):
         if len(left) > 1 and "MAPPING" in clsdict:
             mapping[clsdict["MAPPING"]] = cls
         setattr(type(cls), cls.mapping, mapping)
-        super(MappedUnitRegistry, cls).__init__(name, bases, clsdict)
+        super(MappedObjectsRegistry, cls).__init__(name, bases, clsdict)
+
+
+class MappedUnitRegistry(UnitRegistry, MappedObjectsRegistry):
+    pass

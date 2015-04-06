@@ -51,6 +51,7 @@ class IFileLoader(Interface):
 
 
 class FileFilter(Unit):
+    hide_from_registry = True
     """
     Base class for loading something from files. Function is_valid_fiename()
     should be used in child classes as filter for loading data.
@@ -148,6 +149,8 @@ class FileFilter(Unit):
 
 @implementer(IFileLoader)
 class FileListLoaderBase(Unit):
+    hide_from_registry = True
+
     def __init__(self, workflow, **kwargs):
         super(FileListLoaderBase, self).__init__(workflow, **kwargs)
         self.path_to_test_text_file = kwargs.get("path_to_test_text_file", "")
@@ -187,6 +190,7 @@ class FileListLoaderBase(Unit):
 
 
 class FileLoaderBase(FileFilter):
+    hide_from_registry = True
     """Provides methods to load data from multiple folders.
 
     Attributes:
@@ -256,6 +260,7 @@ class FileLoaderBase(FileFilter):
 
 @implementer(IFileLoader)
 class AutoLabelFileLoader(FileLoaderBase):
+    hide_from_registry = True
     """
     FileLoader extension which takes labels by regular expression from
     file names. Unique selection groups are tracked and enumerated.

@@ -666,7 +666,7 @@ class Loader(Unit):
     def analyze_dataset(self):
         if isinstance(self.normalizer, normalization.StatelessNormalizer):
             self.info('Skipped normalization analysis (type was set to "%s")',
-                      type(self.normalizer).NAME)
+                      type(self.normalizer).MAPPING)
             # Call to analyze() is still needed
             self.normalizer.analyze(self.minibatch_data.mem)
             if len(self.labels_mapping) == 0:
@@ -675,7 +675,7 @@ class Loader(Unit):
             self._unique_labels_count = len(self.labels_mapping)
             return
         self.info("Performing \"%s\" normalization analysis...",
-                  type(self.normalizer).NAME)
+                  type(self.normalizer).MAPPING)
         train_different_labels = defaultdict(int)
 
         def callback():

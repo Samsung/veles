@@ -42,6 +42,7 @@ from zope.interface import implementer, Interface
 from veles.compat import from_none
 from veles.numpy_ext import reshape, transpose
 from veles.verified import Verified
+from veles.unit_registry import MappedObjectsRegistry
 
 
 class UninitializedStateError(Exception):
@@ -92,7 +93,7 @@ class INormalizer(Interface):
         """
 
 
-class NormalizerRegistry(type):
+class NormalizerRegistry(MappedObjectsRegistry):
     """Metaclass to record Unit descendants. Used for introspection and
     analytical purposes.
     Classes derived from Unit may contain 'hide' attribute which specifies
@@ -102,15 +103,8 @@ class NormalizerRegistry(type):
     registration of the whole inheritance tree, so that all the children are
     automatically hidden.
     """
-    normalizers = {}
-
-    def __init__(cls, name, bases, clsdict):
-        yours = set(cls.mro())
-        mine = set(object.mro())
-        left = yours - mine
-        if len(left) > 1 and "NAME" in clsdict:
-            NormalizerRegistry.normalizers[clsdict["NAME"]] = cls
-        super(NormalizerRegistry, cls).__init__(name, bases, clsdict)
+    mapping = "normalizers"
+    base = object
 
 
 @add_metaclass(NormalizerRegistry)
@@ -227,7 +221,7 @@ class MeanDispersionNormalizer(NormalizerBase):
     defined in statistics.
     """
 
-    NAME = "mean_disp"
+    MAPPING = "mean_disp"
 
     def _initialize(self, data):
         # We force float64 to fix possible float32 saturation
@@ -260,7 +254,7 @@ class LinearNormalizer(StatelessNormalizer):
     aggregates min and max through analyze() beforehand.
     """
 
-    NAME = "linear"
+    MAPPING = "linear"
 
     def __init__(self, state=None, **kwargs):
         super(LinearNormalizer, self).__init__(state, **kwargs)
@@ -313,7 +307,7 @@ class ExponentNormalizer(StatelessNormalizer):
     exponent values gets distributed in (0, 1] and has the sum equal to 1.
     """
 
-    NAME = "exp"
+    MAPPING = "exp"
 
     def normalize(self, data):
         data = NormalizerBase.prepare(data)
@@ -328,7 +322,7 @@ class NoneNormalizer(StatelessNormalizer):
     The most important normalizer which does simply nothing.
     """
 
-    NAME = "none"
+    MAPPING = "none"
 
     def normalize(self, data):
         pass
@@ -342,7 +336,7 @@ class PointwiseNormalizer(NormalizerBase):
     arrays within [-1, 1] from the found [min, max].
     """
 
-    NAME = "pointwise"
+    MAPPING = "pointwise"
 
     def _initialize(self, data):
         self._min = data[0].copy()
@@ -402,7 +396,7 @@ class ExternalMeanNormalizer(MeanNormalizerBase, StatelessNormalizer):
     multiplies the result by scale.
     """
 
-    NAME = "external_mean"
+    MAPPING = "external_mean"
 
     def __init__(self, state=None, **kwargs):
         super(ExternalMeanNormalizer, self).__init__(state, **kwargs)
@@ -440,7 +434,7 @@ class InternalMeanNormalizer(MeanNormalizerBase, NormalizerBase):
     Optionally, it then multiplies the result by scale.
     """
 
-    NAME = "internal_mean"
+    MAPPING = "internal_mean"
 
     def analyze(self, data):
         self._count += data.shape[0]
