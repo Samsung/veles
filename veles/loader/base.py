@@ -255,9 +255,8 @@ class Loader(Unit):
 
     @_unique_labels_count.setter
     def _unique_labels_count(self, value):
-        if not self.has_labels:
-            return
-        self.info("There are %d unique labels", value)
+        if self.has_labels:
+            self.info("There are %d unique labels", value)
         self.__unique_labels_count = value
 
     @property
@@ -505,7 +504,7 @@ class Loader(Unit):
     def initialize(self, **kwargs):
         """Loads the data, initializes indices, shuffles the training set.
         """
-        self.normalizer.reset()
+        self.reset_normalization()
         try:
             super(Loader, self).initialize(**kwargs)
         except AttributeError:
@@ -615,6 +614,9 @@ class Loader(Unit):
                       len(self.failed_minibatches),
                       self.pending_minibatches_count)
 
+    def reset_normalization(self):
+        self.normalizer.reset()
+
     def on_before_create_minibatch_data(self):
         self.minibatch_data.reset()
         self.minibatch_labels.reset()
@@ -670,7 +672,7 @@ class Loader(Unit):
                       type(self.normalizer).MAPPING)
             # Call to analyze() is still needed
             self.normalizer.analyze(self.minibatch_data.mem)
-            if len(self.labels_mapping) == 0:
+            if self.has_labels and len(self.labels_mapping) == 0:
                 raise ValueError("Normalization analysis was skipped but you "
                                  "did not setup labels_mapping in load_data()")
             self._unique_labels_count = len(self.labels_mapping)
@@ -753,10 +755,8 @@ class Loader(Unit):
                 "class_length must contain integers only"
             total_samples += n
             self.class_end_offsets[i] = total_samples
-        if self.class_lengths[TRAIN] < 1:
-            raise ValueError(
-                "class_length for TRAIN dataset is invalid: %d" %
-                self.class_lengths[TRAIN])
+        if total_samples == 0:
+            raise ValueError("There is no data to serve")
 
     def _update_flags(self):
         """Resets epoch_ended and last_minibatch.

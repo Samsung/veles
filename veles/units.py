@@ -410,7 +410,7 @@ class Unit(Distributable, Verified):
             if root.common.trace_run:
                 self.debug("Call #%d finished @%s", self._run_calls,
                            threading.current_thread().name)
-            if root.common.spinning_run_progress:
+            if not self.interactive and root.common.spinning_run_progress:
                 spin()
         else:
             raise ValueError("You can not reset run_was_called flag.")

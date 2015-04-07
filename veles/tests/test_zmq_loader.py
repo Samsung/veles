@@ -38,6 +38,8 @@ import unittest
 from twisted.internet import reactor
 import zmq
 
+import veles.dummy as dummy
+from veles.logger import Logger, logging
 from veles.txzmq import ZmqConnection
 from veles.workflow import Workflow
 from veles.zmq_loader import ZeroMQLoader
@@ -54,8 +56,9 @@ class ZmqDealer(ZmqConnection):
         self.send(cid, data)
 
 
-class DummyLauncher(object):
+class DummyLauncher(dummy.DummyLauncher):
     def __init__(self, mode):
+        super(DummyLauncher, self).__init__()
         self._mode = mode
 
     @property
@@ -69,12 +72,6 @@ class DummyLauncher(object):
     @property
     def is_standalone(self):
         return self._mode == 2
-
-    def add_ref(self, workflow):
-        pass
-
-    def on_workflow_finished(self):
-        pass
 
 
 class Test(unittest.TestCase):
@@ -113,4 +110,5 @@ class Test(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    Logger.setup_logging(logging.DEBUG)
     unittest.main()

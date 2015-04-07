@@ -39,6 +39,7 @@ import datetime
 import hashlib
 import inspect
 from itertools import chain
+import logging
 import os
 import six
 import sys
@@ -133,7 +134,7 @@ class Workflow(Container):
     def __del__(self):
         super(Workflow, self).__del__()
         if Unit._pool_ is not None:
-            self.thread_pool.unregister_on_shutdown(self._stop_)
+            self.thread_pool.unregister_on_shutdown(self._stop_, False)
 
     def __getstate__(self):
         state = super(Workflow, self).__getstate__()
@@ -353,7 +354,8 @@ class Workflow(Container):
         if not self.is_running:
             # Break an infinite loop if Workflow belongs to Workflow
             return
-        self.debug("Finished")
+        self.log(logging.INFO if self.interactive else logging.DEBUG,
+                 "Finished")
         self.stopped = True
         run_time = time.time() - self._run_time_started_
         self._run_time_ += run_time

@@ -374,6 +374,20 @@ class Launcher(logger.Logger):
         workflow.run_is_blocking = False
         if self.is_slave or self.matplotlib_backend == "":
             workflow.plotters_are_enabled = False
+
+    def del_ref(self, workflow):
+        pass
+
+    def on_workflow_finished(self):
+        reactor.callFromThread(self.stop)
+
+    def device_thread_pool_detach(self):
+        if self.device is not None and self.device.attached(
+                self.workflow.thread_pool):
+            self.device.thread_pool_detach(self.workflow.thread_pool)
+
+    @threadsafe
+    def initialize(self, snapshot=False, **kwargs):
         # Ensure reactor stops in some rare cases when it does not normally
         if not self.interactive:
             self.workflow.thread_pool.register_on_shutdown(
@@ -382,7 +396,8 @@ class Launcher(logger.Logger):
             self._interactive_shutdown_ref = self._interactive_shutdown
             ThreadPool.register_atexit(self._interactive_shutdown_ref)
         if self.is_slave:
-            self._agent = client.Client(self.args.master_address, workflow)
+            self._agent = client.Client(
+                self.args.master_address, self.workflow)
 
             def on_id_received(node_id, log_id):
                 self.id = node_id
@@ -400,12 +415,12 @@ class Launcher(logger.Logger):
                     connectTimeout=timeout)
                 # Launch the status server if it's not been running yet
                 self._launch_status()
-            if workflow.plotters_are_enabled and \
+            if self.workflow.plotters_are_enabled and \
                     (not self.interactive or Launcher.graphics_client is None):
                 try:
                     Launcher.graphics_server, Launcher.graphics_client = \
                         graphics_server.GraphicsServer.launch(
-                            workflow.thread_pool,
+                            self.workflow.thread_pool,
                             self.matplotlib_backend,
                             self._set_webagg_port,
                             self.args.no_graphics_client)
@@ -420,29 +435,20 @@ class Launcher(logger.Logger):
             if self.is_master:
                 try:
                     self._agent = server.Server(self.args.listen_address,
-                                                workflow)
+                                                self.workflow)
                     # Launch the nodes described in the command line or config
                     self._launch_nodes()
                 except:
                     self._stop_graphics()
                     raise
 
-    def del_ref(self, workflow):
-        pass
-
-    def on_workflow_finished(self):
-        reactor.callFromThread(self.stop)
-
-    def device_thread_pool_detach(self):
-        if self.device is not None and self.device.attached(
-                self.workflow.thread_pool):
-            self.device.thread_pool_detach(self.workflow.thread_pool)
-
-    @threadsafe
-    def initialize(self, **kwargs):
         if not self.is_slave and self.reports_web_status:
-            self.workflow_graph, _ = self.workflow.generate_graph(
-                filename=None, write_on_disk=False, with_data_links=True)
+            try:
+                self.workflow_graph, _ = self.workflow.generate_graph(
+                    filename=None, write_on_disk=False, with_data_links=True)
+            except RuntimeError as e:
+                self.warning("Failed to generate the workflow graph: %s", e)
+                self.workflow_graph = ""
 
         try:
             self._device = Device() if not self.is_master else None
@@ -452,7 +458,8 @@ class Launcher(logger.Logger):
 
         self.workflow.reset_thread_pool()
         try:
-            self.workflow.initialize(device=self.device, **kwargs)
+            self.workflow.initialize(device=self.device, snapshot=snapshot,
+                                     **kwargs)
         except Exception as e:
             self.error("Failed to initialize the workflow")
             self.device_thread_pool_detach()
@@ -482,7 +489,8 @@ class Launcher(logger.Logger):
         self._initialized = True
 
     def run(self):
-        """starts Twisted reactor, Workflow.run() and periodic status updates.
+        """Starts Twisted reactor, invokes attached workflow's run() and does
+        periodic status updates.
         """
         self._pre_run()
         reactor.callLater(0, self.info, "Reactor is running")
@@ -504,6 +512,14 @@ class Launcher(logger.Logger):
         finally:
             with self._lock:
                 self._running = False
+
+    def boot(self, **kwargs):
+        """
+        Initializes and runs the attached workflow.
+        :param kwargs: The keyword arguments to pass to initialize().
+        """
+        self.initialize(**kwargs)
+        self.run()
 
     def stop(self):
         """Stops Twisted reactor and Workflow execution.
@@ -541,6 +557,8 @@ class Launcher(logger.Logger):
     def _pre_run(self):
         if not self._initialized:
             raise RuntimeError("Launcher was not initialized")
+        if self._running:
+            raise RuntimeError("Launcher is already running")
         self._running = True
         self._start_time = time.time()
         if self.reports_web_status:
@@ -550,10 +568,13 @@ class Launcher(logger.Logger):
             self.workflow.thread_pool.start()
             self.workflow.thread_pool.callInThread(self.workflow.run)
 
-    @threadsafe
     def _on_stop(self):
         if self.workflow is None or not self._initialized:
             return
+        self._on_stop_locked()
+
+    @threadsafe
+    def _on_stop_locked(self):
         self.info("Stopping everything (%s mode)", self.mode)
         self._initialized = False
         self._running = False
@@ -587,6 +608,7 @@ class Launcher(logger.Logger):
 
     def _interactive_shutdown(self):
         assert self.interactive
+        self.debug("Shutting down in interactive mode")
         Launcher._prepare_reactor_shutdown()
         reactor.callFromThread(reactor.stop)
         self._stop_graphics(True)

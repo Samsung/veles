@@ -46,12 +46,14 @@ try:
     from veles.loader.fullbatch_image import FullBatchFileImageLoader, \
         FullBatchFileImageLoaderMSE, FullBatchAutoLabelFileImageLoader
     from veles.loader.pickles import PicklesImageFullBatchLoader
+    from veles.loader.interactive import InteractiveLoader, \
+        InteractiveImageLoader
 except ImportError as e:
     import warnings
     warnings.warn("Image loaders will be unavailable: %s" % e)
     IImageLoader = ImageLoader = AutoLabelFileImageLoader = FileImageLoader = \
         FullBatchFileImageLoader = FullBatchFileImageLoaderMSE = \
         FullBatchAutoLabelFileImageLoader = PicklesImageFullBatchLoader = \
-        object
+        InteractiveLoader = InteractiveImageLoader = object
 
 from veles.loader.saver import MinibatchesSaver, MinibatchesLoader

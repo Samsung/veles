@@ -236,6 +236,7 @@ class CommandLineBase(object):
     @staticmethod
     def setup_argv(sys_argv=True, reset_argv=False, *args, **kwargs):
         argv = list(CommandLineBase._argv)
+        args = list(args)
         if reset_argv:
             del argv[:]
         if len(argv) == 0:
@@ -249,9 +250,12 @@ class CommandLineBase(object):
                         "%s" % ",".join(set(kwargs) - set(available)))
                 for key, val in kwargs.items():
                     action = available[key]
-                    argv.append(action.option_strings[-1])
-                    if not isinstance(action, _StoreConstAction):
-                        argv.append(str(val))
+                    if len(action.option_strings) > 0:
+                        argv.append(action.option_strings[-1])
+                        if not isinstance(action, _StoreConstAction):
+                            argv.append(str(val))
+                    else:
+                        args.append(str(val))
             argv.extend(args)
         if not sys_argv:
             assert len(args) >= 2

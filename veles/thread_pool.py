@@ -193,12 +193,12 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         self._add_callback(self.on_thread_enters, func, weak)
 
-    def unregister_on_thread_enter(self, func):
+    def unregister_on_thread_enter(self, func, warn=True):
         """
         Removes the specified function from the list of callbacks which are
         executed just after the new thread created in the thread pool.
         """
-        self._remove_callback(self.on_thread_enters, func)
+        self._remove_callback(self.on_thread_enters, func, warn)
 
     def register_on_thread_exit(self, func, weak=True):
         """
@@ -207,12 +207,12 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         self._add_callback(self.on_thread_exits, func, weak)
 
-    def unregister_on_thread_exit(self, func):
+    def unregister_on_thread_exit(self, func, warn=True):
         """
         Removes the specified function from the list of callbacks which are
         executed just before the thread terminates.
         """
-        self._remove_callback(self.on_thread_exits, func)
+        self._remove_callback(self.on_thread_exits, func, warn)
 
     def register_on_shutdown(self, func, weak=True):
         """
@@ -224,8 +224,8 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         """
         self._add_callback(self.on_shutdowns, func, weak)
 
-    def unregister_on_shutdown(self, func):
-        self._remove_callback(self.on_shutdowns, func)
+    def unregister_on_shutdown(self, func, warn=True):
+        self._remove_callback(self.on_shutdowns, func, warn)
 
     @staticmethod
     def register_atexit(func, weak=True):
@@ -259,7 +259,9 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     def _iter_weak(iterable):
         for obj in copy(iterable):
             if isinstance(obj, weakref.ReferenceType):
-                yield obj()
+                obj = obj()
+                if obj is not None:
+                    yield obj
             else:
                 yield obj
 
@@ -267,7 +269,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     def _add_callback(cont, func, weak):
         cont.add(weakref.ref(func) if weak else func)
 
-    def _remove_callback(self, cont, func):
+    def _remove_callback(self, cont, func, warn):
         if func in cont:
             cont.remove(func)
             return
@@ -276,14 +278,15 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             cont.remove(ref)
             return
         refhash = hash(ref)
-        gc = False
         for key in set(cont):
             if hash(key) == refhash and \
                     isinstance(key, weakref.ReferenceType) and key() is None:
                 cont.remove(key)
-                gc = True
-        if not gc:
-            self.warning("%s was not found in %s", func, cont)
+                break
+        else:
+            if not warn:
+                return
+            self.warning("remove_callback: %s was not found in %s", func, cont)
 
     @staticmethod
     def _put(self, item):
@@ -446,13 +449,15 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
 
     @staticmethod
     def _warn_about_sigint_hysteria(log):
+        import os
         log.warning(
             "Please, stop hitting Ctrl-C hysterically and let me "
             "die peacefully.\nThis will not anticipate the "
             "program's exit because currently Python is trying to "
             "join all the threads\nand some of them can be very "
             "busy on the native side, e.g. running some sophisticated "
-            "OpenCL code.")
+            "OpenCL code. Execute kill -SIGUSR1 %d to know which.",
+            os.getpid())
 
     @staticmethod
     def sigint_handler(sign, frame):

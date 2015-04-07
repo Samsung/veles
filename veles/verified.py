@@ -45,6 +45,8 @@ class Verified(Logger):
     Base for all classes which follow any :class:`zope.interface.Interface`.
     """
     def verify_interface(self, iface):
+        if getattr(type(self), "DISABLE_INTERFACE_VERIFICATION", False):
+            return
         if not iface.providedBy(self):
             raise NotImplementedError(
                 "Unit %s does not implement %s interface" % (repr(self),

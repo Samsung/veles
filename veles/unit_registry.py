@@ -76,7 +76,7 @@ class UnitRegistry(type):
         if "DISABLE_KWARGS_CHECK" in clsdict:
             super(UnitRegistry, cls).__init__(name, bases, clsdict)
             return
-        kwattrs = set()
+        kwattrs = getattr(cls, "KWATTRS", set())
         for base in cls.__mro__:
             try:
                 kw_var = inspect.getargspec(base.__init__).keywords
@@ -91,9 +91,10 @@ class UnitRegistry(type):
                 for inst in instrs:
                     # https://hg.python.org/cpython/file/b3f0d7f50544/Include/opcode.h  # nopep8
                     # 124 = LOAD_FAST
+                    # 136 = LOAD_DEREF
                     # 106 = LOAD_ATTR
                     # 100 = LOAD_CONST
-                    if inst.opcode == 124 and inst.argval == kw_var:
+                    if inst.opcode in (124, 136) and inst.argval == kw_var:
                         loading_fast_kwargs = True
                     elif loading_fast_kwargs and inst.opcode == 106:
                         continue
@@ -144,7 +145,7 @@ class UnitRegistry(type):
                     break
         if len(matched) < len(kwargs):
             # Find replacement candidates with distance = 1
-            ignored_kwargs = []
+            ignored_kwargs = set()
             for given_kwarg in set(kwargs).difference(matched):
                 candidates = []
                 for kwattr in cls.KWATTRS:
@@ -152,16 +153,23 @@ class UnitRegistry(type):
                     if d == 1:
                         candidates.append(kwattr)
                 if len(candidates) == 0:
-                    ignored_kwargs.append(given_kwarg)
+                    ignored_kwargs.add(given_kwarg)
                 else:
                     warning(
                         "Creating %s: potential misprint in keyword argument "
                         "name: expected %s - got %s", obj,
                         " or ".join(candidates), given_kwarg)
+            try:
+                __IPYTHON__  # pylint: disable=E0602
+                from IPython.terminal.interactiveshell import \
+                    InteractiveShell
+                ignored_kwargs -= set(InteractiveShell.instance().user_ns)
+            except NameError:
+                pass
             if len(ignored_kwargs) > 0:
                 warning(
                     "Creating %s: ignored the following keyword arguments: %s",
-                    obj, ", ".join(ignored_kwargs))
+                    obj, ", ".join(sorted(ignored_kwargs)))
         return obj
 
 
