@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-  # pylint: disable=C0302
 """
   _   _ _____ _     _____ _____
  | | | |  ___| |   |  ___/  ___|
@@ -47,6 +47,7 @@ try:
 except ImportError:
     chisquare = None
 import six
+import sys
 from zope.interface import implementer, Interface
 
 from veles.compat import from_none
@@ -847,10 +848,18 @@ class Loader(Unit):
         amin = list(stats.keys())[numpy.argmin(values)]
         lmax = numpy.max(values)
         amax = list(stats.keys())[numpy.argmax(values)]
+        if sys.stdin.isatty() and stddev > mean / 10:
+            endstr = "\033[0m"
+            if stddev > mean / 2:
+                openstr = "\033[1;31m"  # red
+            else:
+                openstr = "\033[1;33m"  # yellow
+        else:
+            openstr = endstr = ""
         self.info(
             u"%s label cardinalities: min: %d (\"%s\"), max: %d (\"%s\"), avg:"
-            u" %d, σ: %d (%d%%)", set_name, lmin, amin, lmax, amax, mean,
-            stddev, stddev * 100 // mean)
+            u" %d, %sσ: %d (%d%%)%s", set_name, lmin, amin, lmax, amax, mean,
+            openstr, stddev, stddev * 100 // mean, endstr)
         if not self.logger.isEnabledFor(logging.DEBUG):
             return
         total = sum(values)
