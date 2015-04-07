@@ -179,7 +179,7 @@ class Unit(Distributable, Verified):
         self._run_lock_ = threading.Lock()
         self._is_initialized = False
         if hasattr(self, "run"):
-            self.run = self._check_stopped(self.run)
+            self.run = self._check_run_conditions(self.run)
             self.run = self._track_call(self.run, "run_was_called")
             self.run = self._measure_time(self.run, Unit.timers)
         if hasattr(self, "initialize"):
@@ -735,8 +735,10 @@ class Unit(Distributable, Verified):
         wrapped_measure_time.__name__ = name + '_measure_time'
         return wrapped_measure_time
 
-    def _check_stopped(self, fn):
-        def wrapped_check_stopped(*args, **kwargs):
+    def _check_run_conditions(self, fn):
+        def wrapped_check_run_conditions(*args, **kwargs):
+            if not self._is_initialized:
+                raise NotInitializedError(self, "%s is not initialized" % self)
             if self.stopped:
                 if thread_pool.ThreadPool.interrupted:
                     for unit in self._iter_links(self.links_from):
@@ -749,10 +751,10 @@ class Unit(Distributable, Verified):
                     (self, self.workflow))
             return fn(*args, **kwargs)
 
-        fnname = getattr(fn, '__name__',
-                         getattr(fn, 'func', wrapped_check_stopped).__name__)
-        wrapped_check_stopped.__name__ = fnname + '_track_call'
-        return wrapped_check_stopped
+        fnname = getattr(fn, '__name__', getattr(
+            fn, 'func', wrapped_check_run_conditions).__name__)
+        wrapped_check_run_conditions.__name__ = fnname + '_track_call'
+        return wrapped_check_run_conditions
 
     def _track_call(self, fn, name):
         def wrapped_track_call(*args, **kwargs):

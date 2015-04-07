@@ -46,6 +46,7 @@ from zope.interface import implementer
 from veles.compat import lzma, from_none
 from veles.config import root
 from veles.distributable import IDistributable
+from veles.mutable import Bool
 from veles.pickle2 import pickle, best_protocol
 from veles.units import Unit, IUnit
 
@@ -67,8 +68,9 @@ class SnapshotterBase(Unit):
         suffix - the file name suffix where to take snapshots
 
     Attributes:
-        compress - the compression applied to pickles: None or '', gz, bz2, xz
-        compress_level - the compression level in [0..9]
+        compression - the compression applied to pickles: None or '', snappy,
+                      gz, bz2, xz
+        compression_level - the compression level in [0..9]
         interval - take only one snapshot within this run() invocations number
         time_interval - take no more than one snapshot within this time window
     """
@@ -78,12 +80,13 @@ class SnapshotterBase(Unit):
         super(SnapshotterBase, self).__init__(workflow, **kwargs)
         self.directory = kwargs.get("directory", root.common.snapshot_dir)
         self.prefix = kwargs.get("prefix", "")
-        self.compress = kwargs.get("compress", "gz")
-        self.compress_level = kwargs.get("compress_level", 6)
+        self.compression = kwargs.get("compression", "gz")
+        self.compression_level = kwargs.get("compression_level", 6)
         self.interval = kwargs.get("interval", 1)
         self.time_interval = kwargs.get("time_interval", 15)
         self.time = 0
         self._skipped_counter = 0
+        self.skip = Bool(False)
         self.file_name = ""
         self.suffix = None
 
@@ -93,7 +96,7 @@ class SnapshotterBase(Unit):
 
     def initialize(self, **kwargs):
         self.time = time.time()
-        self.debug("Compression is set to %s", self.compress)
+        self.debug("Compression is set to %s", self.compression)
         self.debug("interval = %d", self.interval)
         self.debug("time_interval = %f", self.time_interval)
 
@@ -101,7 +104,7 @@ class SnapshotterBase(Unit):
         if self.is_slave or root.common.disable_snapshots:
             return
         self._skipped_counter += 1
-        if self._skipped_counter < self.interval:
+        if self._skipped_counter < self.interval or self.skip:
             return
         self._skipped_counter = 0
         delta = time.time() - self.time
@@ -169,6 +172,10 @@ class SnappyFile(object):
 
     def write(self, data):
         while self.buffer_pos + len(data) > len(self.buffer):
+            if self.buffer_pos == 0 and len(data) > len(self.buffer):
+                size = (len(data) // len(self.buffer)) * len(self.buffer)
+                self._file.write(self._compressor.compress(data[:size]))
+                break
             remainder = len(self.buffer) - self.buffer_pos
             self.buffer[self.buffer_pos:] = data[:remainder]
             self._file.write(self._compressor.compress(bytes(self.buffer)))
@@ -194,6 +201,12 @@ class SnappyFile(object):
         self.flush()
         self._file.close()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        self.close()
+
 
 class Snapshotter(SnapshotterBase):
     """Takes workflow snapshots.
@@ -206,8 +219,9 @@ class Snapshotter(SnapshotterBase):
         suffix - the file name suffix where to take snapshots
 
     Attributes:
-        compress - the compression applied to pickles: None or '', gz, bz2, xz
-        compress_level - the compression level in [0..9]
+        compression - the compression applied to pickles: None or '', snappy,
+                      gz, bz2, xz
+        compression_level - the compression level in [0..9]
         interval - take only one snapshot within this run() invocation number
         time_interval - take no more than one snapshot within this time window
     """
@@ -230,14 +244,13 @@ class Snapshotter(SnapshotterBase):
     }
 
     def export(self):
-        ext = ("." + self.compress) if self.compress else ""
+        ext = ("." + self.compression) if self.compression else ""
         rel_file_name = "%s_%s.%d.pickle%s" % (
             self.prefix, self.suffix, best_protocol, ext)
         self.file_name = os.path.join(self.directory, rel_file_name)
-        self.debug("Snapshotting...")
+        self.info("Snapshotting to %s..." % self.file_name)
         with self._open_file() as fout:
             pickle.dump(self.workflow, fout, protocol=best_protocol)
-        self.info("Snapshotted to %s" % self.file_name)
         file_name_link = os.path.join(
             self.directory, "%s_current.%d.pickle%s" % (
                 self.prefix, best_protocol, ext))
@@ -253,8 +266,8 @@ class Snapshotter(SnapshotterBase):
             pass
 
     def _open_file(self):
-        return Snapshotter.WRITE_CODECS[self.compress](self.file_name,
-                                                       self.compress_level)
+        return Snapshotter.WRITE_CODECS[self.compression](
+            self.file_name, self.compression_level)
 
     @staticmethod
     def import_(file_name):
