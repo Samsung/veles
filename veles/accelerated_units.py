@@ -148,19 +148,8 @@ class AcceleratedUnit(Unit):
         self._sync = args.sync_run
         self._kernel_ = None
         self._backend_run_ = None
-        self.initialize = self.with_backend_init(self.initialize)
+        self.initialize = self._with_backend_init(self.initialize)
         self._cpu_run_jitted_ = False
-
-    def with_backend_init(self, fn):
-        def wrapped(device, **kwargs):
-            result = fn(device, **kwargs)
-            if not result:
-                self._backend_init_()
-                self._after_backend_init()
-            return result
-
-        wrapped.__name__ = fn.__name__ + "_backend_init"
-        return wrapped
 
     @property
     def device(self):
@@ -630,6 +619,17 @@ class AcceleratedUnit(Unit):
         except:
             self.exception("Failed to save the cache file %s:",
                            cache_file_name)
+
+    def _with_backend_init(self, fn):
+        def wrapped_backend_init(device, **kwargs):
+            result = fn(device, **kwargs)
+            if not result:
+                self._backend_init_()
+                self._after_backend_init()
+            return result
+
+        wrapped_backend_init.__name__ = fn.__name__ + "_backend_init"
+        return wrapped_backend_init
 
 
 @implementer(IOpenCLUnit, ICUDAUnit)

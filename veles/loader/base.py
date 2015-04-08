@@ -175,7 +175,7 @@ class Loader(Unit):
         self.failed_minibatches = []
         self._total_failed = 0
         self._on_initialized = nothing
-        self._unique_labels_count = 0
+        self._unique_labels_count = 1  # "None" label
 
         self.shuffled_indices = memory.Vector()
         self.normalization_type = kwargs.get("normalization_type", "none")
@@ -188,6 +188,7 @@ class Loader(Unit):
         self._minibatch_size_ = 0
         self.pending_minibatches_ = defaultdict(list)
         self._minibatch_serve_timestamp_ = time.time()
+        self.initialize = self._with_initialized_callback(self.initialize)
 
     def __getstate__(self):
         state = super(Loader, self).__getstate__()
@@ -240,7 +241,7 @@ class Loader(Unit):
 
     @property
     def unique_labels_count(self):
-        if self._unique_labels_count == 0 and self.class_lengths[TRAIN] > 0 \
+        if self._unique_labels_count <= 1 and self.class_lengths[TRAIN] > 0 \
                 and self.has_labels:
             different_labels = set()
             self.info("Counting unique labels...")
@@ -542,8 +543,6 @@ class Loader(Unit):
         self.analyze_dataset()
         if not kwargs["snapshot"]:
             self.shuffle()
-
-        self.on_initialized()  # pylint: disable=E1102
 
     def run(self):
         """Prepares the minibatch.
@@ -908,6 +907,19 @@ class Loader(Unit):
                 self.info(u"OK: " + msg, other_name, u"the same", p)
             else:
                 self.warning(msg, other_name, u"different", p)
+
+    def _with_initialized_callback(self, fn):
+        def wrapped_on_initialized(*args, **kwargs):
+            retry = fn(*args, **kwargs)
+            assert retry is None or isinstance(retry, bool)
+            if not retry:
+                self.on_initialized()  # pylint: disable=E1102
+            return retry
+
+        fnname = getattr(fn, '__name__',
+                         getattr(fn, 'func', wrapped_on_initialized).__name__)
+        wrapped_on_initialized.__name__ = fnname + '_on_initialized'
+        return wrapped_on_initialized
 
 
 class LoaderMSEMixin(Unit):
