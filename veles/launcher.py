@@ -55,7 +55,7 @@ from twisted.web.client import (Agent, HTTPConnectionPool, FileBodyProducer,
 from twisted.web.http_headers import Headers
 import uuid
 
-from veles.backends import Device
+from veles.backends import Device, NumpyDevice
 import veles.client as client
 from veles.cmdline import CommandLineArgumentsRegistry, CommandLineBase
 from veles.compat import from_none
@@ -157,7 +157,7 @@ class Launcher(logger.Logger):
         self._initialized = False
         self._running = False
         self._start_time = None
-        self._device = None
+        self._device = NumpyDevice()
         self._interactive = interactive
         self._reactor_thread = None
         self._notify_update_interval = kwargs.get(
@@ -382,8 +382,7 @@ class Launcher(logger.Logger):
         reactor.callFromThread(self.stop)
 
     def device_thread_pool_detach(self):
-        if self.device is not None and self.device.attached(
-                self.workflow.thread_pool):
+        if self.device.attached(self.workflow.thread_pool):
             self.device.thread_pool_detach(self.workflow.thread_pool)
 
     @threadsafe
@@ -451,7 +450,8 @@ class Launcher(logger.Logger):
                 self.workflow_graph = ""
 
         try:
-            self._device = Device() if not self.is_master else None
+            if not self.is_master:
+                self._device = Device()
         except Exception as e:
             self.error("Failed to create the OpenCL device.")
             raise from_none(e)

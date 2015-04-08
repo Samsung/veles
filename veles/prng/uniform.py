@@ -39,11 +39,12 @@ from zope.interface import implementer
 
 import veles.error as error
 from veles.memory import Vector, roundup
-from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit
+from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit, \
+    INumpyUnit
 from veles.prng.random_generator import get
 
 
-@implementer(IOpenCLUnit, ICUDAUnit)
+@implementer(IOpenCLUnit, ICUDAUnit, INumpyUnit)
 class Uniform(AcceleratedUnit):
     """Generates random numbers from uniform distribution.
 
@@ -53,8 +54,10 @@ class Uniform(AcceleratedUnit):
         prng: veles.prng.RandomGenerator for initial states generation.
         output_bytes: number of output bytes to generate.
     """
+
+    backend_methods = AcceleratedUnit.backend_methods + ("fill",)
+
     def __init__(self, workflow, **kwargs):
-        self.backend_methods = self.backend_methods + ("fill",)
         super(Uniform, self).__init__(workflow, **kwargs)
         self.num_states = kwargs.get("num_states", 256)
         self.states = Vector()
@@ -122,7 +125,7 @@ class Uniform(AcceleratedUnit):
     def cuda_fill(self, nbytes):
         self._gpu_fill(nbytes)
 
-    def cpu_fill(self, nbytes):
+    def numpy_fill(self, nbytes):
         bytes_per_round = self.num_states * 16 * 8
         nbytes = roundup(nbytes, bytes_per_round)
         if nbytes > self.output.nbytes:
@@ -167,5 +170,5 @@ class Uniform(AcceleratedUnit):
     def cuda_run(self):
         self.cuda_fill(self.output.nbytes)
 
-    def cpu_run(self):
-        self.cpu_fill(self.output.nbytes)
+    def numpy_run(self):
+        self.numpy_fill(self.output.nbytes)

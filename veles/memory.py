@@ -44,7 +44,7 @@ if six.PY3:
     import atexit
     import weakref
 
-from veles.backends import Device
+from veles.backends import Device, NumpyDevice
 from veles.compat import from_none
 from veles.distributable import Pickleable
 from veles.numpy_ext import (  # pylint: disable=W0611
@@ -118,7 +118,7 @@ class Vector(Pickleable):
         devmem: GPU buffer mapped to mem.
         max_supposed: supposed maximum element value.
         map_flags: flags of the current map.
-        map_arr_: address of the mapping if any exists.
+        _map_arr_: address of the mapping if any exists.
 
     Example of how to use:
         1. Construct an object:
@@ -146,7 +146,7 @@ class Vector(Pickleable):
 
     def __init__(self, data=None):
         super(Vector, self).__init__()
-        self._device = None
+        self._device = NumpyDevice()
         self.mem = data
         self._max_value = 1.0
         if six.PY3:
@@ -169,13 +169,15 @@ class Vector(Pickleable):
     @device.setter
     def device(self, device):
         if device is None:
-            self._reset(self.mem)
-            self._unset_device()
-            return
+            raise ValueError("device may not be None")
         if not isinstance(device, Device):
             raise TypeError(
                 "device must be an instance of veles.backends.Device, got %s" %
                 device)
+        if isinstance(device, NumpyDevice):
+            self._reset(self.mem)
+            self._unset_device()
+            return
         self._reset(self.mem)
         self._device = device
         for suffix in Vector.backend_methods:
@@ -260,7 +262,7 @@ class Vector(Pickleable):
         super(Vector, self).init_unpickled()
         self._unset_device()
         self._devmem_ = None
-        self.map_arr_ = None
+        self._map_arr_ = None
         self.map_flags = 0
         self.lock_ = threading.Lock()
 
@@ -282,7 +284,13 @@ class Vector(Pickleable):
     def __getstate__(self):
         """Get data from OpenCL device before pickling.
         """
-        if self.device is not None and self.device.pid == os.getpid():
+        if self.device is None:
+            import gc
+
+            for key, val in gc.get_referrers(self)[0].items():
+                if val is self:
+                    print(key)
+        if self.device.pid == os.getpid():
             self.map_read()
         return super(Vector, self).__getstate__()
 
@@ -333,13 +341,15 @@ class Vector(Pickleable):
 
     @threadsafe
     def initialize(self, device):
+        if device is None:
+            raise ValueError("device may not be None")
         if self.device == device and self.devmem is not None:
             # Check against double initialization (pretty legal)
             return
-        if self.mem is not None or device is None:
+        if self.mem is not None or isinstance(device, NumpyDevice):
             # Set the device only if it makes sense
             self.device = device
-        if self.mem is None or self.device is None:
+        if self.mem is None or isinstance(self.device, NumpyDevice):
             # We are done if there is no host buffer or device
             return
 
@@ -396,9 +406,9 @@ class Vector(Pickleable):
             cl.CL_MEM_READ_WRITE | cl.CL_MEM_USE_HOST_PTR, self.plain)
 
     def ocl_map(self, flags):
-        if self.device is None:
+        if isinstance(self.device, NumpyDevice):
             return
-        if self.map_arr_ is not None:
+        if self._map_arr_ is not None:
             # already mapped properly, nothing to do
             if self.map_flags != cl.CL_MAP_READ or flags == cl.CL_MAP_READ:
                 return
@@ -409,14 +419,14 @@ class Vector(Pickleable):
             flags = cl.CL_MAP_WRITE
         assert self.devmem is not None
         try:
-            ev, self.map_arr_ = self.device.queue_.map_buffer(
+            ev, self._map_arr_ = self.device.queue_.map_buffer(
                 self.devmem, flags, self._mem.nbytes)
             del ev
         except cl.CLRuntimeError as err:
             self.error("Failed to map %d OpenCL bytes: %s(%d)",
                        self._mem.nbytes, str(err), err.code)
             raise
-        if (int(cl.ffi.cast("size_t", self.map_arr_)) !=
+        if (int(cl.ffi.cast("size_t", self._map_arr_)) !=
                 self._mem.__array_interface__["data"][0]):
             raise RuntimeError("map_buffer returned different pointer")
         self.map_flags = flags
@@ -431,10 +441,11 @@ class Vector(Pickleable):
         self.ocl_map(cl.CL_MAP_WRITE_INVALIDATE_REGION)
 
     def ocl_unmap(self):
-        map_arr = self.map_arr_
+        map_arr = self._map_arr_
         if map_arr is None:
             return
-        # Workaround Python 3.4.0 incorrect destructor order call bug
+        # The following checks are neccessary in case of cyclic object
+        # references and CPython >= 3.4.0
         if self.device.queue_.handle is None:
             self.warning(
                 "%s: OpenCL device queue is None but Vector devmem was not "
@@ -446,13 +457,14 @@ class Vector(Pickleable):
         else:
             self.device.queue_.unmap_buffer(self.devmem, map_arr,
                                             need_event=False)
-        self.map_arr_ = None
+        self._map_arr_ = None
         self.map_flags = 0
 
     def ocl_realign_mem(self):
         """We are using CL_MEM_USE_HOST_PTR, so memory should be PAGE-aligned.
         """
-        if self.device is None or self.device.device_info.memalign <= 4096:
+        if isinstance(self.device, NumpyDevice) or \
+                self.device.device_info.memalign <= 4096:
             memalign = 4096
         else:
             memalign = self.device.device_info.memalign
@@ -463,20 +475,20 @@ class Vector(Pickleable):
         self.devmem.to_device(self.mem)
 
     def cuda_map_read(self):
-        if self.device is None or self.map_flags >= 1:
+        if isinstance(self.device, NumpyDevice) or self.map_flags >= 1:
             return
         self.devmem.to_host(self.mem)
         self.map_flags = 1
 
     def cuda_map_write(self):
-        if self.device is None or self.map_flags >= 2:
+        if isinstance(self.device, NumpyDevice) or self.map_flags >= 2:
             return
         if self.map_flags < 1:  # there were no map_read before
             self.devmem.to_host(self.mem)  # sync copy
         self.map_flags = 2
 
     def cuda_map_invalidate(self):
-        if self.device is None or self.map_flags >= 2:
+        if isinstance(self.device, NumpyDevice) or self.map_flags >= 2:
             return
         if self.map_flags < 1:  # there were no map_read before
             self.device.sync()  # sync without copy

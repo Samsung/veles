@@ -180,7 +180,9 @@ root.common.update({
     "test_dataset_root": os.path.join(os.environ.get("HOME", "./"), "data"),
     "test_known_device": False,
     "test_unknown_device": True,
-    "force_cpu_run_on_intel_opencl": True,
+    # The following is a hack to make Intel OpenCL usable;
+    # It does not have 64-bit atomics and the engine uses them
+    "force_numpy_run_on_intel_opencl": True,
     # Disable Numba JIT while debugging or on alternative interpreters
     "disable_numba": (sys.gettrace() is not None or
                       platform.python_implementation() != "CPython"),

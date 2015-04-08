@@ -14,7 +14,7 @@ import sys
 from types import FrameType
 import unittest
 
-from veles.backends import Device, BackendRegistry
+from veles.backends import Device, BackendRegistry, NumpyDevice
 from veles.config import root
 from veles.dummy import DummyWorkflow
 from veles.logger import Logger
@@ -30,13 +30,13 @@ def multi_device(numpy=False):
             if numpy:
                 backends.append(None)
             for cls in backends:
-                self.device = cls() if cls is not None else None
+                self.device = cls() if cls is not None else NumpyDevice()
                 self.info("Selected %s",
                           cls.__name__ if cls is not None else "numpy")
                 self.seed()
                 fn(self)
                 self.parent.stopped = False
-                self.device = None
+                self.device = NumpyDevice()
                 gc.collect()
 
         test_wrapped.__name__ = fn.__name__

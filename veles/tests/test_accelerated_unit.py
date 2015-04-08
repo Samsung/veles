@@ -37,13 +37,14 @@ import os
 import unittest
 from zope.interface import implementer
 
-from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit
+from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit, \
+    INumpyUnit
 from veles.dummy import DummyWorkflow
 
 
-@implementer(IOpenCLUnit, ICUDAUnit)
+@implementer(IOpenCLUnit, ICUDAUnit, INumpyUnit)
 class TestAcceleratedUnit(AcceleratedUnit):
-    def cpu_run(self):
+    def numpy_run(self):
         pass
 
     def ocl_init(self):
@@ -73,6 +74,7 @@ class Test(unittest.TestCase):
         unit.sources_["fourth"] = {"A": 3, "B": 4}
         src, _ = unit._generate_source(
             defines, include_dirs, "float", "cc", template_kwargs)
+        self.maxDiff = None
         self.assertEqual(
             """#define GPU_FORCE_64BIT_PTR 1
 #define PRECISION_LEVEL 0

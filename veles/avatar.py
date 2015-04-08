@@ -11,13 +11,14 @@ from copy import deepcopy
 import numpy
 from zope.interface import implementer
 
-from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit
+from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit, \
+    INumpyUnit
 from veles.distributable import IDistributable, TriviallyDistributable
 from veles.memory import Vector
 from veles.mutable import Bool
 
 
-@implementer(IOpenCLUnit, ICUDAUnit, IDistributable)
+@implementer(IOpenCLUnit, ICUDAUnit, INumpyUnit, IDistributable)
 class Avatar(AcceleratedUnit, TriviallyDistributable):
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = "LOADER"
@@ -106,7 +107,7 @@ class Avatar(AcceleratedUnit, TriviallyDistributable):
             vec.unmap()
             vec.devmem.from_device_async(real.devmem)
 
-    def cpu_run(self):
+    def numpy_run(self):
         for real, vec in self.vectors.items():
             real.map_read()
             vec.map_invalidate()

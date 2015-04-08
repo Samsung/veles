@@ -42,10 +42,11 @@ import veles.error as error
 from veles.memory import Vector
 from veles.distributable import IDistributable, TriviallyDistributable
 from veles.opencl_types import numpy_dtype_to_opencl
-from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit
+from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit, \
+    INumpyUnit
 
 
-@implementer(IDistributable, IOpenCLUnit, ICUDAUnit)
+@implementer(IDistributable, IOpenCLUnit, ICUDAUnit, INumpyUnit)
 class MeanDispNormalizer(AcceleratedUnit, TriviallyDistributable):
     """Normalizes multichannel byte images according to
     dataset mean and dispersion.
@@ -128,7 +129,7 @@ class MeanDispNormalizer(AcceleratedUnit, TriviallyDistributable):
     def cuda_run(self):
         self._gpu_run()
 
-    def cpu_run(self):
+    def numpy_run(self):
         self.input.map_read()
         self.mean.map_read()
         self.rdisp.map_read()

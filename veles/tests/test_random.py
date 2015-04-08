@@ -38,6 +38,7 @@ import numpy
 import os
 
 from veles.accelerated_units import TrivialAcceleratedUnit
+from veles.backends import NumpyDevice
 from veles.config import root
 import veles.memory as formats
 import veles.prng as rnd
@@ -140,7 +141,7 @@ class TestRandom1024(AcceleratedTest):
         u = Uniform(self.parent, num_states=self.n_states,
                     output_bytes=v_cpu.nbytes)
         u.states.mem = stt.copy()
-        u.initialize(None)
+        u.initialize(NumpyDevice())
         u.run()
         u.output.map_read()
         v = u.output.plain.copy().view(dtype=numpy.uint64)

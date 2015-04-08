@@ -41,7 +41,9 @@ from opencl4py import CLRuntimeError
 import six
 from zope.interface import implementer, Interface
 
-from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit
+from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit, \
+    INumpyUnit
+from veles.backends import NumpyDevice
 from veles.compat import from_none
 import veles.error as error
 import veles.memory as memory
@@ -72,7 +74,7 @@ class IFullBatchLoader(Interface):
         """
 
 
-@implementer(ILoader, IOpenCLUnit, ICUDAUnit)
+@implementer(ILoader, IOpenCLUnit, ICUDAUnit, INumpyUnit)
 class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
     """Loads data entire in memory.
 
@@ -110,13 +112,13 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
 
     @property
     def on_device(self):
-        return not self.force_cpu
+        return not self.force_numpy
 
     @on_device.setter
     def on_device(self, value):
         if not isinstance(value, bool):
             raise TypeError("on_device must be boolean (got %s)" % type(value))
-        self.force_cpu = not value
+        self.force_numpy = not value
 
     @property
     def validation_ratio(self):
@@ -161,7 +163,7 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         self.analyze_original_dataset()
         self._map_original_labels()
 
-        if self.device is None:
+        if isinstance(self.device, NumpyDevice):
             return
 
         self.info("Will try to store the entire dataset on the device")
@@ -208,19 +210,19 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
             if e.code == -4:  # CL_MEM_OBJECT_ALLOCATION_FAILURE
                 self.warning("Failed to store the entire dataset on the "
                              "device")
-                self.force_cpu = True
-                self.device = None
+                self.force_numpy = True
+                self.device = NumpyDevice()
             else:
                 raise from_none(e)
 
-    def cpu_run(self):
+    def numpy_run(self):
         Loader.run(self)
 
     def ocl_run(self):
-        self.cpu_run()
+        self.numpy_run()
 
     def cuda_run(self):
-        self.cpu_run()
+        self.numpy_run()
 
     def ocl_init(self):
         self._gpu_init()
@@ -260,7 +262,7 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         self.original_labels.extend(None for _ in range(self.total_samples))
 
     def fill_indices(self, start_offset, count):
-        if self.device is None:
+        if isinstance(self.device, NumpyDevice):
             return super(FullBatchLoader, self).fill_indices(
                 start_offset, count)
 

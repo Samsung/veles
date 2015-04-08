@@ -99,11 +99,11 @@ class Logger(object):
                         record.exc_text = self.formatException(record.exc_info)
                 if record.exc_text:
                     if s[-1:] != "\n":
-                        s = s + "\n"
+                        s += "\n"
                     try:
-                        s = s + record.exc_text
+                        s += record.exc_text
                     except UnicodeError:
-                        s = s + \
+                        s += \
                             record.exc_text.decode(sys.getfilesystemencoding(),
                                                    'replace')
                 return s
@@ -117,8 +117,12 @@ class Logger(object):
         # Set basic log level
         logging.basicConfig(level=level, stream=sys.stdout)
         ProgressBar().logger.level = level
-        # Turn on colors in case of an interactive out tty
-        if sys.stdout.isatty():
+        # Turn on colors in case of an interactive out tty or IPython
+        try:
+            __IPYTHON__  # pylint: disable=E0602
+        except NameError:
+            __IPYTHON__ = None
+        if sys.stdout.isatty() or __IPYTHON__ is not None:
             root = logging.getLogger()
             handler = root.handlers[0]
             handler.setFormatter(Logger.ColorFormatter())

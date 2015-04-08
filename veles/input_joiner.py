@@ -40,10 +40,11 @@ from zope.interface import implementer
 
 from veles.memory import Vector
 import veles.opencl_types as opencl_types
-from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit
+from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit, \
+    INumpyUnit
 
 
-@implementer(IOpenCLUnit, ICUDAUnit)
+@implementer(IOpenCLUnit, ICUDAUnit, INumpyUnit)
 class InputJoiner(AcceleratedUnit):
     """Joins several minibatch inputs into one continuous minibatch output.
 
@@ -122,7 +123,7 @@ class InputJoiner(AcceleratedUnit):
     def cuda_init(self):
         self._gpu_init()
 
-    def cpu_run(self):
+    def numpy_run(self):
         self.output.map_invalidate()  # we will update output on CPU
         minibatch_size = self.output.shape[0]
         low = 0

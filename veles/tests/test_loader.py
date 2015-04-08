@@ -39,6 +39,7 @@ import unittest
 import numpy
 import os
 from zope.interface import implementer
+from veles.backends import NumpyDevice
 
 from veles.tests import AcceleratedTest, assign_backend
 try:
@@ -81,15 +82,15 @@ class Loader(FullBatchLoaderMSE):
 class TestFullBatchLoader(AcceleratedTest):
     def test_random(self):
         results = [self._test_random(*p) for p in
-                   product((self.device, None), (True, False))]
+                   product((self.device, NumpyDevice()), (True, False))]
         for result in results[1:]:
             for index, item in enumerate(result):
                 max_diff = numpy.fabs(item - results[0][index]).max()
                 self.assertLess(max_diff, 1e-6, "index = %d" % index)
 
-    def _test_random(self, device, force_cpu, N=1000):
+    def _test_random(self, device, force_numpy, N=1000):
         rnd.get().seed(123)
-        unit = Loader(self.parent, force_cpu=force_cpu, prng=rnd.get())
+        unit = Loader(self.parent, force_numpy=force_numpy, prng=rnd.get())
         unit.initialize(device, snapshot=False)
         self.assertTrue(unit.has_labels)
         res_data = numpy.zeros((N,) + unit.minibatch_data.shape,

@@ -41,6 +41,7 @@ import json
 import numpy
 import opencl4py as cl
 import os
+from psutil import virtual_memory
 from six import add_metaclass
 import sys
 from threading import current_thread
@@ -224,6 +225,10 @@ class Device(Pickleable):
         """
         return None
 
+    @property
+    def is_async(self):
+        return type(self).ASYNC
+
     def sync(self):
         """Synchronizes the device execution queue.
         """
@@ -340,7 +345,6 @@ class Device(Pickleable):
 class AutoDevice(Device):
     """
     Overrides __new__() to automatically select the best available Device type.
-    If no acceleration is available, returns None.
     """
     BACKEND = "auto"
     PRIORITY = 0
@@ -350,8 +354,7 @@ class AutoDevice(Device):
                           key=lambda b: b.PRIORITY, reverse=True):
             if cls.available():
                 return object.__new__(cls, *args)
-        # If we are still here, then no acceleration is available
-        return None
+        assert False, "Impossible because numpy backend is always available"
 
     @staticmethod
     def available():
@@ -372,6 +375,7 @@ class OpenCLDevice(Device):
     BACKEND = "ocl"
     PRIORITY = 20
     DEVICE_INFOS_JSON = "device_infos.json"
+    ASYNC = True
     skip = cl.skip
 
     # Allow this class to be created manually
@@ -631,6 +635,7 @@ class CUDADevice(Device):
 
     BACKEND = "cuda"
     PRIORITY = 30
+    ASYNC = True
     skip = cu.skip
 
     # Allow this class to be created manually
@@ -744,6 +749,15 @@ class CUDADevice(Device):
                         "CUDA device %s was not found." % device))
             context = device.create_context()
         self._context_ = context
+
+        device = self.context.device
+        self.device_info = DeviceInfo(
+            desc=device.name, memsize=device.total_mem,
+            memalign=4096, version=device.compute_capability,
+            device_type="CUDA",
+            max_work_group_size=device.max_grid_dims,
+            max_work_item_sizes=device.max_block_dims,
+            local_memsize=device.max_shared_memory_per_block)
         return True
 
     def sync(self):
@@ -764,9 +778,19 @@ class NumpyDevice(Device):
 
     BACKEND = "numpy"
     PRIORITY = 10
+    ASYNC = False
 
     def __new__(cls, *args):
-        return None
+        return object.__new__(cls)
+
+    def __init__(self):
+        super(NumpyDevice, self).__init__()
+        self.device_info = DeviceInfo(
+            desc="Python Numpy", memsize=virtual_memory().total,
+            memalign=8, version=numpy.__version__,
+            device_type="Hybrid",
+            max_work_group_size=None, max_work_item_sizes=None,
+            local_memsize=virtual_memory().total)
 
     @staticmethod
     def available():

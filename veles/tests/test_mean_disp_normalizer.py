@@ -35,6 +35,7 @@ under the License.
 
 
 import numpy
+from veles.backends import NumpyDevice
 
 from veles.config import root
 from veles.memory import Vector
@@ -76,7 +77,7 @@ class TestMeanDispNormalizer(AcceleratedTest):
 
     def test_random(self):
         gpu = self._test_random(self.device)
-        cpu = self._test_random(None)
+        cpu = self._test_random(NumpyDevice())
         max_diff = numpy.fabs(cpu - gpu).max()
         self.assertLess(max_diff, 1.0e-5)
 

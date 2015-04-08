@@ -34,6 +34,7 @@ under the License.
 
 import gc
 import numpy
+from veles.backends import NumpyDevice
 
 import veles.memory as formats
 import veles.input_joiner as input_joiner
@@ -141,7 +142,7 @@ class TestInputJoiner(AcceleratedTest):
 
     def testCPU(self):
         self.info("Will test InputJoiner() on CPU.")
-        self._do_test(None)
+        self._do_test(NumpyDevice())
 
     @multi_device()
     def testGPU2(self):
@@ -152,7 +153,7 @@ class TestInputJoiner(AcceleratedTest):
     def testCPU2(self):
         self.info("Will test InputJoiner() on CPU "
                   "with output size greater than inputs.")
-        self._do_tst2(None)
+        self._do_tst2(NumpyDevice())
 
     @multi_device()
     def testGPU3(self):
@@ -163,7 +164,7 @@ class TestInputJoiner(AcceleratedTest):
     def testCPU3(self):
         self.info("Will test InputJoiner() on CPU "
                   "with output size less than inputs.")
-        self._do_tst3(None)
+        self._do_tst3(NumpyDevice())
 
 
 if __name__ == "__main__":

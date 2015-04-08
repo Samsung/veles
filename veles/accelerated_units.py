@@ -55,7 +55,7 @@ from veles.compat import from_none
 from veles.config import root
 from veles.memory import Vector, roundup
 import veles.opencl_types as opencl_types
-from veles.backends import Device, OpenCLDevice, CUDADevice
+from veles.backends import Device, OpenCLDevice, CUDADevice, NumpyDevice
 from veles.pickle2 import pickle, best_protocol
 from veles.timeit import timeit
 from veles.units import Unit, IUnit, UnitCommandLineArgumentsRegistry
@@ -66,13 +66,22 @@ class IncludeError(Exception):
     pass
 
 
+class INumpyUnit(Interface):
+    def numpy_init():
+        """
+        Initialize Numpy-specific stuff. Normally, this is a no-op, so
+        AcceleratedUnit (base class) provides it out of the box.
+        """
+
+    def numpy_run():
+        """
+        Run using Numpy functions.
+        """
+
+
 class IOpenCLUnit(Interface):
     """Requires cpu and ocl methods for OpenCLUnit descendants.
     """
-
-    def cpu_run():
-        """Run on CPU.
-        """
 
     def ocl_init():
         """
@@ -92,10 +101,6 @@ class ICUDAUnit(Interface):
     """Requires cpu and cuda methods for CUDAUnit descendants.
     """
 
-    def cpu_run():
-        """Run on CPU.
-        """
-
     def cuda_init():
         """
         Initialize CUDA-specific stuff. Called inside initialize().
@@ -110,7 +115,8 @@ class ICUDAUnit(Interface):
         """
 
 
-INTERFACE_MAPPING = {OpenCLDevice: IOpenCLUnit, CUDADevice: ICUDAUnit}
+INTERFACE_MAPPING = {OpenCLDevice: IOpenCLUnit, CUDADevice: ICUDAUnit,
+                     NumpyDevice: INumpyUnit}
 
 
 @implementer(IUnit)
@@ -130,11 +136,13 @@ class AcceleratedUnit(Unit):
 
     def __init__(self, workflow, **kwargs):
         super(AcceleratedUnit, self).__init__(workflow, **kwargs)
-        self._device = None
+        self._device = NumpyDevice()
         self._cache = kwargs.get("cache", True)
-        # Yup, this is right - self._force_cpu is initialized in init_unpickled
-        self._force_cpu = kwargs.get("force_cpu", self._force_cpu)
-        self.prefer_numpy = root.common.force_cpu_run_on_intel_opencl
+        # Yup, this is right - self._force_numpy is initialized in
+        # init_unpickled
+        self._force_numpy = kwargs.get("force_numpy", self._force_numpy)
+        self.intel_opencl_workaround = \
+            root.common.force_numpy_run_on_intel_opencl
 
     def init_unpickled(self):
         super(AcceleratedUnit, self).init_unpickled()
@@ -142,14 +150,14 @@ class AcceleratedUnit(Unit):
         self.sources_ = {}
         parser = AcceleratedUnit.init_parser()
         args, _ = parser.parse_known_args(self.argv)
-        if not hasattr(self, "_force_cpu"):
-            self._force_cpu = \
-                self.__class__.__name__ in args.force_cpu.split(',')
+        if not hasattr(self, "_force_numpy"):
+            self._force_numpy = \
+                self.__class__.__name__ in args.force_numpy.split(',')
         self._sync = args.sync_run
         self._kernel_ = None
         self._backend_run_ = None
         self.initialize = self._with_backend_init(self.initialize)
-        self._cpu_run_jitted_ = False
+        self._numpy_run_jitted_ = False
 
     @property
     def device(self):
@@ -157,18 +165,17 @@ class AcceleratedUnit(Unit):
 
     @device.setter
     def device(self, value):
-        if not isinstance(value, Device) and value is not None:
-            raise TypeError("device must be of type veles.opencl.Device (%s "
-                            "was specified)" % value.__class__)
+        if value is None:
+            raise ValueError("device may not be None")
+        if not isinstance(value, Device):
+            raise TypeError(
+                "device must be of type %s (got %s)" % (Device, type(value)))
         self._device = value
-        if value is None or self.force_cpu:
-            backend = "cpu"
-        else:
-            backend = value.backend_name
+        backend = self.device.backend_name
         for suffix in self.backend_methods:
             setattr(self, "_backend_" + suffix + "_",
                     getattr(self, backend + "_" + suffix))
-        if self._sync and value is not None:
+        if self._sync and self.device.is_async:
             self._original_run_ = self._backend_run_
             self._backend_run_ = self._run_synchronized
 
@@ -188,56 +195,64 @@ class AcceleratedUnit(Unit):
         self._cache = value
 
     @property
-    def force_cpu(self):
-        return self._force_cpu
+    def force_numpy(self):
+        return self._force_numpy
 
-    @force_cpu.setter
-    def force_cpu(self, value):
+    @force_numpy.setter
+    def force_numpy(self, value):
         if not isinstance(value, bool):
-            raise TypeError("force_cpu must be boolean (got %s)" % type(value))
-        self._force_cpu = value
+            raise TypeError(
+                "force_numpy must be boolean (got %s)" % type(value))
+        self._force_numpy = value
 
     @property
     def sync(self):
         return self._sync
 
     def initialize(self, device, **kwargs):
-        if device is not None:
-            self.verify_interface(INTERFACE_MAPPING[type(device)])
-            if not device.attached(self.thread_pool):
-                device.thread_pool_attach(self.thread_pool)
+        if device is None:
+            raise ValueError("device may not be None")
+        if not isinstance(device, Device):
+            raise TypeError("deviec must be of type %s" % Device)
+        if self._force_numpy:
+            device = NumpyDevice()
+        self.verify_interface(INTERFACE_MAPPING[type(device)])
+        if not device.attached(self.thread_pool):
+            device.thread_pool_attach(self.thread_pool)
         try:
             super(AcceleratedUnit, self).initialize(**kwargs)
         except AttributeError:
             pass
         self.device = device
-        if not (self.device is None or self.device.exists or self._force_cpu):
-            self.critical(
-                "No device exists and --disable-acceleration option was not "
-                "specified")
-            raise ValueError("No device was found")
-        if self._force_cpu:
-            self.device = None
-        # TODO(a.kazantsev): remove prefer_numpy.
-        self.prefer_numpy = (self.prefer_numpy and self.device is not None and
-                             (isinstance(device, OpenCLDevice) and
-                              device.device_info.is_cpu))
-        if self.device is None and not self._cpu_run_jitted_ and \
+        self.intel_opencl_workaround = (
+            self.intel_opencl_workaround and isinstance(device, OpenCLDevice)
+            and device.device_info.is_cpu)
+        if isinstance(self.device, NumpyDevice) and \
+                not self._numpy_run_jitted_ and \
                 not root.common.disable_numba:
             if jit is None and root.common.warnings.numba:
                 self.warning(
-                    "Numba (http://numba.pydata.org) was not found, cpu_run() "
-                    "is going to be slow. Ignore this by setting "
-                    "root.common.warnings.numba to False.")
+                    "Numba (http://numba.pydata.org) was not found, "
+                    "numpy_run() is going to be slower. Ignore this warning "
+                    "by setting root.common.warnings.numba to False.")
             else:
-                self.cpu_run = jit(nopython=True, nogil=True)(self.cpu_run)
-                self.debug("Jitted cpu_run()")
-                self._cpu_run_jitted_ = True
+                self.numpy_run = jit(nopython=True, nogil=True)(self.numpy_run)
+                self.debug("Jitted numpy_run()")
+                self._numpy_run_jitted_ = True
 
     def run(self):
         return self._backend_run_()
 
-    def cpu_init(self):
+    def numpy_init(self):
+        pass
+
+    def numpy_build_program(self):
+        pass
+
+    def numpy_get_kernel(self):
+        pass
+
+    def numpy_execute_kernel(self):
         pass
 
     def _after_backend_init(self):
@@ -246,9 +261,9 @@ class AcceleratedUnit(Unit):
     @staticmethod
     def init_parser(parser=None):
         parser = parser or argparse.ArgumentParser()
-        parser.add_argument("--force-cpu", default="", type=str,
+        parser.add_argument("--force-numpy", default="", type=str,
                             help="Force these comma separated accelerated "
-                                 "units to run on CPU (that is, disable "
+                                 "units to run using Numpy (that is, disable "
                                  "OpenCL/CUDA/... for them).")
         parser.add_argument(
             "--sync-run", default=False, action="store_true",
@@ -268,9 +283,6 @@ class AcceleratedUnit(Unit):
             dtype = opencl_types.numpy_dtype_to_opencl(dtype)
         return self._backend_build_program_(
             defines, cache_file_name, dtype, kwargs)
-
-    def cpu_build_program(self, defines, cache_file_name, dtype):
-        pass
 
     def _load_binary(self, defines, cache_file_name, dtype, engine, suffix,
                      cache_is_valid, template_kwargs):
@@ -367,9 +379,6 @@ class AcceleratedUnit(Unit):
     def cuda_get_kernel(self, name):
         return self.program_.create_function(name)
 
-    def cpu_get_kernel(self, name):
-        return None
-
     def get_kernel(self, name):
         return self._backend_get_kernel_(name)
 
@@ -387,9 +396,6 @@ class AcceleratedUnit(Unit):
                        "local_size = %s", str(kernel or self._kernel_),
                        str(global_size), str(local_size))
             raise from_none(e)
-
-    def cpu_execute_kernel(self, kernel, global_size, local_size, need_event):
-        return None
 
     def ocl_execute_kernel(self, kernel, global_size, local_size, need_event):
         return self.device.queue_.execute_kernel(
@@ -435,8 +441,7 @@ class AcceleratedUnit(Unit):
         if "PRECISION_LEVEL" not in my_defines:
             my_defines["PRECISION_LEVEL"] = root.common.precision_level
         if ("VECTOR_OPT" not in my_defines and
-                hasattr(self.device, "device_info") and
-                hasattr(self.device.device_info, "vector_opt")):
+                isinstance(self.device, OpenCLDevice)):
             my_defines["VECTOR_OPT"] = self.device.device_info.vector_opt
         if "GPU_FORCE_64BIT_PTR" not in my_defines:  # for AMD
             my_defines["GPU_FORCE_64BIT_PTR"] = os.getenv(
@@ -632,9 +637,9 @@ class AcceleratedUnit(Unit):
         return wrapped_backend_init
 
 
-@implementer(IOpenCLUnit, ICUDAUnit)
+@implementer(IOpenCLUnit, ICUDAUnit, INumpyUnit)
 class TrivialAcceleratedUnit(AcceleratedUnit):
-    def cpu_run(self):
+    def numpy_run(self):
         pass
 
     def ocl_run(self):
@@ -650,7 +655,7 @@ class TrivialAcceleratedUnit(AcceleratedUnit):
         pass
 
 
-@implementer(IOpenCLUnit, ICUDAUnit)
+@implementer(IOpenCLUnit, ICUDAUnit, INumpyUnit)
 class DeviceBenchmark(AcceleratedUnit):
     """
     Executes an OpenCL benchmark to estimate the computing power of the device.
@@ -680,7 +685,7 @@ class DeviceBenchmark(AcceleratedUnit):
         """Compiles the benchmarking kernel.
         """
         super(DeviceBenchmark, self).initialize(device=device, **kwargs)
-        if device is None:
+        if isinstance(device, NumpyDevice):
             self._input_A_.mem = self._input_A_.mem.reshape(
                 self.size, self.size)
             self._input_B_.mem = self._input_B_.mem.reshape(
@@ -718,7 +723,7 @@ class DeviceBenchmark(AcceleratedUnit):
             self.debug("Result is %.2f", res)
         return res
 
-    def cpu_run(self):
+    def numpy_run(self):
         def execute(repeats):
             for _ in range(repeats):
                 numpy.dot(self._input_A_.mem, self._input_A_.mem,
@@ -778,7 +783,7 @@ class AcceleratedWorkflow(Workflow):
         super(AcceleratedWorkflow, self).init_unpickled()
         self._power_ = 0
         self._last_power_measurement_time = 0
-        self.device = None
+        self.device = NumpyDevice()
         self._power_measure_time_interval = 120
 
     @property
