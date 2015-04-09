@@ -90,7 +90,7 @@ class TestMeanDispNormalizer(AcceleratedTest):
         unit.run()
         unit.output.map_read()
         self.assertEqual(unit.output.dtype, self.rdisp.dtype)
-        if device is not None:
+        if not isinstance(device, NumpyDevice):
             vv = unit.output.unit_test_mem[unit.output.shape[0]:]
             nz = numpy.count_nonzero(numpy.isnan(vv))
             self.assertEqual(nz, vv.size, "Overflow occured")
