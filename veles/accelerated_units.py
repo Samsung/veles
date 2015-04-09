@@ -41,7 +41,7 @@ from jinja2 import Template, TemplateError
 import logging
 try:
     from numba import jit
-except ImportError:
+except (ImportError, AttributeError):
     jit = None
 import numpy
 import os
