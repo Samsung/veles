@@ -29,7 +29,7 @@
     "imagemin-pngquant": "*"
   },
   "engines": {
-    "node": ">=0.10.0"
+    "node": ">=0.12.2"
   },
   "homepage": "https://github.com/samsung/veles",
   "license": {

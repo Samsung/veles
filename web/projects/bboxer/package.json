@@ -35,7 +35,7 @@
     "type": "Apache 2.0",
     "url": "https://github.com/samsung/veles/blob/master/LICENSE.md"
   },
-  "name": "veles-forge",
+  "name": "veles-bboxer",
   "private": true,
   "scripts": {
     "gulp": "gulp",
