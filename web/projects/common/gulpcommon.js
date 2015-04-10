@@ -35,13 +35,7 @@ global.assets_pipeline = lazypipe().pipe(plugins.sourcemaps.init,
 
 
 gulp.task('bower', function () {
-  return gulp.src('bower.json')
-    .pipe(plugins.newer('src/libs/status-bower.json'))
-    .on('data', function () {
-      plugins.bower('src/libs');
-    })
-    .pipe(plugins.rename('status-bower.json'))
-    .pipe(gulp.dest('src/libs'));
+  return plugins.bower('src/libs');
 });
 
 gulp.task('watch-bower', function () {
