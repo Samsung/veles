@@ -34,10 +34,12 @@ def multi_device(numpy=False):
                 self.info("Selected %s",
                           cls.__name__ if cls is not None else "numpy")
                 self.seed()
-                fn(self)
+                res = fn(self)
                 self.parent.stopped = False
-                self.device = NumpyDevice()
+                self.device = None
                 gc.collect()
+                if res:
+                    break
 
         test_wrapped.__name__ = fn.__name__
         return test_wrapped
