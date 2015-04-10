@@ -33,9 +33,14 @@ do_pre() {
   git archive --format=tar --prefix deploy/pyenv/ HEAD -o $path/pyenv.tar
   cd $root/mastodon
   git archive --format=tar --prefix mastodon/ HEAD -o $path/Mastodon.tar
+  cd $root/web
+  echo "Building web..."
+  ./build.sh
+  cd $root
+  tar -cf $path/web.tar web/dist
   cd $path
   echo "Merging archives..."
-  for arch in package_lists.tar Znicz.tar pyenv.tar Mastodon.tar; do
+  for arch in package_lists.tar Znicz.tar pyenv.tar Mastodon.tar web.tar; do
     tar --concatenate --file Veles.tar $arch
     rm $arch
   done

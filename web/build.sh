@@ -8,6 +8,7 @@ if ! which npm > /dev/null; then
   exit 1
 fi
 
+rm -rf web/dist
 cd projects/common
 ln -s ../core/package.json package.json
 npm install

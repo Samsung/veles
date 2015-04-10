@@ -20,3 +20,4 @@ gource export-ignore
 debian export-ignore
 setup.py export-ignore
 sonar-project.properties export-ignore
+web export-ignore

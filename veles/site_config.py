@@ -45,6 +45,7 @@ def update(root):
         "web": {
             "host": "smaug",
             "port": 8090,
+            "root": os.path.join(__root__, "web", "dist"),
         },
         "engine": {
             "source_dirs": (

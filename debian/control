@@ -6,6 +6,7 @@ Uploaders: Vadim Markovtsev <v.markovtsev@samsung.com>
 Build-Depends: debhelper (>= 8.1~),
                dh-python (>= 1.20131003-1~),
                dpkg-dev (>= 1.16.1~),
+               nodejs (>= 0.12.2~),
                python3-setuptools,
                python3-setuptools-git (>= 1.0),
                python3 (>= 3.3.0-2),

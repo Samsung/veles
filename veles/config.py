@@ -200,7 +200,7 @@ root.common.update({
         "log_backups": 9,
         "notification_interval": 1,
         "pidfile": "/var/run/veles/web_status",
-        "root": os.path.join(__root__, "web", "dist"),
+        "root": "/usr/share/veles/web",
         "drop_time": 30 * 24 * 3600,
     },
     "forge": {
@@ -223,8 +223,6 @@ root.common.update({
     }
 })
 
-root.common.web.templates = os.path.join(root.common.web.root, "templates")
-
 # Allow to override the settings above
 try:
     from veles.site_config import update
@@ -233,6 +231,7 @@ try:
 except ImportError:
     pass
 
+root.common.web.templates = os.path.join(root.common.web.root, "templates")
 root.common.cache_dir = os.path.join(root.common.veles_user_dir, "cache")
 if not os.path.exists(root.common.cache_dir):
     os.makedirs(root.common.cache_dir)

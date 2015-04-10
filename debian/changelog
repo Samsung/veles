@@ -1,3 +1,21 @@
+veles (0.8.0-0) trusty; urgency=medium
+
+  * 0.8.0 release
+
+ -- Markovtsev Vadim <v.markovtsev@samsung.com>  Wed, 13 Apr 2015 18:09:03 +0300
+
+veles (0.7.1-0) trusty; urgency=medium
+
+  * 0.7.1 release
+
+ -- Markovtsev Vadim <v.markovtsev@samsung.com>  Thu, 03 Apr 2015 12:00:00 +0300
+
+veles (0.7.0-0) trusty; urgency=medium
+
+  * 0.7.0 release
+
+ -- Markovtsev Vadim <v.markovtsev@samsung.com>  Wed, 01 Apr 2015 18:09:03 +0300
+
 veles (0.5.1-0) trusty; urgency=medium
 
   * 0.5.1 release

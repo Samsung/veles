@@ -1,3 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 
 pip3 install -r /usr/share/veles/requirements.txt
+generate_frontend_veles
