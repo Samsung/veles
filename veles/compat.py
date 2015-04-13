@@ -35,6 +35,7 @@ under the License.
 
 import platform
 import six
+from sys import stdin
 
 if six.PY3:
     import lzma  # pylint: disable=W0611
@@ -114,3 +115,11 @@ if not six.PY3:
         return os.path.join(head, _PYCACHE, filename)
 
 PYPY = platform.python_implementation() == "PyPy"
+
+
+def is_interactive():
+    try:
+        import __main__ as main
+        return not hasattr(main, '__file__') or stdin.isatty()
+    except ImportError:
+        return False

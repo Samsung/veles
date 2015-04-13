@@ -46,7 +46,7 @@ import logging
 import sys
 
 import veles
-from veles.compat import from_none
+from veles.compat import from_none, is_interactive
 
 
 class classproperty(object):
@@ -107,7 +107,7 @@ class CommandLineBase(object):
                    "\033" r"[1;32m \___/\____/\_____|____/\____/  " "\033[0m" \
                    "\033[0;37m a subject of your country's laws.\033[0m\n"
 
-    LOGO = LOGO_COLORED if sys.stdout.isatty() else LOGO_PLAIN
+    LOGO = LOGO_COLORED if is_interactive() else LOGO_PLAIN
     DRY_RUN_CHOICES = ["load", "init", "exec", "no"]
     LOG_LEVEL_MAP = {"debug": logging.DEBUG, "info": logging.INFO,
                      "warning": logging.WARNING, "error": logging.ERROR}

@@ -561,6 +561,7 @@ class Main(Logger, CommandLineBase):
                 print(Main.LOGO)
             except:
                 print(Main.LOGO.replace("©", "(c)"))
+            sys.stdout.flush()
 
     def _print_version(self):
         print(veles.__version__, formatdate(veles.__date__, True),

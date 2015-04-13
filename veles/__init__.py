@@ -42,9 +42,10 @@ under the License.
 
 
 from email.utils import parsedate_tz, mktime_tz, formatdate
-from sys import version_info, modules, stdin
+from sys import version_info, modules
 from types import ModuleType
 from warnings import warn
+from veles.compat import is_interactive
 from veles.paths import __root__
 
 __project__ = "Veles Machine Learning Platform"
@@ -148,7 +149,7 @@ class VelesModule(ModuleType):
         Main = __import__("veles.__main__").__main__.Main
         if config is None:
             config = "-"
-        main = Main(stdin.isatty(), workflow, config, **kwargs)
+        main = Main(is_interactive(), workflow, config, **kwargs)
         main.run()
         return main.launcher
 

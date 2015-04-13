@@ -51,7 +51,7 @@ import weakref
 
 import veles.logger as logger
 from veles.cmdline import CommandLineArgumentsRegistry, classproperty
-from veles.compat import from_none
+from veles.compat import from_none, is_interactive
 
 
 def errback(failure, thread_pool=None):
@@ -539,7 +539,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
 
     @staticmethod
     def setup_interactive_exit():
-        if not sys.__stdin__.closed and sys.__stdin__.isatty():
+        if not sys.__stdin__.closed and is_interactive():
             try:
                 __IPYTHON__  # pylint: disable=E0602
                 from IPython.terminal.interactiveshell import InteractiveShell
@@ -560,7 +560,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
 
     @staticmethod
     def restore_initial_interactive_exit():
-        if not sys.__stdin__.closed and sys.__stdin__.isatty():
+        if not sys.__stdin__.closed and is_interactive():
             try:
                 __IPYTHON__  # pylint: disable=E0602
                 from IPython.terminal.interactiveshell import InteractiveShell

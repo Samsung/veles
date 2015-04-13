@@ -47,10 +47,9 @@ try:
 except ImportError:
     chisquare = None
 import six
-import sys
 from zope.interface import implementer, Interface
 
-from veles.compat import from_none
+from veles.compat import from_none, is_interactive
 import veles.config as config
 from veles.distributable import IDistributable
 import veles.error as error
@@ -849,7 +848,7 @@ class Loader(Unit):
         amin = list(stats.keys())[numpy.argmin(values)]
         lmax = numpy.max(values)
         amax = list(stats.keys())[numpy.argmax(values)]
-        if sys.stdin.isatty() and stddev > mean / 10:
+        if is_interactive() and stddev > mean / 10:
             endstr = "\033[0m"
             if stddev > mean / 2:
                 openstr = "\033[1;31m"  # red

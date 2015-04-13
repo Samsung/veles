@@ -36,11 +36,11 @@ under the License.
 import numpy
 import os
 from PIL import Image
-import sys
 import threading
 from tempfile import NamedTemporaryFile
 from zope.interface import implementer
 from wget import bar_adaptive, callback_progress, urllib
+from veles import is_interactive
 
 from veles.loader.base import Loader, ILoader, TEST, TRAIN, VALID
 from veles.loader.image import ImageLoader, MODE_COLOR_MAP
@@ -79,7 +79,7 @@ class InteractiveLoader(Loader):
         pass
 
     def load_data(self):
-        assert sys.stdin.isatty(), \
+        assert is_interactive(), \
             "This loader may only operate in interactive mode"
         self.class_lengths[TEST] = 1
         self.class_lengths[TRAIN] = self.class_lengths[VALID] = 0
