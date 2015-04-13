@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # encoding: utf-8
 # PYTHON_ARGCOMPLETE_OK
-"""
+u"""
   _   _ _____ _     _____ _____
  | | | |  ___| |   |  ___/  ___|
  | | | | |__ | |   | |__ \ `--.
