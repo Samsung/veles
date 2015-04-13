@@ -684,26 +684,13 @@ class Launcher(logger.Logger):
         self.debug("Slave args: %s", slave_args)
         total_slaves = 0
         max_slaves = self.args.max_nodes or 1000
-        cmdline = "%s -d %d:%d %s"
+        cmdline = "%s %s" % (sys.executable, os.path.abspath(sys.argv[0])) + \
+            " --backend %s --device %s " + slave_args
         if self.args.log_file:
             cmdline += " &>> " + self.args.log_file
         for node in self.slaves:
             host, devs = node.split('/')
-            marray = devs.split('x')
-            multiplier = int(marray[1]) if len(marray) > 1 else 1
-            oclpnums, ocldevnum = marray[0].split(':')
-            oclpnum = int(oclpnums)
-            ocldevarr = ocldevnum.split('-')
-            ocldevmin = int(ocldevarr[0])
-            if len(ocldevarr) > 1:
-                ocldevmax = int(ocldevarr[1])
-            else:
-                ocldevmax = ocldevmin
-            progs = []
-            for _ in range(multiplier):
-                for d in range(ocldevmin, ocldevmax + 1):
-                    progs.append(cmdline % (os.path.abspath(sys.argv[0]),
-                                            oclpnum, d, slave_args))
+            progs = [cmdline % dev for dev in Device.iterparse(devs)]
             if total_slaves + len(progs) > max_slaves:
                 progs = progs[:max_slaves - total_slaves]
             total_slaves += len(progs)
@@ -716,6 +703,11 @@ class Launcher(logger.Logger):
         cwd = os.getcwd()
         self.debug("cwd: %s", os.getcwd())
         PYTHONPATH = os.getenv("PYTHONPATH")
+        if os.path.splitext(os.path.basename(sys.argv[0]))[0] == "__main__":
+            if PYTHONPATH is None:
+                PYTHONPATH = cwd
+            else:
+                PYTHONPATH += ":" + cwd
         if PYTHONPATH is not None:
             self.debug("PYTHONPATH: %s", PYTHONPATH)
             ppenv = "export PYTHONPATH='%s' && " % PYTHONPATH

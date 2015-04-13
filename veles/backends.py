@@ -272,6 +272,17 @@ class Device(Pickleable):
         pool.unregister_on_thread_enter(self._on_thread_enter)
         pool.unregister_on_thread_exit(self._on_thread_exit)
 
+    @staticmethod
+    def iterparse(text):
+        bpos = text.find(':')
+        if bpos < 1:
+            raise ValueError("Invalid devices definition: %s" % text)
+        backend, devs = text[:bpos], text[bpos + 1:]
+        multidevs = devs.split('x')
+        for _ in range(1 if len(multidevs) == 1 else int(multidevs[1])):
+            for d in BackendRegistry.backends[backend].iterparse(multidevs[0]):
+                yield d
+
     def _on_thread_enter(self):
         """Called justed after the new thread has been created
         in the thread pool.
@@ -441,6 +452,59 @@ class OpenCLDevice(Device):
     def max_group_size(self):
         return self.queue_.device.max_work_group_size
 
+    @staticmethod
+    def iterparse(text):
+        oclpnums, ocldevnum = text.split(':')
+        oclpnum = int(oclpnums)
+        ocldevarr = ocldevnum.split('-')
+        ocldevmin = int(ocldevarr[0])
+        if len(ocldevarr) > 1:
+            ocldevmax = int(ocldevarr[1])
+        else:
+            ocldevmax = ocldevmin
+        for dev in range(ocldevmin, ocldevmax + 1):
+            yield OpenCLDevice.BACKEND, "%d:%d" % (oclpnum, dev)
+
+    def compute_ratings(self, device_infos):
+        devdt = {}
+        min_dt = {}
+        for desc, device_info in sorted(device_infos.items()):
+            krninfo = device_info.get("matrix_multiplication")
+            if krninfo is None:
+                continue
+            devdt[desc] = {}
+            for dtype, typeinfo in krninfo.items():
+                bsdt = typeinfo.get("0")
+                if bsdt is None:
+                    continue
+                devdt[desc][dtype] = bsdt[1]
+                min_dt[dtype] = min(min_dt.get(dtype, 1.0e30), bsdt[1])
+
+        table = prettytable.PrettyTable("device", " dtype", "rating")
+        table.align["device"] = "l"
+        table.align[" dtype"] = "l"
+        rating = {}
+        for desc, dtypedt in sorted(devdt.items()):
+            rating[desc] = {}
+            for dtype, dt in sorted(dtypedt.items()):
+                rating[desc][dtype] = min_dt[dtype] / dt
+                table.add_row(desc, dtype, "%.3f" % rating[desc][dtype])
+        self.debug("Device ratings:\n%s", str(table))
+
+        if self.device_info.desc in rating:
+            self.device_info.rating = rating[self.device_info.desc]
+
+    def sync(self):
+        self.queue_.flush()
+        self.queue_.finish()
+
+    @staticmethod
+    def available():
+        try:
+            return len(cl.Platforms().platforms) > 0
+        except:
+            return False
+
     def _get_some_device(self, **kwargs):
         """Gets some device from the available OpenCL devices.
         Returns True if any device was selected, otherwise, False.
@@ -470,6 +534,7 @@ class OpenCLDevice(Device):
 
             os.fork = fail
             import subprocess
+
             subprocess.Popen = fail
         device = context.devices[0]
         desc = "%s/%s/%d" % (device.vendor.strip(), device.name.strip(),
@@ -507,9 +572,9 @@ class OpenCLDevice(Device):
                          OpenCLDevice.DEVICE_INFOS_JSON,
                          root.common.engine.device_dirs)
         if ((self.device_info.desc not in device_infos and
-             root.common.test_unknown_device) or
-            (self.device_info.desc in device_infos and
-             root.common.test_known_device)):
+                root.common.test_unknown_device) or
+                (self.device_info.desc in device_infos and
+                 root.common.test_known_device)):
             self.warning("%s, will perform a "
                          "quick test now.", "Forced device retest"
                          if self.device_info.desc in device_infos
@@ -582,46 +647,6 @@ class OpenCLDevice(Device):
                 device_info[krnnme][dtype][precision_level] = (
                     min_block_size, min_dt)
         device_infos[self.device_info.desc] = device_info
-
-    def compute_ratings(self, device_infos):
-        devdt = {}
-        min_dt = {}
-        for desc, device_info in sorted(device_infos.items()):
-            krninfo = device_info.get("matrix_multiplication")
-            if krninfo is None:
-                continue
-            devdt[desc] = {}
-            for dtype, typeinfo in krninfo.items():
-                bsdt = typeinfo.get("0")
-                if bsdt is None:
-                    continue
-                devdt[desc][dtype] = bsdt[1]
-                min_dt[dtype] = min(min_dt.get(dtype, 1.0e30), bsdt[1])
-
-        table = prettytable.PrettyTable("device", " dtype", "rating")
-        table.align["device"] = "l"
-        table.align[" dtype"] = "l"
-        rating = {}
-        for desc, dtypedt in sorted(devdt.items()):
-            rating[desc] = {}
-            for dtype, dt in sorted(dtypedt.items()):
-                rating[desc][dtype] = min_dt[dtype] / dt
-                table.add_row(desc, dtype, "%.3f" % rating[desc][dtype])
-        self.debug("Device ratings:\n%s", str(table))
-
-        if self.device_info.desc in rating:
-            self.device_info.rating = rating[self.device_info.desc]
-
-    def sync(self):
-        self.queue_.flush()
-        self.queue_.finish()
-
-    @staticmethod
-    def available():
-        try:
-            return len(cl.Platforms().platforms) > 0
-        except:
-            return False
 
 
 @add_metaclass(BackendRegistry)
@@ -727,6 +752,17 @@ class CUDADevice(Device):
             result.append(format_device(device))
         return result
 
+    @staticmethod
+    def iterparse(text):
+        ocldevarr = text.split('-')
+        ocldevmin = int(ocldevarr[0])
+        if len(ocldevarr) > 1:
+            ocldevmax = int(ocldevarr[1])
+        else:
+            ocldevmax = ocldevmin
+        for dev in range(ocldevmin, ocldevmax + 1):
+            yield CUDADevice.BACKEND, str(dev)
+
     def _get_some_device(self, **kwargs):
         """Gets some device from the available CUDA devices.
         Returns True if any device was selected, otherwise, False.
@@ -795,3 +831,7 @@ class NumpyDevice(Device):
     @staticmethod
     def available():
         return True
+
+    @staticmethod
+    def iterparse(text):
+        yield "numpy", "numpy"

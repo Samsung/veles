@@ -280,7 +280,11 @@ class VelesProtocol(StringLineReceiver, IDLogger):
                        "request in update_result_received()")
             self.state.postpone_job()
         else:
-            self.state.obtain_job()
+            try:
+                self.state.obtain_job()
+            except fysom.FysomError as e:
+                self.warning("Job was received too late or too early: %s", e)
+                return
         update = self._last_update
         if self.host.async and update is not None:
             self.request_update()
