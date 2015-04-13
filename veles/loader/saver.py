@@ -89,7 +89,7 @@ class MinibatchesSaver(Unit):
         self.demand(
             "minibatch_data", "minibatch_labels", "minibatch_class",
             "class_lengths", "max_minibatch_size", "minibatch_size",
-            "shuffle_limit")
+            "shuffle_limit", "has_labels")
 
     @property
     def effective_class_chunk_sizes(self):
@@ -116,7 +116,8 @@ class MinibatchesSaver(Unit):
         return self.compression, self.class_lengths, self.max_minibatch_size, \
             self.effective_class_chunk_sizes, \
             self.minibatch_data.shape, self.minibatch_data.dtype, \
-            self.minibatch_labels.shape, self.minibatch_labels.dtype
+            self.minibatch_labels.shape if self.has_labels else None,\
+            self.minibatch_labels.dtype if self.has_labels else None
 
     def prepare_chunk_data(self):
         self.minibatch_data.map_read()
@@ -124,14 +125,18 @@ class MinibatchesSaver(Unit):
         arr_data = numpy.zeros(
             (self.effective_class_chunk_sizes[self.minibatch_class],) +
             self.minibatch_data.shape[1:], dtype=self.minibatch_data.dtype)
-        arr_labels = numpy.zeros(
-            (self.effective_class_chunk_sizes[self.minibatch_class],) +
-            self.minibatch_labels.shape[1:], dtype=self.minibatch_labels.dtype)
+        if self.has_labels:
+            arr_labels = numpy.zeros(
+                (self.effective_class_chunk_sizes[self.minibatch_class],) +
+                self.minibatch_labels.shape[1:], self.minibatch_labels.dtype)
+        else:
+            arr_labels = None
         return arr_data, arr_labels
 
     def fill_chunk_data(self, prepared, interval):
         prepared[0][:] = self.minibatch_data[interval[0]:interval[1]]
-        prepared[1][:] = self.minibatch_labels[interval[0]:interval[1]]
+        if self.has_labels:
+            prepared[1][:] = self.minibatch_labels[interval[0]:interval[1]]
 
     def run(self):
         prepared = self.prepare_chunk_data()
@@ -147,7 +152,11 @@ class MinibatchesSaver(Unit):
             file.flush()
 
     def stop(self):
+        if self.file.closed:
+            return
+        pos = self.file.tell()
         pickle.dump(self.offset_table, self.file, protocol=best_protocol)
+        self.debug("Offset table took %d bytes", self.file.tell() - pos)
         self.file.close()
 
 
@@ -190,6 +199,7 @@ class MinibatchesLoader(Loader):
          self.minibatch_data_shape, self.minibatch_data_dtype,
          self.minibatch_labels_shape, self.minibatch_labels_dtype) = \
             pickle.load(self.file)
+        self._has_labels = self.minibatch_labels_shape is not None
         self.decompress = MinibatchesLoader.CODECS[codec]
 
         self.chunk_numbers = []
@@ -216,6 +226,8 @@ class MinibatchesLoader(Loader):
             self.error("Failed to read the offset table (table offset was %d)",
                        bm.size)
             raise from_none(e)
+        for i, offset in enumerate(self.offset_table):
+            self.offset_table[i] = int(offset)
         # Virtual end
         self.offset_table.append(self.file.tell() - bm.size)
         self.debug("Offsets: %s", self.offset_table)
@@ -226,8 +238,9 @@ class MinibatchesLoader(Loader):
             dtype=self.minibatch_data_dtype))
 
     def fill_minibatch(self):
-        chunks_map = [self.get_address(i) + (i,) for i in
-                      self.minibatch_indices.mem[:self.minibatch_size]]
+        chunks_map = [
+            self.get_address(sample) + (i,) for i, sample in
+            enumerate(self.minibatch_indices.mem[:self.minibatch_size])]
         chunks_map.sort()
         prev_chunk_number = -1
         chunk = None
@@ -240,7 +253,8 @@ class MinibatchesLoader(Loader):
                 chunk = pickle.loads(self.decompress(buffer))
             mb_data, mb_labels = chunk
             self.minibatch_data[index] = mb_data[chunk_offset]
-            self.minibatch_labels[index] = mb_labels[chunk_offset]
+            if self.has_labels:
+                self.minibatch_labels[index] = mb_labels[chunk_offset]
 
     def get_address(self, index):
         class_index, class_remainder = self.class_index_by_sample_index(index)

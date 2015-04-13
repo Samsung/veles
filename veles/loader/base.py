@@ -136,9 +136,9 @@ class Loader(Unit):
     LABEL_DTYPE = numpy.int32
     INDEX_DTYPE = numpy.int32
     exports = "epoch_ended", "epoch_number", "train_ended", "class_lengths", \
-        "minibatch_data", "minibatch_class", "minibatch_data", \
-        "minibatch_labels", "minibatch_size", "total_samples", \
-        "last_minibatch", "class_lengths"
+        "minibatch_data", "minibatch_class", "minibatch_data", "has_labels", \
+        "minibatch_labels", "minibatch_size", "max_minibatch_size", \
+        "total_samples", "last_minibatch", "class_lengths", "shuffle_limit"
 
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = "LOADER"
@@ -624,13 +624,13 @@ class Loader(Unit):
     def shuffle(self):
         """Randomly shuffles the TRAIN dataset.
         """
+        if self.shuffled_indices.mem is None:
+            self.shuffled_indices.mem = numpy.arange(
+                self.total_samples, dtype=Loader.INDEX_DTYPE)
         if self.shuffle_limit <= 0:
             return
         self.shuffle_limit -= 1
         self.debug("Shuffling, remaining limit is %d", self.shuffle_limit)
-        if self.shuffled_indices.mem is None:
-            self.shuffled_indices.mem = numpy.arange(self.total_samples,
-                                                     dtype=Loader.INDEX_DTYPE)
         self.shuffled_indices.map_write()
         self.prng.shuffle(self.shuffled_indices.mem[
             self.class_end_offsets[VALID]:])
@@ -734,7 +734,7 @@ class Loader(Unit):
                   self.minibatch_indices):
             v.map_invalidate()
         self.shuffled_indices.map_read()
-        self.minibatch_indices.mem[:count] = self.shuffled_indices.mem[
+        self.minibatch_indices.mem[:count] = self.shuffled_indices[
             start_offset:start_offset + count]
         return False
 
@@ -770,6 +770,8 @@ class Loader(Unit):
         self.last_minibatch <<= last_mb
         self.epoch_ended <<= last_mb and (
             self.minibatch_class == VALID or
+            (self.minibatch_class == TEST and self.class_lengths[TRAIN] ==
+                self.class_lengths[VALID] == 0) or
             (self.minibatch_class == TRAIN and self.class_lengths[VALID] == 0))
 
     def _advance_global_offset(self):
