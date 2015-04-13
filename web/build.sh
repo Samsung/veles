@@ -21,3 +21,7 @@ npm run gulp
 cd ../forge
 npm install
 npm run gulp
+
+cd ../bboxer
+npm install
+npm run gulp
