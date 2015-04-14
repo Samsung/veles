@@ -74,10 +74,6 @@ from veles.config import root
 from veles.external.prettytable import PrettyTable
 from veles.forge_common import REQUIRED_MANIFEST_FIELDS, validate_requires
 from veles.logger import Logger
-try:
-    import veles.znicz  # pylint: disable=W0611
-except:
-    pass
 
 
 ACTIONS = set()

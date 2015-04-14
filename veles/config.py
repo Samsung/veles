@@ -230,6 +230,14 @@ try:
     del update
 except ImportError:
     pass
+for site_path in root.common.veles_user_dir, os.getcwd():
+    sys.path.insert(0, site_path)
+    try:
+        __import__("site_config").update(root)
+    except (ImportError, AttributeError):
+        pass
+    finally:
+        del sys.path[0]
 
 root.common.web.templates = os.path.join(root.common.web.root, "templates")
 root.common.cache_dir = os.path.join(root.common.veles_user_dir, "cache")

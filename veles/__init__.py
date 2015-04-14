@@ -57,6 +57,7 @@ __authors__ = ["Gennady Kuznetsov", "Vadim Markovtsev", "Alexey Kazantsev",
                "Lyubov Podoynitsina", "Denis Seresov", "Dmitry Senin",
                "Alexey Golovizin", "Egor Bulychev", "Ernesto Sanches"]
 __contact__ = "Gennady Kuznetsov <g.kuznetsov@samsung.com>"
+__plugins__ = set()
 
 try:
     __git__ = "$Commit$"
@@ -93,8 +94,6 @@ if version_info.major == 3 and version_info.minor == 4 and \
     warn("Python 3.4.0 has a bug which is critical to Veles OpenCL subsystem ("
          "see issue #21435). It is recommended to upgrade to 3.4.1.")
 
-__plugins__ = set()
-
 
 def __html__():
     """
@@ -123,6 +122,7 @@ class VelesModule(ModuleType):
         self.__dict__.update(modules[__name__].__dict__)
         self.__units_cache__ = None
         self.__modules_cache_ = None
+        self.__plugins = None
 
     def __call__(self, workflow, config=None, **kwargs):
         """
@@ -243,6 +243,25 @@ class VelesModule(ModuleType):
 
         result["all"] = sum(result.values())
         return result
+
+    @property
+    def __plugins__(self):
+        if self.__plugins is None:
+            self.__plugins = set()
+            from os import walk, path
+            for root, dirs, files in walk(self.__root__):
+                if ".veles" in files:
+                    package = path.relpath(root, self.__root__).replace(
+                        path.sep, '.')
+                    try:
+                        __import__(package)
+                    except ImportError:
+                        continue
+                    plugin = self
+                    for name in package.split('.')[1:]:
+                        plugin = getattr(plugin, name)
+                    self.__plugins.add(plugin)
+        return self.__plugins
 
 
 if not isinstance(modules[__name__], VelesModule):
