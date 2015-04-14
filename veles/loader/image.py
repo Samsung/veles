@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-  _   _ _____ _     _____ _____
- | | | |  ___| |   |  ___/  ___|
- | | | | |__ | |   | |__ \ `--.
- | | | |  __|| |   |  __| `--. \
- \ \_/ / |___| |___| |___/\__/ /
-  \___/\____/\_____|____/\____/
+.. invisible:
+     _   _ _____ _     _____ _____
+    | | | |  ___| |   |  ___/  ___|
+    | | | | |__ | |   | |__ \ `--.
+    | | | |  __|| |   |  __| `--. \
+    \ \_/ / |___| |___| |___/\__/ /
+     \___/\____/\_____|____/\____/
 
 Created on Aug 14, 2013
 
@@ -499,9 +500,10 @@ class ImageLoader(Loader):
 
     def crop_image(self, data, bbox):
         """
+        Cuts a rectangular part of an image.
         :param data: The source image to crop.
         :param bbox: (ymin, ymax, xmin, xmax)
-        :return: tuple (image part randomly cropped around the bbox,
+        :return: tuple (image part randomly cropped around the bbox,\
         intersection ratio)
         """
         crop_hw_yx = [[0, 0], [0, 0]]

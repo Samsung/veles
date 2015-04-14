@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-  _   _ _____ _     _____ _____
- | | | |  ___| |   |  ___/  ___|
- | | | | |__ | |   | |__ \ `--.
- | | | |  __|| |   |  __| `--. \
- \ \_/ / |___| |___| |___/\__/ /
-  \___/\____/\_____|____/\____/
+.. invisible:
+     _   _ _____ _     _____ _____
+    | | | |  ___| |   |  ___/  ___|
+    | | | | |__ | |   | |__ \ `--.
+    | | | |  __|| |   |  __| `--. \
+    \ \_/ / |___| |___| |___/\__/ /
+     \___/\____/\_____|____/\____/
 
 Created on Jul 3, 2014.
 
@@ -217,8 +218,8 @@ class ZmqConnection(Logger):
 
     def fileno(self):
         """
-        Implementation of :tm:`IFileDescriptor
-        <internet.interfaces.IFileDescriptor>`.
+        Implementation of :class:`IFileDescriptor
+        <twisted.internet.interfaces.IFileDescriptor>`.
 
         Returns ZeroMQ polling file descriptor.
 
@@ -241,8 +242,8 @@ class ZmqConnection(Logger):
         """
         Called when the connection was lost.
 
-        Implementation of :tm:`IFileDescriptor
-        <internet.interfaces.IFileDescriptor>`.
+        Implementation of :class:`IFileDescriptor
+        <twisted.internet.interfaces.IFileDescriptor>`.
 
         This is called when the connection on a selectable object has been
         lost.  It will be called whether the connection was closed explicitly,
@@ -346,8 +347,8 @@ class ZmqConnection(Logger):
         ZeroMQ is signalling that we should process some events,
         we're starting to receive incoming messages.
 
-        Implementation of :tm:`IReadDescriptor
-        <internet.interfaces.IReadDescriptor>`.
+        Implementation of :class:`IReadDescriptor
+        <twisted.internet.interfaces.IReadDescriptor>`.
         """
         if self.shutted_down:
             return
@@ -384,8 +385,8 @@ class ZmqConnection(Logger):
 
     def logPrefix(self):
         """
-        Implementation of :tm:`ILoggingContext
-        <internet.interfaces.ILoggingContext>`.
+        Implementation of :class:`ILoggingContext
+        <twisted.internet.interfaces.ILoggingContext>`.
 
         :return: Prefix used during log formatting to indicate context.
         :rtype: str
@@ -403,13 +404,13 @@ class ZmqConnection(Logger):
         After writing read is scheduled as ZeroMQ may not signal incoming
         messages after we touched socket with write request.
 
-        :param message: message data, a series of objects; if an object is
-        an instance of bytes, it will be sent as-is, otherwise, it will be
+        :param message: message data, a series of objects; if an object is\
+        an instance of bytes, it will be sent as-is, otherwise, it will be\
         pickled and optionally compressed. Object must not be a string.
-        :param pickles_compression: the compression to apply to pickled
+        :param pickles_compression: the compression to apply to pickled\
         objects. Supported values are None or "", "gzip", "snappy" and "xz".
         :type pickles_compression: str
-        :param io: a SharedIO object where to put pickles into instead of the
+        :param io: a SharedIO object where to put pickles into instead of the\
         socket. Can be None.
         """
         if self.shutted_down:

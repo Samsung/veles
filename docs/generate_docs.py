@@ -6,12 +6,18 @@ To generate the docs, you have to install sphinx3-doc and the extensions:
     sphinxcontrib-napoleon, sphinx.ext.mathjax and sphinx.ext.argparse
 """
 
+import argparse
 import os
 import subprocess
 import sys
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="VELES documentation builder")
+    parser.add_argument("--skip-deps", default=False,
+                        help="Do not generate the module dependency diagrams.",
+                        action='store_true')
+    args = parser.parse_args()
     docs_path = os.path.dirname(os.path.realpath(__file__))
     docs_source_path = os.path.join(docs_path, "source")
     project_path = os.path.realpath(os.path.join(docs_path, ".."))
@@ -19,13 +25,15 @@ if __name__ == "__main__":
     sys.path.append(docs_path)
     os.chdir(docs_path)
 
-    subprocess.call(["./deps.sh"])
-    subprocess.call(["sphinx-apidoc", "-e", "-f", "-H",
-                    "Source Code", "-o", docs_source_path,
-                    project_path, os.path.join(project_path, "veles/external"),
-                    os.path.join(project_path, "veles/znicz/external"),
-                    os.path.join(project_path, "veles/tests"),
-                    os.path.join(project_path, "veles/znicz/tests")])
+    if not args.skip_deps:
+        subprocess.call(["./deps.sh"])
+    subprocess.call([
+        "sphinx-apidoc", "-e", "-f", "-H", "Source Code", "-o",
+        docs_source_path, project_path,
+        os.path.join(project_path, "veles/external"),
+        os.path.join(project_path, "veles/znicz/external"),
+        os.path.join(project_path, "veles/tests"),
+        os.path.join(project_path, "veles/znicz/tests")])
     os.remove("source/modules.rst")
     os.remove("source/setup.rst")
     subprocess.call(["sphinx-build", "-b", "html", "-d",

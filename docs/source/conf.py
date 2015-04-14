@@ -316,7 +316,7 @@ class Mock(object):
             return Mock()
 
 MOCK_MODULES = ['pygtk', 'gtk', 'gobject', "numpy", "numpy.random",
-                "numpy.linalg", "cv2",
+                "numpy.linalg", "cv2", "numba", "numpy.matlib",
                 "scipy", "scipy.signal", "scipy.io", "scipy.misc",
                 "scipy.interpolate", "scipy.stats",
                 "scipy.ndimage", "freetype", "matplotlib", "matplotlib.pyplot",
