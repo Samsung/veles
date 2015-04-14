@@ -91,7 +91,7 @@ class MeanDispNormalizer(AcceleratedUnit, TriviallyDistributable):
             raise error.BadFormatError("Sample size of input differs from "
                                        "mean-rdisp size")
 
-        if not self.output.mem:
+        if not self.output:
             self.output.reset(numpy.zeros(self.input.shape, self.rdisp.dtype))
         else:
             assert self.output.shape == self.input.shape
