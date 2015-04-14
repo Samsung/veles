@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Veles Machine Learning Platform documentation build configuration file, created by
-# sphinx-quickstart on Wed Apr 23 17:26:16 2014.
+# Veles Machine Learning Platform documentation build configuration file,
+# created by sphinx-quickstart on Wed Apr 23 17:26:16 2014.
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.
@@ -17,9 +17,15 @@ import sys
 import os
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
-sys.path.append(os.path.join(os.path.dirname(__file__), "../../scripts"))
 from veles import (__version__, __license__, __copyright__, __git__,
-                   __authors__, __project__)
+                   __authors__, __project__, __plugins__)
+
+for plugin in __plugins__:
+    docs = os.path.join(os.path.dirname(plugin.__file__), "docs")
+    if os.path.exists(docs):
+        symlink = os.path.join(os.path.dirname(__file__), plugin.__name__)
+        if not os.path.exists(symlink):
+            os.symlink(docs, symlink, True)
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
