@@ -181,8 +181,8 @@ class SnappyFile(object):
             self._file.write(self._compressor.compress(bytes(self.buffer)))
             data = data[remainder:]
             self.buffer_pos = 0
-        self.buffer_pos = len(data)
-        self.buffer[:len(data)] = data
+        self.buffer_pos += len(data)
+        self.buffer[self.buffer_pos - len(data):self.buffer_pos] = data
 
     def read(self):
         return self._decompressor.decompress(self._file.read(len(self.buffer)))

@@ -164,7 +164,7 @@ def decompress_snappy(data):
     bio_in = BytesIO(data)
     bio_out = BytesIO()
     snappy.stream_decompress(bio_in, bio_out)
-    return bio_out.getbuffer()
+    return bio_out.getvalue()
 
 
 @implementer(ILoader)
