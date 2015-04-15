@@ -22,7 +22,7 @@ gulp.task('forge', ['sass', 'browserify'], function() {
 gulp.task('forge_image', function() {
   return gulp.src('src/forge_image.html')
     .pipe(plugins.minifyHtml())
-    .pipe(gulp.dest(dist));
+    .pipe(gulp.dest(templates_dist));
 });
 
 gulp.task('default', ['forge', 'forge_image', 'fonts', 'media']);

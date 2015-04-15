@@ -540,38 +540,40 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
 
     @staticmethod
     def setup_interactive_exit():
-        if not sys.__stdin__.closed and is_interactive():
+        if not is_interactive():
+            return
+        try:
+            __IPYTHON__  # pylint: disable=E0602
+            from IPython.terminal.interactiveshell import InteractiveShell
+            shell = InteractiveShell.instance()
+            ThreadPool.exit_initial = shell.exiter.__call__
+            shell.exiter.__call__ = ThreadPool.builtin_exit
+            ThreadPool._ipython_ask_exit_initial = shell.ask_exit
+            shell.ask_exit = ThreadPool._ipython_ask_exit
+        except NameError:
             try:
-                __IPYTHON__  # pylint: disable=E0602
-                from IPython.terminal.interactiveshell import InteractiveShell
-                shell = InteractiveShell.instance()
-                ThreadPool.exit_initial = shell.exiter.__call__
-                shell.exiter.__call__ = ThreadPool.builtin_exit
-                ThreadPool._ipython_ask_exit_initial = shell.ask_exit
-                shell.ask_exit = ThreadPool._ipython_ask_exit
-            except NameError:
-                try:
-                    import builtins
-                    ThreadPool.exit_initial = builtins.exit
-                    ThreadPool.quit_initial = builtins.quit
-                    builtins.exit = ThreadPool.builtin_exit
-                    builtins.quit = ThreadPool.builtin_quit
-                except:
-                    pass
+                import builtins
+                ThreadPool.exit_initial = builtins.exit
+                ThreadPool.quit_initial = builtins.quit
+                builtins.exit = ThreadPool.builtin_exit
+                builtins.quit = ThreadPool.builtin_quit
+            except:
+                pass
 
     @staticmethod
     def restore_initial_interactive_exit():
-        if not sys.__stdin__.closed and is_interactive():
+        if not is_interactive():
+            return
+        try:
+            __IPYTHON__  # pylint: disable=E0602
+            from IPython.terminal.interactiveshell import InteractiveShell
+            shell = InteractiveShell.instance()
+            shell.exiter.__call__ = ThreadPool.exit_initial
+            shell.ask_exit = ThreadPool._ipython_ask_exit_initial
+        except NameError:
             try:
-                __IPYTHON__  # pylint: disable=E0602
-                from IPython.terminal.interactiveshell import InteractiveShell
-                shell = InteractiveShell.instance()
-                shell.exiter.__call__ = ThreadPool.exit_initial
-                shell.ask_exit = ThreadPool._ipython_ask_exit_initial
-            except NameError:
-                try:
-                    import builtins
-                    builtins.exit = ThreadPool.exit_initial
-                    builtins.quit = ThreadPool.quit_initial
-                except:
-                    pass
+                import builtins
+                builtins.exit = ThreadPool.exit_initial
+                builtins.quit = ThreadPool.quit_initial
+            except:
+                pass

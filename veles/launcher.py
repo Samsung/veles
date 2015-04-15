@@ -538,6 +538,7 @@ class Launcher(logger.Logger):
             self._on_stop()
             return
         if self.interactive:
+            self._on_stop()
             return
         try:
             reactor.stop()

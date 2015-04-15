@@ -175,7 +175,7 @@ function updateUI() {
   });
 }
 
-function activateListItem(item_id) {
+global.activateListItem = function(item_id) {
   if (active_workflow_id != item_id) {
     console.log("Switching items in the list");
     $("#" + active_workflow_id).removeClass("active");
@@ -322,19 +322,19 @@ function activateListItem(item_id) {
     });
   }
   $("#indicator").hide();
-}
+};
 
-function showPlots(item_id) {
+global.showPlots = function(item_id) {
   var workflow = listed_workflows[item_id];
   var win = window.open(workflow.plots, '_blank');
   win.focus();
-}
+};
 
-function showLogs(item_id) {
+global.showLogs = function(item_id) {
   var workflow = listed_workflows[item_id];
   var win = window.open("logs.html?session=" + workflow.log_id, '_blank');
   win.focus();
-}
+};
 
 $(window).load(function() {
   setInterval(updateUI, 2000);

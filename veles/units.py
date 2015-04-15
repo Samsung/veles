@@ -460,7 +460,7 @@ class Unit(Distributable, Verified):
         # while the loop is working
         gate_blocks = [bool(dst.gate_block) for dst in links]
         for index, dst in enumerate(links):
-            if gate_blocks[index]:
+            if gate_blocks[index] or dst.gate_block:
                 continue
             if root.common.trace_run:
                 self.debug("%s -> %s (%d/%d) @%s", self, dst, index + 1,

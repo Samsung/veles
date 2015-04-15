@@ -121,6 +121,7 @@ PYPY = platform.python_implementation() == "PyPy"
 def is_interactive():
     try:
         import __main__ as main
-        return not hasattr(main, '__file__') or stdin.isatty()
+        return not hasattr(main, '__file__') or (
+            not stdin.closed and stdin.isatty())
     except ImportError:
         return False
