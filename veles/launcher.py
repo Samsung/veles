@@ -530,7 +530,8 @@ class Launcher(logger.Logger):
                 return
             running = self._running and reactor.running
             self._running = False
-        if self.is_master and len(self.agent.protocols) > 0:
+        if self.is_master and self.agent is not None and \
+                len(self.agent.protocols) > 0:
             self.info("Waiting for the slaves to finish (%d left)...",
                       len(self.agent.protocols))
             return

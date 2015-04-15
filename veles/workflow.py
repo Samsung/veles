@@ -770,8 +770,9 @@ class Workflow(Container):
                 if k == "run":
                     continue
                 time_all += v
-                table.add_row(k, int(v * 100 / self._run_time_),
-                              datetime.timedelta(seconds=v))
+                if self._run_time_ > 0:
+                    table.add_row(k, int(v * 100 / self._run_time_),
+                                  datetime.timedelta(seconds=v))
             if self.is_slave:
                 table.add_row(u"Σ", int(time_all * 100 / self._run_time_),
                               datetime.timedelta(seconds=time_all))

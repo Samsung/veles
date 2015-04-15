@@ -37,11 +37,14 @@ under the License.
 
 import argparse
 import errno
+from fcntl import fcntl, F_GETFL, F_SETFL
+from io import UnsupportedOperation
 import os
 import subprocess
 import sys
 from tempfile import mkdtemp
-
+import threading
+from select import select
 import six
 import snappy
 from twisted.internet import reactor
@@ -161,7 +164,11 @@ class GraphicsServer(Logger):
 
     def shutdown(self):
         self.debug("Shutting down")
+        if hasattr(self, "fifo_shutting_down"):
+            self.fifo_shutting_down = True
         self.enqueue(None)
+        if hasattr(self, "fifo_thread") and self.fifo_thread.is_alive():
+            self.fifo_thread.join()
 
     @staticmethod
     def launch(thread_pool, backend, webagg_callback=None, only_server=False):
@@ -189,9 +196,36 @@ class GraphicsServer(Logger):
             env['PYTHONPATH'] = __root__
         else:
             env['PYTHONPATH'] += ':' + __root__
-        client = subprocess.Popen(args, stdout=sys.stdout, stderr=sys.stderr,
-                                  env=env)
+        streams = {"stdout": None, "stderr": None}
+        try:
+            for key in streams:
+                stream = getattr(sys, key)
+                stream.fileno()
+                streams[key] = stream
+            pipe = False
+        except (UnsupportedOperation, AttributeError) as e:
+            server.debug("fileno() check failed: %s", e)
+            for key in streams:
+                streams[key] = subprocess.PIPE
+            pipe = True
+        client = subprocess.Popen(args, env=env, **streams)
+        if pipe:
+            for stream in client.stdout, client.stderr:
+                fcntl(stream, F_SETFL, fcntl(stream, F_GETFL) | os.O_NONBLOCK)
+            server.fifo_shutting_down = False
+            server.fifo_thread = threading.Thread(
+                target=server.drain_fifo, args=(client,))
+            server.fifo_thread.start()
+            server.debug("Started the stdout / stderr pipe thread")
         return server, client
+
+    def drain_fifo(self, client):
+        while not self.fifo_shutting_down:
+            rs, _, _ = select((client.stdout, client.stderr), tuple(), tuple())
+            for stream in rs:
+                out = sys.stdout if stream is client.stdout else sys.stderr
+                out.write(stream.read().decode("utf-8"))
+                out.flush()
 
     @staticmethod
     def _read_webagg_port(fifo, tmpfn, tmpdir, webagg_callback):
