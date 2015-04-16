@@ -57,14 +57,14 @@ from twisted.web.http_headers import Headers
 import uuid
 
 from veles.backends import Device, NumpyDevice
-import veles.client as client
+from veles.client import Client as SlaveManager
 from veles.cmdline import CommandLineArgumentsRegistry, CommandLineBase
 from veles.compat import from_none
 from veles.config import root
 import veles.graphics_server as graphics_server
 from veles.plotter import Plotter
 import veles.logger as logger
-import veles.server as server
+from veles.server import Server as MasterManager
 from veles.thread_pool import ThreadPool
 from veles.error import MasterSlaveCommunicationError
 from veles.external.pytrie import StringTrie
@@ -396,8 +396,7 @@ class Launcher(logger.Logger):
             self._interactive_shutdown_ref = self._interactive_shutdown
             ThreadPool.register_atexit(self._interactive_shutdown_ref)
         if self.is_slave:
-            self._agent = client.Client(
-                self.args.master_address, self.workflow)
+            self._agent = SlaveManager(self.args.master_address, self.workflow)
 
             def on_id_received(node_id, log_id):
                 self.id = node_id
@@ -434,7 +433,7 @@ class Launcher(logger.Logger):
                              "no effect.")
             if self.is_master:
                 try:
-                    self._agent = server.Server(self.args.listen_address,
+                    self._agent = MasterManager(self.args.listen_address,
                                                 self.workflow)
                     # Launch the nodes described in the command line or config
                     self._launch_nodes()
@@ -583,6 +582,8 @@ class Launcher(logger.Logger):
         self._running = False
         # Wait for the own graphics client to terminate normally
         self._stop_graphics()
+        if not self.is_standalone:
+            self.agent.close()
         self.workflow.thread_pool.shutdown()
         if self.args.validate_history:
             try:

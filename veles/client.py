@@ -176,6 +176,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
         'initial': 'INIT',
         'events': [
             {'name': 'disconnect', 'src': '*', 'dst': 'ERROR'},
+            {'name': 'close', 'src': '*', 'dst': 'END'},
             {'name': 'reconnect', 'src': '*', 'dst': 'INIT'},
             {'name': 'request_id', 'src': ['INIT', 'WAIT'], 'dst': 'WAIT'},
             {'name': 'send_id', 'src': 'INIT', 'dst': 'WAIT'},
@@ -472,7 +473,7 @@ class Client(NetworkAgent, ReconnectingClientFactory):
         return self.protocol
 
     def clientConnectionLost(self, connector, reason):
-        if self.state is None or self.state.current not in ['ERROR', 'END']:
+        if self.state is None or self.state.current not in ('ERROR', 'END'):
             lost_state = "<None>"
             if self.state is not None:
                 lost_state = self.state.current
@@ -498,3 +499,6 @@ class Client(NetworkAgent, ReconnectingClientFactory):
 
     def on_id_received(self, node_id, log_id):
         pass
+
+    def close(self):
+        self.state.close()

@@ -706,3 +706,6 @@ class Server(NetworkAgent, ServerFactory):
         for pid in self.protocols.keys():
             nodes[pid] = self.nodes[pid]
         return nodes
+
+    def close(self):
+        pass

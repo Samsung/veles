@@ -745,13 +745,17 @@ class Unit(Distributable, Verified):
                     for unit in self._iter_links(self.links_from):
                         unit.gate_block <<= True
                     return
-                msg = ("%s's run() was called after stop(). Looks like you "
-                       "made an error in setting control flow links. Workflow:"
-                       " %s." % (self, self.workflow))
                 if root.common.raise_run_after_stop:
-                    raise RunAfterStopError(self, msg)
+                    raise RunAfterStopError(
+                        self, "%s's run() was called after stop(). Looks like "
+                              "you made an error in setting control flow links"
+                              ". Workflow: %s." % (self, self.workflow))
                 else:
-                    self.warning(msg)
+                    self.warning(
+                        "run() was called after stop(). Looks like you made an"
+                        " error in setting control flow links. Workflow: %s. "
+                        "Set root.common.raise_run_after_stop to True to get "
+                        "an exception instead", self.workflow)
                     return
             return fn(*args, **kwargs)
 
