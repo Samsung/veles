@@ -469,7 +469,8 @@ class VelesProtocol(StringLineReceiver, IDLogger):
             self._sendError("Workflow checksum is missing")
             return
         if mysha != your_sha:
-            self._sendError("Workflow checksum mismatch")
+            self._sendError("Workflow checksum mismatch: "
+                            "expected %s, got %s" % (mysha, your_sha))
             return
         must_reply = False
         msgid = msg.get("id")
