@@ -23,7 +23,6 @@ Veles Machine Learning Platform
     manualrst_veles_graphics
     manualrst_veles_genetic_optimization
     manualrst_veles_advanced
-    manualrst_veles_workflow_creation
     manualrst_veles_units_kwargs
     
     veles

@@ -103,6 +103,10 @@ def __html__():
     from veles.config import root
     from veles.portable import show_file
 
+    if not os.path.exists(root.common.help_dir):
+        print("\"%s\" does not exist, unable to open the docs" %
+              root.common.help_dir)
+        return
     page = os.path.join(root.common.help_dir, "index.html")
     if not os.path.exists(page):
         from runpy import run_path

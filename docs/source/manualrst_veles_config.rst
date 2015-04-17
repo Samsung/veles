@@ -109,7 +109,8 @@ command line.
      root.my_workflow.loader.minibatch_size = 30
 
   .. image:: _static/configs.png
-Result minibatch_size will be 30.
+
+The resulting minibatch_size will be 30.
 
   3. Command line. Parameters in the command line overwrite arguments in
   configuration file (my_config.py). The parameters can be defined after

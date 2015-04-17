@@ -1,14 +1,12 @@
 {% set root_kwattrs = root_kwattrs %}
 {% set all_units = all_units %}
 {% macro render_kwargs(condition, units=all_units) %}
-  {% set index = 1 %}
   {% for unit in units %}
     {% if origin["get_condition_" + condition](unit) %}
-{{ index }}. :class:`{{ (unit|string())[8:-2] }}`
+#. :class:`{{ (unit|string())[8:-2] }}`
       {% for arg in (unit.KWATTRS - root_kwattrs)|sort %}
     {{ arg }}
       {% endfor %}
-      {% set index = index + 1 %}
     {% endif %}
   {% endfor %}
   {{ caller() }}

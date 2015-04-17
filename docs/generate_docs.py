@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # encoding: utf-8
 """
-This scripts generates Veles project documentation
+This scripts generates Veles project documentation.
 To generate the docs, you have to install sphinx3-doc and the extensions:
     sphinxcontrib-napoleon, sphinx.ext.mathjax and sphinx.ext.argparse
 """
@@ -49,6 +49,7 @@ def main():
     subprocess.call([
         "sphinx-apidoc", "-e", "-f", "-H", "Source Code", "-o",
         docs_source_path, project_path,
+        os.path.join(project_path, "docs"),
         os.path.join(project_path, "veles/external"),
         os.path.join(project_path, "veles/znicz/external"),
         os.path.join(project_path, "veles/tests"),

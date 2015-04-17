@@ -10,6 +10,7 @@ fi
 
 rm -rf web/dist
 cd projects/common
+rm -f package.json
 ln -s ../core/package.json package.json
 npm install
 rm package.json

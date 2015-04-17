@@ -63,7 +63,7 @@ if __name__ == "__main__":
                 'veles=veles.__main__:__run__',
                 'compare_snapshots=veles.scripts.compare_snapshots.main',
                 'bboxer=veles.scripts.bboxer.main',
-                'generate_frontend_veles=veles.scripts.generate_frontend.main']
+                'generate_veles_frontend=veles.scripts.generate_frontend.main']
         },
         keywords=["Samsung", "Veles", "Znicz"],
         classifiers=[

@@ -209,8 +209,8 @@ class Vector(Pickleable):
     def max_supposed(self):
         """
         :return: The supposed maximal value in the contained array. It is NOT
-        updated automatically and default to 1. To get the actual maximal
-        value, use max().
+           updated automatically and default to 1. To get the actual maximal
+           value, use max().
         """
         return self._max_value
 

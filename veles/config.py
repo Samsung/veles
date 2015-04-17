@@ -41,6 +41,7 @@ from pprint import pprint
 from six import print_, PY2
 import sys
 
+veles = __import__("veles")
 from veles.paths import __root__
 
 # : Global config
@@ -159,7 +160,6 @@ def validate_kwargs(caller, **kwargs):
 __home__ = os.path.join(os.environ.get("HOME", "./"), ".veles")
 
 root.common.update({
-    "allow_root": False,
     "graphics_multicast_address": "239.192.1.1",
     "graphics_blacklisted_ifaces": set(),
     "matplotlib_backend": "Qt4Agg",
@@ -191,6 +191,7 @@ root.common.update({
     "disable_snapshots": False,
     "veles_dir": __root__,
     "veles_user_dir": __home__,
+    "veles_dist_config_dir": "/etc/default/veles",
     "help_dir": "/usr/share/doc/python3-veles",
     "warnings": {
         "numba": True
@@ -232,7 +233,8 @@ try:
     del update
 except ImportError:
     pass
-for site_path in root.common.veles_user_dir, os.getcwd():
+for site_path in (root.common.veles_dist_config_dir,
+                  root.common.veles_user_dir, os.getcwd()):
     sys.path.insert(0, site_path)
     try:
         __import__("site_config").update(root)
@@ -251,13 +253,13 @@ root.common.snapshot_dir = os.path.join(root.common.veles_user_dir,
 if not os.path.exists(root.common.snapshot_dir):
     os.makedirs(root.common.snapshot_dir)
 
-if not root.common.allow_root and os.getuid() == 0:
+# Make some settings read-only
+root.common.protect("cache_dir", "snapshot_dir", "pickles_compression",
+                    "veles_user_dir")
+
+if not getattr(veles, "allow_root", False) and os.getuid() == 0:
     raise PermissionError(
         "I have detected your attempt to run this VELES-based script with root"
         " privileges. Most likely this is because the code must be fixed and "
         "you are too lazy to find out where and how. Bad, bad boy! "
-        "If you REALLY need it, set root.common.allow_root to True.")
-
-# Make some settings read-only
-root.common.protect("cache_dir", "snapshot_dir", "pickles_compression",
-                    "veles_user_dir")
+        "If you REALLY need it, set veles.allow_root to True.")

@@ -98,7 +98,7 @@ release = __version__
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = ["docs*"]
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -321,8 +321,8 @@ MOCK_MODULES = ['pygtk', 'gtk', 'gobject', "numpy", "numpy.random",
                 "scipy.interpolate", "scipy.stats",
                 "scipy.ndimage", "freetype", "matplotlib", "matplotlib.pyplot",
                 "matplotlib.cm", "matplotlib.patches", "matplotlib.lines",
-                "caffe",
-
+                "h5py", "matplotlib.colors", "scipy.cluster",
+                "scipy.cluster.hierarchy",
                 "veles.scripts.music_features", "sound_feature_extraction",
                 "sound_feature_extraction.library"  # deprecated
                 ]
