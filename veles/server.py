@@ -309,7 +309,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
             pass
         if not self.host.workflow.is_running:
             self._erase_self(True)
-            if len(self.nodes) == 0:
+            if len(self.host.protocols) == 0:
                 self.host.launcher.stop()
         elif self.id in self.nodes:
             d = threads.deferToThreadPool(
