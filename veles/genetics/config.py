@@ -42,6 +42,7 @@ import sys
 from zope.interface import implementer
 
 from veles.config import Config, root
+from veles.cmdline import CommandLineBase
 from veles.distributable import IDistributable
 from veles.genetics.simple import Chromosome, Population
 from veles.mutable import Bool
@@ -270,9 +271,10 @@ class GeneticsWorkflow(Workflow):
         self.plotter.link_from(self.container)
         self.plotter.gate_skip = ~self.container.generation_evolved
 
-        self.repeater.link_from(self.container)
+        self.repeater.link_from(self.plotter)
         self.end_point.link_from(self.container)
         self.end_point.gate_block = ~self.container.gate_block
+        self.plotter.gate_block = self.container.gate_block
 
     def initialize(self, **kwargs):
         super(GeneticsWorkflow, self).initialize(**kwargs)
@@ -286,6 +288,10 @@ class GeneticsWorkflow(Workflow):
             return 10000 / avg_time
         else:
             return 0
+
+    def stop(self):
+        self.container.gate_block <<= True
+        super(GeneticsWorkflow, self).stop()
 
 
 class ConfigChromosome(Chromosome):
@@ -334,8 +340,6 @@ class ConfigChromosome(Chromosome):
     def run_workflow(self, fitness):
         self.info("Will evaluate the following config:")
         self.population_.root_.print_()
-        if self.population_.multi:
-            self.population_.fix_argv_to_run_standalone()
         root.common.disable_snapshots = True
         self.population_.main_.run_module(self.population_.workflow_module_)
         fv = self.population_.main_.workflow.fitness
@@ -407,20 +411,23 @@ class ConfigPopulation(Population):
                          "(%.2f%%)", i, 100.0 * i / len(self))
                 self.container.enqueue_for_evaluation(u, i)
 
-    def fix_argv_to_run_standalone(self):
+    def fix_argv_to_run_standalone(self, *argv_holders):
         """Forces standalone mode.
 
         Removes master-slave arguments from the command line.
         """
-        self.debug("#" * 80)
-        self.debug("sys.argv was %s", str(sys.argv))
-        sys.argv = filter_argv(sys.argv, "-b", "--background",
-                               "-m", "-master-address") + ["-p", ""]
-        self.debug("sys.argv became %s", str(sys.argv))
-        self.debug("#" * 80)
+        for holder in argv_holders:
+            self.debug("#" * 80)
+            self.debug("%s.argv was %s", str(holder), str(holder.argv))
+            holder.argv = filter_argv(
+                holder.argv, "-b", "--background",
+                "-m", "-master-address", "-p") + ["-p", ""]
+            self.debug("%s.argv became %s", str(holder), str(holder.argv))
+            self.debug("#" * 80)
 
-    def job_process(self, parent_conn, child_conn):
+    def job_process_main(self, parent_conn, child_conn):
         # Switch off genetics for the contained workflow launches
+        self.fix_argv_to_run_standalone(sys, self.main_, CommandLineBase)
         self.main_.optimization = False
         child_conn.close()
         while True:
@@ -441,12 +448,12 @@ class ConfigPopulation(Population):
 
     def evolve_multi(self):
         parser = Launcher.init_parser()
-        args, _ = parser.parse_known_args(self.argv)
+        args, _ = parser.parse_known_args()
         self.is_slave = bool(args.master_address.strip())
         if self.is_slave:
             # Fork before creating the GPU device
             self.job_connection = Pipe()
-            self.job_process = Process(target=self.job_process,
+            self.job_process = Process(target=self.job_process_main,
                                        args=self.job_connection)
             self.job_process.start()
             self.job_connection[0].close()
@@ -478,7 +485,7 @@ class ConfigPopulation(Population):
 
     def on_after_evolution_step(self):
         completed = super(ConfigPopulation, self).on_after_evolution_step()
-        if completed and not self.is_slave:
+        if completed and self.multi and not self.is_slave:
             # Stop master's workflow
             self.main_.workflow.stop()
         return completed
