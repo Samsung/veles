@@ -72,7 +72,7 @@ class Avatar(AcceleratedUnit, TriviallyDistributable):
 
     def __getstate__(self):
         state = super(Avatar, self).__getstate__()
-        for unit, attrs in self.reals.items():
+        for _unit, attrs in self.reals.items():
             for attr in attrs:
                 if attr in state and self.is_immutable(getattr(self, attr)):
                     del state[attr]
@@ -87,6 +87,15 @@ class Avatar(AcceleratedUnit, TriviallyDistributable):
     def run(self):
         self.clone()
         super(Avatar, self).run()
+
+    def apply_data_from_slave(self, data, slave):
+        if slave is None:
+            # Partial update
+            return
+        self.run()
+
+    def generate_data_for_master(self):
+        return True
 
     def ocl_init(self):
         pass
