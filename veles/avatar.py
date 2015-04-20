@@ -84,6 +84,12 @@ class Avatar(AcceleratedUnit, TriviallyDistributable):
         self.init_vectors(*self.vectors.values())
         self.init_vectors(*self.vectors.keys())
 
+        # Unlink Avatar from Loader in slave mode
+        # to avoid unnecessary and potentially buggy Loader's second run
+        if self.is_slave:
+            for u in self.reals.keys():
+                u.unlink_from(self)
+
     def run(self):
         self.clone()
         super(Avatar, self).run()
