@@ -37,7 +37,7 @@ under the License.
 
 
 import six
-import pickle
+from six.moves import cPickle as pickle  # pylint: disable=W0611
 import sys
 from pickle import PicklingError, UnpicklingError
 
@@ -51,11 +51,16 @@ def setup_pickle_debug():
     and unpickling.
     """
     if six.PY3:
+        global pickle
         pickle.dump = pickle._dump
         pickle.dumps = pickle._dumps
         pickle.load = pickle._load
         pickle.loads = pickle._loads
     else:
+        import pickle  # pylint: disable=W0621
+        for module in sys.modules.values():
+            if "pickle" in getattr(module, "__dict__", {}):
+                module.__dict__["pickle"] = pickle
         pickle._Pickler = pickle.Pickler
         pickle._Unpickler = pickle.Unpickler
     orig_save = pickle._Pickler.save
