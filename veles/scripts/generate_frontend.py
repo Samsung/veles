@@ -46,7 +46,6 @@ import threading
 import tornado.template as template
 import warnings
 
-from veles import __root__
 from veles.config import root
 from veles.cmdline import CommandLineBase
 from veles.import_file import try_to_import_file, is_module
@@ -54,10 +53,8 @@ from veles.unit_registry import UnitRegistry
 
 
 WEB_FOLDER = root.common.web.root
-BLACKLISTED_DIRS = {'.', 'gource', 'docs', 'web', 'deploy', "libVeles",
-                    "debian", "libSoundFeatureExtraction", "veles/tests",
-                    "veles/external", "veles/znicz/tests/unit",
-                    "veles/znicz/tests/functional"}
+BLACKLISTED_DIRS = {"external", "znicz/external", "tests", "znicz/tests/unit",
+                    "znicz/tests/functional"}
 
 BLACKLISTED_FILES = {"boxer.py", "bbox_detection.py", "generate_frontend.py",
                      "__init__.py"}
@@ -95,8 +92,9 @@ def scan_workflows(debug_imports):
     workflows = []
     warnings.simplefilter("ignore")
     UnitRegistry.enabled = False
-    for path, _, files in os.walk(__root__, followlinks=True):
-        relpath = os.path.relpath(path, __root__)
+    root_dir = root.common.veles_dir
+    for path, _, files in os.walk(root_dir, followlinks=True):
+        relpath = os.path.relpath(path, root_dir)
         skip = False
         for bdir in BLACKLISTED_DIRS:
             if relpath.startswith(bdir):
@@ -119,7 +117,7 @@ def scan_workflows(debug_imports):
                 for func in dir(mod):
                     if func == "run" and \
                             getargspec(mod.run).args == ["load", "main"]:
-                        wf_path = os.path.relpath(f_path, __root__)
+                        wf_path = os.path.relpath(f_path, root_dir)
                         workflows.append(wf_path)
                         if debug_imports:
                             print("OK")
@@ -129,7 +127,7 @@ def scan_workflows(debug_imports):
                         print("SKIP")
     gc.collect()
     warnings.simplefilter("default")
-    print("Found workflows:\n", workflows)
+    print("Found %d workflows:\n" % len(workflows), workflows)
     if len(threading.enumerate()) > 1:
         print("Warning: more than 1 thread is currently running, a join lock "
               "may happen.")
