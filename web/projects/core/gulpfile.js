@@ -41,7 +41,7 @@ gulp.task('view', ['browserify'], function () {
     .pipe(gulp.dest(dist));
 });
 
-gulp.task('jquery.ui-js', function () {
+gulp.task('jquery.ui-js', ['bower'], function () {
   var $ = function (file) {
     return 'src/libs/jquery.ui/ui/' + file + '.js';
   };
@@ -55,7 +55,7 @@ gulp.task('jquery.ui-js', function () {
     .pipe(gulp.dest('build/js'));
 });
 
-gulp.task('jquery.ui-css', function() {
+gulp.task('jquery.ui-css', ['bower'], function() {
   var $ = function(file) {
     return 'src/libs/jquery.ui/themes/base/' + file + '.css';
   };
@@ -71,7 +71,7 @@ gulp.task('jquery.ui-css', function() {
 });
 
 
-gulp.task('jquery.ui-images', function () {
+gulp.task('jquery.ui-images', ['bower'], function () {
   var img = dist + "img";
   return gulp.src('src/libs/jquery.ui/themes/base/images/*')
     .pipe(plugins.newer(img))

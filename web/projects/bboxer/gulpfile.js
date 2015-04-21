@@ -2,12 +2,12 @@ plugins = require('gulp-load-plugins')();
 require('../common/gulpcommon.js');
 
 
-gulp.task('awesome_fonts', function() {
+gulp.task('awesome_fonts', ['bower'], function() {
   return gulp.src('src/libs/font-awesome/fonts/*')
     .pipe(gulp.dest(dist + "fonts"));
 });
 
-gulp.task('jquery.ui', function () {
+gulp.task('jquery.ui', ['bower'], function () {
   var $ = function (file) {
     return 'src/libs/jquery.ui/ui/' + file + '.js';
   };
