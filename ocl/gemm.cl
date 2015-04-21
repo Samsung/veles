@@ -1,0 +1,10 @@
+#include "defines.cl"
+#include "highlight.cl"
+
+/// @brief C = A * B * alpha + C * beta.
+__kernel __attribute__((reqd_work_group_size(BLOCK_SIZE, BLOCK_SIZE, 1)))
+void gemm(__global const dtype *A, __global const dtype *B, __global dtype *C,
+          const dtype alpha, const dtype beta) {
+  #define STORE_OUTPUT "gemm.store_output.cl"
+  #include "matrix_multiplication.cl"
+}
