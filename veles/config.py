@@ -257,9 +257,11 @@ if not os.path.exists(root.common.snapshot_dir):
 root.common.protect("cache_dir", "snapshot_dir", "pickles_compression",
                     "veles_user_dir")
 
-if not getattr(veles, "allow_root", False) and os.getuid() == 0:
+if os.getuid() == 0 and not getattr(veles, "allow_root", False) \
+        and os.getenv("VELES_ALLOW_ROOT") is None:
     raise PermissionError(
         "I have detected your attempt to run this VELES-based script with root"
         " privileges. Most likely this is because the code must be fixed and "
         "you are too lazy to find out where and how. Bad, bad boy! "
-        "If you REALLY need it, set veles.allow_root to True.")
+        "If you REALLY need it, set veles.allow_root to True or define "
+        "VELES_ALLOW_ROOT environment variable.")

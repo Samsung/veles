@@ -1,4 +1,4 @@
 #!/bin/sh -e
 
 pip3 install -r /usr/share/veles/requirements.txt
-generate_veles_frontend
+VELES_ALLOW_ROOT= generate_veles_frontend
