@@ -754,7 +754,8 @@ Next, create an instance of MyLoader and link it with Repeater.
   self.loader.link_from(self.repeater)
 
 .. image:: _static/abstract_workflow1.png
-Then, create an instance of MyNewUnit and links it with Repeater and
+
+Next, create an instance of MyNewUnit and links it with Repeater and
 associates Loader's and MyNewUnit's attributes.
 
 .. code-block:: python
@@ -794,7 +795,7 @@ More about linking units: :doc:`manualrst_veles_units`
 
 
 How to stop, pause or skip the execution of the unit
-::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 .. code-block:: python
 
