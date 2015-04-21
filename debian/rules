@@ -16,10 +16,11 @@ override_dh_install:
 	cd docs && PYTHONPATH=.. ./generate_docs.py; cd ..
 	cd web && ./build.sh; cd ..
 	dh_install
+	rm -f debian/python3-veles/usr/lib/python*/dist-packages/veles/site_config.py
+	rm -f debian/python3-veles/usr/lib/python*/dist-packages/veles/znicz/site_config.py
 	rm -rf debian/python3-veles/usr/lib/python*/dist-packages/veles/tests
 	rm -rf debian/python3-veles/usr/lib/python*/dist-packages/veles/znicz/tests
-	rm debian/python3-veles/usr/lib/python*/dist-packages/veles/site_config.py
-	rm debian/python3-veles/usr/lib/python*/dist-packages/veles/znicz/site_config.py
+	rm -rf debian/python3-veles/usr/lib/python*/dist-packages/docs
 	mkdir -p debian/python3-veles/usr/share/veles
 	mkdir -p debian/python3-veles/usr/share/doc/python3-veles
 	cp -rL docs/html/* debian/python3-veles/usr/share/doc/python3-veles
@@ -27,7 +28,6 @@ override_dh_install:
 	cp -r veles/znicz/ocl debian/python3-veles/usr/share/veles/ocl/znicz
 	cp -r devices debian/python3-veles/usr/share/veles/
 	cp requirements.txt debian/python3-veles/usr/share/veles/
-	rm -rf debian/python3-veles/usr/lib/*/dist-packages/veles/znicz/samples
 	mkdir -p debian/python3-veles/etc/init
 	cp deploy/upstart/*.conf debian/python3-veles/etc/init
 	cp -r web/dist debian/python3-veles/usr/share/veles/web

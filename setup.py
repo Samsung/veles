@@ -20,7 +20,7 @@ def write_exclusions(gitattrfile):
         if path.startswith("./"):
             path = path[2:]
         if os.path.isdir(path):
-            exclusions.append("recursive-exclude %s *\n" % path)
+            exclusions.append("prune %s\n" % path)
         elif os.path.exists(path):
             exclusions.append("exclude %s\n" % path)
         else:
@@ -69,10 +69,8 @@ if __name__ == "__main__":
             if ".gitattributes" in files:
                 write_exclusions(os.path.join(root, ".gitattributes"))
         with open(MANIFEST, "a") as fout:
-            fout.write("recursive-exclude deploy *\n")
-            fout.write("exclude ubuntu-apt-get-install-me.txt\n")
+            fout.write("prune deploy\n")
             fout.write("exclude MANIFEST.in\n")
-            fout.write("recursive-include docs/build/html *\n")
 
     setup(
         setup_requires=["setuptools_git", ],
