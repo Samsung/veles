@@ -51,9 +51,12 @@ from veles.logger import Logger
 
 class Main(Logger):
     def run(self, server_url):
+        if server_url is None:
+            raise ValueError("Server URL must not be None. Looks like you did "
+                             "not set FORGE_SERVER environment variable.")
         workflows = scan_workflows(False)
         for workflow in workflows:
-            workflow_folder = os.path.dirname(workflow)
+            workflow_folder = os.path.join("veles", os.path.dirname(workflow))
             if root.common.forge.manifest in os.listdir(workflow_folder):
                 self.info("Update workflow %s in VELESForge" % workflow_folder)
                 subprocess.call(

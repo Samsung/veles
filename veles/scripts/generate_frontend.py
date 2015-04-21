@@ -132,8 +132,9 @@ def scan_workflows(debug_imports):
     # Fix ResourceWarning on /dev/null
     from io import TextIOWrapper
     try:
-        next(obj for obj in gc.get_objects() if isinstance(obj, TextIOWrapper)
-             and obj.name == "/dev/null").close()
+        for obj in gc.get_objects():
+            if isinstance(obj, TextIOWrapper) and obj.name == "/dev/null":
+                obj.close()
     except:
         pass
     if len(threading.enumerate()) > 1:
