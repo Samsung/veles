@@ -26,6 +26,7 @@ Veles Machine Learning Platform
     manualrst_veles_advanced
     manualrst_veles_workflow_creation
     manualrst_veles_workflow_parameters
+    manualrst_veles_units
     manualrst_veles_units_kwargs
     
     veles

@@ -350,7 +350,8 @@ Next, we create an instance of MyLoader and link it with Repeater.
   self.loader.link_from(self.repeater)
 
 .. image:: _static/abstract_workflow1.png
-Then, we create an instance of MyNewUnit, link it with Repeater and
+
+Next, we create an instance of MyNewUnit, link it with Repeater and
 associate Loader's and MyNewUnit's attributes.
 
 .. code-block:: python

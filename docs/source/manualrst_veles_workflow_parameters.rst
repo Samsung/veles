@@ -207,7 +207,7 @@ You can change basic units parameters at ``root.name_of_your_workflow.name_of_un
 2. `generate_data_for_slave_threadsafe`  - value indicating whether generate_data_for_slave() method is invoked in a thread safe manner (under a mutex).
 3. `name` - unit name, a string value which distinguishes it from the others. If it was not explicitly specified, the corresponding class name is returned. Name may be not unique, so if you need to map units, use :property`id` instead.
 4. `logger` - the logging.Logger instance used for logging.
-5. `view_group` - string key which defines this unit’s style (particularly, color) in workflow graphs. See :attribute:`veles.workflow.Workflow.VIEW_GROUP_COLORS`
+5. `view_group` - string key which defines this unit’s style (particularly, color) in workflow graphs. See :attr:`veles.workflow.Workflow.VIEW_GROUP_COLORS`
 6. `apply_data_from_slave_threadsafe` - value indicating whether apply_data_from_slave() method is invoked in a thread safe manner (under a mutex).
 7. `timings` - value indicating whether this unit should print run time statistics after each :method`run()` invocation. If it is not defined in the constructor, the default value is set. The default value is True if this unit’s class is in root.common.timings set and False otherwise.
 8. `cache` - value indicating whether to save the compiled acceleration code on disk for faster following initializations.
@@ -341,11 +341,11 @@ descendants). You can change model's topology with parameters for **each** layer
                  {"type": "softmax"}]
       })
 
-This code defines this Model structure:
+The following code defines this Model's structure:
 
 .. image:: _static/layers.png
 
-Here is a list of all layers types:
+Here is the list of all layer types:
 
 1. "all2all_resizable" - (Forward: :class:`veles.znicz.resizable_all2all.ResizableAll2All`)
 2. "all2all_tanh" - (Forward: :class:`veles.znicz.all2all.All2AllTanh`, Backward: :class:`veles.znicz.gd.GDTanh`)
@@ -395,6 +395,7 @@ Symbols `->` setting parameters for forward propagation.
                          "weights_filling": "gaussian", "weights_stddev": 0.0001,
                          "bias_filling": "constant", "bias_stddev": 0}}]
                          })
+
 Here are some of forward propagation parameters:
 
 1. `kx`

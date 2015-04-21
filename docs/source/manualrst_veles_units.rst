@@ -23,7 +23,7 @@ This makes units' running *data driven*.
 Units may unite into a :class:`Workflow <veles.workflow.Workflow>`. Actually, each unit
 has a :attr:`workflow` property which points to the parent object. Workflows are
 units, too, so they can also be linked and run, but in a slightly different way.
-See :doc:`manualrst_veles_workflow`.
+See :doc:`manualrst_veles_workflow_creation`.
 
 Distributed calculation is performed using the additional group of methods required
 by :class:`IDistributable <veles.distributable.IDistributable>` (see :doc:`manualrst_veles_distributed_units`).
