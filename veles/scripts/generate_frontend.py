@@ -36,16 +36,17 @@ under the License.
 ███████████████████████████████████████████████████████████████████████████████
 """
 
-
 import argparse
 import gc
 from inspect import getargspec
 import json
 import os
 import sys
+import threading
 import tornado.template as template
 import warnings
 
+from veles import __root__
 from veles.config import root
 from veles.cmdline import CommandLineBase
 from veles.import_file import try_to_import_file, is_module
@@ -92,11 +93,10 @@ def main(debug_imports=False):
 
 def scan_workflows(debug_imports):
     workflows = []
-    root_path = root.common.veles_dir
     warnings.simplefilter("ignore")
     UnitRegistry.enabled = False
-    for path, _, files in os.walk(root_path, followlinks=True):
-        relpath = os.path.relpath(path, root_path)
+    for path, _, files in os.walk(__root__, followlinks=True):
+        relpath = os.path.relpath(path, __root__)
         skip = False
         for bdir in BLACKLISTED_DIRS:
             if relpath.startswith(bdir):
@@ -113,15 +113,26 @@ def scan_workflows(debug_imports):
                                      % (relpath, modname))
                 mod = try_to_import_file(f_path)
                 if not is_module(mod):
+                    if debug_imports:
+                        print("SKIP")
                     continue
                 for func in dir(mod):
-                    if func == "run":
-                        if getargspec(mod.run).args == ["load", "main"]:
-                            wf_path = os.path.relpath(f_path, root_path)
-                            workflows.append(wf_path)
+                    if func == "run" and \
+                            getargspec(mod.run).args == ["load", "main"]:
+                        wf_path = os.path.relpath(f_path, __root__)
+                        workflows.append(wf_path)
+                        if debug_imports:
+                            print("OK")
+                        break
+                else:
+                    if debug_imports:
+                        print("SKIP")
     gc.collect()
     warnings.simplefilter("default")
     print("Found workflows:\n", workflows)
+    if len(threading.enumerate()) > 1:
+        print("Warning: more than 1 thread is currently running, a join lock "
+              "may happen.")
     return workflows
 
 
