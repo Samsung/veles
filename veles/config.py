@@ -189,7 +189,7 @@ root.common.update({
     "disable_numba": (sys.gettrace() is not None or
                       platform.python_implementation() != "CPython"),
     "disable_snapshots": False,
-    "veles_dir": __root__,
+    "veles_dir": os.path.join(__root__, "veles"),
     "veles_user_dir": __home__,
     "veles_dist_config_dir": "/etc/default/veles",
     "help_dir": "/usr/share/doc/python3-veles",

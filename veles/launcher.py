@@ -652,11 +652,8 @@ class Launcher(logger.Logger):
             self._launch_remote_progs(
                 root.common.web.host,
                 "PYTHONPATH=%s %s 2>>%s" %
-                (os.path.dirname(
-                    os.path.abspath(
-                        os.path.join(root.common.veles_dir, "veles"))),
-                 os.path.abspath(os.path.join(root.common.veles_dir,
-                                              "veles/web_status.py")),
+                (os.path.dirname(root.common.veles_dir),
+                 os.path.join(root.common.veles_dir, "web_status.py"),
                  "%s.stderr%s" %
                  os.path.splitext(root.common.web.log_file)))
         else:
