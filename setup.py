@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
 from setuptools import setup, find_packages
+import veles
 from veles import __root__, __project__, __version__, __license__,\
-    __authors__, __contact__
+    __authors__, __contact__, __versioninfo__, __date__, formatdate
 
 
 MANIFEST = os.path.join(__root__, "MANIFEST.in")
@@ -31,6 +32,33 @@ def write_exclusions(gitattrfile):
                 exclusions.append("exclude %s\n" % path)
     with open(MANIFEST, "a") as fout:
         fout.writelines(exclusions)
+
+
+def make_release(patch_init=True, patch_changelog=True):
+    incver = __versioninfo__[:-1] + (__versioninfo__[-1] + 1,)
+    strver = [str(v) for v in incver]
+    if patch_init:
+        with open(veles.__file__, "r+") as init:
+            patched = init.read().replace(
+                "__versioninfo__ = %s" % ", ".join(map(str, __versioninfo__)),
+                "__versioninfo__ = %s" % ", ".join(strver))
+            init.seek(0, os.SEEK_SET)
+            init.write(patched)
+    chlog_head = """veles (%(ver)s-0) trusty utopic; urgency=medium
+
+  * %(ver)s release, see https://github.com/samsung/veles/releases/tag/v%(ver)s
+
+ -- Markovtsev Vadim <v.markovtsev@samsung.com>  %(date)s
+
+""" % {"ver": ".".join(strver), "date": formatdate(__date__, True)}
+    if patch_changelog:
+        with open(os.path.join(__root__, "debian", "changelog"), "r+") as fch:
+            changelog = fch.read()
+            changelog = chlog_head + changelog
+            fch.seek(0, os.SEEK_SET)
+            fch.write(changelog)
+    return incver
+
 
 if __name__ == "__main__":
     if not os.path.exists(MANIFEST):
