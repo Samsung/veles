@@ -27,9 +27,12 @@ cache
 debian/python3-veles*
 debian/substvars
 debian/files
+Veles.egg-info
+.ipynb_checkpoints
 docs/build
-.idea/workspace.xml
+**/.idea/workspace.xml
 .pybuild
+web/dist
 !Doxyfile.in
 !Veles.pc.in
 !Application.mk.in
