@@ -60,7 +60,8 @@ BLACKLISTED_FILES = {"boxer.py", "bbox_detection.py", "generate_frontend.py",
                      "__init__.py"}
 
 
-def main(debug_imports=False):
+def main():
+    debug_imports = bool(sys.argv[1]) if len(sys.argv) > 1 else False
     print("Scanning for workflow files...")
     list_workflows = scan_workflows(debug_imports)
 
@@ -105,26 +106,26 @@ def scan_workflows(debug_imports):
         for f in set(files) - BLACKLISTED_FILES:
             f_path = os.path.join(path, f)
             modname, ext = os.path.splitext(f)
-            if ext == '.py':
+            if ext != '.py':
+                continue
+            if debug_imports:
+                sys.stdout.write("[%s] importing %s... " % (relpath, modname))
+            mod = try_to_import_file(f_path)
+            if not is_module(mod):
                 if debug_imports:
-                    sys.stdout.write("[%s] importing %s... "
-                                     % (relpath, modname))
-                mod = try_to_import_file(f_path)
-                if not is_module(mod):
+                    print("SKIP (import)")
+                continue
+            for func in dir(mod):
+                if func == "run" and \
+                        getargspec(mod.run).args == ["load", "main"]:
+                    wf_path = os.path.relpath(f_path, root_dir)
+                    workflows.append(wf_path)
                     if debug_imports:
-                        print("SKIP")
-                    continue
-                for func in dir(mod):
-                    if func == "run" and \
-                            getargspec(mod.run).args == ["load", "main"]:
-                        wf_path = os.path.relpath(f_path, root_dir)
-                        workflows.append(wf_path)
-                        if debug_imports:
-                            print("OK")
-                        break
-                else:
-                    if debug_imports:
-                        print("SKIP")
+                        print("OK")
+                    break
+            else:
+                if debug_imports:
+                    print("SKIP (run)")
     gc.collect()
     warnings.simplefilter("default")
     print("Found %d workflows:\n" % len(workflows), workflows)
@@ -292,4 +293,4 @@ def convert_choices(arg, arg_mode, option_strings):
     return arg_line
 
 if __name__ == "__main__":
-    sys.exit(main(bool(sys.argv[1]) if len(sys.argv) > 1 else False))
+    sys.exit(main())
