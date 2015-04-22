@@ -17,7 +17,12 @@ rm package.json
 
 cd ../core
 npm install
-npm run gulp
+if ! npm run gulp; then
+  # Sometimes it fails for the first time; the error is different each time
+  # and it looks like a memory corruption
+  npm run gulp nuke
+  npm run gulp
+fi
 
 cd ../forge
 npm install

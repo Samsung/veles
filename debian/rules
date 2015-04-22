@@ -12,9 +12,14 @@ override_dh_clean:
 	rm MANIFEST.in
 	dh_clean
 
+override_dh_auto_build:
+	dh_auto_build
+	cd docs && PYTHONPATH=.. ./generate_docs.py
+	cd ..
+	cd web && ./build.sh
+	cd ..
+
 override_dh_install:
-	cd docs && PYTHONPATH=.. ./generate_docs.py; cd ..
-	cd web && ./build.sh; cd ..
 	dh_install
 	rm -f debian/python3-veles/usr/lib/python*/dist-packages/veles/site_config.py
 	rm -f debian/python3-veles/usr/lib/python*/dist-packages/veles/znicz/site_config.py
