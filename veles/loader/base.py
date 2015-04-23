@@ -821,20 +821,21 @@ class Loader(Unit):
     def _setup_labels_mapping(self, diff_labels):
         if not self.has_labels:
             return
-        other_diff_labels, train_diff_labels = \
+        other_diff_labels, self.train_diff_labels = \
             diff_labels[:TRAIN], diff_labels[TRAIN]
-        self._unique_labels_count = len(train_diff_labels)
+        self.test_diff_labels, self.valid_diff_labels = other_diff_labels
+        self._unique_labels_count = len(self.train_diff_labels)
         if len(self.labels_mapping) == 0:
             self.labels_mapping.update(
-                {k: i for i, k in enumerate(sorted(train_diff_labels))})
-        self._print_label_stats(train_diff_labels, "TRAIN")
+                {k: i for i, k in enumerate(sorted(self.train_diff_labels))})
+        self._print_label_stats(self.train_diff_labels, "TRAIN")
         for i, diff_labels in enumerate(other_diff_labels):
             if self.class_lengths[i] > 0:
                 self._validate_and_fix_other_labels(diff_labels)
                 self._print_label_stats(diff_labels, CLASS_NAME[i])
         train_dist, test_dist, valid_dist = map(
             self._calc_labels_normalized_distribution,
-            (train_diff_labels,) + other_diff_labels)
+            (self.train_diff_labels,) + other_diff_labels)
         for i, dist in enumerate((test_dist, valid_dist)):
             self._compare_label_distributions(train_dist, dist, CLASS_NAME[i])
 
@@ -873,7 +874,8 @@ class Loader(Unit):
                           "*" * (v * 25 // lmax))
         self.debug("Detailed %s label stats:\n%s", set_name, table)
 
-    def _calc_labels_normalized_distribution(self, different_labels):
+    @staticmethod
+    def _calc_labels_normalized_distribution(different_labels):
         distribution = numpy.array(
             [v for k, v in sorted(different_labels.items())], numpy.float64)
         dist_sum = numpy.sum(distribution)

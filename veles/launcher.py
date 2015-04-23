@@ -41,6 +41,7 @@ import getpass
 from itertools import chain
 import json
 import os
+from tempfile import NamedTemporaryFile
 import paramiko
 import platform
 from six import BytesIO, add_metaclass
@@ -440,15 +441,9 @@ class Launcher(logger.Logger):
                 except:
                     self._stop_graphics()
                     raise
-
-        if not self.is_slave and self.reports_web_status:
-            try:
-                self.workflow_graph, _ = self.workflow.generate_graph(
-                    filename=None, write_on_disk=False, with_data_links=True)
-            except RuntimeError as e:
-                self.warning("Failed to generate the workflow graph: %s", e)
-                self.workflow_graph = ""
-
+        # The last moment when we can do this, because OpenCL device curses
+        # new process creation
+        self._generate_workflow_graph()
         try:
             if not self.is_master:
                 self._device = Device()
@@ -630,6 +625,31 @@ class Launcher(logger.Logger):
                 self.info("Graphics client has been terminated")
             else:
                 self.info("Graphics client returned normally")
+
+    def _generate_workflow_graph(self):
+        if not self.is_slave and self.reports_web_status:
+            try:
+                self.workflow_graph, _ = self.workflow.generate_graph(
+                    filename=None, write_on_disk=False, with_data_links=True)
+            except RuntimeError as e:
+                self.warning("Failed to generate the workflow graph: %s", e)
+                self.workflow_graph = ""
+        units_wanting_graph = [u for u in self.workflow
+                               if getattr(u, "wants_workflow_graph", False)]
+        if len(units_wanting_graph) > 0:
+            for unit in units_wanting_graph:
+                self.info(
+                    "Rendering the workflow graphs as requested by %s...",
+                    unit)
+                unit.workflow_graphs = {}
+                for fmt in "svg", "png":
+                    with NamedTemporaryFile(suffix="veles_workflow.%s" % fmt) \
+                            as wfgf:
+                        kwargs = getattr(unit, "workflow_graph_kwargs", {})
+                        kwargs["quiet"] = True
+                        self.workflow.generate_graph(wfgf.name, **kwargs)
+                        wfgf.seek(0, os.SEEK_SET)
+                        unit.workflow_graphs[fmt] = wfgf.read()
 
     def _print_stats(self):
         self.workflow.print_stats()

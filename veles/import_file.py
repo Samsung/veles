@@ -35,6 +35,7 @@ under the License.
 """
 
 
+from importlib import import_module
 import os
 import sys
 from types import ModuleType
@@ -57,8 +58,7 @@ def import_file_as_package(file_name):
         file_name)
     sys.path.insert(0, os.path.dirname(os.path.dirname(file_name)))
     try:
-        package = __import__("%s.%s" % (package_name, module_name))
-        return getattr(package, module_name)
+        return import_module("%s.%s" % (package_name, module_name))
     finally:
         del sys.path[0]
 

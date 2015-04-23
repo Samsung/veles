@@ -108,11 +108,11 @@ class Test(unittest.TestCase):
         ap = AccumulatingPlotter(self, name="Lines")
         ap.input = numpy.arange(1, 20, 0.1)
         ap.input_field = 0
-        ap._add_value()
+        ap.fill()
         ap, fio = self.run_plotter(ap)
         for i in range(11):
             ap.input_field = i + 1
-            ap._add_value()
+            ap.fill()
             ap.redraw()
         pp.savefig(fio, format="png")
         fio.seek(0)

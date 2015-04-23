@@ -41,6 +41,7 @@ import datetime
 import errno
 import gc
 import logging
+from importlib import import_module
 import os
 import signal
 import socket
@@ -119,6 +120,7 @@ class GraphicsClient(Logger):
         if self.backend == "no":
             self._run()
             return
+        Plotter = import_module("veles.plotter").Plotter
         try:
             if self._shutted_down:
                 return
@@ -127,25 +129,18 @@ class GraphicsClient(Logger):
             if self.backend:
                 matplotlib.use(self.backend)
             try:
-                import matplotlib.pyplot as pp
+                self.pkgs = Plotter.import_matplotlib()
             except ImportError:
                 self.warning("%s backend is not loadable, falling back to "
                              "WebAgg")
                 matplotlib.use("WebAgg", force=True)
                 try:
-                    import matplotlib.pyplot as pp
+                    self.pkgs = Plotter.import_matplotlib()
                 except ImportError:
                     self.exception("Failed to load WebAgg matplotlib backend")
                     return
-            import matplotlib.cm as cm
-            import matplotlib.lines as lines
-            import matplotlib.patches as patches
+            self.pp = pp = self.pkgs["pp"]
             pp.ion()
-            self.matplotlib = matplotlib
-            self.cm = cm
-            self.lines = lines
-            self.patches = patches
-            self.pp = pp
             if pp.get_backend() == "TkAgg":
                 from six.moves import tkinter
                 self.root = tkinter.Tk()
@@ -212,11 +207,7 @@ class GraphicsClient(Logger):
 
             if self.backend == "no":
                 return
-            plotter.matplotlib = self.matplotlib
-            plotter.cm = self.cm
-            plotter.lines = self.lines
-            plotter.patches = self.patches
-            plotter.pp = self.pp
+            plotter.set_matplotlib(self.pkgs)
             plotter.show_figure = self.show_figure
             if not IPlotter.providedBy(plotter):
                 self.warning("%s does not provide IPlotter interface", plotter)

@@ -41,6 +41,7 @@ under the License.
 
 
 from email.utils import parsedate_tz, mktime_tz, formatdate
+from importlib import import_module
 from sys import version_info, modules
 from types import ModuleType
 from warnings import warn
@@ -149,7 +150,7 @@ class VelesModule(ModuleType):
         # FIXME(v.markovtsev): disable R0401 locally when pylint issue is fixed
         # https://bitbucket.org/logilab/pylint/issue/61
         # from veles.__main__ import Main  # pylint: disable=R0401
-        Main = __import__("veles.__main__").__main__.Main
+        Main = import_module("veles.__main__").Main
         if config is None:
             config = "-"
         main = Main(is_interactive(), workflow, config, **kwargs)
@@ -176,7 +177,7 @@ class VelesModule(ModuleType):
                 modpath = os.path.relpath(root, self.__root__).replace(
                     os.path.sep, '.')
                 try:
-                    yield __import__("%s.%s" % (modpath, modname))
+                    yield import_module("%s.%s" % (modpath, modname))
                 except Exception as e:
                     stdout.write("%s: %s\n" % (
                         os.path.relpath(os.path.join(root, file),
@@ -257,13 +258,9 @@ class VelesModule(ModuleType):
                     package = path.relpath(root, self.__root__).replace(
                         path.sep, '.')
                     try:
-                        __import__(package)
+                        self.__plugins.add(import_module(package))
                     except ImportError:
                         continue
-                    plugin = self
-                    for name in package.split('.')[1:]:
-                        plugin = getattr(plugin, name)
-                    self.__plugins.add(plugin)
         return self.__plugins
 
 

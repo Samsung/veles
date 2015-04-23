@@ -597,7 +597,8 @@ class Workflow(Container):
         return True
 
     def generate_graph(self, filename=None, write_on_disk=True,
-                       with_data_links=False, background="transparent"):
+                       with_data_links=False, background="transparent",
+                       quiet=False):
         """Produces a Graphviz PNG image of the unit control flow. Returns the
         DOT graph description (string).
         If write_on_disk is False, filename is ignored. If filename is None, a
@@ -698,7 +699,8 @@ class Workflow(Container):
                 (_, filename) = tempfile.mkstemp(
                     os.path.splitext(filename)[1], "workflow_",
                     dir=os.path.join(root.common.cache_dir, "plots"))
-            self.debug("Saving the workflow graph to %s", filename)
+            if not quiet:
+                self.debug("Saving the workflow graph to %s", filename)
             try:
                 g.write(filename, format=os.path.splitext(filename)[1][1:])
             except pydot.InvocationException as e:
@@ -712,9 +714,11 @@ class Workflow(Container):
                              "draw the data links.", buggy_unit)
                 return self.generate_graph(filename, write_on_disk, False,
                                            background)
-            self.info("Saved the workflow graph to %s", filename)
+            if not quiet:
+                self.info("Saved the workflow graph to %s", filename)
         desc = g.to_string().strip()
-        self.debug("Graphviz workflow scheme:\n%s", desc)
+        if not quiet:
+            self.debug("Graphviz workflow scheme:\n%s", desc)
         return desc, filename
 
     VIEW_GROUP_COLORS = {"PLOTTER": "gold",

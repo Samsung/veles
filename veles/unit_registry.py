@@ -31,6 +31,7 @@ under the License.
 
 ███████████████████████████████████████████████████████████████████████████████
 """
+from veles.mapped_object_registry import MappedObjectsRegistry
 
 
 try:
@@ -174,20 +175,5 @@ class UnitRegistry(type):
         return obj
 
 
-class MappedObjectsRegistry(type):
-    mapping = "You must define \"mapping\" static attribute in your metaclass"
-    base = Distributable
-
-    def __init__(cls, name, bases, clsdict):
-        yours = set(cls.mro())
-        mine = set(cls.base.mro())
-        left = yours - mine
-        mapping = getattr(type(cls), cls.mapping, {})
-        if len(left) > 1 and "MAPPING" in clsdict:
-            mapping[clsdict["MAPPING"]] = cls
-        setattr(type(cls), cls.mapping, mapping)
-        super(MappedObjectsRegistry, cls).__init__(name, bases, clsdict)
-
-
 class MappedUnitRegistry(UnitRegistry, MappedObjectsRegistry):
-    pass
+    base = Distributable

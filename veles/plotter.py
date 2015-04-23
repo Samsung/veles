@@ -33,7 +33,8 @@ under the License.
 """
 
 
-import time
+from importlib import import_module
+from time import time
 from zope.interface import implementer
 
 from veles.distributable import TriviallyDistributable
@@ -49,6 +50,14 @@ class Plotter(Unit, TriviallyDistributable):
     """
     hide_from_registry = True
     server_shutdown_registered = False
+
+    MATPLOTLIB_PKG_MAPPING = {
+        "matplotlib": "matplotlib",
+        "pp": "matplotlib.pyplot",
+        "cm": "matplotlib.cm",
+        "lines": "matplotlib.lines",
+        "patches": "matplotlib.patches"
+    }
 
     def __init__(self, workflow, **kwargs):
         view_group = kwargs.get("view_group", "PLOTTER")
@@ -91,13 +100,17 @@ class Plotter(Unit, TriviallyDistributable):
         self._server_ = kwargs.get("graphics_server", self.graphics_server)
 
     def run(self):
+        self.fill()
         if self.workflow.plotters_are_enabled and \
-           (time.time() - self._last_run_) > self.redraw_threshold:
+           (time() - self._last_run_) > self.redraw_threshold:
             assert self.graphics_server is not None
-            self._last_run_ = time.time()
+            self._last_run_ = time()
             self.stripped_pickle = True
             self.graphics_server.enqueue(self)
             self.stripped_pickle = False
+
+    def fill(self):
+        pass
 
     def generate_data_for_master(self):
         return True
@@ -105,3 +118,13 @@ class Plotter(Unit, TriviallyDistributable):
     def apply_data_from_slave(self, data, slave):
         if not self.gate_block and not self.gate_skip:
             self.run()
+
+    @staticmethod
+    def import_matplotlib():
+        pkgs = {}
+        for key, pkg in Plotter.MATPLOTLIB_PKG_MAPPING.items():
+            pkgs[key] = import_module(pkg)
+        return pkgs
+
+    def set_matplotlib(self, pkgs):
+        self.__dict__.update(**pkgs)

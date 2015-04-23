@@ -38,6 +38,7 @@ import argparse
 import cuda4py as cu
 import cuda4py.blas as cublas
 import gc
+from importlib import import_module
 import json
 import numpy
 import opencl4py as cl
@@ -605,7 +606,7 @@ class OpenCLDevice(Device):
         # FIXME(v.markovtsev): disable R0401 locally when pylint issue is fixed
         # https://bitbucket.org/logilab/pylint/issue/61
         # pylint: disable=R0401
-        opencl_units = __import__("veles.accelerated_units").accelerated_units
+        opencl_units = import_module("veles.accelerated_units")
         benchmark = opencl_units.DeviceBenchmark
         for dtype in sorted(opencl_types.dtypes.keys()):
             device_info[krnnme][dtype] = {}

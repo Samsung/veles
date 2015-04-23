@@ -156,11 +156,7 @@ class AccumulatingPlotter(Plotter):
             figure.canvas.draw()
         return figure
 
-    def run(self):
-        self._add_value()
-        super(AccumulatingPlotter, self).run()
-
-    def _add_value(self):
+    def fill(self):
         if self.input_field is None:
             try:
                 value = float(self.input)
@@ -716,8 +712,8 @@ class MultiHistogram(Plotter):
         fig.canvas.draw()
         return fig
 
-    def run(self):
-        for i in range(0, self.hist_number):
+    def fill(self):
+        for i in range(self.hist_number):
             self.value.map_write()
             self.input.map_read()
             mx = self.input.mem[i].max()
@@ -730,8 +726,6 @@ class MultiHistogram(Plotter):
             for x in self.input.mem[i]:
                 i_bar = int(numpy.floor((x - mi) * d))
                 self.value[i, i_bar] += 1
-
-        super(MultiHistogram, self).run()
 
 
 @implementer(IPlotter)
@@ -775,7 +769,7 @@ class TableMaxMin(Plotter):
         fig.canvas.draw()
         return fig
 
-    def run(self):
+    def fill(self):
         if len(self.col_labels) != len(self.y):
             raise error.BadFormatError(
                 "Shape of col_names %s not equal shape of Y %s !" %
@@ -787,7 +781,6 @@ class TableMaxMin(Plotter):
             else:
                 self.values[0, i] = "None"
                 self.values[1, i] = "None"
-        super(TableMaxMin, self).run()
 
 
 @implementer(IPlotter, IDistributable)

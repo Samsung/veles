@@ -44,7 +44,7 @@ from zope.interface import implementer, Interface
 from veles.compat import from_none
 from veles.numpy_ext import reshape, transpose
 from veles.verified import Verified
-from veles.unit_registry import MappedObjectsRegistry
+from veles.mapped_object_registry import MappedObjectsRegistry
 
 
 class UninitializedStateError(Exception):
@@ -106,7 +106,6 @@ class NormalizerRegistry(MappedObjectsRegistry):
     automatically hidden.
     """
     mapping = "normalizers"
-    base = object
 
 
 @add_metaclass(NormalizerRegistry)
