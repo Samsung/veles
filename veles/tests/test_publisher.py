@@ -131,6 +131,8 @@ class TestPublisher(unittest.TestCase, Logger):
         self.assertEqual(info["normalization"], self.loader.normalization_type)
         self.assertEqual(info["normalization_parameters"],
                          self.loader.normalization_parameters)
+        self.assertIsInstance(info["unit_run_times_by_class"], dict)
+        self.assertIsInstance(info["unit_run_times_by_name"], dict)
 
     def test_confluence_render(self):
         info = self.publisher.init_info()

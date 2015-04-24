@@ -732,9 +732,12 @@ class Workflow(Container):
 
     HIDDEN_UNIT_ATTRS = {"_workflow"}
 
-    def print_stats(self, by_name=False, top_number=5):
-        """Outputs various time statistics gathered with run_timed and
-        method_timed.
+    def get_unit_run_time_stats(self, by_name=False):
+        """
+        Returns an iterable of tuples of length 2. First element is the unit
+        identifier, second is the accumulated run time.
+        :param by_name: If True, use unit name as identifier; otherwise,
+                        unit class name.
         """
         timers = {}
         key_unit_map = {}
@@ -744,12 +747,18 @@ class Workflow(Container):
             unit = key_unit_map.get(key)
             if unit is None:
                 continue
-            uid = unit.__class__.__name__ if not by_name else unit.name()
+            uid = unit.__class__.__name__ if not by_name else unit.name
             if id not in timers:
                 timers[uid] = 0
             timers[uid] += value
-        stats = sorted(timers.items(), key=lambda x: x[1], reverse=True)
-        time_all = sum(timers.values())
+        return sorted(timers.items(), key=lambda x: x[1], reverse=True)
+
+    def print_stats(self, by_name=False, top_number=5):
+        """Outputs various time statistics gathered with run_timed and
+        method_timed.
+        """
+        stats = self.get_unit_run_time_stats(by_name)
+        time_all = sum(s[1] for s in stats)
         if time_all > 0:
             table = PrettyTable("#", "%", "time", "unit")
             table.align["unit"] = "l"

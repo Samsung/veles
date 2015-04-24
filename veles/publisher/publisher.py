@@ -166,7 +166,11 @@ class Publisher(Unit, TriviallyDistributable):
             "logid": self.launcher.log_id,
             "config_root": root,
             "workflow_file": self.launcher.workflow_file,
-            "config_file": self.launcher.config_file
+            "config_file": self.launcher.config_file,
+            "unit_run_times_by_class":
+            dict(self.workflow.get_unit_run_time_stats()),
+            "unit_run_times_by_name":
+            dict(self.workflow.get_unit_run_time_stats(by_name=True))
         }
         sio = StringIO()
         root.print_(file=sio)
