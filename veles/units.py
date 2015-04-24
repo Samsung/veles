@@ -341,6 +341,13 @@ class Unit(Distributable, Verified):
         value.add_ref(self)
 
     @property
+    def launcher(self):
+        workflow = self.workflow
+        while not workflow.is_main:
+            workflow = workflow.workflow
+        return workflow.workflow  # workflow, workflow, workflow...
+
+    @property
     def name(self):
         if getattr(self, "_name", None) is not None:
             return self._name

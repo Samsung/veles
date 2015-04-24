@@ -64,7 +64,7 @@ class ConfluenceBackend(Jinja2TemplateBackend):
                 index += 1
         self.info("Uploading the text (%d symbols)...", len(content))
         published = conf.store_page_content(
-            page, self.space, content, parent=self.parent)
+            page, self.space, content, convert_wiki=False, parent=self.parent)
         url = published["url"]
         for name, data in info["plots"].items():
             self.info("Attaching %s...", name)
@@ -72,4 +72,8 @@ class ConfluenceBackend(Jinja2TemplateBackend):
         self.info("Attaching the workflow graph...")
         conf.attach_file(page, self.space,
                          {"workflow.png": info["workflow_graph"]["png"]})
+        if info["image"] is not None:
+            self.info("Attaching the image...")
+            conf.attach_file(page, self.space,
+                             {info["image"]["name"]: info["image"]["data"]})
         self.info("Successfully published \"%s\" as %s", page, url)

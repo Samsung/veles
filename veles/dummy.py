@@ -72,6 +72,14 @@ class DummyLauncher(object):
     def start_time(self):
         return time() - 1000
 
+    @property
+    def workflow_file(self):
+        return "/path/to/workflow"
+
+    @property
+    def config_file(self):
+        return "/path/to/config"
+
     def add_ref(self, workflow):
         self.workflow = workflow
 
@@ -93,8 +101,8 @@ class DummyWorkflow(Workflow):
         """
         Passes DummyLauncher as workflow parameter value.
         """
-        self.launcher = DummyLauncher()
-        super(DummyWorkflow, self).__init__(self.launcher)
+        self._launcher = DummyLauncher()
+        super(DummyWorkflow, self).__init__(self._launcher)
         self.end_point.link_from(self.start_point)
 
     @property

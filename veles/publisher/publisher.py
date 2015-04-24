@@ -36,6 +36,7 @@ under the License.
 """
 
 
+import json
 import logging
 import os
 import platform
@@ -158,17 +159,34 @@ class Publisher(Unit, TriviallyDistributable):
             "workflow_graph": self.workflow_graphs,
             "name": self.workflow.name,
             "description": self.workflow.__doc__,
-            "id": self.workflow.workflow.id,
+            "id": self.launcher.id,
             "python": "%s %s" % (platform.python_implementation(),
                                  platform.python_version()),
             "pid": os.getpid(),
-            "logid": self.workflow.workflow.log_id,
-            "config_root": root
+            "logid": self.launcher.log_id,
+            "config_root": root,
+            "workflow_file": self.launcher.workflow_file,
+            "config_file": self.launcher.config_file
         }
         sio = StringIO()
         root.print_(file=sio)
         info["config_text"] = sio.getvalue()
-        mins, secs = divmod(time() - self.workflow.workflow.start_time, 60)
+        workflow_dir = os.path.dirname(self.launcher.workflow_file)
+        manifest_file = os.path.join(workflow_dir, "manifest.json")
+        if os.access(manifest_file, os.R_OK):
+            with open(manifest_file, "r") as fin:
+                manifest = json.load(fin)
+            image_path = os.path.join(workflow_dir, manifest["image"])
+            if not os.access(image_path, os.R_OK):
+                self.warning("Could not read %s", image_path)
+                info["image"] = None
+            else:
+                with open(image_path, "rb") as fin:
+                    info["image"] = {"name": manifest["image"],
+                                     "data": fin.read()}
+        else:
+            info["image"] = None
+        mins, secs = divmod(time() - self.launcher.start_time, 60)
         hours, mins = divmod(mins, 60)
         days, hours = divmod(hours, 24)
         info.update({"days": days, "hours": hours, "mins": mins, "secs": secs})
@@ -218,6 +236,10 @@ class Publisher(Unit, TriviallyDistributable):
         graph_copy = info["workflow_graph"]
         del info["workflow_graph"]
         info["workflow_graph"] = {"png": "<data>", "svg": "<data>"}
+        image_copy = info["image"]
+        if image_copy is not None:
+            info["image"] = {"name": image_copy["name"], "data": "<data>"}
         self.debug("Info: %s", info)
         info["plots"] = plots_copy
         info["workflow_graph"] = graph_copy
+        info["image"] = image_copy

@@ -55,4 +55,6 @@ class Jinja2TemplateBackend(Backend):
 
     def render(self, info):
         self.info("Rendering the template...")
-        return self.template.render(**info)
+        content = self.template.render(**info)
+        self.debug("Rendered:\n%s", content)
+        return content

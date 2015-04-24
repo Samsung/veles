@@ -420,6 +420,8 @@ class Main(Logger, CommandLineBase):
         self.load_called = True
         try:
             self.launcher = Launcher(self.interactive)
+            self.launcher.workflow_file = self.workflow_file
+            self.launcher.config_file = self.config_file
         except:
             self.exception("Failed to create the launcher")
             sys.exit(Main.EXIT_FAILURE)
@@ -643,11 +645,11 @@ class Main(Logger, CommandLineBase):
 
         parser = Main.init_parser()
         args = parser.parse_args(self.argv)
-        fname_config = args.config
-        if fname_config == "-":
-            fname_config = "%s_config%s" % os.path.splitext(args.workflow)
-        fname_config = os.path.abspath(fname_config)
-        fname_workflow = os.path.abspath(args.workflow)
+        config_file = args.config
+        if config_file == "-":
+            config_file = "%s_config%s" % os.path.splitext(args.workflow)
+        self.config_file = config_file = os.path.abspath(config_file)
+        self.workflow_file = workflow_file = os.path.abspath(args.workflow)
         self._visualization_mode = args.visualize
         self._workflow_graph = args.workflow_graph
         self._dry_run = Main.DRY_RUN_CHOICES.index(args.dry_run)
@@ -668,8 +670,8 @@ class Main(Logger, CommandLineBase):
         if self.logger.isEnabledFor(logging.DEBUG):
             self._print_config(root)
         self._fetch_snapshot(args.snapshot)
-        wm = self._load_model(fname_workflow)
-        self._apply_config(fname_config, args.config_list)
+        wm = self._load_model(workflow_file)
+        self._apply_config(config_file, args.config_list)
         if self.logger.isEnabledFor(logging.DEBUG):
             self._print_config(root)
 
