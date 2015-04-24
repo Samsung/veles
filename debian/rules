@@ -25,7 +25,7 @@ override_dh_install:
 	rm -f debian/python3-veles/usr/lib/python*/dist-packages/veles/znicz/site_config.py
 	rm -rf debian/python3-veles/usr/lib/python*/dist-packages/veles/tests
 	rm -rf debian/python3-veles/usr/lib/python*/dist-packages/veles/znicz/tests
-	touch debian/python3-veles/usr/lib/python*/dist-packages/veles/znicz/.veles
+	touch .veles && mv .veles debian/python3-veles/usr/lib/python*/dist-packages/veles/znicz
 	rm -rf debian/python3-veles/usr/lib/python*/dist-packages/docs
 	mkdir -p debian/python3-veles/usr/share/veles
 	mkdir -p debian/python3-veles/usr/share/doc/python3-veles
