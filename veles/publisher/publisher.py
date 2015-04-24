@@ -35,6 +35,8 @@ under the License.
 ███████████████████████████████████████████████████████████████████████████████
 """
 
+
+import logging
 import os
 import platform
 from six import BytesIO
@@ -141,17 +143,8 @@ class Publisher(Unit, TriviallyDistributable):
     def run(self):
         info = self.init_info()
         self.add_info(info)
-        plots_copy = info["plots"]
-        del info["plots"]
-        info["plots"] = {}
-        for key in plots_copy:
-            info["plots"][key] = {"png": "<data>", "svg": "<data>"}
-        graph_copy = info["workflow_graph"]
-        del info["workflow_graph"]
-        info["workflow_graph"] = {"png": "<data>", "svg": "<data>"}
-        self.debug("Info: %s", info)
-        info["plots"] = plots_copy
-        info["workflow_graph"] = graph_copy
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self._debug_info(info)
         self.info("Publishing the results...")
         for backend_class, backend_kwargs in self.backends.items():
             self.debug("Rendering %s...", backend_class)
@@ -210,3 +203,16 @@ class Publisher(Unit, TriviallyDistributable):
                 figure.savefig(rendered, format=fmt, **self._savefig_kwargs)
                 formats[fmt] = rendered.getvalue()
         return plots
+
+    def _debug_info(self, info):
+        plots_copy = info["plots"]
+        del info["plots"]
+        info["plots"] = {}
+        for key in plots_copy:
+            info["plots"][key] = {"png": "<data>", "svg": "<data>"}
+        graph_copy = info["workflow_graph"]
+        del info["workflow_graph"]
+        info["workflow_graph"] = {"png": "<data>", "svg": "<data>"}
+        self.debug("Info: %s", info)
+        info["plots"] = plots_copy
+        info["workflow_graph"] = graph_copy
