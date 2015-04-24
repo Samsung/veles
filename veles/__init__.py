@@ -258,7 +258,7 @@ class VelesModule(ModuleType):
                     package = path.relpath(root, self.__root__).replace(
                         path.sep, '.')
                     try:
-                        self.__plugins.add(import_module(package))
+                        self.__plugins.add(self.import_module(package))
                     except ImportError:
                         continue
         return self.__plugins
