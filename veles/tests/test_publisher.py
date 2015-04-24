@@ -37,15 +37,18 @@ under the License.
 import logging
 import os
 import platform
+from six import string_types, PY3
 from time import time
 import unittest
 from zope.interface import implementer
 
+from veles.config import Config
 from veles.dummy import DummyWorkflow
 from veles.launcher import Launcher
 from veles.logger import Logger
 from veles.loader import Loader, ILoader
 from veles.publisher import Publisher
+from veles.publisher.confluence_backend import ConfluenceBackend
 
 
 @implementer(ILoader)
@@ -86,7 +89,10 @@ class TestPublisher(unittest.TestCase, Logger):
                                     "action": 2355, "hard porn": 2645}
         loader.epoch_number = 30
         self.publisher.loader_unit = loader
-        Launcher._generate_workflow_graphs(self)
+        if PY3:
+            Launcher._generate_workflow_graphs(self)
+        else:
+            Launcher._generate_workflow_graphs.__func__(self)
         self.publisher.initialize()
 
     def test_init_info(self):
@@ -105,7 +111,8 @@ class TestPublisher(unittest.TestCase, Logger):
                                     platform.python_version()))
         self.assertEqual(info["pid"], os.getpid())
         self.assertEqual(info["logid"], self.workflow.workflow.log_id)
-
+        self.assertIsInstance(info["config_root"], Config)
+        self.assertIsInstance(info["config_text"], str)
         mins, secs = divmod(time() - self.workflow.workflow.start_time, 60)
         hours, mins = divmod(mins, 60)
         days, hours = divmod(hours, 24)
@@ -124,6 +131,15 @@ class TestPublisher(unittest.TestCase, Logger):
         self.assertEqual(info["normalization"], self.loader.normalization_type)
         self.assertEqual(info["normalization_parameters"],
                          self.loader.normalization_parameters)
+
+    def test_confluence_render(self):
+        info = self.publisher.init_info()
+        self.publisher.add_info(info)
+        conf = ConfluenceBackend(None, server="", username="", password="",
+                                 space="")
+        content = super(ConfluenceBackend, conf).render(info)
+        self.assertIsInstance(content, string_types)
+        self.info("Confluence backend rendered:\n%s", content)
 
     @property
     def is_slave(self):

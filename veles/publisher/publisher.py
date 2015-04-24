@@ -39,10 +39,11 @@ under the License.
 import logging
 import os
 import platform
-from six import BytesIO
+from six import BytesIO, StringIO
 from time import time
 from zope.interface import implementer
 
+from veles.config import root
 from veles.distributable import TriviallyDistributable, IDistributable
 from veles.loader import Loader
 from veles.plotter import Plotter
@@ -161,8 +162,12 @@ class Publisher(Unit, TriviallyDistributable):
             "python": "%s %s" % (platform.python_implementation(),
                                  platform.python_version()),
             "pid": os.getpid(),
-            "logid": self.workflow.workflow.log_id
+            "logid": self.workflow.workflow.log_id,
+            "config_root": root
         }
+        sio = StringIO()
+        root.print_(file=sio)
+        info["config_text"] = sio.getvalue()
         mins, secs = divmod(time() - self.workflow.workflow.start_time, 60)
         hours, mins = divmod(mins, 60)
         days, hours = divmod(hours, 24)
