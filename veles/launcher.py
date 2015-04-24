@@ -443,7 +443,7 @@ class Launcher(logger.Logger):
                     raise
         # The last moment when we can do this, because OpenCL device curses
         # new process creation
-        self._generate_workflow_graph()
+        self._generate_workflow_graphs()
         try:
             if not self.is_master:
                 self._device = Device()
@@ -626,7 +626,7 @@ class Launcher(logger.Logger):
             else:
                 self.info("Graphics client returned normally")
 
-    def _generate_workflow_graph(self):
+    def _generate_workflow_graphs(self):
         if not self.is_slave and self.reports_web_status:
             try:
                 self.workflow_graph, _ = self.workflow.generate_graph(

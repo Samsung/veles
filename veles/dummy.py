@@ -35,6 +35,8 @@ under the License.
 """
 
 
+from time import time
+import uuid
 from zope.interface import implementer
 
 from veles.units import IUnit, TrivialUnit
@@ -44,6 +46,7 @@ from veles.workflow import Workflow
 class DummyLauncher(object):
     def __init__(self):
         self.stopped = False
+        self.id = str(uuid.uuid4())
 
     @property
     def interactive(self):
@@ -64,6 +67,10 @@ class DummyLauncher(object):
     @property
     def log_id(self):
         return "DUMMY"
+
+    @property
+    def start_time(self):
+        return time() - 1000
 
     def add_ref(self, workflow):
         self.workflow = workflow

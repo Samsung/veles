@@ -437,7 +437,7 @@ def graph_definition():
 
         subgraph = Group(subgraph_ + Optional(ID) + graph_stmt).setName("subgraph")
 
-        edge_point << Group(subgraph | graph_stmt | node_id).setName('edge_point')
+        edge_point <<= Group(subgraph | graph_stmt | node_id).setName('edge_point')
 
         node_stmt = (
             node_id + Optional(attr_list) + Optional(semi.suppress())
@@ -448,7 +448,7 @@ def graph_definition():
             assignment | edge_stmt | attr_stmt |
             subgraph | graph_stmt | node_stmt
             ).setName("stmt")
-        stmt_list << OneOrMore(stmt + Optional(semi.suppress()))
+        stmt_list <<= OneOrMore(stmt + Optional(semi.suppress()))
 
         graphparser = OneOrMore((
             Optional(strict_) + Group((graph_ | digraph_)) +

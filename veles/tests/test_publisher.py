@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+# -*-coding: utf-8 -*-
+"""
+.. invisible:
+     _   _ _____ _     _____ _____
+    | | | |  ___| |   |  ___/  ___|
+    | | | | |__ | |   | |__ \ `--.
+    | | | |  __|| |   |  __| `--. \
+    \ \_/ / |___| |___| |___/\__/ /
+     \___/\____/\_____|____/\____/
+
+Created on April 24, 2015
+
+███████████████████████████████████████████████████████████████████████████████
+
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+
+███████████████████████████████████████████████████████████████████████████████
+"""
+
+
+import logging
+import os
+import platform
+from time import time
+import unittest
+from zope.interface import implementer
+
+from veles.dummy import DummyWorkflow
+from veles.launcher import Launcher
+from veles.logger import Logger
+from veles.loader import Loader, ILoader
+from veles.publisher import Publisher
+
+
+@implementer(ILoader)
+class DummyLoader(Loader):
+    def load_data(self):
+        pass
+
+    def create_minibatch_data(self):
+        pass
+
+    def fill_minibatch(self):
+        pass
+
+
+class TestPublisher(unittest.TestCase, Logger):
+    def __init__(self, methodName="runTest"):
+        Logger.__init__(self)
+        unittest.TestCase.__init__(self, methodName)
+
+    def setUp(self):
+        self.workflow = wf = DummyWorkflow()
+        self.loader = loader = DummyLoader(wf, normalization_type="mean_disp")
+        loader.link_from(wf.start_point)
+        self.publisher = Publisher(wf, backends={})
+        self.publisher.link_from(loader)
+        wf.end_point.link_from(self.publisher)
+        loader._has_labels = True
+        loader.class_lengths[0] = 0
+        loader.class_lengths[1] = 1000
+        loader.class_lengths[2] = 10000
+        loader._labels_mapping = {"comedy": 0, "drama": 1, "action": 2,
+                                  "hard porn": 3}
+        loader.test_diff_labels = {"comedy": 0, "drama": 0, "action": 0,
+                                   "hard porn": 0}
+        loader.valid_diff_labels = {"comedy": 240, "drama": 260, "action": 235,
+                                    "hard porn": 265}
+        loader.train_diff_labels = {"comedy": 2433, "drama": 2567,
+                                    "action": 2355, "hard porn": 2645}
+        loader.epoch_number = 30
+        self.publisher.loader_unit = loader
+        Launcher._generate_workflow_graphs(self)
+        self.publisher.initialize()
+
+    def test_init_info(self):
+        info = self.publisher.init_info()
+        self.publisher.add_info(info)
+        self.assertIsInstance(info, dict)
+        self.assertEqual(info["plots"], {})
+        self.assertIsInstance(info["workflow_graph"], dict)
+        for fmt in "png", "svg":
+            self.assertIsInstance(info["workflow_graph"][fmt], bytes)
+        self.assertEqual(info["name"], self.workflow.name)
+        self.assertEqual(info["description"], self.workflow.__doc__)
+        self.assertEqual(info["id"], self.workflow.workflow.id)
+        self.assertEqual(info["python"],
+                         "%s %s" % (platform.python_implementation(),
+                                    platform.python_version()))
+        self.assertEqual(info["pid"], os.getpid())
+        self.assertEqual(info["logid"], self.workflow.workflow.log_id)
+
+        mins, secs = divmod(time() - self.workflow.workflow.start_time, 60)
+        hours, mins = divmod(mins, 60)
+        days, hours = divmod(hours, 24)
+        self.assertEqual(info["days"], days)
+        self.assertEqual(info["hours"], hours)
+        self.assertEqual(info["mins"], mins)
+        self.assertEqual(info["labels"], tuple(self.loader.labels_mapping))
+        self.assertEqual(
+            info["label_stats"], (self.loader.test_diff_labels,
+                                  self.loader.valid_diff_labels,
+                                  self.loader.train_diff_labels))
+        self.assertEqual(info["class_lengths"],
+                         tuple(self.loader.class_lengths))
+        self.assertEqual(info["total_samples"], self.loader.total_samples)
+        self.assertEqual(info["epochs"], self.loader.epoch_number)
+        self.assertEqual(info["normalization"], self.loader.normalization_type)
+        self.assertEqual(info["normalization_parameters"],
+                         self.loader.normalization_parameters)
+
+    @property
+    def is_slave(self):
+        return False
+
+    @property
+    def reports_web_status(self):
+        return True
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
+    unittest.main()
