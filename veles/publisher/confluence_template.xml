@@ -1,0 +1,86 @@
+<ac:layout><ac:layout-section ac:type="two_equal"><ac:layout-cell>
+<h1>Task Description</h1>
+<p>{{ description }}</p>
+<p><ac:image><ri:attachment ri:filename="mnist.png" /></ac:image></p>
+<hr />
+<h1>Data</h1>
+<p>Total samples: {{ total_samples }}</p>
+<table>
+<tbody>
+<tr>
+<th>&nbsp;</th>
+<th>number of samples</th></tr>
+<tr>
+<td>test</td>
+<td>{{ class_lengths[0] }}</td></tr>
+<tr>
+<td>validation</td>
+<td>{{ class_lengths[1] }}</td></tr>
+<tr>
+<td>train</td>
+<td>{{ class_lengths[2] }}</td></tr></tbody></table>
+<p>&nbsp;</p>
+<p>Labels: {{ labels }}</p>
+<table>
+<tbody>
+<tr>
+<th>&nbsp;</th>
+<th>Labels statistics</th></tr>
+<tr>
+<td>test</td>
+<td>{{ label_stats[0] }}</td></tr>
+<tr>
+<td>validation</td>
+<td>{{ label_stats[1] }}</td></tr>
+<tr>
+<td>train</td>
+<td>{{ label_stats[2] }}</td></tr></tbody></table>
+<p>&nbsp;</p>
+<hr />
+<h1>Workflow</h1>
+<p><ac:image ac:width="600"><ri:attachment ri:filename="workflow.png" /></ac:image></p>
+<hr />
+<h1>Parameters</h1>
+<hr />
+<p>&nbsp;</p>
+<h1>Time of running</h1>
+<hr />
+<p>&nbsp;</p>
+<table>
+<tbody>
+<tr>
+<th>&nbsp;</th>
+<th>time of training</th></tr>
+<tr>
+<td>time</td>
+<td>{{ days  }} days, {{ hours }} hours, {{ mins }} minutes,  {{ secs|round(4) }} secs </td></tr>
+<tr>
+<td>number of epochs</td>
+<td>{{ epochs }}</td></tr></tbody></table>
+<p>&nbsp;</p>
+<hr />
+<h1>Results</h1>
+<p>&nbsp;</p>
+<table>
+<tbody>
+<tr>
+<th>&nbsp;</th>
+<th>Achieved accuracy</th></tr>
+<tr>
+<td>test</td>
+<td>{{ errors_pt[0]|round(4) }}%</td></tr>
+<tr>
+<td>validation</td>
+<td>{{ errors_pt[1]|round(4) }}%</td></tr>
+<tr>
+<td>train</td>
+<td>{{ errors_pt[2]|round(4) }}%</td></tr></tbody></table></ac:layout-cell><ac:layout-cell>
+<h1>Visualization of training process</h1>
+<p>
+    {% for name in plots %}
+    <ac:image ac:height="600" ac:width="600">
+        <ri:attachment ri:filename="{{ name }}.png" />
+    </ac:image><br /><</ac:image>
+    {% endfor %}
+
+</p></ac:layout-cell></ac:layout-section></ac:layout>

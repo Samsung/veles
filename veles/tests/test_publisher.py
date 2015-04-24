@@ -135,6 +135,7 @@ class TestPublisher(unittest.TestCase, Logger):
     def test_confluence_render(self):
         info = self.publisher.init_info()
         self.publisher.add_info(info)
+        info["errors_pt"] = 0, 0.5, 0.6
         conf = ConfluenceBackend(None, server="", username="", password="",
                                  space="")
         content = super(ConfluenceBackend, conf).render(info)

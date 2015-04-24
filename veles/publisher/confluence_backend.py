@@ -41,7 +41,7 @@ from veles.publisher.jinja2_template_backend import Jinja2TemplateBackend
 
 class ConfluenceBackend(Jinja2TemplateBackend):
     MAPPING = "confluence"
-    TEMPLATE_EXT = "md"
+    TEMPLATE_EXT = "xml"
 
     def __init__(self, template, **kwargs):
         super(ConfluenceBackend, self).__init__(template, **kwargs)
