@@ -1,3 +1,9 @@
+veles (0.8.4-0) trusty utopic; urgency=medium
+
+  * 0.8.4 release, see https://github.com/samsung/veles/releases/tag/v0.8.4
+
+ -- Markovtsev Vadim <v.markovtsev@samsung.com>  Fri, 24 Apr 2015 14:27:06 +0300
+
 veles (0.8.3-0) trusty utopic; urgency=medium
 
   * 0.8.3 release, see https://github.com/samsung/veles/releases/tag/v0.8.3
