@@ -63,7 +63,7 @@
             <table>
                 <tbody>
                     <tr>
-                        <th>&nbsp;</th>
+                        <th>set</th>
                         <th>number of samples</th>
                     </tr>
                     <tr>
@@ -98,6 +98,19 @@
                     <tr>
                         <td>train</td>
                         <td>{{ label_stats[2] }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h4>Normalization</h4>
+            <table>
+                <tbody>
+                    <tr>
+                        <td>type of normalization</td>
+                        <td>{{ normalization }}</td>
+                    </tr>
+                    <tr>
+                        <td>normalization parameters</td>
+                        <td>{{ normalization_parameters }}</td>
                     </tr>
                 </tbody>
             </table>
