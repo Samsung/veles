@@ -99,7 +99,7 @@
                     </tr>
                 </tbody>
             </table>
-            <h1>Run time</h1>
+            <h1>Run stats</h1>
             <table>
                 <tbody>
                     <tr>
@@ -116,6 +116,21 @@
                         <td>number of epochs</td>
                         <td>{{ epochs }}</td>
                     </tr>
+                </tbody>
+            </table>
+            <table>
+                <tbody>
+                    <tr>
+                        <th>unit class</th>
+                        <th>run time</th>
+                    </tr>
+                    {% for unit, value in unit_run_times_by_class.items() %}
+                    <tr>
+                        <td>{{ unit }}</td>
+                        <td>{{ value|round(4) }} secs
+                        </td>
+                    </tr>
+                    {% endfor %}
                 </tbody>
             </table>
             <h1>Configuration</h1>

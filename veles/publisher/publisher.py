@@ -198,9 +198,9 @@ class Publisher(Unit, TriviallyDistributable):
             unit = self.loader_unit
             if unit.has_labels:
                 info.update({"labels": tuple(unit.labels_mapping),
-                             "label_stats": (unit.test_diff_labels,
-                                             unit.valid_diff_labels,
-                                             unit.train_diff_labels)})
+                             "label_stats": (dict(unit.test_diff_labels),
+                                             dict(unit.valid_diff_labels),
+                                             dict(unit.train_diff_labels))})
             info.update({"class_lengths": tuple(unit.class_lengths),
                          "total_samples": unit.total_samples,
                          "epochs": unit.epoch_number,
