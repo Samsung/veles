@@ -159,6 +159,9 @@ class AcceleratedUnit(Unit):
         self._backend_run_ = None
         self.initialize = self._with_backend_init(self.initialize)
         self._numpy_run_jitted_ = False
+        if hasattr(self, "numpy_run"):
+            # Attribute may be missing if INumpyUnit is not implemented
+            self.numpy_run = type(self).numpy_run.__get__(self, type(self))
 
     @property
     def device(self):
@@ -238,7 +241,7 @@ class AcceleratedUnit(Unit):
                     "by setting root.common.warnings.numba to False.")
             else:
                 self.numpy_run = jit(nopython=True, nogil=True)(self.numpy_run)
-                self.debug("Jitted numpy_run()")
+                self.debug("Jitted numpy_run() with numba")
                 self._numpy_run_jitted_ = True
 
     def run(self):
