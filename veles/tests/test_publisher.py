@@ -47,6 +47,7 @@ from veles.dummy import DummyWorkflow
 from veles.launcher import Launcher
 from veles.logger import Logger
 from veles.loader import Loader, ILoader
+from veles.pickle2 import pickle, best_protocol
 from veles.publisher import Publisher
 from veles.publisher.confluence_backend import ConfluenceBackend
 
@@ -143,6 +144,17 @@ class TestPublisher(unittest.TestCase, Logger):
         content = super(ConfluenceBackend, conf).render(info)
         self.assertIsInstance(content, string_types)
         self.info("Confluence backend rendered:\n%s", content)
+
+    def test_pickle(self):
+        wf = DummyWorkflow()
+        publisher = Publisher(wf, backends={})
+        loader = DummyLoader(wf, normalization_type="mean_disp")
+        publisher.link_from(loader)
+        wf.end_point.link_from(publisher)
+        publisher.loader_unit = loader
+        publisher.initialize()
+        publ = pickle.dumps(publisher, protocol=best_protocol)
+        publisher = pickle.loads(publ)
 
     @property
     def is_slave(self):

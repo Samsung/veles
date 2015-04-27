@@ -66,7 +66,7 @@ class Publisher(Unit, TriviallyDistributable):
             self.templates[key] = val
         self._include_plots = bool(kwargs.get("plots", True))
         self._matplotlib_backend = kwargs.get("matplotlib_backend", "cairo")
-        self._matplotlib_packages = {}
+        self._matplotlib_packages_ = {}
         self._savefig_kwargs = dict(kwargs.get(
             "savefig_kwargs", {"transparent": True}))
         self._workflow_graph_kwargs = dict(kwargs.get(
@@ -131,7 +131,7 @@ class Publisher(Unit, TriviallyDistributable):
         try:
             import matplotlib
             matplotlib.use(self.matplotlib_backend)
-            self._matplotlib_packages = Plotter.import_matplotlib()
+            self._matplotlib_packages_ = Plotter.import_matplotlib()
         except ImportError:
             self.include_plots = False
             self.warning("Failed to import matplotlib: there will be no plots "
@@ -218,7 +218,7 @@ class Publisher(Unit, TriviallyDistributable):
             if not isinstance(unit, Plotter):
                 continue
             self.debug("Rendering \"%s\"...", unit.name)
-            unit.set_matplotlib(self._matplotlib_packages)
+            unit.set_matplotlib(self._matplotlib_packages_)
             unit.show_figure = nothing
             unit.fill()
             figure = unit.redraw()
