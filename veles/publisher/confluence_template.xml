@@ -35,6 +35,7 @@
                     <ri:attachment ri:filename="workflow.png"/>
                 </ac:image>
             </p>
+            {% if errors_pt is defined %}
             <h1>Results</h1>
             <table>
                 <tbody>
@@ -56,6 +57,7 @@
                     </tr>
                 </tbody>
             </table>
+            {% endif %}
             <h1>Source data</h1>
             <h4>Samples</h4><p>Total number: {{ total_samples }}</p>
             <table>
