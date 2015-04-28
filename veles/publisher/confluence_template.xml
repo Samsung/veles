@@ -1,3 +1,4 @@
+{% set set_names = ("test", "validation", "train") %}
 <ac:layout>
     <ac:layout-section ac:type="two_equal">
         <ac:layout-cell>
@@ -41,9 +42,9 @@
                     {% for i in range(3) %}
                     {% if class_lengths[i] > 0 %}
                     <tr>
-                        <td>{{ ("test", "validation", "train")[i] }}</td>
-                        <td>{{ (100 - errors_pt[i])|round(4) }}%</td>
-                        <td>{{ errors_pt[i]|round(4) }}%</td>
+                        <td>{{ set_names[i] }}</td>
+                        <td>{{ (100 - errors_pt[i])|round(2) }}%</td>
+                        <td>{{ errors_pt[i]|round(2) }}%</td>
                     </tr>
                     {% endif %}
                     {% endfor %}
@@ -51,49 +52,77 @@
             </table>
             {% endif %}
             <h1>Source data</h1>
-            <h4>Samples</h4><p>Total number: {{ total_samples }}</p>
-            <table>
-                <tbody>
-                    <tr>
-                        <th>set</th>
-                        <th>number of samples</th>
-                    </tr>
-                    <tr>
-                        <td>test</td>
-                        <td>{{ class_lengths[0] }}</td>
-                    </tr>
-                    <tr>
-                        <td>validation</td>
-                        <td>{{ class_lengths[1] }}</td>
-                    </tr>
-                    <tr>
-                        <td>train</td>
-                        <td>{{ class_lengths[2] }}</td>
-                    </tr>
-                </tbody>
-            </table>
-            <h4>Labels</h4><p>Total number: {{ labels|length }}</p>
-            <p>{{ labels|sort }}</p>
-            <table>
-                <tbody>
-                    <tr>
-                        <th>set</th>
-                        <th>label stats</th>
-                    </tr>
-                    <tr>
-                        <td>test</td>
-                        <td>{{ label_stats[0]|dictsort }}</td>
-                    </tr>
-                    <tr>
-                        <td>validation</td>
-                        <td>{{ label_stats[1]|dictsort }}</td>
-                    </tr>
-                    <tr>
-                        <td>train</td>
-                        <td>{{ label_stats[2]|dictsort }}</td>
-                    </tr>
-                </tbody>
-            </table>
+            <ac:structured-macro ac:name="chart">
+                <ac:parameter ac:name="title">Samples</ac:parameter>
+                <ac:parameter ac:name="subTitle">Total number: {{ total_samples }}
+                </ac:parameter>
+                <ac:parameter ac:name="type">pie</ac:parameter>
+                <ac:parameter ac:name="imageFormat">png</ac:parameter>
+                <ac:rich-text-body>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <th>
+                                    <p>Number</p>
+                                </th>
+                                {% for name in set_names %}
+                                <th>
+                                    <p>{{ name }}</p>
+                                </th>
+                                {% endfor %}
+                            </tr>
+                            <tr>
+                                <th>
+                                    <p>Value</p>
+                                </th>
+                                {% for i in range(3) %}
+                                <td>
+                                    <p>{{ class_lengths[i] }}</p>
+                                </td>
+                                {% endfor %}
+                            </tr>
+                        </tbody>
+                    </table>
+                </ac:rich-text-body>
+            </ac:structured-macro>
+            <h4>Labels</h4>
+            <p>{{ labels|sort }} (total: {{ labels|length }})</p>
+            {% for i in range(3) %}
+            {% if label_stats[i]|length > 0 %}
+            <ac:structured-macro ac:name="chart">
+                <ac:parameter ac:name="title">Labels</ac:parameter>
+                <ac:parameter ac:name="subTitle">{{ set_names[i] }}</ac:parameter>
+                <ac:parameter ac:name="type">pie</ac:parameter>
+                <ac:parameter ac:name="imageFormat">png</ac:parameter>
+                <ac:rich-text-body>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <th>
+                                    <p>Number</p>
+                                </th>
+                                {% for name in label_stats[i]|sort %}
+                                <th>
+                                    <p>{{ name }}</p>
+                                </th>
+                                {% endfor %}
+                            </tr>
+                            <tr>
+                                <th>
+                                    <p>Value</p>
+                                </th>
+                                {% for _, value in label_stats[i]|dictsort %}
+                                <td>
+                                    <p>{{ value }}</p>
+                                </td>
+                                {% endfor %}
+                            </tr>
+                        </tbody>
+                    </table>
+                </ac:rich-text-body>
+            </ac:structured-macro>
+            {% endif %}
+            {% endfor %}
             <h4>Normalization</h4>
             <table>
                 <tbody>
@@ -111,7 +140,7 @@
             <table>
                 <tbody>
                     <tr>
-                        <td>time</td>
+                        <td>elapsed time</td>
                         <td>{{ days }} days, {{ hours }} hours, {{ mins }}
                             minutes, {{ secs|round(1) }} secs
                         </td>
@@ -122,21 +151,39 @@
                     </tr>
                 </tbody>
             </table>
-            <table>
-                <tbody>
-                    <tr>
-                        <th>unit class</th>
-                        <th>run time</th>
-                    </tr>
-                    {% for unit, value in unit_run_times_by_class|dictsort(by='value') %}
-                    <tr>
-                        <td>{{ unit }}</td>
-                        <td>{{ value|round(4) }} secs
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <ac:structured-macro ac:name="chart">
+                <ac:parameter ac:name="title">Unit run time</ac:parameter>
+                <ac:parameter ac:name="type">pie</ac:parameter>
+                <ac:parameter ac:name="imageFormat">png</ac:parameter>
+                <ac:parameter ac:name="width">600</ac:parameter>
+                <ac:parameter ac:name="height">600</ac:parameter>
+                <ac:rich-text-body>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <th>
+                                    <p>Number</p>
+                                </th>
+                                {% for name, _ in unit_run_times_by_class|dictsort(by='value')|reverse %}
+                                <th>
+                                    <p>{{ name }}</p>
+                                </th>
+                                {% endfor %}
+                            </tr>
+                            <tr>
+                                <th>
+                                    <p>Value</p>
+                                </th>
+                                {% for _, value in unit_run_times_by_class|dictsort(by='value')|reverse %}
+                                <td>
+                                    <p>{{ value|round(4) }}</p>
+                                </td>
+                                {% endfor %}
+                            </tr>
+                        </tbody>
+                    </table>
+                </ac:rich-text-body>
+            </ac:structured-macro>
             <h1>Configuration</h1>
             <ac:structured-macro ac:name="noformat">
                 <ac:plain-text-body>
