@@ -29,12 +29,6 @@
                     {% endif %}
                 </ac:rich-text-body>
             </ac:structured-macro>
-            <h1>Workflow</h1>
-            <p>
-                <ac:image ac:width="600">
-                    <ri:attachment ri:filename="workflow.png"/>
-                </ac:image>
-            </p>
             {% if errors_pt is defined %}
             <h1>Results</h1>
             <table>
@@ -42,19 +36,17 @@
                     <tr>
                         <th>set</th>
                         <th>accuracy</th>
+                        <th>errors</th>
                     </tr>
+                    {% for i in range(3) %}
+                    {% if class_lengths[i] > 0 %}
                     <tr>
-                        <td>test</td>
-                        <td>{{ errors_pt[0]|round(4) }}%</td>
+                        <td>{{ ("test", "validation", "train")[i] }}</td>
+                        <td>{{ (100 - errors_pt[i])|round(4) }}%</td>
+                        <td>{{ errors_pt[i]|round(4) }}%</td>
                     </tr>
-                    <tr>
-                        <td>validation</td>
-                        <td>{{ errors_pt[1]|round(4) }}%</td>
-                    </tr>
-                    <tr>
-                        <td>train</td>
-                        <td>{{ errors_pt[2]|round(4) }}%</td>
-                    </tr>
+                    {% endif %}
+                    {% endfor %}
                 </tbody>
             </table>
             {% endif %}
@@ -80,7 +72,8 @@
                     </tr>
                 </tbody>
             </table>
-            <h4>Labels</h4><p>{{ labels }}</p>
+            <h4>Labels</h4><p>Total number: {{ labels|length }}</p>
+            <p>{{ labels|sort }}</p>
             <table>
                 <tbody>
                     <tr>
@@ -89,15 +82,15 @@
                     </tr>
                     <tr>
                         <td>test</td>
-                        <td>{{ label_stats[0] }}</td>
+                        <td>{{ label_stats[0]|dictsort }}</td>
                     </tr>
                     <tr>
                         <td>validation</td>
-                        <td>{{ label_stats[1] }}</td>
+                        <td>{{ label_stats[1]|dictsort }}</td>
                     </tr>
                     <tr>
                         <td>train</td>
-                        <td>{{ label_stats[2] }}</td>
+                        <td>{{ label_stats[2]|dictsort }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -118,13 +111,9 @@
             <table>
                 <tbody>
                     <tr>
-                        <th>&nbsp;</th>
-                        <th>time of training</th>
-                    </tr>
-                    <tr>
                         <td>time</td>
                         <td>{{ days }} days, {{ hours }} hours, {{ mins }}
-                            minutes, {{ secs|round(4) }} secs
+                            minutes, {{ secs|round(1) }} secs
                         </td>
                     </tr>
                     <tr>
@@ -139,7 +128,7 @@
                         <th>unit class</th>
                         <th>run time</th>
                     </tr>
-                    {% for unit, value in unit_run_times_by_class.items() %}
+                    {% for unit, value in unit_run_times_by_class|dictsort(by='value') %}
                     <tr>
                         <td>{{ unit }}</td>
                         <td>{{ value|round(4) }} secs
@@ -155,9 +144,16 @@
             </ac:structured-macro>
         </ac:layout-cell>
         <ac:layout-cell>
+            <h1>Workflow</h1>
+            <p>
+                <ac:image ac:width="600">
+                    <ri:attachment ri:filename="workflow.png"/>
+                </ac:image>
+            </p>
             <h1>Plots</h1>
             <p>
-                {% for name in plots %}
+                {% for name in plots|sort %}
+                <h4>{{ name }}</h4>
                 <ac:image ac:width="600">
                     <ri:attachment ri:filename="{{ name }}.png"/>
                 </ac:image>

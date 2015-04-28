@@ -137,7 +137,7 @@ class Publisher(Unit, TriviallyDistributable):
             self.warning("Failed to import matplotlib: there will be no plots "
                          "in the published documents.")
         for backend_class, backend_kwargs in self.backends.items():
-            self.debug("Creating %s...", backend_class)
+            self.debug("Creating \"%s\" backend...", backend_class)
             self._backend_instances[backend_class] = \
                 PublishingBackendRegistry.backends[backend_class](
                     self.templates.get(backend_class), **backend_kwargs)
