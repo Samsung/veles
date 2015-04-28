@@ -77,6 +77,8 @@ class Config(object):
         __protected__[self].update(names)
 
     def __getattr__(self, name):
+        if name in ("keys", "values"):
+            return getattr(self.__content__, name)
         temp = Config("%s.%s" % (self.__path__, name))
         setattr(self, name, temp)
         return temp
@@ -124,6 +126,12 @@ class Config(object):
         It actually leads to "maximum recursion depth exceeded" exception.
         """
         self.__dict__.update(state)
+
+    def __iter__(self):
+        return iter(self.__content__)
+
+    def __getitem__(self, item):
+        return getattr(self, item)
 
     if PY2:
         def __getnewargs__(self):
