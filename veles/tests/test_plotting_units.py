@@ -102,6 +102,9 @@ class Test(unittest.TestCase):
               [41, 59, 82, 105, 20, 69, 32, 13, 5355, 49],
               [9, 14, 12, 46, 206, 51, 1, 118, 72, 5405]]], order=2)
         mp.input_field = 0
+        mp.reversed_labels_mapping = {
+            0: "0", 1: "1", 2: "2", 3: "3", 4: "4",
+            5: "5", 6: "6", 7: "7", 8: "8", 9: "9"}
         self.compare_images(*self.run_plotter(mp))
 
     def testAccumulatingPlotter(self):

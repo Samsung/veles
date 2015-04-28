@@ -171,6 +171,7 @@ class Loader(Unit):
         self.minibatch_labels = memory.Vector()
         self._raw_minibatch_labels = []
         self._labels_mapping = {}
+        self._reversed_labels_mapping = []
 
         self.failed_minibatches = []
         self._total_failed = 0
@@ -237,7 +238,7 @@ class Loader(Unit):
 
     @property
     def reversed_labels_mapping(self):
-        return list(sorted(self.labels_mapping))
+        return self._reversed_labels_mapping
 
     @property
     def unique_labels_count(self):
@@ -828,6 +829,7 @@ class Loader(Unit):
         if len(self.labels_mapping) == 0:
             self.labels_mapping.update(
                 {k: i for i, k in enumerate(sorted(self.train_diff_labels))})
+            self._reversed_labels_mapping[:] = sorted(self.labels_mapping)
         self._print_label_stats(self.train_diff_labels, "TRAIN")
         for i, diff_labels in enumerate(other_diff_labels):
             if self.class_lengths[i] > 0:

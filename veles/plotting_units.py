@@ -197,7 +197,7 @@ class MatrixPlotter(Plotter):
         self.patches = None
         self.lines = None
         self.show_figure = nothing
-        self.demand("input", "input_field")
+        self.demand("input", "input_field", "reversed_labels_mapping")
 
     def redraw(self):
         self.pp.ioff()
@@ -294,7 +294,8 @@ class MatrixPlotter(Plotter):
         # Headers in first row
         row = 0
         for column in range(1, num_columns - 1):
-            figure.text(label=("C%d" % (column - 1)),
+            label = self.reversed_labels_mapping[column - 1]
+            figure.text(label="C%s" % str(label),
                         s=(column - 1),
                         x=(column + 0.5) / num_columns,
                         y=(num_rows - row - 0.5) / num_rows,
@@ -303,7 +304,8 @@ class MatrixPlotter(Plotter):
         # Headers in first column
         column = 0
         for row in range(1, num_rows - 1):
-            figure.text(label=("R%d" % (row - 1)),
+            label = self.reversed_labels_mapping[row - 1]
+            figure.text(label=("R%s" % str(label)),
                         s=(row - 1),
                         x=(column + 0.5) / num_columns,
                         y=(num_rows - row - 0.5) / num_rows,
