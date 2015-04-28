@@ -138,7 +138,8 @@ class Loader(Unit):
     exports = "epoch_ended", "epoch_number", "train_ended", "class_lengths", \
         "minibatch_data", "minibatch_class", "minibatch_data", "has_labels", \
         "minibatch_labels", "minibatch_size", "max_minibatch_size", \
-        "total_samples", "last_minibatch", "class_lengths", "shuffle_limit"
+        "total_samples", "last_minibatch", "class_lengths", "shuffle_limit", \
+        "reversed_labels_mapping"
 
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = "LOADER"
