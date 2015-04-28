@@ -31,8 +31,8 @@ override_dh_install:
 	mkdir -p debian/python3-veles/usr/share/doc/python3-veles
 	cp -rL docs/html/* debian/python3-veles/usr/share/doc/python3-veles
 	cp -r ocl cuda debian/python3-veles/usr/share/veles/
-	cp -r veles/znicz/ocl debian/python3-veles/usr/share/veles/ocl/znicz
-	cp -r veles/znicz/cuda debian/python3-veles/usr/share/veles/cuda/znicz
+	cp -r veles/znicz/ocl debian/python3-veles/usr/share/veles/znicz/ocl
+	cp -r veles/znicz/cuda debian/python3-veles/usr/share/veles/znicz/cuda
 	cp -r devices debian/python3-veles/usr/share/veles/
 	cp requirements.txt debian/python3-veles/usr/share/veles/
 	mkdir -p debian/python3-veles/etc/init
