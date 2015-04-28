@@ -86,7 +86,6 @@ class AccumulatingPlotter(Plotter):
         fit_poly_power: the approximation polynomial's power. If set to 0,
         do no approximation.
     """
-
     def __init__(self, workflow, **kwargs):
         kwargs["name"] = kwargs.get("name", "AccumulatingPlotter")
         super(AccumulatingPlotter, self).__init__(workflow, **kwargs)
@@ -98,6 +97,7 @@ class AccumulatingPlotter(Plotter):
         self.fit_poly_power = kwargs.get("fit_poly_power", 2)
         self.minimap_size = kwargs.get("minimap", 0.25)
         self.line_width = kwargs.get("line_width", 2.0)
+        self.label = kwargs.get("label", "")
         self.values = []
         self.input_offset = 0
         self.pp = None
@@ -108,6 +108,7 @@ class AccumulatingPlotter(Plotter):
     def redraw(self):
         self.pp.ioff()
         figure = self.pp.figure(self.name)
+
         if self.clear_plot:
             figure.clf()
         axes = figure.add_subplot(111)  # Main axes
@@ -115,7 +116,8 @@ class AccumulatingPlotter(Plotter):
         if self.ylim is not None:
             axes.set_ylim(self.ylim[0], self.ylim[1])
         if self.last == 0:
-            axes.plot(self.values, self.plot_style)
+            axes.xaxis.set_ticks(range(len(self.values)))
+            axes.plot(self.values, marker=self.plot_style, label=self.label)
         else:
             values = self.values[-self.last:]
             if len(self.values) > self.last:
@@ -125,14 +127,16 @@ class AccumulatingPlotter(Plotter):
                 if self.fit_poly_power == 0:
                     axes.plot(values_range, values, self.plot_style[:-1] + '-',
                               linewidth=self.line_width, marker='o',
-                              markersize=self.line_width * 4)
+                              markersize=self.line_width * 4,
+                              label=self.label)
                 else:
                     interval = numpy.linspace(0, len(values) - 1, 100)
                     smooth_vals = numpy.poly1d(numpy.polyfit(
                         range(len(values)), values,
                         self.fit_poly_power))(interval)
                     axes.plot(interval + begindex, smooth_vals,
-                              self.plot_style, linewidth=self.line_width)
+                              self.plot_style, linewidth=self.line_width,
+                              label=self.label)
                     axes.plot(values_range, values, self.plot_style[:-1] + 'o',
                               linewidth=self.line_width * 4)
                 if self.minimap_size > 0:
@@ -149,7 +153,10 @@ class AccumulatingPlotter(Plotter):
                 axes.xaxis.set_ticks(range(len(values)))
                 axes.plot(values, self.plot_style[:-1] + '-',
                           linewidth=self.line_width, marker='o',
-                          markersize=self.line_width * 4)
+                          markersize=self.line_width * 4,
+                          label=self.label)
+        if self.label:
+            axes.legend(loc=2)
         self.pp.ion()
         self.show_figure(figure)
         if self.redraw_plot:
@@ -604,8 +611,7 @@ class Histogram(Plotter):
         ax.set_ylabel('Y', fontsize=20)
         ax.axis([xmin, xmax + ((xmax - xmin) / nbars), ymin, ymax])
         ax.grid(True)
-        leg = ax.legend("Y ")
-                        # 'upper center')
+        leg = ax.legend("Y ")  # 'upper center')
         frame = leg.get_frame()
         frame.set_facecolor('#E8D6BB')
         for t in leg.get_texts():

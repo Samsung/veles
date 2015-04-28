@@ -68,15 +68,18 @@ class Test(unittest.TestCase):
         plotter.patches = patches
         plotter.pp = pp
         plotter.show_figure = self.show_figure
+        plotter.fill()
         fig = plotter.redraw()
         fio = io.BytesIO()
         fig.savefig(fio, format="png")
         fio.seek(0)
         if save_on_disk:
-            tmp_file_name = tempfile.mkstemp("%s.png" %
-                                             plotter.__class__.__name__)[1]
-            logging.info("Dumped figure to %s", tmp_file_name)
-            pp.savefig(tmp_file_name)
+            tmp_file = tempfile.NamedTemporaryFile(
+                suffix="%s.png" % plotter.__class__.__name__,
+                delete=False)
+            logging.info("Dumped figure to %s", tmp_file.name)
+            tmp_file.write(fio.getvalue())
+            fio.name = tmp_file.name
         return plotter, fio
 
     def compare_images(self, plotter, fio):
@@ -86,7 +89,12 @@ class Test(unittest.TestCase):
                          "res/%s.png" % plotter.__class__.__name__))]
         diff = numpy.linalg.norm(img1 - img2)
         print("Difference:", diff)
-        self.assertLess(diff, 10)
+        try:
+            self.assertLess(diff, 10)
+        finally:
+            fio.close()
+        if hasattr(fio, "name"):
+            os.remove(fio.name)
 
     def testMatrixPlotter(self):
         mp = MatrixPlotter(self, name="Matrix")
@@ -108,16 +116,19 @@ class Test(unittest.TestCase):
         self.compare_images(*self.run_plotter(mp))
 
     def testAccumulatingPlotter(self):
-        ap = AccumulatingPlotter(self, name="Lines")
+        ap = AccumulatingPlotter(self, name="Lines", clear_plot=True)
         ap.input = numpy.arange(1, 20, 0.1)
         ap.input_field = 0
-        ap.fill()
+        ap.label = "label name"
         ap, fio = self.run_plotter(ap)
+        fig = None
         for i in range(11):
             ap.input_field = i + 1
             ap.fill()
-            ap.redraw()
-        pp.savefig(fio, format="png")
+            fig = ap.redraw()
+        fig.savefig(fio, format="png")
+        with open(fio.name, 'wb') as fout:
+            fout.write(fio.getvalue())
         fio.seek(0)
         self.compare_images(ap, fio)
 
