@@ -62,9 +62,11 @@ class Config(object):
     def update(self, value):
         if self == root:
             raise ValueError("Root updates are disabled")
-        if not isinstance(value, dict):
-            raise ValueError("Value must be an instance of dict")
-        self.__update__(value)
+        if not isinstance(value, (dict, Config)):
+            raise ValueError("Value must be an instance of dict or Config")
+        self.__update__(
+            value if isinstance(value, dict) else value.__content__)
+        return self
 
     def __update__(self, tree):
         for k, v in tree.items():
