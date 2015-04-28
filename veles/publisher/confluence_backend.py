@@ -77,3 +77,5 @@ class ConfluenceBackend(Jinja2TemplateBackend):
             conf.attach_file(page, self.space,
                              {info["image"]["name"]: info["image"]["data"]})
         self.info("Successfully published \"%s\" as %s", page, url)
+        self.url = url
+        self.page = page
