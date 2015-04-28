@@ -178,6 +178,8 @@ class Main(Logger, CommandLineBase):
             # help text requires UTF-8, but the default codec is ascii over ssh
             Logger.ensure_utf8_streams()
         if "--dump-config" in sys.argv:
+            self.info("Scanning for the plugins...")
+            self.debug("Loaded plugins: %s", veles.__plugins__)
             root.print_()
             return Main.EXIT_SUCCESS
         return None
