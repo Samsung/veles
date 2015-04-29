@@ -21,6 +21,7 @@ override_dh_auto_build:
 
 override_dh_install:
 	dh_install
+	chmod +x debian/python3-veles/usr/lib/python*/dist-packages/veles/web_status.py
 	rm -f debian/python3-veles/usr/lib/python*/dist-packages/veles/site_config.py
 	rm -f debian/python3-veles/usr/lib/python*/dist-packages/veles/znicz/site_config.py
 	rm -rf debian/python3-veles/usr/lib/python*/dist-packages/veles/tests

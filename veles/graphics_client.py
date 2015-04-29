@@ -350,12 +350,12 @@ class GraphicsClient(Logger):
         self._pdf_trigger = True
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-b", "--backend", nargs='?',
                         default=root.common.matplotlib_backend,
-                        help="Matplotlib drawing backend. \"no\" value "
-                        "disables any real plotting (useful with --dump).")
+                        help="Matplotlib drawing backend. \"no\" value disable"
+                             "s any real plotting (useful with --dump).")
     parser.add_argument("-e", "--endpoint", required=True,
                         help="ZeroMQ endpoint to receive updates from.")
     parser.add_argument("--webagg-discovery-fifo", nargs='?',
@@ -386,3 +386,7 @@ if __name__ == "__main__":
         client_thread.join()
     else:
         client.run()
+
+
+if __name__ == "__main__":
+    main()
