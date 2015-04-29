@@ -303,7 +303,7 @@ class MatrixPlotter(Plotter):
         for column in range(1, num_columns - 1):
             label = self.reversed_labels_mapping[column - 1]
             figure.text(label="C%s" % str(label),
-                        s=(column - 1),
+                        s=label,
                         x=(column + 0.5) / num_columns,
                         y=(num_rows - row - 0.5) / num_rows,
                         verticalalignment="center",
@@ -313,7 +313,7 @@ class MatrixPlotter(Plotter):
         for row in range(1, num_rows - 1):
             label = self.reversed_labels_mapping[row - 1]
             figure.text(label=("R%s" % str(label)),
-                        s=(row - 1),
+                        s=label,
                         x=(column + 0.5) / num_columns,
                         y=(num_rows - row - 0.5) / num_rows,
                         verticalalignment="center",
