@@ -35,6 +35,7 @@ under the License.
 """
 
 import os
+import sys
 from jinja2 import Environment, FileSystemLoader
 
 from veles.publisher.backend import Backend
@@ -46,7 +47,8 @@ class Jinja2TemplateBackend(Backend):
         self.environment = Environment(
             trim_blocks=kwargs.get("trim_blocks", True),
             lstrip_blocks=kwargs.get("lstrip_blocks", True),
-            loader=FileSystemLoader(os.path.dirname(__file__)))
+            loader=FileSystemLoader(os.path.dirname(
+                sys.modules[type(self).__module__].__file__)))
         if template is None:
             self.template = self.environment.get_template(
                 "%s_template.%s" % (self.MAPPING, self.TEMPLATE_EXT))
