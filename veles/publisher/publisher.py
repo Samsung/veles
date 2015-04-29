@@ -165,6 +165,7 @@ class Publisher(Unit, TriviallyDistributable):
             "pid": os.getpid(),
             "logid": self.launcher.log_id,
             "config_root": root,
+            "loader": self.loader_unit,
             "workflow_file": self.launcher.workflow_file,
             "config_file": self.launcher.config_file,
             "unit_run_times_by_class":
