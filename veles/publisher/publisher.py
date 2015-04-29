@@ -68,7 +68,7 @@ class Publisher(Unit, TriviallyDistributable):
         self._matplotlib_backend = kwargs.get("matplotlib_backend", "cairo")
         self._matplotlib_packages_ = {}
         self._savefig_kwargs = dict(kwargs.get(
-            "savefig_kwargs", {"transparent": True}))
+            "savefig_kwargs", {"transparent": False}))
         self._workflow_graph_kwargs = dict(kwargs.get(
             "workflow_graph_kwargs", {"with_data_links": True}))
         # Launcher sets self.workflow_graphs thanks to this flag
