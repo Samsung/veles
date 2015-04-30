@@ -102,7 +102,7 @@ class SnapshotterBase(Unit):
         self.debug("time_interval = %f", self.time_interval)
 
     def run(self):
-        if self.is_slave or root.common.disable_snapshots:
+        if self.is_slave or root.common.disable_snapshotting:
             return
         self._skipped_counter += 1
         if self._skipped_counter < self.interval or self.skip:

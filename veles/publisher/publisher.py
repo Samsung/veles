@@ -72,7 +72,7 @@ class Publisher(Unit, TriviallyDistributable):
         self._workflow_graph_kwargs = dict(kwargs.get(
             "workflow_graph_kwargs", {"with_data_links": True}))
         # Launcher sets self.workflow_graphs thanks to this flag
-        self.wants_workflow_graph = True
+        self.wants_workflow_graph = not root.common.disable_publishing
         # Instance of veles.loader.Loader
         self._loader_unit = kwargs.get("loader")
 
@@ -128,6 +128,8 @@ class Publisher(Unit, TriviallyDistributable):
         self._loader_unit = value
 
     def initialize(self, **kwargs):
+        if root.common.disable_publishing:
+            return
         try:
             import matplotlib
             matplotlib.use(self.matplotlib_backend)
@@ -143,6 +145,8 @@ class Publisher(Unit, TriviallyDistributable):
                     self.templates.get(backend_class), **backend_kwargs)
 
     def run(self):
+        if root.common.disable_publishing:
+            return
         info = self.init_info()
         self.add_info(info)
         if self.logger.isEnabledFor(logging.DEBUG):
@@ -164,6 +168,7 @@ class Publisher(Unit, TriviallyDistributable):
                                  platform.python_version()),
             "pid": os.getpid(),
             "logid": self.launcher.log_id,
+            "seeds": self.launcher.seeds,
             "config_root": root,
             "loader": self.loader_unit,
             "workflow_file": self.launcher.workflow_file,

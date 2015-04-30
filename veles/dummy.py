@@ -80,6 +80,10 @@ class DummyLauncher(object):
     def config_file(self):
         return "/path/to/config"
 
+    @property
+    def seeds(self):
+        return []
+
     def add_ref(self, workflow):
         self.workflow = workflow
 

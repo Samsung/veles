@@ -358,12 +358,13 @@ class Main(Logger, CommandLineBase):
 
     def _seed_random(self, rndvals):
         rndvals_split = rndvals.split(',')
+        seeds = []
         for rndval, index in zip(rndvals_split, range(len(rndvals_split))):
             try:
                 binvle = binascii.unhexlify(rndval)
-                prng.get(index + 1).seed(
-                    numpy.frombuffer(binvle, dtype=numpy.uint8),
-                    dtype=numpy.uint8)
+                seed = numpy.frombuffer(binvle, dtype=numpy.uint8)
+                prng.get(index + 1).seed(seed, dtype=numpy.uint8)
+                seeds.append(seed)
                 continue
             except (binascii.Error, TypeError):
                 pass
@@ -376,6 +377,7 @@ class Main(Logger, CommandLineBase):
                     self.critical("Random generator file name is empty")
                     sys.exit(errno.ENOENT)
             if fname == "-":
+                seeds.append(None)
                 try:
                     prng.get(index + 1).seed(None)
                 except:
@@ -398,14 +400,16 @@ class Main(Logger, CommandLineBase):
             dtype = numpy.dtype(vals[2]) if len(vals) > 2 else numpy.int32
 
             self.debug("Seeding with %d samples of type %s from %s to %d",
-                       count, str(dtype), fname, index + 1)
+                       count, dtype, fname, index + 1)
             try:
-                prng.get(index + 1).seed(numpy.fromfile(
-                    fname, dtype=dtype, count=count), dtype=dtype)
+                seed = (numpy.fromfile(fname, dtype=dtype, count=count))
+                prng.get(index + 1).seed(seed, dtype=dtype)
+                seeds.append(seed)
             except:
                 self.exception("Failed to seed the random generator with %s",
                                fname)
                 sys.exit(Main.EXIT_FAILURE)
+        self.seeds = seeds
 
     def _load_workflow(self, fname_snapshot):
         try:
@@ -424,6 +428,7 @@ class Main(Logger, CommandLineBase):
             self.launcher = Launcher(self.interactive)
             self.launcher.workflow_file = self.workflow_file
             self.launcher.config_file = self.config_file
+            self.launcher.seeds = self.seeds
         except:
             self.exception("Failed to create the launcher")
             sys.exit(Main.EXIT_FAILURE)

@@ -180,7 +180,6 @@ root.common.update({
     "trace_run": False,
     "raise_run_after_stop": False,
     "spinning_run_progress": sys.stdout.isatty(),
-    "disable_plotting": "unittest" in sys.modules,
     "precision_type": "double",  # float or double
     "precision_level": 0,  # 0 - use simple summation
                            # Only for ocl backend:
@@ -198,7 +197,9 @@ root.common.update({
     # Disable Numba JIT while debugging or on alternative interpreters
     "disable_numba": (sys.gettrace() is not None or
                       platform.python_implementation() != "CPython"),
-    "disable_snapshots": False,
+    "disable_plotting": "unittest" in sys.modules,
+    "disable_snapshotting": False,
+    "disable_publishing": False,
     "veles_dir": os.path.join(__root__, "veles"),
     "veles_user_dir": __home__,
     "veles_dist_config_dir": "/etc/default/veles",

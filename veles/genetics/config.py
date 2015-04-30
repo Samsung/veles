@@ -40,6 +40,7 @@ from multiprocessing import Process, Pipe, Value
 import numpy
 import sys
 from zope.interface import implementer
+from veles.compat import from_none
 
 from veles.config import Config, root
 from veles.cmdline import CommandLineBase
@@ -323,14 +324,14 @@ class ConfigChromosome(Chromosome):
         p.start()
         try:
             p.join()
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as e:
             if p.is_alive():
                 self.info("Giving the evaluator process a fair chance to die")
                 p.join(1.0)
                 if p.is_alive():
                     self.warning("Terminating the evaluator process")
                     p.terminate()
-            raise
+            raise from_none(e)
         if p.exitcode != 0:
             self.warning("Child process died with error code %d => "
                          "reevaluating", p.exitcode)
@@ -339,8 +340,10 @@ class ConfigChromosome(Chromosome):
 
     def run_workflow(self, fitness):
         self.info("Will evaluate the following config:")
+        root.common.disable_plotting = True
+        root.common.disable_snapshotting = True
+        root.common.disable_publishing = True
         self.population_.root_.print_()
-        root.common.disable_snapshots = True
         self.population_.main_.run_module(self.population_.workflow_module_)
         fv = self.population_.main_.workflow.fitness
         if fv is not None:
@@ -418,11 +421,10 @@ class ConfigPopulation(Population):
         """
         for holder in argv_holders:
             self.debug("#" * 80)
-            self.debug("%s.argv was %s", str(holder), str(holder.argv))
-            holder.argv = filter_argv(
-                holder.argv, "-b", "--background",
-                "-m", "-master-address", "-p") + ["-p", ""]
-            self.debug("%s.argv became %s", str(holder), str(holder.argv))
+            self.debug("%s.argv was %s", holder, holder.argv)
+            holder.argv = ["-s", "-p", ""] + filter_argv(
+                holder.argv, "-b", "--background", "-m", "--master-address")
+            self.debug("%s.argv became %s", holder, holder.argv)
             self.debug("#" * 80)
 
     def job_process_main(self, parent_conn, child_conn):
@@ -442,8 +444,8 @@ class ConfigPopulation(Population):
                 chromo.population_ = self
                 chromo.evaluate()
                 parent_conn.send(chromo.fitness)
-            except:
-                self.error("Failed to evaluate %s", chromo)
+            except Exception as e:
+                self.error("Failed to evaluate %s: %s", chromo, e)
                 parent_conn.send(None)
 
     def evolve_multi(self):
