@@ -134,11 +134,13 @@ class TestPublisher(unittest.TestCase, Logger):
                          self.loader.normalization_parameters)
         self.assertIsInstance(info["unit_run_times_by_class"], dict)
         self.assertIsInstance(info["unit_run_times_by_name"], dict)
+        self.assertIsInstance(info["seeds"], list)
 
     def test_confluence_render(self):
         info = self.publisher.init_info()
         self.publisher.add_info(info)
         info["errors_pt"] = 0, 0.5, 0.6
+        info["seeds"].append(b"abcd1234")
         conf = ConfluenceBackend(None, server="", username="", password="",
                                  space="")
         content = super(ConfluenceBackend, conf).render(info)

@@ -34,6 +34,7 @@ under the License.
 ███████████████████████████████████████████████████████████████████████████████
 """
 
+import binascii
 import os
 import sys
 from jinja2 import Environment, FileSystemLoader
@@ -56,6 +57,7 @@ class Jinja2TemplateBackend(Backend):
             self.template = self.environment.from_string(template)
 
     def render(self, info):
+        info["hexlify"] = binascii.hexlify
         self.info("Rendering the template...")
         content = self.template.render(**info)
         self.debug("Rendered:\n%s", content)

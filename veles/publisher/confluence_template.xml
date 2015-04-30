@@ -189,6 +189,29 @@
                 <ac:plain-text-body>
                     <![CDATA[{{ config_text }}]]></ac:plain-text-body>
             </ac:structured-macro>
+            <h1>Random seeds</h1>
+            <table>
+                <tbody>
+                    <tr>
+                        <th>
+                            <p>Index</p>
+                        </th>
+                        <th>
+                            <p>Value (binascii.hexlify)</p>
+                        </th>
+                    </tr>
+                    <tr>
+                        {% for value in seeds %}
+                        <td>
+                            <p>{{ loop.index }}</p>
+                        </td>
+                        <td>
+                            <p>{{ hexlify(value).decode('charmap') }}</p>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                </tbody>
+            </table>
         </ac:layout-cell>
         <ac:layout-cell>
             <h1>Workflow</h1>
