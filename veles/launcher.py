@@ -382,6 +382,14 @@ class Launcher(logger.Logger):
 
     def on_workflow_finished(self):
         reactor.callFromThread(self.stop)
+        self.debug("%s signalled that it had finished, enqueued self.stop",
+                   self.workflow)
+        # Sometimes, reactor does not wake up from the first attempt
+        # (inside callFromThread). This looks absurd, but it's true.
+        # os.fsync on reactor.waker.o does not help (not a buffering issue?).
+        while self._running:
+            self.debug("wake up, Neo")
+            reactor.wakeUp()
 
     def device_thread_pool_detach(self):
         if self.device.attached(self.workflow.thread_pool):

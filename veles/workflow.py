@@ -349,9 +349,9 @@ class Workflow(Container):
         """Manually interrupts the execution, calling stop() on each bound
         unit.
         """
-        self.on_workflow_finished(True)
+        self.on_workflow_finished()
 
-    def on_workflow_finished(self, propagate=False):
+    def on_workflow_finished(self):
         if not self.is_running:
             # Break an infinite loop if Workflow belongs to Workflow
             return
@@ -364,7 +364,7 @@ class Workflow(Container):
         self.is_running = False
         if not self.is_master:
             self.event("run", "end")
-        if (self.is_standalone or propagate) and self.is_main:
+        if self.is_standalone and self.is_main:
             self.workflow.on_workflow_finished()
         elif self.is_slave:
             self._do_job_callback_(self.generate_data_for_master())

@@ -273,8 +273,10 @@ class GeneticsContainer(Unit):
         if slave.id in self.scheduled_chromos:
             # We do not support more than one job for a slave
             # Wait until the previous job finishes via apply_data_from_slave()
-            raise ValueError("slave requested a new job, "
-                             "but hadn't completed previous")
+            self.warning("slave requested a new job, but the previous was not "
+                         "completed => retry")
+            idx = self.scheduled_chromos[slave.id]
+            return self._chromo_by_idx(idx), idx
         try:
             idx = self.retry_chromos.pop()
         except IndexError:
