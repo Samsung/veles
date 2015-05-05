@@ -46,7 +46,7 @@ under the License.
 
 
 from veles.genetics.simple import Chromosome, Population, schwefel
-from veles.genetics.config import (Tune,
+from veles.genetics.config import (Range,
                                    ConfigChromosome,
                                    ConfigPopulation,
                                    fix_config)

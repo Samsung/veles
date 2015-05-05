@@ -130,13 +130,8 @@ def scan_workflows(debug_imports):
     warnings.simplefilter("default")
     print("Found %d workflows:\n" % len(workflows), workflows)
     # Fix ResourceWarning on /dev/null
-    from io import TextIOWrapper
-    try:
-        for obj in gc.get_objects():
-            if isinstance(obj, TextIOWrapper) and obj.name == "/dev/null":
-                obj.close()
-    except:
-        pass
+    from IPython.utils.io import devnull
+    devnull.close()
     if len(threading.enumerate()) > 1:
         print("Warning: more than 1 thread is currently running, a join lock "
               "may happen.")

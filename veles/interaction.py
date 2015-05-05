@@ -35,6 +35,8 @@ under the License.
 
 from IPython.config.loader import Config
 from IPython.terminal.embed import InteractiveShellEmbed
+from IPython.utils.io import devnull
+devnull.close()
 import select
 import sys
 from zope.interface import implementer

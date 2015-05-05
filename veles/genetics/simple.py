@@ -134,14 +134,14 @@ class Chromosome(Pickleable):
         binary: binary representation of genes as string with "0"s and "1"s.
         numeric: list of numeric genes.
     """
-    def __init__(self, size, minvles, maxvles, accuracy, codes,
+    def __init__(self, size, min_values, max_values, accuracy, codes,
                  binary=None, numeric=None, rand=prng.get()):
         """Constructs the chromosome and computes it's fitness.
 
         Parameters:
             size: number of genes or 0.
-            minvles: list of minimum values for genes.
-            maxvles: list of maximum values for genes.
+            min_values: list of minimum values for genes.
+            max_values: list of maximum values for genes.
             accuracy: floating point approximation accuracy.
             codes: gray codes if any.
             binary: binary representation of genes.
@@ -155,22 +155,23 @@ class Chromosome(Pickleable):
         self.optimization.choice = "betw"
         self.optimization.code = "float"
 
-        self.minvles = minvles
-        self.maxvles = maxvles
+        self.min_values = min_values
+        self.max_values = max_values
         if size:
             self.size = size
             self.binary = ""
             self.numeric = []
             for j in range(size):
                 if self.optimization.choice == "or":
-                    rand = self.rand.choice([minvles[j], maxvles[j]])
+                    rand = self.rand.choice([min_values[j], max_values[j]])
                     self.numeric.append(rand)
-                elif type(minvles[j]) == float or type(maxvles[j]) == float:
-                    rand = self.rand.randint(int(minvles[j] * accuracy),
-                                             int(maxvles[j] * accuracy) + 1)
+                elif isinstance(min_values[j], float) or \
+                        isinstance(max_values[j], float):
+                    rand = self.rand.randint(int(min_values[j] * accuracy),
+                                             int(max_values[j] * accuracy) + 1)
                     self.numeric.append(rand / accuracy)
                 else:
-                    rand = self.rand.randint(minvles[j], maxvles[j] + 1)
+                    rand = self.rand.randint(min_values[j], max_values[j] + 1)
                     self.numeric.append(rand)
                     rand = int(rand * accuracy)
                 if self.optimization.code == "gray":
@@ -210,12 +211,13 @@ class Chromosome(Pickleable):
 
     def numeric_correct(self):
         for pos in range(len(self.numeric)):
-            maxvle = self.maxvles[pos]
-            minvle = self.minvles[pos]
-            diff = maxvle - minvle
-            while self.numeric[pos] < minvle or self.numeric[pos] > maxvle:
+            max_value = self.max_values[pos]
+            min_value = self.min_values[pos]
+            diff = max_value - min_value
+            while self.numeric[pos] < min_value or \
+                    self.numeric[pos] > max_value:
                 self.fitness = None
-                if self.numeric[pos] < minvle:
+                if self.numeric[pos] < min_value:
                     self.numeric[pos] += diff
                 else:
                     self.numeric[pos] -= diff
@@ -276,19 +278,19 @@ class Chromosome(Pickleable):
     def mutation_gaussian(self, n_points, probability):
         """Adds random gaussian number.
         """
-        minvles = self.minvles
-        maxvles = self.maxvles
+        min_values = self.min_values
+        max_values = self.max_values
         mut_pool = [i for i in range(len(self.numeric))]
         for _ in range(n_points):
             self.fitness = None
             pos = self.rand.choice(mut_pool)
             if self.optimization.choice == "or":
                 self.numeric[pos] = self.rand.choice(
-                    [minvles[pos], maxvles[pos]])
+                    [min_values[pos], max_values[pos]])
             else:
                 isint = (type(self.numeric[pos]) == int)
-                diff = maxvles[pos] - minvles[pos]
-                max_prob = minvles[pos] + diff / 2
+                diff = max_values[pos] - min_values[pos]
+                max_prob = min_values[pos] + diff / 2
                 gauss = self.rand.normal(max_prob, numpy.sqrt(diff / 6))
                 p_m = self.rand.rand()
                 if p_m < probability:
@@ -297,9 +299,9 @@ class Chromosome(Pickleable):
                     else:
                         self.numeric[pos] += gauss
                     # Bringing numeric[pos] to its limits
-                    while (self.numeric[pos] < minvles[pos] or
-                           self.numeric[pos] > maxvles[pos]):
-                        if self.numeric[pos] < minvles[pos]:
+                    while (self.numeric[pos] < min_values[pos] or
+                           self.numeric[pos] > max_values[pos]):
+                        if self.numeric[pos] < min_values[pos]:
                             self.numeric[pos] += diff
                         else:
                             self.numeric[pos] -= diff
@@ -312,20 +314,20 @@ class Chromosome(Pickleable):
     def mutation_uniform(self, n_points, probability):
         """Replaces float number with another random number.
         """
-        minvles = self.minvles
-        maxvles = self.maxvles
+        min_values = self.min_values
+        max_values = self.max_values
         mut_pool = list(range(len(self.numeric)))
         for _ in range(n_points):
             self.fitness = None
             pos = self.rand.choice(mut_pool)
             if self.optimization.choice == "or":
                 self.numeric[pos] = self.rand.choice(
-                    [minvles[pos], maxvles[pos]])
+                    [min_values[pos], max_values[pos]])
             else:
                 isint = (type(self.numeric[pos]) == int)
                 p_m = self.rand.rand()
                 if p_m < probability:
-                    rand = self.rand.uniform(minvles[pos], maxvles[pos])
+                    rand = self.rand.uniform(min_values[pos], max_values[pos])
                     if isint:
                         rand = int(rand)
                     self.numeric[pos] = rand
@@ -438,7 +440,7 @@ class Population(Pickleable):
         """
         return len(self.chromosomes)
 
-    def new(self, size, minvles, maxvles, accuracy, codes, binary=None,
+    def new(self, size, min_values, max_values, accuracy, codes, binary=None,
             numeric=None):
         population = self
         kwargs = {k: v for k, v in locals().items() if k != "self"}
@@ -547,8 +549,7 @@ class Population(Pickleable):
                 j += 1
             cross_points.insert(j, l)
         cross_points.append(len(parent1))
-        cross1 = ""
-        cross2 = ""
+        cross1 = cross2 = ""
         i = 1
         while i <= self.crossing.pointed_points + 1:
             if i % 2 == 0:
@@ -558,17 +559,17 @@ class Population(Pickleable):
                 cross1 += parent2[cross_points[i - 1]:cross_points[i]]
                 cross2 += parent1[cross_points[i - 1]:cross_points[i]]
             i += 1
-        (num1, num2) = bin_to_num([cross1, cross2], self.dl,
-                                  self.optimization.accuracy, self.codes)
-        chromo_son1 = self.new(
-            0, self.minvles, self.maxvles,
+        num1, num2 = bin_to_num((cross1, cross2), self.dl,
+                                self.optimization.accuracy, self.codes)
+        chromo1 = self.new(
+            0, self.min_values, self.max_values,
             1.0 / self.optimization.accuracy, self.codes, cross1, num1)
-        chromo_son2 = self.new(
-            0, self.minvles, self.maxvles,
+        chromo2 = self.new(
+            0, self.min_values, self.max_values,
             1.0 / self.optimization.accuracy, self.codes, cross2, num2)
-        chromo_son1.size = len(chromo_son1.numeric)
-        chromo_son2.size = len(chromo_son2.numeric)
-        return chromo_son1, chromo_son2
+        chromo1.size = len(chromo1.numeric)
+        chromo2.size = len(chromo2.numeric)
+        return chromo1, chromo2
 
     def cross_uniform(self, parents):
         self._cross_with_attempts(parents, self.crossing.uniform_crossings,
@@ -589,8 +590,8 @@ class Population(Pickleable):
                     cross += parent2[i]
             numeric = bin_to_num([cross], self.dl,
                                  self.optimization.accuracy, self.codes)[0]
-            chromo_son = self.new(
-                0, self.minvles, self.maxvles,
+            chromo = self.new(
+                0, self.min_values, self.max_values,
                 1.0 / self.optimization.accuracy, self.codes, cross,
                 numeric)
         else:
@@ -605,11 +606,11 @@ class Population(Pickleable):
                     cross.append(parent1[i])
                 else:
                     cross.append(parent2[i])
-            chromo_son = self.new(
+            chromo = self.new(
                 0, self.optimization.min_values,
                 self.optimization.max_values,
                 1.0 / self.optimization.accuracy, self.codes, None, cross)
-        return (chromo_son,)
+        return chromo,
 
     def cross_arithmetic(self, parents):
         """Arithmetical crossingover.
@@ -641,12 +642,12 @@ class Population(Pickleable):
                 cross1.append(a * parent1[i] + (1 - a) * parent2[i])
                 cross2.append((1 - a) * parent1[i] + a * parent2[i])
         if self.optimization.code == "gray":
-            (bin1, bin2) = (num_to_bin(cross1, self.optimization.accuracy,
-                                       self.codes),
-                            num_to_bin(cross2, self.optimization.accuracy,
-                                       self.codes))
+            bin1, bin2 = (num_to_bin(cross1, self.optimization.accuracy,
+                                     self.codes),
+                          num_to_bin(cross2, self.optimization.accuracy,
+                                     self.codes))
         else:
-            (bin1, bin2) = ("", "")
+            bin1, bin2 = "", ""
         chromo1 = self.new(0, self.optimization.min_values,
                            self.optimization.max_values,
                            1.0 / self.optimization.accuracy,
@@ -655,7 +656,7 @@ class Population(Pickleable):
                            self.optimization.max_values,
                            1.0 / self.optimization.accuracy,
                            self.codes, bin2, cross2)
-        return (chromo1, chromo2)
+        return chromo1, chromo2
 
     def cross_geometric(self, parents):
         """Geometrical crossingover.
@@ -694,11 +695,11 @@ class Population(Pickleable):
         if self.optimization.code == "gray":
             binary = num_to_bin(cross, self.optimization.accuracy,
                                 self.codes)
-        chromo_son = self.new(0, self.optimization.min_values,
-                              self.optimization.max_values,
-                              1.0 / self.optimization.accuracy,
-                              self.codes, binary, cross)
-        return (chromo_son,)
+        chromo = self.new(0, self.optimization.min_values,
+                          self.optimization.max_values,
+                          1.0 / self.optimization.accuracy,
+                          self.codes, binary, cross)
+        return chromo,
 
     def compute_gray_codes(self):
         max_abs_x = 0

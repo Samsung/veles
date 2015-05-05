@@ -40,11 +40,12 @@ from multiprocessing import Process, Pipe, Value
 import numpy
 import sys
 from zope.interface import implementer
-from veles.compat import from_none
 
+from veles.compat import from_none
 from veles.config import Config, root
 from veles.cmdline import CommandLineBase
 from veles.distributable import IDistributable
+from veles.external.prettytable import PrettyTable
 from veles.genetics.simple import Chromosome, Population
 from veles.mutable import Bool
 from veles.units import IUnit, Unit, nothing
@@ -59,66 +60,141 @@ if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
 
 
 class Tuneable(object):
-    def __init__(self):
-        self.root = None
-        self.name = None
+    def __init__(self, default):
+        self._path = None
+        self._name = None
+        self._addr = None
+        self.default = default
+
+    @property
+    def path(self):
+        return self._path
+
+    @path.setter
+    def path(self, value):
+        if not isinstance(value, str):
+            raise TypeError(
+                "Tuneable's path must be a string (got %s)" % type(value))
+        self._path = value
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        if not isinstance(value, str):
+            raise TypeError(
+                "Tuneable's name must be a string (got %s)" % type(value))
+        self._name = value
+
+    @property
+    def full_name(self):
+        return "%s.%s" % (self.path, self.name)
+
+    @property
+    def addr(self):
+        return self._addr
+
+    @addr.setter
+    def addr(self, value):
+        if not isinstance(value, tuple):
+            raise TypeError(
+                "Tuneable's addr must be a tuple (got %s)" % type(value))
+        if len(value) != 2:
+            raise ValueError(
+                "Tuneable's addr must be of length = 2 (container, key)")
+        # Check that the address is valid
+        value[0][value[1]]
+        self._addr = value
+
+    def set(self, value):
+        self.addr[0][self.addr[1]] = type(self.default)(value)
+
+    def __ilshift__(self, value):
+        self.set(value)
+
+    def details(self):
+        return "default: " + self.default
+
+    def __str__(self):
+        return "%s{%s}" % (type(self), self.details())
+
+    def __repr__(self):
+        return "%s: %s" % (self.full_name, str(self))
 
 
-class Tune(Tuneable):
-    """Class for tunable range.
+class Range(Tuneable):
+    """Class for a tunable range.
     """
-    def __init__(self, defvle, minvle, maxvle):
-        super(Tune, self).__init__()
-        self.defvle = defvle
-        self.minvle = minvle
-        self.maxvle = maxvle
+    def __init__(self, default, min_value, max_value):
+        super(Range, self).__init__(default)
+        self.min_value = min_value
+        self.max_value = max_value
+
+    def set(self, value):
+        if value < self.min_value or value > self.max_value:
+            raise ValueError(
+                "[%s] Value is out of range [%s, %s]: %s" %
+                (self.full_name, self.min_value, self.max_value, value))
+        super(Range, self).set(value)
+
+    def details(self):
+        return "[%s, %s] (default: %s)" % (
+            self.min_value, self.max_value, self.default)
 
 
-def process_config(cfgroot, class_to_process, callback):
+def process_config(config, class_to_process, callback):
     """Applies callback to Config tree elements with the specified class.
 
     Parameters:
-        cfgroot: instance of the Config object.
-        class_to_process: class of the elements on which to apply callback.
+        config: instance of the Config object.
+        class_to_process: class of the elements to which to apply the callback.
         callback: callback function with 3 arguments:
-                  root: instance of the Config object (leaf of the tree).
+                  path: path in the Config tree (of type str) to this instance.
+                  addr: tuple (container, key) pointing to this instance.
                   name: name of the parameter (of type str).
                   value: value of the parameter (of type class_to_process).
+                  The return value is applied back.
     """
-    kv = {}
-    if isinstance(cfgroot, Config):
-        arr = sorted(cfgroot.__dict__.items())
-    elif isinstance(cfgroot, dict):
-        arr = sorted(cfgroot.items())
+    _process_config(config.__path__, config.__dict__, class_to_process,
+                    callback)
+
+
+def _process_config(path, items, class_to_process, callback):
+    if isinstance(items, dict):
+        to_visit = items.items()
     else:
-        arr = enumerate(cfgroot)
-    for k, v in arr:
-        if isinstance(v, Config) or type(v) in (list, tuple, dict):
-            process_config(v, class_to_process, callback)
+        to_visit = enumerate(items)
+    to_process = {}
+    for k, v in sorted(to_visit):
+        if isinstance(v, Config):
+            _process_config(v.__path__, v.__dict__, class_to_process, callback)
+        elif isinstance(v, (dict, list, tuple)):
+            _process_config("%s.%s" % (path, k), v, class_to_process, callback)
         elif isinstance(v, class_to_process):
-            kv[k] = v
-    for k, v in sorted(kv.items()):
-        callback(cfgroot, k, v)
-
-
-def set_config_or_array(r, n, v):
-    if isinstance(r, Config):
-        setattr(r, n, v)
-    else:
-        r[n] = v
-
-
-def fix_attr(r, n, v):
-    set_config_or_array(r, n, v.defvle)
+            to_process[k] = v
+    for k, v in sorted(to_process.items()):
+        items[k] = callback(path, (items, k), k, v)
 
 
 def fix_config(cfgroot):
-    """Replaces all Tune values in Config tree with its defaults.
+    """Replaces all Tuneable values in Config tree with its defaults.
 
     Parameters:
         cfgroot: instance of the Config object.
     """
-    return process_config(cfgroot, Tune, fix_attr)
+    return process_config(cfgroot, Tuneable, _fix_tuneable)
+
+
+def _fix_tuneable(path, addr, name, value):
+    return value.default
+
+
+def print_config(cfgroot):
+    for name, cfg in cfgroot.__content__.items():
+        if name != "common":
+            cfg.print_()
 
 
 @implementer(IUnit, IDistributable)
@@ -296,19 +372,20 @@ class GeneticsWorkflow(Workflow):
 
 
 class ConfigChromosome(Chromosome):
-    """Chromosome, based on Config tree's Tune elements.
+    """Chromosome, based on Config tree's Tuneable elements.
     """
     def __init__(self, population,
-                 size, minvles, maxvles, accuracy, codes,
+                 size, min_values, max_values, accuracy, codes,
                  binary, numeric, rand):
         self.population_ = population
         self.fitness = None
         super(ConfigChromosome, self).__init__(
-            size, minvles, maxvles, accuracy, codes, binary, numeric, rand)
+            size, min_values, max_values, accuracy, codes, binary, numeric,
+            rand)
 
     def apply_config(self):
-        for i, tune in enumerate(self.population_.registered_tunes_):
-            set_config_or_array(tune.root, tune.name, self.numeric[i])
+        for tune, val in zip(self.population_.registered_tunes_, self.numeric):
+            tune <<= val
 
     def evaluate(self):
         self.apply_config()
@@ -343,7 +420,7 @@ class ConfigChromosome(Chromosome):
         root.common.disable_plotting = True
         root.common.disable_snapshotting = True
         root.common.disable_publishing = True
-        self.population_.root_.print_()
+        print_config(self.population_.root_)
         self.population_.main_.run_module(self.population_.workflow_module_)
         fv = self.population_.main_.workflow.fitness
         if fv is not None:
@@ -351,14 +428,14 @@ class ConfigChromosome(Chromosome):
 
 
 class ConfigPopulation(Population):
-    """Creates population based on Config tree's Tune elements.
+    """Creates population based on Config tree's Tuneable elements.
     """
     def __init__(self, cfgroot, main, workflow_module, multi, size,
                  accuracy=0.00001, rand=prng.get()):
         """Constructor.
 
         Parameters:
-            root: Config instance (NOTE: values of Tune class in it
+            root: Config instance (NOTE: values of Tuneable class in it
                   will be changed during evolution).
             main: velescli Main instance.
             optimization_accuracy: float optimization accuracy.
@@ -375,28 +452,41 @@ class ConfigPopulation(Population):
 
         self.registered_tunes_ = []
 
-        process_config(self.root_, Tune, self.register_tune)
-
+        process_config(self.root_, Range, self.register_tune)
+        if len(self.registered_tunes_) == 0:
+            raise ValueError(
+                "There are no tunable parameters in the configuration file. "
+                "Wrap at least one into veles.genetics.Range class.")
         super(ConfigPopulation, self).__init__(
             ConfigChromosome,
             len(self.registered_tunes_),
-            list(x.minvle for x in self.registered_tunes_),
-            list(x.maxvle for x in self.registered_tunes_),
+            list(x.min_value for x in self.registered_tunes_),
+            list(x.max_value for x in self.registered_tunes_),
             size, accuracy, rand)
+        self.registered_tunes_.sort(
+            key=lambda t: (str(type(t)), t.path, t.name))
+        tpt = PrettyTable("path", "details", "class")
+        tpt.align["path"] = 'l'
+        tpt.align["details"] = 'l'
+        for tune in self.registered_tunes_:
+            tpt.add_row(tune.full_name, tune.details(), type(tune).__name__)
+        self.info("Tuned parameters:\n%s", tpt)
 
-    def register_tune(self, cfgroot, name, value):
-        value.root = cfgroot
+    def register_tune(self, path, addr, name, value):
+        value.path = path
+        value.addr = addr
         value.name = name
         self.registered_tunes_.append(value)
+        return value
 
     def log_statistics(self):
         self.info("#" * 80)
         self.info("Best config is:")
         best = self.chromosomes[
             numpy.argmax(x.fitness for x in self.chromosomes)]
-        for i, tune in enumerate(self.registered_tunes_):
-            set_config_or_array(tune.root, tune.name, best.numeric[i])
-        self.root_.print_()
+        for tune, value in zip(self.registered_tunes_, best.numeric):
+            tune <<= value
+        print_config(self.root_)
         self.info("#" * 80)
         super(ConfigPopulation, self).log_statistics()
         self.info("#" * 80)

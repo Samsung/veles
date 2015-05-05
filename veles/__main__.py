@@ -302,7 +302,7 @@ class Main(Logger, CommandLineBase):
             return {}
 
     def _load_model(self, fname_workflow):
-        self.debug("Loading the model \"%s\"...", fname_workflow)
+        self.info("Loading workflow \"%s\"...", fname_workflow)
         self.load_called = False
         self.main_called = False
         package_name, module_name = get_file_package_and_module(
@@ -330,8 +330,7 @@ class Main(Logger, CommandLineBase):
             sys.exit(Main.EXIT_FAILURE)
 
     def _apply_config(self, fname_config, config_list):
-        self.debug("Applying the configuration from %s...",
-                   fname_config)
+        self.info("Applying the configuration from %s...", fname_config)
         try:
             runpy.run_path(fname_config)
         except FileNotFoundError:
@@ -357,6 +356,7 @@ class Main(Logger, CommandLineBase):
             sys.exit(Main.EXIT_FAILURE)
 
     def _seed_random(self, rndvals):
+        self.debug("Seeding with %s", rndvals)
         rndvals_split = rndvals.split(',')
         seeds = []
         for rndval, index in zip(rndvals_split, range(len(rndvals_split))):

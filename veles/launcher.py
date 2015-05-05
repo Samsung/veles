@@ -424,11 +424,11 @@ class Launcher(logger.Logger):
                             self.matplotlib_backend,
                             self._set_webagg_port,
                             self.args.no_graphics_client)
-                except:
+                except Exception as e:
                     self.error("Failed to create the graphics server and/or "
                                "client. Try to completely disable plotting "
                                "with -p ''.")
-                    raise
+                    raise from_none(e)
             elif self.args.no_graphics_client:
                 self.warning("Plotters are disabled. --no-graphics-client has "
                              "no effect.")
@@ -438,25 +438,31 @@ class Launcher(logger.Logger):
                                                 self.workflow)
                     # Launch the nodes described in the command line or config
                     self._launch_nodes()
-                except:
+                except Exception as e:
                     self._stop_graphics()
-                    raise
+                    raise from_none(e)
         # The last moment when we can do this, because OpenCL device curses
         # new process creation
-        self._generate_workflow_graphs()
+        try:
+            self._generate_workflow_graphs()
+        except Exception as e:
+            self.error("Failed to generate the workflow graph(s)")
+            self._stop_graphics()
+            raise from_none(e)
         try:
             if not self.is_master:
                 self._device = Device()
         except Exception as e:
-            self.error("Failed to create the OpenCL device.")
+            self.error("Failed to create the OpenCL device")
+            self._stop_graphics()
             raise from_none(e)
-
         self.workflow.reset_thread_pool()
         try:
             self.workflow.initialize(device=self.device, snapshot=snapshot,
                                      **kwargs)
         except Exception as e:
             self.error("Failed to initialize the workflow")
+            self._stop_graphics()
             self.device_thread_pool_detach()
             raise from_none(e)
 
