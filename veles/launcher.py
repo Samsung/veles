@@ -381,6 +381,9 @@ class Launcher(logger.Logger):
         pass
 
     def on_workflow_finished(self):
+        if threading.current_thread().ident == self._reactor_thread_ident:
+            reactor.callWhenRunning(self.stop)
+            return
         reactor.callFromThread(self.stop)
         self.debug("%s signalled that it had finished, enqueued self.stop",
                    self.workflow)
@@ -502,7 +505,12 @@ class Launcher(logger.Logger):
         periodic status updates.
         """
         self._pre_run()
-        reactor.callLater(0, self.info, "Reactor is running")
+
+        def set_thread_ident():
+            self._reactor_thread_ident = threading.current_thread().ident
+
+        reactor.callWhenRunning(self.info, "Reactor is running")
+        reactor.callWhenRunning(set_thread_ident)
         self.event("work", "begin", height=0.1)
         if self.interactive:
             if not reactor.running and self._reactor_thread is None:
@@ -807,7 +815,7 @@ class Launcher(logger.Logger):
                                           self.webagg_port),
                'custom_plots': "<br/>".join(self.plots_endpoints),
                'description':
-               "<br />".join(escape(self.workflow.__doc__).split("\n"))}
+               "<br />".join(escape(self.workflow.__doc__ or "").split("\n"))}
         url = "http://%s:%d/update" % (root.common.web.host,
                                        root.common.web.port)
         headers = Headers({b'User-Agent': [b'twisted']})
