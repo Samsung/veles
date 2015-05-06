@@ -31,11 +31,13 @@ under the License.
 ███████████████████████████████████████████████████████████████████████████████
 """
 
+from cuda4py.blas import CUBLAS_OP_N, CUBLAS_OP_T
 import gc
 import numpy
 
+from veles.config import root
 from veles.memory import Vector
-from veles.ocl_blas import BLAS
+from veles.ocl_blas import OCLBLAS
 from veles.tests import AcceleratedTest, assign_backend
 import veles.prng as prng
 
@@ -44,22 +46,24 @@ class TestOCLBLASBase(AcceleratedTest):
     ABSTRACT = True
 
     def test_veles_blas(self):
-        blas = BLAS(self.device)
-        for _ in range(2):
-            self._test_random(blas, 17, 1999, 231)
+        for enabled in (True, False):
+            root.common.engine.ocl.clBLAS = enabled
+            blas = OCLBLAS(self.device)
+            for _ in range(2):
+                self._test_random(blas, 17, 1999, 231)
+                gc.collect()
+                self._test_random(blas, 7, 9, 8)
+                gc.collect()
+                self._test_random(blas, 9, 7, 800)
+                gc.collect()
+                self._test_random(blas, 1, 1, 1)
+                gc.collect()
+                self._test_random(blas, 7777, 17, 219)
+                gc.collect()
+                self._test_random(blas, 1777, 1999, 2119)
+                gc.collect()
+            del blas
             gc.collect()
-            self._test_random(blas, 7, 9, 8)
-            gc.collect()
-            self._test_random(blas, 9, 7, 800)
-            gc.collect()
-            self._test_random(blas, 1, 1, 1)
-            gc.collect()
-            self._test_random(blas, 7777, 17, 219)
-            gc.collect()
-            self._test_random(blas, 1777, 1999, 2119)
-            gc.collect()
-        del blas
-        gc.collect()
 
     def _test_random(self, blas, a_size, b_size, common_size):
         rnd = prng.RandomGenerator(None)
@@ -85,16 +89,20 @@ class TestOCLBLASBase(AcceleratedTest):
         alpha = numpy.ones(1, dtype=self.dtype)
         beta = numpy.zeros(1, dtype=self.dtype)
 
-        blas.veles_gemm(BLAS.OP_N, BLAS.OP_T, a_size, b_size, common_size,
-                        alpha, a.devmem, b.devmem, beta, c.devmem)
+        gemm = OCLBLAS.gemm(self.dtype)
+
+        gemm(blas, CUBLAS_OP_T, CUBLAS_OP_N,
+             a_size, b_size, common_size,
+             alpha, a.devmem, b.devmem, beta, c.devmem)
         c.map_read()
         max_diff = numpy.fabs(c.plain - c_gold).max()
         self.info("max_diff = %.6f", max_diff)
         self.assertLess(max_diff, 1.0e-4)
 
         c.unmap()
-        blas.veles_gemm(BLAS.OP_T, BLAS.OP_N, a_size, b_size, common_size,
-                        alpha, a.devmem, b.devmem, beta, c.devmem)
+        gemm(blas, CUBLAS_OP_N, CUBLAS_OP_T,
+             a_size, b_size, common_size,
+             alpha, a.devmem, b.devmem, beta, c.devmem)
         c.map_read()
         max_diff = numpy.fabs(c.plain - c_gold_t).max()
         self.info("max_diff = %.6f", max_diff)

@@ -234,6 +234,10 @@ root.common.update({
         "device_dirs": ["/usr/share/veles/devices",
                         os.path.join(__home__, "devices"),
                         os.environ.get("VELES_DEVICE_DIRS", "./")],
+        "ocl": {
+            # Use clBLAS when available
+            "clBLAS": True
+        }
     }
 })
 

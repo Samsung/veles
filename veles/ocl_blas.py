@@ -33,15 +33,24 @@ under the License.
 ███████████████████████████████████████████████████████████████████████████████
 """
 
+from cuda4py.blas import CUBLAS_OP_N, CUBLAS_OP_T
+import numpy
+import opencl4py.blas as clblas
+import os
+import weakref
 from zope.interface import implementer
 
 from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit
+from veles.config import root
 from veles.dummy import DummyWorkflow
+from veles.logger import Logger
 from veles.numpy_ext import roundup
 
 
 @implementer(IOpenCLUnit)
 class Builder(AcceleratedUnit):
+    """Dummy unit for building OpenCL kernels.
+    """
     def __init__(self, workflow, **kwargs):
         super(Builder, self).__init__(workflow, **kwargs)
         self.source = kwargs["source"]
@@ -63,18 +72,101 @@ class Builder(AcceleratedUnit):
         pass
 
 
-class BLAS(object):
-    OP_N = 0
-    OP_T = 1
+class OCLBLAS(Logger):
+    """Class with BLAS functionality similar to CUBLAS.
+
+    It uses CLBLAS when available or custom kernels otherwise.
+    """
+    @staticmethod
+    def attach_to_device(device):
+        if device.blas is None:
+            device.blas = OCLBLAS(device)
 
     def __init__(self, device):
-        self.device = device
+        super(OCLBLAS, self).__init__()
+        self._device = weakref.ref(device)
         self.kernels = {}
+        try:
+            if root.common.engine.ocl.clBLAS is not True:
+                raise OSError()
+            if "CLBLAS_STORAGE_PATH" not in os.environ:
+                found = False
+                for dirnme in root.common.engine.device_dirs:
+                    for path, _, files in os.walk(dirnme):
+                        for f in files:
+                            if f.endswith(".kdb"):
+                                found = True
+                                os.environ["CLBLAS_STORAGE_PATH"] = path
+                                break
+                        if found:
+                            break
+                    if found:
+                        break
+            self.blas = clblas.CLBLAS()
+            self._sgemm = self.clblas_sgemm
+            self._dgemm = self.clblas_dgemm
+            self.debug("Using clBLAS for matrix multiplication")
+        except (OSError, RuntimeError):
+            self._sgemm = self.veles_gemm
+            self._dgemm = self.veles_gemm
+            self.debug("Using Veles OpenCL kernels for matrix multiplication")
+
+    @property
+    def device(self):
+        return self._device()
+
+    @staticmethod
+    def gemm(dtype):
+        if dtype == numpy.float32:
+            return OCLBLAS.sgemm
+        if dtype == numpy.float64:
+            return OCLBLAS.dgemm
+        raise ValueError("Invalid dtype %s" % dtype)
+
+    def sgemm(self, transA, transB,
+              rowsCountA, columnCountB, commonSideLength,
+              alpha, A, B, beta, C):
+        return self._sgemm(
+            transA, transB, rowsCountA, columnCountB, commonSideLength,
+            alpha, A, B, beta, C)
+
+    def dgemm(self, transA, transB,
+              rowsCountA, columnCountB, commonSideLength,
+              alpha, A, B, beta, C):
+        return self._dgemm(
+            transA, transB, rowsCountA, columnCountB, commonSideLength,
+            alpha, A, B, beta, C)
+
+    def clblas_sgemm(self, transA, transB,
+                     rowsCountA, columnCountB, commonSideLength,
+                     alpha, A, B, beta, C):
+        """Does a matrix multiplication like in CUBLAS using clBLAS.
+
+        Matricies are assumed to be tightly packed and stored like in CUBLAS.
+
+        Single precision (float) version.
+        """
+        self.blas.sgemm((self.device.queue_,), clblas.clblasColumnMajor,
+                        transA, transB, rowsCountA, columnCountB,
+                        commonSideLength, alpha, A, B, beta, C)
+
+    def clblas_dgemm(self, transA, transB,
+                     rowsCountA, columnCountB, commonSideLength,
+                     alpha, A, B, beta, C):
+        """Does a matrix multiplication like in CUBLAS using clBLAS.
+
+        Matricies are assumed to be tightly packed and stored like in CUBLAS.
+
+        Double precision (double) version.
+        """
+        self.blas.dgemm((self.device.queue_,), clblas.clblasColumnMajor,
+                        transA, transB, rowsCountA, columnCountB,
+                        commonSideLength, alpha, A, B, beta, C)
 
     def veles_gemm(self, transA, transB,
                    rowsCountA, columnCountB, commonSideLength,
                    alpha, A, B, beta, C):
-        """Does a matrix multiplication like in CUBLAS.
+        """Does a matrix multiplication like in CUBLAS using custom kernel.
 
         Matricies are assumed to be tightly packed and stored like in CUBLAS.
         """
@@ -91,14 +183,14 @@ class BLAS(object):
                 "A_WIDTH": columnCountB,
                 "AB_COMMON": commonSideLength
             }
-            if transA == BLAS.OP_T:
-                defines["B_COL"] = 1
-            else:
-                assert transA == BLAS.OP_N
-            if transB == BLAS.OP_N:
+            if transB == CUBLAS_OP_T:
                 defines["A_COL"] = 1
             else:
-                assert transB == BLAS.OP_T
+                assert transB == CUBLAS_OP_N
+            if transA == CUBLAS_OP_N:
+                defines["B_COL"] = 1
+            else:
+                assert transA == CUBLAS_OP_T
             global_size = (roundup(rowsCountA, block_size),
                            roundup(columnCountB, block_size))
             local_size = (block_size, block_size)

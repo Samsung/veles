@@ -398,6 +398,8 @@ class OpenCLDevice(Device):
     def __init__(self):
         super(OpenCLDevice, self).__init__()
 
+        self._blas = None
+
         # Workaround for NVIDIA
         # (fixes incorrect behaviour with OpenCL binaries)
         if os.getenv("CUDA_CACHE_DISABLE") is None:
@@ -441,6 +443,15 @@ class OpenCLDevice(Device):
                           self.device_info.get_block_size(dtype=dtype),
                           self.device_info.version)
         self.info(log_configs + str(table))
+
+    @property
+    def blas(self):
+        return self._blas
+
+    @blas.setter
+    def blas(self, value):
+        assert self._blas is None, "blas property is not None already"
+        self._blas = value
 
     @property
     def exists(self):
