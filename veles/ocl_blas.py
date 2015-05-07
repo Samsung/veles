@@ -87,8 +87,9 @@ class OCLBLAS(Logger):
         self._device = weakref.ref(device)
         self.kernels = {}
         try:
-            if root.common.engine.ocl.clBLAS is not True:
-                raise OSError()
+            if (root.common.engine.ocl.clBLAS is not True or
+                    root.common.precision_level > 0):
+                raise ValueError()
             if "CLBLAS_STORAGE_PATH" not in os.environ:
                 found = False
                 for dirnme in root.common.engine.device_dirs:
@@ -106,7 +107,7 @@ class OCLBLAS(Logger):
             self._sgemm = self.clblas_sgemm
             self._dgemm = self.clblas_dgemm
             self.debug("Using clBLAS for matrix multiplication")
-        except (OSError, RuntimeError):
+        except (OSError, RuntimeError, ValueError):
             self._sgemm = self.veles_gemm
             self._dgemm = self.veles_gemm
             self.debug("Using Veles OpenCL kernels for matrix multiplication")
