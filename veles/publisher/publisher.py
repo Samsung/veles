@@ -128,7 +128,7 @@ class Publisher(Unit, TriviallyDistributable):
         self._loader_unit = value
 
     def initialize(self, **kwargs):
-        if root.common.disable_publishing:
+        if self.is_slave or root.common.disable_publishing:
             return
         try:
             import matplotlib
@@ -145,7 +145,7 @@ class Publisher(Unit, TriviallyDistributable):
                     self.templates.get(backend_class), **backend_kwargs)
 
     def run(self):
-        if root.common.disable_publishing:
+        if self.is_slave or root.common.disable_publishing:
             return
         info = self.init_info()
         self.add_info(info)
