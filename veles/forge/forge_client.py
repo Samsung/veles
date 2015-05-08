@@ -44,11 +44,12 @@ from pip.util import normalize_path
 from pip import wheel
 from pkg_resources import working_set, Requirement, Distribution, \
     VersionConflict, SOURCE_DIST, PY_MAJOR
+import re
 import shutil
 from six.moves import input
 from six.moves.urllib.parse import urlparse, urlencode
 from six import PY3
-from veles.import_file import try_to_import_file, is_module
+
 
 if PY3:
     from importlib.util import cache_from_source
@@ -68,35 +69,33 @@ from types import ModuleType
 import wget
 from zope.interface import implementer
 
-from veles import __plugins__, __name__, __version__, __root__
+import veles
 from veles.cmdline import CommandLineBase
 from veles.compat import from_none
 from veles.config import root
 from veles.external.prettytable import PrettyTable
 from veles.forge_common import REQUIRED_MANIFEST_FIELDS, validate_requires
+from veles.import_file import try_to_import_file, is_module
 from veles.logger import Logger
 
 
-ACTIONS = set()
-
-
-class ForgeClientArgs(object):
-    def __init__(self, action, base, verbose=False):
-        self.action = action
-        self.base = base
-        self.verbose = verbose
+ACTIONS = {}
 
 
 class ForgeClient(Logger):
     UPLOAD_TAR_BUFFER_SIZE = 1024 * 1024
     UPLOAD_PENDING_BUFFERS = 4
+    EMAIL_REGEXP = re.compile(r"^[^@\s=]+@[^@\s=]+\.[^@\s=]+$")
 
     def action(fn):
-        ACTIONS.add(fn.__name__)
+        ACTIONS[fn.__name__] = fn.__doc__
         return fn
 
     @action
     def fetch(self):
+        """
+        Download the specififc workflow bundle.
+        """
         self.path = self.path or ""
         if not self.path or (os.path.exists(self.path) and
                              os.path.samefile(self.path, os.getcwd())):
@@ -125,8 +124,24 @@ class ForgeClient(Logger):
         self._check_deps(metadata)
         return self.path, metadata
 
+    @staticmethod
+    def fetch_init_parser(parser):
+        ForgeClient.add_server_arg(parser)
+        ForgeClient.add_name_arg(parser, "download")
+        ForgeClient.add_version_arg(parser, "Downloaded")
+        parser.add_argument(
+            "-f", "--force", default=False, action='store_true',
+            help="Force remove destination directory if it exists, "
+                 "overwrite files.")
+        ForgeClient.add_path_arg(
+            parser, "The directory where to store the received package's "
+                    "contents.")
+
     @action
     def upload(self):
+        """
+        Upload the workflow bundle to VelesForge. Requires write access.
+        """
         try:
             metadata = self._parse_metadata(self.path)
         except Exception as e:
@@ -142,11 +157,11 @@ class ForgeClient(Logger):
         validate_requires(requires)
         vreqfound = False
         for req in requires:
-            if Requirement.parse(req).project_name == __name__:
+            if Requirement.parse(req).project_name == veles.__name__:
                 vreqfound = True
                 break
         if not vreqfound:
-            velreq = __name__ + ">=" + __version__
+            velreq = veles.__name__ + ">=" + veles.__version__
             self.warning("No VELES core requirement was specified. "
                          "Appended %s", velreq)
             requires.append(velreq)
@@ -259,15 +274,25 @@ class ForgeClient(Logger):
                            failure.value.reasons[0].getTraceback())
             self.stop(failure, False)
 
-        url = self.base + root.common.forge.upload_name
+        url = self.base + root.common.forge.upload_name + "?token=" + self.id
         self.debug("Sending the request to %s", url)
         d = agent.request(
             b'POST', url.encode('charmap'), headers=headers, bodyProducer=body)
         d.addCallback(finished)
         d.addErrback(failed)
 
+    @staticmethod
+    def upload_init_parser(parser):
+        ForgeClient.add_server_arg(parser)
+        ForgeClient.add_path_arg(parser, "Source package directory to upload.")
+        ForgeClient.add_id_arg(parser)
+        ForgeClient.add_version_arg(parser, "New")
+
     @action
     def list(self):
+        """
+        Print the list of available workflows on VelesForge.
+        """
         def finished(response):
             self.debug("Received %s", response)
             try:
@@ -279,6 +304,7 @@ class ForgeClient(Logger):
                 return
             table = PrettyTable("Name", "Description", "Author", "Version",
                                 "Date")
+            table.align["Name"] = table.align["Description"] = 'l'
             for item in response:
                 table.add_row(*item)
             print(table)
@@ -298,8 +324,15 @@ class ForgeClient(Logger):
         getPage(url.encode('charmap')).addCallbacks(callback=finished,
                                                     errback=failed)
 
+    @staticmethod
+    def list_init_parser(parser):
+        ForgeClient.add_server_arg(parser)
+
     @action
     def details(self):
+        """
+        View the details of the specific package.
+        """
         def finished(response):
             try:
                 response = json.loads(response.decode('UTF-8'))
@@ -338,14 +371,27 @@ class ForgeClient(Logger):
         getPage(url.encode('charmap')).addCallbacks(callback=finished,
                                                     errback=failed)
 
-    @action
-    def delete(self):
+    @staticmethod
+    def details_init_parser(parser):
+        ForgeClient.add_server_arg(parser)
+        ForgeClient.add_name_arg(parser, "view the details about")
+
+    def _confirm(self):
         confirmation = "Yes, I am sure!"
         user = input("Please type \"%s\": " % confirmation)
         if user != confirmation:
             print("Refusing to delete %s because this operation was not "
                   "confirmed" % self.name)
             self.stop()
+            return False
+        return True
+
+    @action
+    def delete(self):
+        """
+        Delete the specific workflow from VelesForge. Requires write access.
+        """
+        if not self._confirm():
             return
         print("Deleting %s..." % self.name)
         sys.stdout.flush()
@@ -362,11 +408,17 @@ class ForgeClient(Logger):
                 self.exception("Failed to delete %s:", self.name)
             self.stop(failure, False)
 
-        url = "%s%s?query=delete&name=%s" % (
-            self.base, root.common.forge.service_name, self.name)
+        url = "%s%s?query=delete&name=%s&token=%s" % (
+            self.base, root.common.forge.service_name, self.name, self.id)
         self.debug("Requesting %s", url)
         getPage(url.encode('charmap')).addCallbacks(callback=finished,
                                                     errback=failed)
+
+    @staticmethod
+    def delete_init_parser(parser):
+        ForgeClient.add_name_arg(parser, "delete")
+        ForgeClient.add_server_arg(parser)
+        ForgeClient.add_id_arg(parser)
 
     def _get_pkg_files(self, dist):
         """
@@ -422,12 +474,12 @@ class ForgeClient(Logger):
     def _scan_deps(self, module):
         print("Scanning for dependencies...")
         sys.stdout.flush()
-        deps = ["veles >= " + __version__]
-        for plugin in __plugins__:
+        deps = ["veles >= " + veles.__version__]
+        for plugin in veles.__plugins__:
             deps.append("%s >= %s" % (plugin.__name__, plugin.__version__))
         stdlib_paths = {p for p in sys.path
                         if p.find("dist-packages") < 0 and p}
-        stdlib_paths.add(__root__)
+        stdlib_paths.add(veles.__root__)
         pkg_match = {}
         for dist in working_set:
             for file in self._get_pkg_files(dist):
@@ -454,6 +506,10 @@ class ForgeClient(Logger):
 
     @action
     def assist(self):
+        """
+        Interactively create a metadata file for the workflow, so that it can
+        be submitted to VelesForge.
+        """
         metadata = {}
         base = os.path.dirname(self.path)
         modname = os.path.splitext(os.path.basename(self.path))[0]
@@ -535,52 +591,124 @@ class ForgeClient(Logger):
                                root.common.forge.manifest), "w") as fout:
             json.dump(metadata, fout, sort_keys=True, indent=4)
 
+    @staticmethod
+    def assist_init_parser(parser):
+        parser.add_argument(
+            "-w", "--workflow", dest="path", required=True,
+            help="The path to the workflow file.")
+
+    @action
+    def register(self):
+        """
+        Request write access to VelesForge. After the successful registration,
+        you will be able to upload and delete your workflows.
+        """
+        self.register_or_unregister("register")
+
+    @staticmethod
+    def register_init_parser(parser):
+        ForgeClient.register_unregister_init_parser(parser)
+
+    @action
+    def unregister(self):
+        """
+        Revoke write access to VelesForge. After you are unregistered, you may
+        register again. Warning: the write access to your own packages will be
+        lost forever.
+        """
+        if not self._confirm():
+            return
+        self.register_or_unregister("unregister")
+
+    @staticmethod
+    def unregister_init_parser(parser):
+        ForgeClient.register_unregister_init_parser(parser)
+
+    def register_or_unregister(self, verb):
+        email = self.email
+        while not self.EMAIL_REGEXP.match(email):
+            raise ValueError("email %s looks invalid" % email)
+
+        def finished(response):
+            print(response.decode('UTF-8'))
+            sys.stdout.flush()
+            self.stop()
+
+        def failed(failure):
+            try:
+                failure.raiseException()
+            except:
+                self.exception("Failed to %s %s:", verb, email)
+            self.stop(failure, False)
+
+        url = "%s%s?query=%s&email=%s" % (
+            self.base, root.common.forge.service_name, verb, email)
+        self.debug("Requesting %s", url)
+        getPage(url.encode('charmap')).addCallbacks(callback=finished,
+                                                    errback=failed)
+
+    @staticmethod
+    def register_unregister_init_parser(parser):
+        ForgeClient.add_server_arg(parser)
+        ForgeClient.add_email_arg(parser)
+
     action = staticmethod(action)
+
+    @staticmethod
+    def add_email_arg(parser):
+        parser.add_argument("-a", "--email", required=True,
+                            help="Email which is used as user identifier.")
+
+    @staticmethod
+    def add_path_arg(parser, intent):
+        parser.add_argument(
+            "-d", "--directory", default=".", dest="path", required=True,
+            help=intent)
+
+    @staticmethod
+    def add_name_arg(parser, intent):
+        parser.add_argument(
+            "-n", "--name", default="", required=True,
+            help="Package name to %s." % intent)
+
+    @staticmethod
+    def add_server_arg(parser):
+        parser.add_argument(
+            "-s", "--server", dest="base", required=True,
+            help="Address of VelesForge server, e.g., http://host:8080/forge")
+
+    @staticmethod
+    def add_id_arg(parser):
+        parser.add_argument("-i", "--id", required=True,
+                            help="Authorization token.")
+
+    @staticmethod
+    def add_version_arg(parser, intent):
+        parser.add_argument("-v", "--version", default="master",
+                            help="%s package version." % intent)
 
     @staticmethod
     def init_parser(sphinx=False):
         parser = ArgumentParser(
             description=CommandLineBase.LOGO if not sphinx else "",
             formatter_class=CommandLineBase.SortingRawDescriptionHelpFormatter)
-        parser.add_argument("action", choices=ACTIONS,
-                            help="Command to execute.")
-        parser.add_argument(
-            "-d", "--directory", default=".", dest="path",
-            help="Destination directory where to save the received package;"
-                 "Source package directory to upload. Path to workflow to "
-                 "assist creating metadata with.")
-        parser.add_argument(
-            "-n", "--name", default="",
-            help="Package name to download/show details about.")
-        parser.add_argument(
-            "-v", "--version", default="master",
-            help="Uploaded/downloaded package version.")
-        parser.add_argument(
-            "-s", "--server", dest="base", required=True,
-            help="Address of VelesForge server, e.g., http://host:8080/forge")
-        parser.add_argument(
-            "-f", "--force", default=False, action='store_true',
-            help="Force remove destination directory if it exists, "
-                 "overwrite files.")
         parser.add_argument(
             "--verbose", default=False, action='store_true',
             help="Write debug messages.")
+        subparsers = parser.add_subparsers(dest="action", title="Commands",
+                                           help="Command to execute.")
+        for action, desc in ACTIONS.items():
+            subp = subparsers.add_parser(action, help=desc)
+            getattr(ForgeClient, "%s_init_parser" % action)(subp)
+
         return parser
 
     def __init__(self, args=None, own_reactor=True):
         super(ForgeClient, self).__init__()
         self.own_reactor = own_reactor
         if args is None:
-            if sys.argv[1] == "assist":
-                if len(sys.argv) < 3:
-                    raise ValueError(
-                        "You must specify the path to the workflow file which "
-                        "you want to generate package for.")
-                args = {"action": "assist", "path": sys.argv[2],
-                        "verbose": False}
-            else:
-                parser = ForgeClient.init_parser()
-                args = parser.parse_args()
+            parser = ForgeClient.init_parser()
+            args = parser.parse_args()
         for k, v in getattr(args, "__dict__", args).items():
             setattr(self, k, v)
         try:
@@ -626,7 +754,7 @@ class ForgeClient(Logger):
     def _check_deps(self, metadata):
         plugins = {k.__name__.replace('_', '-'): Distribution(
             os.path.dirname(k.__file__), None, k.__name__, k.__version__,
-            None, SOURCE_DIST) for k in __plugins__}
+            None, SOURCE_DIST) for k in veles.__plugins__}
         failed_general = set()
         failed_veles = set()
         for rreq in metadata["requires"]:

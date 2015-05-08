@@ -34,13 +34,18 @@ under the License.
 """
 
 from argparse import ArgumentParser
-from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import hashlib
+import inspect
 from itertools import islice
 import json
 import logging
 import os
+from smtplib import SMTPException
+import uuid
 from PIL import Image
 import pygit2
 import re
@@ -54,12 +59,19 @@ import tempfile
 from tornado import gen, web
 from tornado.escape import xhtml_escape
 from tornado.ioloop import IOLoop
+from tornado.template import BaseLoader, Template
+from tornado_smtpclient.client import SMTPAsync
 
 from veles.cmdline import CommandLineBase
 from veles.compat import from_none
 from veles.config import root
 from veles.forge_common import REQUIRED_MANIFEST_FIELDS, validate_requires
 from veles.logger import Logger
+
+
+if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
+    PermissionError = IOError  # pylint: disable=W0622
+    FileNotFoundError = IOError  # pylint: disable=W0622
 
 
 def dirname(path):
@@ -75,6 +87,7 @@ class HandlerBase(web.RequestHandler, Logger):
         if hasattr(self, "error_message"):
             if isinstance(self.error_message, BaseException):
                 import traceback
+
                 self.write("<html><body><pre>%s</pre></body></html>" %
                            xhtml_escape(''.join(traceback.format_exc())))
             else:
@@ -93,13 +106,15 @@ class HandlerBase(web.RequestHandler, Logger):
 
 
 class ServiceHandler(HandlerBase):
+    EMAIL_REGEXP = re.compile(r"^[^@\s=]+@[^@\s=]+\.[^@\s=]+$")
+
     def initialize(self, server):
         self.server = server
         self.logger = logging.getLogger(
             "%s/%s" % (self.logger.name, root.common.forge.service_name))
-        self.handlers = {"details": self.handle_details,
-                         "list": self.handle_list,
-                         "delete": self.handle_delete}
+        self.handlers = {n[len("handle_"):]: m.__get__(self) for n, m in
+                         inspect.getmembers(ServiceHandler, inspect.isfunction)
+                         if n.startswith("handle_")}
 
     @property
     def name(self):
@@ -109,9 +124,11 @@ class ServiceHandler(HandlerBase):
             self.error("No 'name' argument was specified")
             raise from_none(e)
 
+    @gen.coroutine
     def handle_details(self):
         self.finish(json_encode(self.server.details(self.name)))
 
+    @gen.coroutine
     def handle_list(self):
         self.write('[')
         first = True
@@ -123,17 +140,109 @@ class ServiceHandler(HandlerBase):
             self.write(json_encode(item))
         self.finish(']')
 
+    @gen.coroutine
     def handle_delete(self):
-        self.server.delete(self.name)
+        token = self.get_argument("token")
+        if self.server.scramble(token) not in self.server.tokens:
+            self.error("\"%s\" is not allowed to write", token)
+            self.send_error(403)
+            return
+        try:
+            self.server.delete(token, self.name)
+        except PermissionError:
+            self.send_error(403)
+            return
         self.finish("OK")
 
+    @gen.coroutine
+    def handle_register(self):
+        email = self.get_argument("email")
+        if not self.EMAIL_REGEXP.match(email):
+            self.send_error(400)
+            return
+        token = self.server.emails.get(email)
+        if token is not None:
+            self.finish("You are already registered. If you forgot your token,"
+                        " please unregister first.")
+            return
+        smtp = yield self.server.smtp()
+        msg = MIMEMultipart('alternative')
+        msg["Subject"] = "VelesForge registration confirmation"
+        msg["From"] = sender = self.server.email_sender
+        msg["To"] = email
+        link = "%s://%s%s%s?query=confirm&token=%s" % (
+            self.request.headers.get("HTTP_X_SCHEME", self.request.protocol),
+            self.request.headers.get("Host", self.request.host),
+            self.server.suburi, root.common.forge.service_name,
+            self.server.generate_token(email))
+        self.debug("Sending the confirmation link %s to %s", link, email)
+        msg.attach(MIMEText(
+            self.render_string("email.txt", link=link).decode('charmap'),
+            "plain"))
+        msg.attach(MIMEText(
+            self.render_string("email.html", link=link).decode('charmap'),
+            "html"))
+        yield smtp.sendmail(sender, email, msg.as_string())
+        yield smtp.quit()
+        self.finish(self.render_string("confirmation.html", email=email))
+
+    @gen.coroutine
+    def handle_confirm(self):
+        token = self.get_argument("token")
+        if not self.server.register(token):
+            self.error("Token %s was not found in the pending list", token)
+            self.send_error(400)
+            return
+        self.finish(self.render_string(
+            "successful_registration.html", token=token))
+
+    @gen.coroutine
+    def handle_unregister(self):
+        email = self.get_argument("email")
+        if not self.EMAIL_REGEXP.match(email):
+            self.send_error(400)
+            return
+        token = self.server.emails.get(email)
+        if token is None:
+            self.finish(self.render_string("not_registered.html"))
+            return
+        smtp = yield self.server.smtp()
+        msg = MIMEMultipart('alternative')
+        msg["Subject"] = "VelesForge unregistration confirmation"
+        msg["From"] = sender = self.server.email_sender
+        msg["To"] = email
+        link = "%s://%s%s%s?query=unconfirm&token=%s" % (
+            self.request.headers.get("HTTP_X_SCHEME", self.request.protocol),
+            self.request.headers.get("Host", self.request.host),
+            self.server.suburi, root.common.forge.service_name, token)
+        self.debug("Sending the unconfirmation link %s to %s", link, email)
+        msg.attach(MIMEText(
+            self.render_string("email_un.txt", link=link).decode('charmap'),
+            "plain"))
+        msg.attach(MIMEText(
+            self.render_string("email_un.html", link=link).decode('charmap'),
+            "html"))
+        yield smtp.sendmail(sender, email, msg.as_string())
+        yield smtp.quit()
+        self.finish(self.render_string("unconfirmation.html", email=email))
+
+    @gen.coroutine
+    def handle_unconfirm(self):
+        token = self.get_argument("token")
+        if token not in self.server.tokens:
+            self.error("Token %s was not found in the registered list", token)
+            self.send_error(400)
+        self.server.unregister(token)
+        self.finish(self.render_string("successful_unregistration.html"))
+
     @web.asynchronous
+    @gen.coroutine
     def get(self):
         self.debug("GET from %s: %s", self.request.remote_ip,
                    "&".join(("%s=%s" % (k, v) for k, v in
                              self.request.arguments.items())))
         self.set_header("Content-Type", "application/json")
-        self.handlers[self.get_argument("query")]()
+        yield self.handlers[self.get_argument("query")]()
 
 
 class FetchHandler(HandlerBase):
@@ -232,6 +341,11 @@ class UploadHandler(HandlerBase):
 
     def prepare(self):
         self.debug("start POST from %s", self.request.remote_ip)
+        self.token = self.get_argument("token", None)
+        if self.server.scramble(self.token) not in self.server.tokens:
+            self.error("Token \"%s\" is not registered", self.token)
+            self.send_error(403)
+            return
         self.metadata = None
         self.metadata_size = 0
         self.size = 0
@@ -241,8 +355,16 @@ class UploadHandler(HandlerBase):
     def post(self):
         self.debug("finish POST from %s, read %d bytes",
                    self.request.remote_ip, self.read_counter)
+        rep = self.server.repos.get(self.metadata["name"])
+        if rep is not None and self.server.scramble(self.token) not in \
+                rep.config["forge.tokens"].split():
+            self.error("\"%s\" may not write to %s (owner: %s)", self.token,
+                       self.metadata["name"], rep.config["forge.tokens"])
+            self.send_error(403)
+            return
         try:
-            self.server.upload(self.metadata, UploadHandler.Reader(self.cache))
+            self.server.upload(self.token, self.metadata,
+                               UploadHandler.Reader(self.cache))
             self.finish()
         except Exception as e:
             self.return_error(400, e)
@@ -256,7 +378,7 @@ class UploadHandler(HandlerBase):
                 self.metadata_size = struct.unpack('!I', chunk[:4])[0]
                 if self.metadata_size > 32 * 1024:
                     self.return_error(400, "%d is a too big metadata size" %
-                                           self.metadata_size)
+                                      self.metadata_size)
                     return
                 self.debug("metadata size is %d", self.metadata_size)
                 if PY3:
@@ -339,41 +461,59 @@ class ImageStaticHandler(InterceptingStaticFileHandler):
         return ForgeServer.IMAGE_FILE_NAME % fmt[1:]
 
 
-ForgeServerArgs = namedtuple("ForgeServerArgs", ("root", "port"))
-
-
 class ForgeServer(Logger):
     THUMBNAIL_FILE_NAME = "thumbnail.png"
     IMAGE_FILE_NAME = "image.%s"
     DELETED_DIR = ".deleted"
 
     @staticmethod
-    def init_parser_(sphinx=False):
+    def init_parser(sphinx=False):
         parser = ArgumentParser(
             description=CommandLineBase.LOGO if not sphinx else "",
             formatter_class=CommandLineBase.SortingRawDescriptionHelpFormatter)
-        parser.add_argument("-r", "--root", help="The root directory to "
-                                                 "operate on.")
+        parser.add_argument("-v", "--verbose", action="store_true",
+                            help="Produce debug output.")
+        parser.add_argument("-r", "--root", required=True,
+                            help="The root directory to operate on.")
         parser.add_argument("-p", "--port", default=80, type=int,
                             help="The port to listen on.")
         parser.add_argument("--suburi", default="/",
                             help="SubURI to work behind a reverse proxy.")
+        parser.add_argument("--smtp-host", required=True,
+                            help="SMTP host which to use for sending emails.")
+        parser.add_argument("--smtp-port", required=True,
+                            help="SMTP port which to use for sending emails.")
+        parser.add_argument("--smtp-user", required=True,
+                            help="SMTP user which to use for sending emails.")
+        parser.add_argument("--smtp-password", required=True,
+                            help="SMTP password which to use for sending "
+                                 "emails.")
+        parser.add_argument("--email-sender", required=True,
+                            help="Email \"from\" identifier.")
         return parser
 
     def __init__(self, args=None):
         super(ForgeServer, self).__init__()
         if args is None:
-            parser = ForgeServer.init_parser_()
+            parser = ForgeServer.init_parser()
             args = parser.parse_args()
-        Logger.setup_logging(logging.INFO)
-        self.root = args.root
-        self.port = args.port
+        Logger.setup_logging(
+            logging.INFO if not args.verbose else logging.DEBUG)
+        for key, val in args.__dict__.items():
+            setattr(self, key, val)
         self.suburi = getattr(args, "suburi", "/")
         if not self.suburi.endswith("/"):
             raise ValueError("--suburi must end with a slash (\"/\")")
         self.thread_pool = ThreadPoolExecutor(4)
         self._stop = IOLoop.instance().stop
         IOLoop.instance().stop = self.stop
+        self._tokens = None
+        self._tokens_timestamp = None
+        self._emails = None
+        self.tokens_file = getattr(self, "tokens_file",
+                                   root.common.forge.tokens_file)
+        self.pending_file = getattr(self, "pending_file",
+                                    root.common.forge.pending_file)
 
     def stop(self):
         self._stop()
@@ -405,6 +545,108 @@ class ForgeServer(Logger):
     @property
     def repos(self):
         return self._repos
+
+    @property
+    def tokens(self):
+        timestamp = self._get_tokens_timestamp()
+        if self._tokens is None or timestamp > self._tokens_timestamp:
+            self._tokens = self._read_tokens(self.tokens_file)
+            self._tokens_timestamp = timestamp
+        return self._tokens
+
+    @property
+    def emails(self):
+        timestamp = self._tokens_timestamp
+        tokens = self.tokens
+        if self._emails is None or self._tokens_timestamp != timestamp:
+            self._emails = {e: t for t, e in tokens.items()}
+        return self._emails
+
+    def generate_token(self, email):
+        pending = {e: t for t, e in
+                   self._read_tokens(self.pending_file).items()}
+        token = pending.get(email)
+        if token is not None:
+            return token
+        token = str(uuid.uuid4())
+        pending[email] = token
+        self._append_token(self.pending_file, token, email)
+        return token
+
+    def register(self, token):
+        sectok = self.scramble(token)
+        if sectok in self.tokens:
+            return True
+        pending = self._read_tokens(self.pending_file)
+        if token not in pending:
+            return False
+        self.tokens[sectok] = pending[token]
+        del pending[token]
+        self._write_tokens(self.pending_file, pending)
+        self._write_tokens(self.tokens_file, self.tokens)
+        self._tokens_timestamp = self._get_tokens_timestamp()
+        return True
+
+    def unregister(self, token):
+        if token not in self.tokens:
+            return
+        del self.tokens[token]
+        self._write_tokens(self.tokens_file, self.tokens)
+
+    @staticmethod
+    def scramble(value):
+        sha = hashlib.sha1()
+        sha.update(b"veles")
+        if value:
+            sha.update(value.encode('charmap'))
+        return sha.hexdigest()
+
+    def _get_tokens_timestamp(self):
+        if not os.access(self.tokens_file, os.R_OK):
+            with open(self.tokens_file, "w") as _:
+                pass
+        return os.path.getmtime(self.tokens_file)
+
+    @staticmethod
+    def _read_tokens(file):
+        if not os.access(file, os.R_OK):
+            with open(file, "w") as _:
+                return {}
+        with open(file, "r") as fin:
+            tokens = {}
+            for line in fin:
+                if not line.strip():
+                    continue
+                token, email = line.strip().split("=")
+                tokens[token] = email
+            return tokens
+
+    @staticmethod
+    def _append_token(file, token, email):
+        with open(file, "a") as fout:
+            ForgeServer._write_token(fout, token, email)
+
+    @staticmethod
+    def _write_tokens(file, tokens):
+        with open(file, "w") as fout:
+            for pair in tokens.items():
+                ForgeServer._write_token(fout, *pair)
+
+    @staticmethod
+    def _write_token(file, token, email):
+        file.write("%s=%s\n" % (token, email))
+
+    @gen.coroutine
+    def smtp(self):
+        smtp = SMTPAsync()
+        self.debug("Accessing %s:%s...", self.smtp_host, self.smtp_port)
+        yield smtp.connect(self.smtp_host, int(self.smtp_port))
+        try:
+            yield smtp.starttls()
+        except SMTPException:
+            pass
+        yield smtp.login(self.smtp_user, self.smtp_password)
+        return smtp
 
     def _get_metadata(self, rep):
         with open(os.path.join(dirname(rep.path), root.common.forge.manifest),
@@ -478,7 +720,7 @@ class ForgeServer(Logger):
                 img.save(os.path.join(
                     rep.path, ForgeServer.THUMBNAIL_FILE_NAME), "PNG")
 
-    def upload(self, metadata, reader):
+    def upload(self, token, metadata, reader):
         name = metadata["name"]
         version = metadata["version"]
         rep = self.repos.get(name)
@@ -505,6 +747,7 @@ class ForgeServer(Logger):
                 del self.repos[name]
                 self.error("Failed to initialize %s", name)
                 raise from_none(e)
+            rep.config["forge.tokens"] = self.scramble(token)
         self._generate_images(metadata, rep)
 
     def add_version(self, rep, version):
@@ -547,7 +790,7 @@ class ForgeServer(Logger):
 
     def list(self):
         for name, r in sorted(self.repos.items()):
-            item = [name, self._get_metadata(r)["short_description"]]
+            item = [name, self._get_metadata(r)["short_description"].strip()]
             head = r.head.get_object()
             item.append(head.author.name)
             item.append(head.message.strip())
@@ -578,10 +821,17 @@ class ForgeServer(Logger):
                 "version": head.message.strip(),
                 "date": str(datetime.utcfromtimestamp(head.commit_time))}
 
-    def delete(self, name):
+    def delete(self, token, name):
         if name not in self.repos:
             raise ValueError("Package %s was not found" % name)
         rep = self.repos[name]
+        try:
+            if self.scramble(token) not in rep.config["forge.tokens"].split():
+                self.error("\"%s\" may not write to %s (owner: %s)", token,
+                           name, rep.config["forge.tokens"])
+                raise PermissionError()
+        except ValueError:
+            raise from_none(PermissionError())
         del self.repos[name]
         path = dirname(rep.path)
         deldir = os.path.join(self.root, ForgeServer.DELETED_DIR)
@@ -616,7 +866,8 @@ class ForgeServer(Logger):
              {"url": self.uri("forge.html"), "permanent": True}),
             (self.suburi[:-1], web.RedirectHandler,
              {"url": self.uri("forge.html"), "permanent": True}),
-        ], template_path=root.common.web.templates)
+        ], template_loader=ForgeTemplateLoader(
+            root.common.web.templates, root.common.forge.email_templates))
         try:
             self.application.listen(self.port)
         except OSError as e:
@@ -627,8 +878,40 @@ class ForgeServer(Logger):
             IOLoop.instance().start()
 
 
+class ForgeTemplateLoader(BaseLoader):
+    def __init__(self, *args, **kwargs):
+        super(ForgeTemplateLoader, self).__init__(**kwargs)
+        self.roots = [os.path.abspath(d) for d in args]
+
+    def resolve_path(self, name, parent_path=None):
+        if parent_path and not parent_path.startswith("<") and \
+                not parent_path.startswith("/") and \
+                not name.startswith("/"):
+            for r in self.roots:
+                current_path = os.path.join(r, parent_path)
+                file_dir = os.path.dirname(os.path.abspath(current_path))
+                relative_path = os.path.abspath(os.path.join(file_dir, name))
+                if os.path.exists(relative_path) and \
+                        relative_path.startswith(r):
+                    name = relative_path[len(r) + 1:]
+                    break
+        return name
+
+    def _create_template(self, name):
+        for r in self.roots:
+            path = os.path.join(r, name)
+            if os.path.exists(path):
+                break
+        else:
+            raise FileNotFoundError(name)
+        with open(path, "rb") as f:
+            template = Template(f.read(), name=name, loader=self)
+            return template
+
+
 def __run__():
     return ForgeServer().run()
+
 
 if __name__ == "__main__":
     __run__()

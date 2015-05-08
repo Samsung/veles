@@ -222,6 +222,10 @@ root.common.update({
         "upload_name": "upload",
         "fetch_name": "fetch",
         "manifest": "manifest.json",
+        "tokens_file": os.path.join(__home__, "forge_tokens.txt"),
+        "pending_file": os.path.join(__home__, "forge_pending.txt"),
+        "email_templates": os.path.join(os.path.join(__root__, "veles",
+                                                     "forge", "templates"))
     },
     "ThreadPool": {
         "minthreads": 2,

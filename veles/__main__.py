@@ -49,8 +49,10 @@ under the License.
 """
 
 import sys
+
 from veles.import_file import get_file_package_and_module, \
     import_file_as_package, import_file_as_module
+
 
 __unittest = "unittest" in sys.modules
 import atexit
@@ -157,7 +159,7 @@ class Main(Logger, CommandLineBase):
                         "\"%s\" is not supported in interactive mode" % opt)
             return None
         if len(sys.argv) > 1 and sys.argv[1] == "forge":
-            from veles.forge_client import __run__ as forge_run
+            from veles.forge.forge_client import __run__ as forge_run
             del sys.argv[1]
             action = sys.argv[1]
             try:

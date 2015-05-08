@@ -36,24 +36,25 @@ under the License.
 from __future__ import print_function
 import io
 import json
-from numpy.random import randint
 import os
 import shutil
-from six import PY2, StringIO
 import struct
 import sys
 import tarfile
 import tempfile
 import threading
+import unittest
+
+from numpy.random import randint
+from six import PY2, StringIO
 from twisted.internet import reactor
 from twisted.internet.error import CannotListenError
 from twisted.web.server import Site, Request
 from twisted.web.resource import Resource
-import unittest
 
 from veles import __root__, __plugins__, __version__
 from veles.config import root
-from veles.forge_client import ForgeClient, ForgeClientArgs
+from veles.forge.forge_client import ForgeClient
 
 
 PORT = 8068 + randint(-1000, 1000)
@@ -61,6 +62,13 @@ PORT = 8068 + randint(-1000, 1000)
 
 if PY2:
     StringIO.fileno = lambda _: 0
+
+
+class ForgeClientArgs(object):
+    def __init__(self, action, base, verbose=False):
+        self.action = action
+        self.base = base
+        self.verbose = verbose
 
 
 class Router(Resource):
@@ -124,6 +132,7 @@ class TestForgeClient(unittest.TestCase):
 
     def sync(fn):
         def wrapped_sync(self, *args, **kwargs):
+            print(fn.__name__)
             stdout = sys.stdout
             fn(self, *args, **kwargs)
             d = self.client.run()
@@ -192,8 +201,8 @@ class TestForgeClient(unittest.TestCase):
                          """+------+-------------+--------+---------+------+
 | Name | Description | Author | Version | Date |
 +------+-------------+--------+---------+------+
-|  1   |      2      |   3    |    4    |  5   |
-|  6   |      7      |   8    |    9    |  10  |
+| 1    | 2           |   3    |    4    |  5   |
+| 6    | 7           |   8    |    9    |  10  |
 +------+-------------+--------+---------+------+
 """)
 
@@ -276,6 +285,7 @@ Really long text telling about how this model is awesome.
         def check_name(name, request):
             self.assertEqual(request.args[b"query"][0], b"delete")
             self.assertEqual(request.args[b"name"][0], b"First")
+            self.assertEqual(request.args[b"token"][0], b"secret_token")
             self.assertEqual(b'service', name)
 
         TestForgeClient.router.page_class = DeletePage
@@ -283,6 +293,7 @@ Really long text telling about how this model is awesome.
         args = ForgeClientArgs("delete", "http://localhost:%d" % PORT,
                                True)
         args.name = "First"
+        args.id = "secret_token"
         self.client = ForgeClient(args, False)
         self.stdout = sys.stdout
         sys.stdout = StringIO()
@@ -298,6 +309,70 @@ Really long text telling about how this model is awesome.
         self.assertEqual(
             out, """Please type "Yes, I am sure!": Deleting First...
 Successfully deleted First
+""")
+
+    @sync
+    def test_unregister_good(self):
+        class UnregisterPage(Resource):
+            def render_GET(self, request):
+                return b'Confirmation letter'
+
+        def check_name(name, request):
+            self.assertEqual(request.args[b"query"][0], b"unregister")
+            self.assertEqual(request.args[b"email"][0], b"user@domain.com")
+            self.assertEqual(b'service', name)
+
+        TestForgeClient.router.page_class = UnregisterPage
+        TestForgeClient.router.callback = check_name
+        args = ForgeClientArgs("unregister", "http://localhost:%d" % PORT,
+                               True)
+        args.email = "user@domain.com"
+        self.client = ForgeClient(args, False)
+        self.stdout = sys.stdout
+        sys.stdout = StringIO()
+        self.stdin = sys.stdin
+        sys.stdin = StringIO()
+        sys.stdin.write("Yes, I am sure!")
+        sys.stdin.seek(0)
+
+    def after_unregister_good(self):
+        out = sys.stdout.getvalue()
+        sys.stdout = self.stdout
+        sys.stdin = self.stdin
+        self.assertEqual(
+            out, """Please type "Yes, I am sure!": Confirmation letter
+""")
+
+    @sync
+    def test_register_good(self):
+        class RegisterPage(Resource):
+            def render_GET(self, request):
+                return b'Confirmation letter'
+
+        def check_name(name, request):
+            self.assertEqual(request.args[b"query"][0], b"register")
+            self.assertEqual(request.args[b"email"][0], b"user@domain.com")
+            self.assertEqual(b'service', name)
+
+        TestForgeClient.router.page_class = RegisterPage
+        TestForgeClient.router.callback = check_name
+        args = ForgeClientArgs("register", "http://localhost:%d" % PORT,
+                               True)
+        args.email = "user@domain.com"
+        self.client = ForgeClient(args, False)
+        self.stdout = sys.stdout
+        sys.stdout = StringIO()
+        self.stdin = sys.stdin
+        sys.stdin = StringIO()
+        sys.stdin.write("Yes, I am sure!")
+        sys.stdin.seek(0)
+
+    def after_register_good(self):
+        out = sys.stdout.getvalue()
+        sys.stdout = self.stdout
+        sys.stdin = self.stdin
+        self.assertEqual(
+            out, """Confirmation letter
 """)
 
     def test_fetch_bad(self):
@@ -369,12 +444,15 @@ Successfully deleted First
 
         def check_name(name, request):
             self.assertEqual(b'upload', name)
+            self.assertEqual(request.args[b"token"][0], b"secret_token")
+            self.assertEqual(request.args[b"version"][0], b"2.4")
 
         TestForgeClient.router.page_class = BadUploadPage
         TestForgeClient.router.callback = check_name
         args = ForgeClientArgs("upload", "http://localhost:%d" % PORT, True)
         args.path = os.path.join(__root__, "veles/tests")
         args.version = "2.4"
+        args.id = "secret_token"
         self.client = ForgeClient(args, False)
 
     @sync
@@ -415,6 +493,7 @@ Successfully deleted First
         args = ForgeClientArgs("upload", "http://localhost:%d" % PORT, True)
         args.path = os.path.join(__root__, "veles/tests/forge/First")
         args.version = "2.4"
+        args.id = "secret_token"
         self.client = ForgeClient(args, False)
 
     def test_fetch_bad_deps(self):

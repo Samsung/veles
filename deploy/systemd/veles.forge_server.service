@@ -7,7 +7,7 @@ Environment="FORGE_SERVER_ARGS="
 EnvironmentFile=-/etc/default/veles.forge_server
 
 ExecStartPre=-/bin/mkdir -p -m0755 /var/run/veles /var/log/veles
-ConditionFileIsExecutable=/usr/lib/python3/dist-packages/veles/forge_server.py
+ConditionFileIsExecutable=/usr/lib/python3/dist-packages/veles/forge/forge_server.py
 
 ExecStart=/usr/lib/python3/dist-packages/veles/forge_server.py $FORGE_SERVER_ARGS
 PIDFile=/var/run/veles/forge_server.lock

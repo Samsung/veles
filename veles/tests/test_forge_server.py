@@ -34,24 +34,28 @@ under the License.
 
 
 from __future__ import print_function
+from collections import namedtuple
 import logging
-from numpy.random import randint
 import os
-import pygit2
 import shutil
-from six import BytesIO
 import socket
 import struct
 import sys
 from tarfile import TarFile
 import threading
+from time import time
+import unittest
+
+from numpy.random import randint
+import pygit2
+from six import BytesIO
+from tornado import gen
 from tornado.httpclient import HTTPClient, HTTPRequest, HTTPError
 from tornado.ioloop import IOLoop
-import unittest
 
 from veles import __root__
 from veles.config import root
-from veles.forge_server import ForgeServer, ForgeServerArgs
+from veles.forge.forge_server import ForgeServer
 
 
 while True:
@@ -61,10 +65,27 @@ while True:
         probe.close()
         break
 
+ForgeServerArgs = namedtuple(
+    "ForgeServerArgs", ("root", "port", "smtp_host", "smtp_port", "smtp_user",
+                        "smtp_password", "email_sender", "verbose"))
+
+
+class FakeSMTP(object):
+    @gen.coroutine
+    def sendmail(self, sender, addr, msg):
+        self.sender = sender
+        self.addr = addr
+        self.msg = msg
+
+    @gen.coroutine
+    def quit(self):
+        pass
+
 
 class TestForgeServer(unittest.TestCase):
     ioloop_thread = None
     server = None
+    fake_smtp = FakeSMTP()
 
     @classmethod
     def setUpClass(cls):
@@ -79,7 +100,9 @@ class TestForgeServer(unittest.TestCase):
                     os.path.join(base, "%s.git.tar.gz" % name)) as tar:
                 tar.extractall(os.path.join(base, name))
         sys.stderr = sys.stdout
-        cls.server = ForgeServer(ForgeServerArgs(base, PORT))
+        cls.server = ForgeServer(ForgeServerArgs(
+            base, PORT, "smtp_host", 25, "user", "password", "from", True))
+        cls.server.smtp = TestForgeServer.smtp.__get__(cls.server)
         cls.server.run(loop=False)
         cls.ioloop_thread.start()
 
@@ -91,6 +114,10 @@ class TestForgeServer(unittest.TestCase):
     def tearDownClass(cls):
         IOLoop.instance().stop()
         cls.ioloop_thread.join()
+
+    @gen.coroutine
+    def smtp(self):
+        return TestForgeServer.fake_smtp
 
     def test_list(self):
         response = self.client.fetch(
@@ -140,17 +167,29 @@ class TestForgeServer(unittest.TestCase):
         src_path = os.path.join(self.base, "Second")
         bak_path = os.path.join(self.base, "Second.bak")
         shutil.copytree(src_path, bak_path)
+        TestForgeServer.server.tokens[
+            TestForgeServer.server.scramble("secret")] = "user@domain.com"
         try:
             try:
                 self.client.fetch(HTTPRequest(
-                    method='POST', url="http://localhost:%d/upload" % PORT,
+                    method='POST',
+                    url="http://localhost:%d/upload?token=n" % PORT,
+                    body=self._compose_upload("second_bad.tar.gz")))
+                self.fail("HTTPError was not thrown")
+            except HTTPError as e:
+                self.assertEqual(e.response.code, 403)
+            try:
+                self.client.fetch(HTTPRequest(
+                    method='POST', url="http://localhost:%d/upload?token=%s" %
+                                       (PORT, "secret"),
                     body=self._compose_upload("second_bad.tar.gz")))
                 self.fail("HTTPError was not thrown")
             except HTTPError as e:
                 self.assertGreaterEqual(
                     e.response.body.find(b'No new changes'), 0)
             response = self.client.fetch(HTTPRequest(
-                method='POST', url="http://localhost:%d/upload" % PORT,
+                method='POST', url="http://localhost:%d/upload?token=%s" % (
+                    PORT, "secret"),
                 body=self._compose_upload("second_good.tar.gz")))
             self.assertEqual(response.reason, 'OK')
             rep = pygit2.Repository(os.path.join(self.base, "Second"))
@@ -164,9 +203,12 @@ class TestForgeServer(unittest.TestCase):
             shutil.move(bak_path, src_path)
 
     def test_upload_new(self):
+        TestForgeServer.server.tokens[
+            TestForgeServer.server.scramble("secret")] = "user@domain.com"
         try:
             response = self.client.fetch(HTTPRequest(
-                method='POST', url="http://localhost:%d/upload" % PORT,
+                method='POST', url="http://localhost:%d/upload?token=%s" % (
+                    PORT, "secret"),
                 body=self._compose_upload("First2.tar.gz")))
             self.assertEqual(response.reason, 'OK')
             rep = pygit2.Repository(os.path.join(self.base, "First2"))
@@ -183,9 +225,12 @@ class TestForgeServer(unittest.TestCase):
         dirname = os.path.join(self.base, "Second")
         shutil.copytree(dirname, dirname + ".bak")
         deldir = os.path.join(self.base, ForgeServer.DELETED_DIR)
+        TestForgeServer.server.tokens[
+            TestForgeServer.server.scramble("secret")] = "user@domain.com"
         try:
             response = self.client.fetch(
-                "http://localhost:%d/service?query=delete&name=Second" % PORT)
+                "http://localhost:%d/service?query=delete&name=Second&"
+                "token=secret" % PORT)
             self.assertEqual(response.body, b'OK')
             self.assertFalse(os.path.exists(dirname))
             self.assertTrue(os.path.exists(deldir))
@@ -203,6 +248,56 @@ class TestForgeServer(unittest.TestCase):
             if os.path.exists(deldir):
                 shutil.rmtree(deldir)
             TestForgeServer.server._build_db()
+
+    def test_register_bad(self):
+        self.assertRaises(
+            HTTPError, self.client.fetch,
+            "http://localhost:%d/service?query=register&"
+            "email=bademail.com" % PORT)
+        self.assertRaises(
+            HTTPError, self.client.fetch,
+            "http://localhost:%d/service?query=register&"
+            "email=bad=a@email.com" % PORT)
+        self.assertRaises(
+            HTTPError, self.client.fetch,
+            "http://localhost:%d/service?query=register&"
+            "email=" % PORT)
+
+    def do_register(self):
+        TestForgeServer.server._tokens = {}
+        TestForgeServer.server._tokens_timestamp = time()
+        TestForgeServer.server._emails = {}
+        response = self.client.fetch(
+            "http://localhost:%d/service?query=register&"
+            "email=user@domain.com" % PORT)
+        self.assertTrue(
+            b"The confirmation email has been sent to user@domain.com"
+            in response.body)
+        pos = self.fake_smtp.msg.find("token=") + len("token=")
+        token = self.fake_smtp.msg[pos:pos+36]
+        response = self.client.fetch(
+            "http://localhost:%d/service?query=confirm&"
+            "token=%s" % (PORT, token))
+        self.assertTrue(
+            ("Registered, your token is %s" % token).encode("utf-8")
+            in response.body)
+        TestForgeServer.server._emails = {
+            "user@domain.com":  self.server.scramble(token)}
+        return token
+
+    def test_register_unregister(self):
+        token = self.do_register()
+        response = self.client.fetch(
+            "http://localhost:%d/service?query=unregister&"
+            "email=user@domain.com" % PORT)
+        self.assertTrue(
+            b"The confirmation email has been sent to user@domain.com"
+            in response.body)
+        response = self.client.fetch(
+            "http://localhost:%d/service?query=unconfirm&"
+            "token=%s" % (PORT, self.server.scramble(token)))
+        self.assertTrue(b"Successfully unregistered" in response.body)
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
