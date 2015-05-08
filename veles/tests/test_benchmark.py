@@ -38,14 +38,11 @@ from veles.tests import AcceleratedTest, multi_device
 
 
 class TestBenchmark(AcceleratedTest):
-    def setUp(self):
-        super(TestBenchmark, self).setUp()
-        self.bench = DeviceBenchmark(self.parent)
-
     @multi_device(True)
     def testBenchmark(self):
-        self.bench.initialize(device=self.device)
-        self.info("Result: %d points", self.bench.run())
+        bench = DeviceBenchmark(self.parent)
+        bench.initialize(device=self.device)
+        self.info("Result: %d points", bench.run())
 
 
 if __name__ == "__main__":

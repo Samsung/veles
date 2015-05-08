@@ -86,6 +86,7 @@ class OCLBLAS(Logger):
         super(OCLBLAS, self).__init__()
         self._device = weakref.ref(device)
         self.kernels = {}
+        self._const_i = numpy.zeros(3, dtype=numpy.uint64)
         try:
             if (root.common.engine.ocl.clBLAS is not True or
                     root.common.precision_level > 0):
@@ -126,21 +127,23 @@ class OCLBLAS(Logger):
 
     def sgemm(self, transA, transB,
               rowsCountA, columnCountB, commonSideLength,
-              alpha, A, B, beta, C):
+              alpha, A, B, beta, C, offsetA=0, offsetB=0, offsetC=0):
         return self._sgemm(
             transA, transB, rowsCountA, columnCountB, commonSideLength,
-            alpha, A, B, beta, C)
+            alpha, A, B, beta, C,
+            offsetA=offsetA, offsetB=offsetB, offsetC=offsetC)
 
     def dgemm(self, transA, transB,
               rowsCountA, columnCountB, commonSideLength,
-              alpha, A, B, beta, C):
+              alpha, A, B, beta, C, offsetA=0, offsetB=0, offsetC=0):
         return self._dgemm(
             transA, transB, rowsCountA, columnCountB, commonSideLength,
-            alpha, A, B, beta, C)
+            alpha, A, B, beta, C,
+            offsetA=offsetA, offsetB=offsetB, offsetC=offsetC)
 
     def clblas_sgemm(self, transA, transB,
                      rowsCountA, columnCountB, commonSideLength,
-                     alpha, A, B, beta, C):
+                     alpha, A, B, beta, C, offsetA=0, offsetB=0, offsetC=0):
         """Does a matrix multiplication like in CUBLAS using clBLAS.
 
         Matricies are assumed to be tightly packed and stored like in CUBLAS.
@@ -149,11 +152,12 @@ class OCLBLAS(Logger):
         """
         self.blas.sgemm((self.device.queue_,), clblas.clblasColumnMajor,
                         transA, transB, rowsCountA, columnCountB,
-                        commonSideLength, alpha, A, B, beta, C)
+                        commonSideLength, alpha, A, B, beta, C,
+                        offsetA=offsetA, offsetB=offsetB, offsetC=offsetC)
 
     def clblas_dgemm(self, transA, transB,
                      rowsCountA, columnCountB, commonSideLength,
-                     alpha, A, B, beta, C):
+                     alpha, A, B, beta, C, offsetA=0, offsetB=0, offsetC=0):
         """Does a matrix multiplication like in CUBLAS using clBLAS.
 
         Matricies are assumed to be tightly packed and stored like in CUBLAS.
@@ -162,11 +166,12 @@ class OCLBLAS(Logger):
         """
         self.blas.dgemm((self.device.queue_,), clblas.clblasColumnMajor,
                         transA, transB, rowsCountA, columnCountB,
-                        commonSideLength, alpha, A, B, beta, C)
+                        commonSideLength, alpha, A, B, beta, C,
+                        offsetA=offsetA, offsetB=offsetB, offsetC=offsetC)
 
     def veles_gemm(self, transA, transB,
                    rowsCountA, columnCountB, commonSideLength,
-                   alpha, A, B, beta, C):
+                   alpha, A, B, beta, C, offsetA=0, offsetB=0, offsetC=0):
         """Does a matrix multiplication like in CUBLAS using custom kernel.
 
         Matricies are assumed to be tightly packed and stored like in CUBLAS.
@@ -209,8 +214,10 @@ class OCLBLAS(Logger):
 
         # Set the constants and execute the kernel
         krn = krn_info[0]
+        self._const_i[0:3] = offsetA, offsetB, offsetC
         # Our kernel stores output in row-major order, so swap A and B
-        krn.set_args(B, A, C, alpha, beta)
+        krn.set_args(B, A, C, alpha, beta, self._const_i[1:2],
+                     self._const_i[0:1], self._const_i[2:3])
         global_size = krn_info[1]
         local_size = krn_info[2]
         self.device.queue_.execute_kernel(krn, global_size, local_size,

@@ -35,9 +35,12 @@ def multi_device(numpy=False):
                           cls.__name__ if cls is not None else "numpy")
                 self.seed()
                 res = fn(self)
-                self.parent.stopped = False
+
+                # Garbage collection
+                self.parent = self.getParent()
                 self.device = None
                 gc.collect()
+
                 if res:
                     break
 
@@ -75,6 +78,7 @@ class AcceleratedTest(unittest.TestCase, Logger):
         self.device = self.DEVICE()
         self.parent = self.getParent()
         self._dtype = dtypes[root.common.precision_type]
+        gc.collect()
 
     def getParent(self):
         return DummyWorkflow()
