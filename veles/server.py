@@ -78,7 +78,7 @@ class ZmqRouter(ZmqConnection, Logger):
         self._command = None
         self._command_str = None
         self.ignore_unknown_commands = ignore_unknown_commands
-        self.pickles_compression = root.common.network_compression
+        self.pickles_compression = root.common.engine.network_compression
 
     def change_log_message(self, msg):
         return "zmq: " + msg

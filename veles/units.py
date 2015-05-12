@@ -383,8 +383,8 @@ class Unit(Distributable, Verified):
             if Unit._pool_ is None:
                 Unit._pool_ = thread_pool.ThreadPool(
                     name="units",
-                    minthreads=root.common.ThreadPool.minthreads,
-                    maxthreads=root.common.ThreadPool.maxthreads)
+                    minthreads=root.common.engine.thread_pool.minthreads,
+                    maxthreads=root.common.engine.thread_pool.maxthreads)
         return Unit._pool_
 
     @property
@@ -415,10 +415,11 @@ class Unit(Distributable, Verified):
     def run_was_called(self, value):
         if value:
             self._run_calls += 1
-            if root.common.trace_run:
+            if root.common.trace.run:
                 self.debug("Call #%d finished @%s", self._run_calls,
                            threading.current_thread().name)
-            if not self.interactive and root.common.spinning_run_progress:
+            if not self.interactive and \
+                    not root.common.disable.spinning_run_progress:
                 spin()
         else:
             raise ValueError("You can not reset run_was_called flag.")
@@ -469,7 +470,7 @@ class Unit(Distributable, Verified):
         for index, dst in enumerate(links):
             if gate_blocks[index] or dst.gate_block:
                 continue
-            if root.common.trace_run:
+            if root.common.trace.run:
                 self.debug("%s -> %s (%d/%d) @%s", self, dst, index + 1,
                            len(links), threading.current_thread().name)
             if len(self.links_to) == 1:
@@ -752,7 +753,7 @@ class Unit(Distributable, Verified):
                     for unit in self._iter_links(self.links_from):
                         unit.gate_block <<= True
                     return
-                if root.common.raise_run_after_stop:
+                if root.common.exceptions.run_after_stop:
                     raise RunAfterStopError(
                         self, "%s's run() was called after stop(). Looks like "
                               "you made an error in setting control flow links"
@@ -761,8 +762,8 @@ class Unit(Distributable, Verified):
                     self.warning(
                         "run() was called after stop(). Looks like you made an"
                         " error in setting control flow links. Workflow: %s. "
-                        "Set root.common.raise_run_after_stop to True to get "
-                        "an exception instead", self.workflow)
+                        "Set root.common.exceptions.run_after_stop to True to "
+                        "raise an exception instead", self.workflow)
                     return
             return fn(*args, **kwargs)
 

@@ -143,7 +143,7 @@ class AcceleratedUnit(Unit):
         # init_unpickled
         self._force_numpy = kwargs.get("force_numpy", self._force_numpy)
         self.intel_opencl_workaround = \
-            root.common.force_numpy_run_on_intel_opencl
+            root.common.engine.force_numpy_run_on_intel_opencl
 
     def init_unpickled(self):
         super(AcceleratedUnit, self).init_unpickled()
@@ -233,7 +233,7 @@ class AcceleratedUnit(Unit):
             and device.device_info.is_cpu)
         if isinstance(self.device, NumpyDevice) and \
                 not self._numpy_run_jitted_ and \
-                not root.common.disable_numba:
+                not root.common.engine.disable_numba:
             if jit is None and root.common.warnings.numba:
                 self.warning(
                     "Numba (http://numba.pydata.org) was not found, "

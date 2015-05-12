@@ -419,9 +419,9 @@ class ConfigChromosome(Chromosome):
 
     def run_workflow(self, fitness):
         self.info("Will evaluate the following config:")
-        root.common.disable_plotting = True
-        root.common.disable_snapshotting = True
-        root.common.disable_publishing = True
+        root.common.disable.plotting = True
+        root.common.disable.snapshotting = True
+        root.common.disable.publishing = True
         print_config(self.population_.root_)
         self.population_.main_.run_module(self.population_.workflow_module_)
         fv = self.population_.main_.workflow.fitness
@@ -552,7 +552,7 @@ class ConfigPopulation(Population):
             self.job_process.start()
             self.job_connection[0].close()
 
-            root.common.disable_plotting = True
+            root.common.disable.plotting = True
 
         # Launch the container workflow
         self.main_.run_workflow(GeneticsWorkflow,

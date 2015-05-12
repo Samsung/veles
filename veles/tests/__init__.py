@@ -43,4 +43,4 @@ from veles.tests.timeout import timeout
 from veles.tests.accelerated_test import AcceleratedTest, multi_device, \
     assign_backend
 from veles.config import root
-root.common.disable_plotting = True
+root.common.disable.plotting = True

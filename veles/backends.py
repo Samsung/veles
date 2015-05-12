@@ -585,9 +585,9 @@ class OpenCLDevice(Device):
                          OpenCLDevice.DEVICE_INFOS_JSON,
                          root.common.engine.device_dirs)
         if ((self.device_info.desc not in device_infos and
-                root.common.test_unknown_device) or
+                root.common.engine.test_unknown_device) or
                 (self.device_info.desc in device_infos and
-                 root.common.test_known_device)):
+                 root.common.engine.test_known_device)):
             self.warning("%s, will perform a "
                          "quick test now.", "Forced device retest"
                          if self.device_info.desc in device_infos

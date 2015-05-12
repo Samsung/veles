@@ -101,12 +101,12 @@ class GraphicsServer(Logger):
                          ZmqEndpoint("bind", "rndipc://veles-ipc-plots-:")]
         ifaces = []
         for iface, _ in interfaces():
-            if iface in root.common.graphics_blacklisted_ifaces:
+            if iface in root.common.graphics.blacklisted_ifaces:
                 continue
             ifaces.append(iface)
             zmq_endpoints.append(ZmqEndpoint(
                 "bind", "rndepgm://%s;%s:1024:65535:1" %
-                        (iface, root.common.graphics_multicast_address)))
+                        (iface, root.common.graphics.multicast_address)))
         self.debug("Trying to bind to %s...", zmq_endpoints)
 
         try:
@@ -130,14 +130,14 @@ class GraphicsServer(Logger):
         for port, iface in zip(ports, ifaces):
             self.endpoints["epgm"].append(
                 "epgm://%s;%s:%d" %
-                (iface, root.common.graphics_multicast_address, port))
+                (iface, root.common.graphics.multicast_address, port))
         self.info("Publishing to %s", "; ".join([self.endpoints["inproc"],
                                                  self.endpoints["ipc"]] +
                                                 self.endpoints["epgm"]))
         if btime > 1:
             self.warning(
                 "EPGM bind took %d seconds - consider adding offending "
-                "interfaces to root.common.graphics_blacklisted_ifaces or "
+                "interfaces to root.common.graphics.blacklisted_ifaces or "
                 "completely disabling graphics (-p '').",
                 int(btime))
 

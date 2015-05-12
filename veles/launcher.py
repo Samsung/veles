@@ -204,8 +204,9 @@ class Launcher(logger.Logger):
                                  "specified address.").mode = ["master"]
         parser.add_argument("-p", "--matplotlib-backend", type=str, nargs='?',
                             const="",
-                            default=kwargs.get("matplotlib_backend",
-                                               root.common.matplotlib_backend),
+                            default=kwargs.get(
+                                "matplotlib_backend",
+                                root.common.graphics.matplotlib.backend),
                             help="Matplotlib drawing backend.")
         parser.add_argument("--no-graphics-client",
                             default=kwargs.get("graphics_client", False),

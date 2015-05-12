@@ -127,7 +127,7 @@ class UnitRegistry(type):
 
         def warning(*largs):
             obj.warning(*largs)
-            if root.common.trace_misprints:
+            if root.common.trace.misprints:
                 obj.warning("Stack trace:\n%s",
                             "".join(format_list(extract_stack(
                                 inspect.currentframe().f_back.f_back))))

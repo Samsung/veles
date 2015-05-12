@@ -158,7 +158,7 @@ def validate_kwargs(caller, **kwargs):
         if isinstance(v, Config) and len(v.__content__) == 0:
             caller.warning("Argument '%s' seems to be undefined at %s",
                            k, v.__path__)
-            if root.common.trace_undefined_configs:
+            if root.common.trace.undefined_configs:
                 import inspect
                 from traceback import format_list, extract_stack
                 caller.warning("kwargs are: %s", kwargs)
@@ -170,42 +170,41 @@ def validate_kwargs(caller, **kwargs):
 __home__ = os.path.join(os.environ.get("HOME", "./"), ".veles")
 
 root.common.update({
-    "graphics_multicast_address": "239.192.1.1",
-    "graphics_blacklisted_ifaces": set(),
-    "matplotlib_backend": "Qt4Agg",
-    "matplotlib_webagg_port": 8081,
     "mongodb_logging_address": "127.0.0.1:27017",
-    "trace_misprints": False,
-    "trace_undefined_configs": False,
-    "trace_run": False,
-    "raise_run_after_stop": False,
-    "spinning_run_progress": sys.stdout.isatty(),
     "precision_type": "double",  # float or double
     "precision_level": 0,  # 0 - use simple summation
                            # Only for ocl backend:
                            # 1 - use Kahan summation (9% slower)
                            # 2 - use multipartials summation (90% slower)
-    "network_compression": (None if  # snappy is slow on CPython
-                            platform.python_implementation() == "CPython"
-                            else "snappy"),
-    "test_dataset_root": os.path.join(os.environ.get("HOME", "./"), "data"),
-    "test_known_device": False,
-    "test_unknown_device": True,
-    # The following is a hack to make Intel OpenCL usable;
-    # It does not have 64-bit atomics and the engine uses them
-    "force_numpy_run_on_intel_opencl": True,
-    # Disable Numba JIT while debugging or on alternative interpreters
-    "disable_numba": (sys.gettrace() is not None or
-                      platform.python_implementation() != "CPython"),
-    "disable_plotting": "unittest" in sys.modules,
-    "disable_snapshotting": False,
-    "disable_publishing": False,
+    "datasets_root": os.path.join(__home__, "data"),
     "veles_dir": os.path.join(__root__, "veles"),
     "veles_user_dir": __home__,
     "veles_dist_config_dir": "/etc/default/veles",
     "help_dir": "/usr/share/doc/python3-veles",
+    "disable": {
+        "spinning_run_progress": not sys.stdout.isatty(),
+        "plotting": "unittest" in sys.modules,
+        "snapshotting": False,
+        "publishing": False,
+    },
+    "trace": {
+        "misprints": False,
+        "undefined_configs": False,
+        "run": False,
+    },
     "warnings": {
         "numba": True
+    },
+    "exceptions": {
+        "run_after_stop": False,
+    },
+    "graphics": {
+        "multicast_address": "239.192.1.1",
+        "blacklisted_ifaces": set(),
+        "matplotlib": {
+            "backend": "Qt4Agg",
+            "webagg_port": 8081,
+        }
     },
     "web": {
         "host": "0.0.0.0",
@@ -227,19 +226,30 @@ root.common.update({
         "email_templates": os.path.join(os.path.join(__root__, "veles",
                                                      "forge", "templates"))
     },
-    "ThreadPool": {
-        "minthreads": 2,
-        "maxthreads": 2,
-    },
     "engine": {
         "backend": "auto",
+        "test_known_device": False,
+        "test_unknown_device": True,
+        "thread_pool": {
+            "minthreads": 2,
+            "maxthreads": 2,
+        },
+        # The following is a hack to make Intel OpenCL usable;
+        # It does not have 64-bit atomics and the engine uses them
+        "force_numpy_run_on_intel_opencl": True,
+        # Disable Numba JIT while debugging or on alternative interpreters
+        "disable_numba": (sys.gettrace() is not None or
+                          platform.python_implementation() != "CPython"),
+        "network_compression": (None if  # snappy is slow on CPython
+                                platform.python_implementation() == "CPython"
+                                else "snappy"),
         "source_dirs": (os.environ.get("VELES_ENGINE_DIRS", "").split(":") +
                         ["/usr/share/veles"]),
         "device_dirs": ["/usr/share/veles/devices",
                         os.path.join(__home__, "devices"),
                         os.environ.get("VELES_DEVICE_DIRS", "./")],
         "ocl": {
-            # Use clBLAS when available
+            # Use clBLAS if it is available
             "clBLAS": True
         }
     }

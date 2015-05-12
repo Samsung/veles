@@ -164,7 +164,7 @@ class GraphicsClient(Logger):
                 self.condition = threading.Condition()
                 with self.condition:
                     self.condition.wait()
-                    free_port = root.common.matplotlib_webagg_port - 1
+                    free_port = root.common.graphics.matplotlib.webagg_port - 1
                     result = 0
                     while result == 0:
                         free_port += 1
@@ -353,7 +353,7 @@ class GraphicsClient(Logger):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-b", "--backend", nargs='?',
-                        default=root.common.matplotlib_backend,
+                        default=root.common.graphics.matplotlib.backend,
                         help="Matplotlib drawing backend. \"no\" value disable"
                              "s any real plotting (useful with --dump).")
     parser.add_argument("-e", "--endpoint", required=True,

@@ -98,7 +98,7 @@ class Workflow(Container):
 
     def __init__(self, workflow, **kwargs):
         self._plotters_are_enabled = kwargs.get(
-            "enable_plotters", not root.common.disable_plotting)
+            "enable_plotters", not root.common.disable.plotting)
         self._sync = kwargs.get("sync", True)  # do not move down
         self._units = tuple()
         super(Workflow, self).__init__(workflow,
