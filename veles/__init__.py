@@ -127,6 +127,7 @@ class VelesModule(ModuleType):
         self.__units_cache__ = None
         self.__modules_cache_ = None
         self.__plugins = None
+        self.__loc = None
 
     def __call__(self, workflow, config=None, **kwargs):
         """
@@ -209,20 +210,23 @@ class VelesModule(ModuleType):
 
     @property
     def __loc__(self):
-        """Calculation of lines of code relies on "cloc" utility.
+        """Calculates of lines of code relies on "cloc" utility.
         """
+        if self.__loc is not None:
+            return self.__loc
+
         from subprocess import Popen, PIPE
 
         result = {}
 
-        def calc(cond, exclude_docs=True):
+        def calc(cond):
             cmd = ("cd %s && echo $(find %s ! -path '*debian*' "
-                   "%s ! -path '*.pybuild*' "
+                   "! -path '*docs*' ! -path '*.pybuild*' "
                    "-exec cloc --quiet --csv {} \; | "
                    "sed -n '1p;0~3p' | tail -n +2 | cut -d ',' -f 5 | "
                    "tr '\n' '+' | head -c -1) | bc") %\
-                  (self.__root__, cond,
-                   "! -path '*docs*'" if exclude_docs else "")
+                  (self.__root__, cond)
+            print(cmd)
             discovery = Popen(cmd, shell=True, stdout=PIPE)
             num, _ = discovery.communicate()
             return int(num)
@@ -231,21 +235,29 @@ class VelesModule(ModuleType):
                  "! -path './web/*' ! -path './veles/external/*' "
                  "! -name create-emitter-tests.py ! -path "
                  "'./veles/tests/*' ! -path './veles/znicz/tests/*'")
-        result["core"] += calc("veles/external/txzmq  -name '*.py'")
         result["tests"] = calc("'./veles/tests' './veles/znicz/tests' "
                                "-name '*.py'")
         result["c/c++"] = calc(
             "\( -name '*.cc' -o -name '*.h' -o -name '*.c' \) ! -path "
             "'*google*' ! -path '*web*' ! -path '*zlib*' !"
-            " -path '*libarchive*' ! -path '*yaml-cpp*'")
-        result["js"] = calc("-name '*.js' ! -path '*.min.js*' "
+            " -path '*libarchive*' ! -path '*jsoncpp*' ! -path '*boost*'")
+        result["js"] = calc("-name '*.js' ! -path '*node_modules*' "
+                            "! -path '*dist*' ! -path '*libs*' "
+                            "! -path '*jquery*' "
                             "! -path '*viz.js*' ! -path '*emscripten*'")
-        result["docs"] = calc("-name '*manualrst*'", False)
-        result["opencl"] = calc("-name '*.cl' ! -path './web/*'")
+        result["sass"] = calc("-name '*.scss' ! -path '*node_modules*' "
+                              "! -path '*dist*' ! -path '*libs*' "
+                              "! -path '*viz.js*' ! -path '*emscripten*'")
+        result["html"] = calc("-name '*.html' ! -path '*node_modules*' "
+                              "! -path '*dist*' ! -path '*libs*' "
+                              "! -path '*viz.js*' ! -path '*emscripten*'")
+        result["opencl/cuda"] = calc(
+            "\( -name '*.cl' -o -name '*.cu' \) ! -path './web/*'")
         result["java"] = calc("'./mastodon/lib/src/main' -name '*.java'")
         result["tests"] += calc("'./mastodon/lib/src/test' -name '*.java'")
 
         result["all"] = sum(result.values())
+        self.__loc = result
         return result
 
     @property
