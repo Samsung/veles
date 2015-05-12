@@ -46,6 +46,21 @@ from pickle import PicklingError, UnpicklingError
 best_protocol = 4 if sys.version_info > (3, 4) else sys.version_info[0]
 
 
+def augment__str__(fn):
+    def __str__(self):
+        return "%s\n%s" % (
+            fn(self),
+            "To debug this error, add --debug-pickle to the command line "
+            "arguments or execute from veles.pickle2 "
+            "import setup_pickle_debug; setup_pickle_debug()")
+    return __str__
+
+
+PicklingError.__str__ = augment__str__(PicklingError.__str__)
+UnpicklingError.__str__ = augment__str__(UnpicklingError.__str__)
+del augment__str__
+
+
 def setup_pickle_debug():
     """Enables the interactive debugging of errors occured during pickling
     and unpickling.
