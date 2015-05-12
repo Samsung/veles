@@ -15,7 +15,7 @@
     "gulp-if": "*",
     "gulp-uglify": "*",
     "gulp-minify-html": "*",
-    "gulp-minify-css": "*",
+    "gulp-minify-css": "1.1.0",
     "gulp-uncss": "*",
     "gulp-sass": "<2.0.0",
     "gulp-sourcemaps": "*",
