@@ -662,8 +662,7 @@ class ForgeClient(Logger):
     @staticmethod
     def add_path_arg(parser, intent):
         parser.add_argument(
-            "-d", "--directory", default=".", dest="path", required=True,
-            help=intent)
+            "-d", "--directory", default=".", dest="path", help=intent)
 
     @staticmethod
     def add_name_arg(parser, intent):
