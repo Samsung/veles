@@ -831,7 +831,7 @@ class Loader(Unit):
             self.labels_mapping.update(
                 {k: i for i, k in enumerate(sorted(self.train_diff_labels))})
             self._reversed_labels_mapping[:] = sorted(self.labels_mapping)
-        self._print_label_stats(self.train_diff_labels, "TRAIN")
+        self._print_label_stats(self.train_diff_labels, CLASS_NAME[TRAIN])
         for i, diff_labels in enumerate(other_diff_labels):
             if self.class_lengths[i] > 0:
                 self._validate_and_fix_other_labels(diff_labels)
@@ -908,7 +908,7 @@ class Loader(Unit):
         if chisquare is not None:
             _, p = chisquare(other_dist, train_dist)
             is_the_same = p > 0.95
-            msg = (u"TRAIN and %s labels have %s "
+            msg = (CLASS_NAME[TRAIN] + u" and %s labels have %s "
                    u"distributions (Χ-square test's p-value is %.3f)")
             if is_the_same:
                 self.info(u"OK: " + msg, other_name, u"the same", p)
