@@ -636,7 +636,7 @@ class Loader(Unit):
         self.shuffled_indices.map_write()
         self.prng.shuffle(self.shuffled_indices.mem[
             self.class_end_offsets[VALID]:])
-        self.debug("Shuffled TRAIN")
+        self.debug("Shuffled %s set", CLASS_NAME[TRAIN])
 
     def serve_next_minibatch(self, slave_id):
         try:
