@@ -184,7 +184,7 @@ class ServiceHandler(HandlerBase):
             "html"))
         yield smtp.sendmail(sender, email, msg.as_string())
         yield smtp.quit()
-        self.finish(self.render_string("confirmation.html", email=email))
+        self.render_finish("confirmation.html", email=email)
 
     @gen.coroutine
     def handle_confirm(self):
@@ -193,8 +193,7 @@ class ServiceHandler(HandlerBase):
             self.error("Token %s was not found in the pending list", token)
             self.send_error(400)
             return
-        self.finish(self.render_string(
-            "successful_registration.html", token=token))
+        self.render_finish("successful_registration.html", token=token)
 
     @gen.coroutine
     def handle_unregister(self):
@@ -204,7 +203,7 @@ class ServiceHandler(HandlerBase):
             return
         token = self.server.emails.get(email)
         if token is None:
-            self.finish(self.render_string("not_registered.html"))
+            self.render_finish("not_registered.html")
             return
         smtp = yield self.server.smtp()
         msg = MIMEMultipart('alternative')
@@ -224,7 +223,7 @@ class ServiceHandler(HandlerBase):
             "html"))
         yield smtp.sendmail(sender, email, msg.as_string())
         yield smtp.quit()
-        self.finish(self.render_string("unconfirmation.html", email=email))
+        self.render_finish("unconfirmation.html", email=email)
 
     @gen.coroutine
     def handle_unconfirm(self):
@@ -233,7 +232,11 @@ class ServiceHandler(HandlerBase):
             self.error("Token %s was not found in the registered list", token)
             self.send_error(400)
         self.server.unregister(token)
-        self.finish(self.render_string("successful_unregistration.html"))
+        self.render_finish("successful_unregistration.html")
+
+    def render_finish(self, template, **kwargs):
+        self.clear()
+        self.finish(self.render_string(template, **kwargs))
 
     @web.asynchronous
     @gen.coroutine
