@@ -427,7 +427,7 @@ class Vector(Pickleable):
             self.error("Failed to map %d OpenCL bytes: %s(%d)",
                        self._mem.nbytes, str(err), err.code)
             raise
-        if (int(cl.ffi.cast("size_t", self._map_arr_)) !=
+        if (int(cl.get_ffi().cast("size_t", self._map_arr_)) !=
                 self._mem.__array_interface__["data"][0]):
             raise RuntimeError("map_buffer returned different pointer")
         self.map_flags = flags
