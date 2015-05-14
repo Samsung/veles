@@ -34,12 +34,12 @@ under the License.
 ███████████████████████████████████████████████████████████████████████████████
 """
 
-
-import six
 import threading
 import uuid
 import weakref
 import sys
+
+import six
 from zope.interface import Interface, implementer
 
 from veles.cmdline import CommandLineArgumentsRegistry
@@ -629,6 +629,11 @@ class Unit(Distributable, Verified):
         for link in self._iter_links(self.links_to):
             res += "\t%s" % repr(link)
         six.print_(res, file=file)
+
+    @classmethod
+    def reload(cls):
+        from veles.external.pydev import xreload
+        xreload(sys.modules[cls.__module__])
 
     @staticmethod
     def is_immutable(value):
