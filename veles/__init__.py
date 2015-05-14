@@ -129,7 +129,7 @@ class VelesModule(ModuleType):
         self.__plugins = None
         self.__loc = None
 
-    def __call__(self, workflow, config=None, **kwargs):
+    def __call__(self, workflow, config=None, *args, **kwargs):
         """
         Launcher the specified workflow and returns the corresponding
         :class:`veles.launcher.Launcher` instance.
@@ -154,7 +154,7 @@ class VelesModule(ModuleType):
         Main = import_module("veles.__main__").Main
         if config is None:
             config = "-"
-        main = Main(is_interactive(), workflow, config, **kwargs)
+        main = Main(is_interactive(), workflow, config, *args, **kwargs)
         main.run()
         return main.launcher
 
