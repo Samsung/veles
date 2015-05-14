@@ -274,13 +274,15 @@ for site_path in (root.common.veles_dist_config_dir,
 
 root.common.web.templates = os.path.join(root.common.web.root, "templates")
 root.common.cache_dir = os.path.join(root.common.veles_user_dir, "cache")
-if not os.path.exists(root.common.cache_dir):
-    os.makedirs(root.common.cache_dir)
-
 root.common.snapshot_dir = os.path.join(root.common.veles_user_dir,
                                         "snapshots")
-if not os.path.exists(root.common.snapshot_dir):
-    os.makedirs(root.common.snapshot_dir)
+for d in (root.common.cache_dir, root.common.snapshot_dir,
+          root.common.datasets_root):
+    if not os.path.exists(d):
+        try:
+            os.makedirs(d)
+        except OSError:
+            pass
 
 # Make some settings read-only
 root.common.protect("cache_dir", "snapshot_dir", "pickles_compression",
