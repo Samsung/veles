@@ -164,6 +164,7 @@ class Publisher(Unit, TriviallyDistributable):
             "name": self.workflow.name,
             "description": self.workflow.__doc__,
             "id": self.launcher.id,
+            "loader": self.loader_unit,
             "python": "%s %s" % (platform.python_implementation(),
                                  platform.python_version()),
             "pid": os.getpid(),
