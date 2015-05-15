@@ -101,7 +101,7 @@ target namespace.
 import imp
 
 try:
-    from .exec import Exec
+    from .exec1 import Exec
 except:
     from .exec2 import Exec
 from .dont_trace import clear_trace_filter_cache
