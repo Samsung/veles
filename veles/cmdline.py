@@ -97,16 +97,15 @@ class CommandLineBase(object):
                    (" Version \033[1;36m%s\033[0m" % veles.__version__) + \
                    (" %s\n" % formatdate(veles.__date__, True)) + \
                    "\033" r"[1;32m| | | | |__ | |   | |__ \ `--.  " \
-                   "\033[0m" + ("\033[0;37m Copyright %s\033[0m\n" %
-                                veles.__copyright__) + \
+                   "\033[0m\033[0;37m %s\033[0m\n" % veles.__logo_ext__[0] + \
                    "\033" r"[1;32m| | | |  __|| |   |  __| `--. \ " "\033[0m" \
-                   "\033[0;37m All rights reserved. Any unauthorized use of" \
+                   "\033[0;37m %s" % veles.__logo_ext__[1] + \
                    "\033[0m\n" \
                    "\033" r"[1;32m\ \_/ / |___| |___| |___/\__/ / " "\033[0m" \
-                   "\033[0;37m this software is strictly prohibited and is" \
+                   "\033[0;37m %s" % veles.__logo_ext__[2] + \
                    "\033[0m\n" \
                    "\033" r"[1;32m \___/\____/\_____|____/\____/  " "\033[0m" \
-                   "\033[0;37m a subject of your country's laws.\033[0m\n"
+                   "\033[0;37m %s\033[0m\n" % veles.__logo_ext__[3]
 
     LOGO = LOGO_COLORED if is_interactive() else LOGO_PLAIN
     DRY_RUN_CHOICES = ["load", "init", "exec", "no"]

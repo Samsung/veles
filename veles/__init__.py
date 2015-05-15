@@ -67,19 +67,24 @@ except Exception as ex:
     __git__ = None
     __date__ = None
 
+__logo_ext__ = ("Copyright %s" % __copyright__,
+                "Released under Apache 2.0 license.",
+                "https://velesnet.ml",
+                "https://github.com/samsung/veles/issues")
+
 __logo__ = \
     r" _   _ _____ _     _____ _____  " "\n" \
     r"| | | |  ___| |   |  ___/  ___| " + \
-    (" Version %s" % __version__) + \
+    (" Version %s." % __version__) + \
     (" %s\n" % formatdate(__date__, True)) + \
     r"| | | | |__ | |   | |__ \ `--.  " + \
-    (" Copyright %s\n" % __copyright__) + \
-    r"| | | |  __|| |   |  __| `--. \ " \
-    " All rights reserved. Any unauthorized use of\n" \
-    r"\ \_/ / |___| |___| |___/\__/ / " \
-    " this software is strictly prohibited and is\n" \
+    (" %s\n" % __logo_ext__[0]) + \
+    r"| | | |  __|| |   |  __| `--. \ " + \
+    (" %s\n" % __logo_ext__[1]) + \
+    r"\ \_/ / |___| |___| |___/\__/ / " + \
+    (" %s\n" % __logo_ext__[2]) + \
     r" \___/\____/\_____|____/\____/  " \
-    " a subject of your country's laws.\n"
+    " %s\n" % __logo_ext__[3]
 
 if "sphinx" in modules:
     __doc__ %= "| %s\n      | Version %s %s\n      | %s\n\n      Authors:" \
