@@ -111,7 +111,9 @@ class GraphicsClient(Logger):
                                               self._sigusr2_handler)
 
     def __del__(self):
-        signal.signal(signal.SIGINT, self._sigint_initial)
+        sigint_initial = getattr(self, "_sigint_initial", None)
+        if sigint_initial is not None:
+            signal.signal(signal.SIGINT, sigint_initial)
 
     def run(self):
         """Creates and runs main graphics window.

@@ -85,8 +85,9 @@ class DeviceInfo(Logger):
         self.rating = {}
         self.device_info = {}
 
-    def get_block_size(self, **kwargs):
-        """Gets optimal block size for matrix multiplication.
+    def get_kernel_bs_vo(self, **kwargs):
+        """Gets optimal block size and vector_opt
+        flag for matrix multiplication.
 
         Parameters:
             dtype: numeric data type as string (float or double).
@@ -99,7 +100,7 @@ class DeviceInfo(Logger):
                        (defaults to root.common.precision_level).
 
         Returns:
-            BLOCK_SIZE
+            BLOCK_SIZE, VECTOR_OPT
         """
         dtype = kwargs["dtype"]
         if type(dtype) != str:
@@ -110,7 +111,6 @@ class DeviceInfo(Logger):
         if krninfo is None:
             # Benchmark for other kernel types is not implemented,
             # so only debug level here
-            # TODO(a.kazantsev): implement benchmark for conv and deconv.
             self.debug(
                 "Kernel \"%s\" was not found, "
                 "rolling back to block size for matrix_multiplication",
@@ -122,14 +122,14 @@ class DeviceInfo(Logger):
                 self.warning(
                     "krnnme = %s was not found, "
                     "will use block size %d", krnnme, bs)
-                return bs
+                return bs, False
         typeinfo = krninfo.get(dtype)
         if typeinfo is None:
             bs = 8
             self.warning(
                 "dtype = %s was not found with krnnme = %s, "
                 "will use block size %d", dtype, krnnme, bs)
-            return bs
+            return bs, False
         bs_dt = typeinfo.get(str(precision))
         while bs_dt is None and precision > 0:
             precision -= 1
@@ -139,17 +139,17 @@ class DeviceInfo(Logger):
             self.warning(
                 "precision = 0 was not found with krnnme = %s and dtype = %s, "
                 "will use block size %d", krnnme, dtype, bs)
-            return bs
-        return bs_dt[0]
+            return bs, False
+        return bs_dt[0], bs_dt[1]
 
-    def get_max_block_size(self, dtype):
+    def get_max_block_size(self, dtype, vector_opt):
         itemsize = {"float": 4, "double": 8}[dtype]
         sz = int(numpy.sqrt(self.max_work_group_size))
         sh = self.max_work_item_sizes
         bs = min(sz, sh[0], sh[1])
         while bs * bs * 2 * itemsize > self.local_memsize:
             bs -= 1
-        if self.vector_opt:  # round down to 4
+        if vector_opt:  # round down to 4
             bs >>= 2
             bs <<= 2
         return bs
@@ -157,10 +157,6 @@ class DeviceInfo(Logger):
     @property
     def is_cpu(self):
         return self.device_type == cl.CL_DEVICE_TYPE_CPU
-
-    @property
-    def vector_opt(self):
-        return self.is_cpu
 
 
 class DeviceNotFoundError(Exception):
@@ -429,19 +425,20 @@ class OpenCLDevice(Device):
         self._fill_device_info_performance_values()
         log_configs = "Selected the following OpenCL configuration:\n"
         table = prettytable.PrettyTable("device", " dtype", "rating",
-                                        "BLOCK_SIZE", "version")
+                                        "BLOCK_SIZE", "VECTOR_OPT", "version")
         table.align["device"] = "l"
         table.align[" dtype"] = "l"
-        table.align["BLOCK_SIZES"] = "l"
+        table.align["BLOCK_SIZE"] = "l"
+        table.align["VECTOR_OPT"] = "l"
         for dtype in sorted(opencl_types.dtypes.keys()):
             rating = self.device_info.rating.get(dtype)
             if rating is None:
                 rating = ""
             else:
                 rating = "%.3f" % rating
+            bs_vo = self.device_info.get_kernel_bs_vo(dtype=dtype)
             table.add_row(self.device_info.desc, dtype, rating,
-                          self.device_info.get_block_size(dtype=dtype),
-                          self.device_info.version)
+                          bs_vo[0], bs_vo[1], self.device_info.version)
         self.info(log_configs + str(table))
 
     @property
@@ -487,11 +484,11 @@ class OpenCLDevice(Device):
                 continue
             devdt[desc] = {}
             for dtype, typeinfo in krninfo.items():
-                bsdt = typeinfo.get("0")
-                if bsdt is None:
+                bs_vo_dt = typeinfo.get("0")
+                if bs_vo_dt is None or len(bs_vo_dt) < 3:
                     continue
-                devdt[desc][dtype] = bsdt[1]
-                min_dt[dtype] = min(min_dt.get(dtype, 1.0e30), bsdt[1])
+                devdt[desc][dtype] = bs_vo_dt[2]
+                min_dt[dtype] = min(min_dt.get(dtype, 1.0e30), bs_vo_dt[2])
 
         table = prettytable.PrettyTable("device", " dtype", "rating")
         table.align["device"] = "l"
@@ -550,8 +547,7 @@ class OpenCLDevice(Device):
 
             subprocess.Popen = fail
         device = context.devices[0]
-        desc = "%s/%s/%d" % (device.vendor.strip(), device.name.strip(),
-                             device.vendor_id)
+        desc = "%s/%s" % (device.vendor.strip(), device.name.strip())
         self.queue_ = context.create_queue(device)
         self.device_info = DeviceInfo(
             desc=desc, memsize=device.memsize,
@@ -566,20 +562,20 @@ class OpenCLDevice(Device):
         device_infos = {}
         found_any = False
         for devdir in root.common.engine.device_dirs:
-            if not os.path.exists(devdir):
-                try:
-                    os.makedirs(devdir, 0o755)
-                except:
-                    pass
+            try:
+                os.makedirs(devdir, 0o755)
+            except OSError:
+                pass
             device_infos_fnme = os.path.join(devdir,
                                              OpenCLDevice.DEVICE_INFOS_JSON)
-            if os.access(device_infos_fnme, os.R_OK):
-                try:
-                    with open(device_infos_fnme, "r") as fin:
-                        device_infos.update(json.load(fin))
-                    found_any = True
-                except:
-                    self.exception("Failed to load %s", device_infos_fnme)
+            try:
+                with open(device_infos_fnme, "r") as fin:
+                    device_infos.update(json.load(fin))
+                found_any = True
+            except OSError:
+                pass
+            except ValueError as e:
+                self.warning("Failed to load %s: %s", device_infos_fnme, e)
         if not found_any:
             self.warning("Did not find %s in any of the configured paths: %s",
                          OpenCLDevice.DEVICE_INFOS_JSON,
@@ -592,15 +588,17 @@ class OpenCLDevice(Device):
                          "quick test now.", "Forced device retest"
                          if self.device_info.desc in device_infos
                          else "Device has not been analyzed yet")
-            self._find_optimal_block_size(device_infos)
+            self._find_optimal_bs_vo(device_infos)
             found_any = False
             for devdir in root.common.engine.device_dirs:
                 device_infos_fnme = os.path.join(
                     devdir, OpenCLDevice.DEVICE_INFOS_JSON)
-                if os.access(device_infos_fnme, os.W_OK):
+                try:
                     with open(device_infos_fnme, "w") as fout:
                         json.dump(device_infos, fout, indent=2, sort_keys=True)
                     found_any = True
+                except OSError:
+                    pass
             if not found_any:
                 self.warning("Unable to save the analysis results to any of "
                              "the configured paths: %s",
@@ -609,56 +607,65 @@ class OpenCLDevice(Device):
         if self.device_info.desc in device_infos:
             self.device_info.device_info = device_infos[self.device_info.desc]
 
-    def _find_optimal_block_size(self, device_infos):
-        device_info = {}
+    def _find_optimal_bs_vo(self, device_infos):
+        device_info = device_infos.get(self.device_info.desc, {})
         krnnme = "matrix_multiplication"
-        device_info[krnnme] = {}
+        if krnnme not in device_info:
+            device_info[krnnme] = {}
         from veles.dummy import DummyWorkflow
         # FIXME(v.markovtsev): disable R0401 locally when pylint issue is fixed
         # https://bitbucket.org/logilab/pylint/issue/61
         # pylint: disable=R0401
         opencl_units = import_module("veles.accelerated_units")
         benchmark = opencl_units.DeviceBenchmark
-        for dtype in sorted(opencl_types.dtypes.keys()):
-            device_info[krnnme][dtype] = {}
-            for precision_level in ("0", "1", "2"):  # json wants strings
+        for dtype in root.common.engine.test_precision_types:
+            if dtype not in device_info[krnnme]:
+                device_info[krnnme][dtype] = {}
+            # json wants strings
+            for precision_level in (
+                    str(p) for p in root.common.engine.test_precision_levels):
                 min_dt = 1.0e30
-                max_block_size = self.device_info.get_max_block_size(dtype)
-                min_block_size = 8
-                if self.device_info.vector_opt:
-                    min_block_size >>= 2
-                    min_block_size <<= 2
-                    bs_inc = 4
-                else:
-                    bs_inc = 1
-                for block_size in range(min_block_size, max_block_size + 1,
-                                        bs_inc):
-                    self.info(
-                        "Testing %s dtype=%s precision_level=%s block_size=%d",
-                        krnnme, dtype, precision_level, block_size)
-                    try:
-                        with DummyWorkflow() as wf:
-                            u = benchmark(
-                                wf, size=3001, repeats=3,
-                                dtype=dtype, precision_level=precision_level,
-                                block_size=block_size,
-                                return_time=True, dry_run_first=True)
-                            u.initialize(self)
-                            dt = u.run()
-                    except cl.CLRuntimeError as e:
-                        self.exception("Failed to evaluate block size %d",
-                                       block_size)
-                        if e.code == -5:  # CL_OUT_OF_RESOURCES
-                            break
-                        else:
-                            continue
-                    finally:
-                        gc.collect()
-                    if dt < min_dt:
-                        min_dt = dt
-                        min_block_size = block_size
-                device_info[krnnme][dtype][precision_level] = (
-                    min_block_size, min_dt)
+                for vector_opt in (False, True):
+                    max_block_size = self.device_info.get_max_block_size(
+                        dtype, vector_opt)
+                    min_block_size = 8
+                    if int(vector_opt):
+                        min_block_size >>= 2
+                        min_block_size <<= 2
+                        bs_inc = 4
+                    else:
+                        bs_inc = 1
+                    for block_size in range(min_block_size, max_block_size + 1,
+                                            bs_inc):
+                        self.info(
+                            "Testing %s dtype=%s precision_level=%s "
+                            "block_size=%d vector_opt=%s",
+                            krnnme, dtype, precision_level,
+                            block_size, vector_opt)
+                        try:
+                            with DummyWorkflow() as wf:
+                                u = benchmark(
+                                    wf, size=3001, repeats=3,
+                                    dtype=dtype,
+                                    precision_level=precision_level,
+                                    block_size=block_size,
+                                    vector_opt=vector_opt,
+                                    return_time=True, dry_run_first=True)
+                                u.initialize(self)
+                                dt = u.run()
+                        except cl.CLRuntimeError as e:
+                            self.exception("Failed to evaluate block size %d",
+                                           block_size)
+                            if e.code == -5:  # CL_OUT_OF_RESOURCES
+                                break
+                            else:
+                                continue
+                        finally:
+                            gc.collect()
+                        if dt < min_dt:
+                            min_dt = dt
+                            device_info[krnnme][dtype][precision_level] = (
+                                block_size, bool(int(vector_opt)), min_dt)
         device_infos[self.device_info.desc] = device_info
 
 

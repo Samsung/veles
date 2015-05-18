@@ -28,6 +28,7 @@ encoding//veles/external/progressbar/compat.py=utf-8
 encoding//veles/external/progressbar/progressbar.py=utf-8
 encoding//veles/external/progressbar/widgets.py=utf-8
 encoding//veles/external/pydot.py=latin1
+encoding//veles/genetics/config.py=utf-8
 encoding//veles/loader/base.py=utf-8
 encoding//veles/logger.py=utf-8
 encoding//veles/memory.py=utf-8

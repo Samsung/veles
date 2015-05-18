@@ -230,6 +230,8 @@ root.common.update({
         "backend": "auto",
         "test_known_device": False,
         "test_unknown_device": True,
+        "test_precision_types": ("float", "double"),
+        "test_precision_levels": (0, 1),
         "thread_pool": {
             "minthreads": 2,
             "maxthreads": 2,
@@ -250,7 +252,7 @@ root.common.update({
                         os.environ.get("VELES_DEVICE_DIRS", "./")],
         "ocl": {
             # Use clBLAS if it is available
-            "clBLAS": True
+            "clBLAS": False
         }
     }
 })

@@ -181,10 +181,11 @@ class OCLBLAS(Logger):
                dtype)
         krn_info = self.kernels.get(key)
         if krn_info is None:
-            block_size = self.device.device_info.get_block_size(
+            block_size, vector_opt = self.device.device_info.get_kernel_bs_vo(
                 kernel="matrix_multiplication", dtype=dtype)
             defines = {
                 "BLOCK_SIZE": block_size,
+                "VECTOR_OPT": int(bool(vector_opt)),
                 "B_WIDTH": rowsCountA,
                 "A_WIDTH": columnCountB,
                 "AB_COMMON": commonSideLength

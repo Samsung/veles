@@ -444,9 +444,6 @@ class AcceleratedUnit(Unit):
         my_defines.update(opencl_types.cl_defines[dtype])
         if "PRECISION_LEVEL" not in my_defines:
             my_defines["PRECISION_LEVEL"] = root.common.precision_level
-        if ("VECTOR_OPT" not in my_defines and
-                isinstance(self.device, OpenCLDevice)):
-            my_defines["VECTOR_OPT"] = self.device.device_info.vector_opt
         if "GPU_FORCE_64BIT_PTR" not in my_defines:  # for AMD
             my_defines["GPU_FORCE_64BIT_PTR"] = os.getenv(
                 "GPU_FORCE_64BIT_PTR", 1)
@@ -680,6 +677,7 @@ class DeviceBenchmark(AcceleratedUnit):
         self._input_A_.mem = genmem()
         self._input_B_.mem = genmem()
         self.block_size = kwargs.get("block_size")
+        self.vector_opt = kwargs.get("vector_opt")
         self.precision_level = kwargs.get("precision_level",
                                           root.common.precision_level)
         self.return_time = kwargs.get("return_time", False)
@@ -696,11 +694,17 @@ class DeviceBenchmark(AcceleratedUnit):
                 self.size, self.size)
 
     def ocl_init(self):
-        self.block_size = self.device.device_info.get_block_size(
-            kernel="matrix_multiplication", dtype=self.precision)
+        if self.block_size is None or self.vector_opt is None:
+            bs_vo = self.device.device_info.get_kernel_bs_vo(
+                kernel="matrix_multiplication", dtype=self.precision)
+        if self.block_size is None:
+            self.block_size = bs_vo[0]
+        if self.vector_opt is None:
+            self.vector_opt = bs_vo[1]
         self.sources_["benchmark"] = {}
         defines = {
             "BLOCK_SIZE": self.block_size,
+            "VECTOR_OPT": int(bool(self.vector_opt)),
             "SIZE": self.size,
             "PRECISION_LEVEL": self.precision_level}
         self.build_program(defines, dtype=self.precision)

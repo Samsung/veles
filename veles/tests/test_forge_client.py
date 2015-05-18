@@ -52,7 +52,7 @@ from twisted.internet.error import CannotListenError
 from twisted.web.server import Site, Request
 from twisted.web.resource import Resource
 
-from veles import __root__, __plugins__, __version__
+from veles import __root__, __plugins__, __version__, __versioninfo__
 from veles.config import root
 from veles.forge.forge_client import ForgeClient
 
@@ -457,17 +457,14 @@ Successfully deleted First
 
     @sync
     def test_upload_good(self):
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         this = self
         print(root.common.forge.manifest)
         print(os.path.join(__root__, "veles/tests/forge/First/%s" %
                            root.common.forge.manifest))
         manifest_size = os.path.getsize(
             os.path.join(__root__, "veles/tests/forge/First/%s" %
-                         root.common.forge.manifest)) + 1
-        # "+ 1" is present because of the UTF-8 signature, see
-        # metabytes = json.dumps(metadata, sort_keys = True).encode('UTF-8')
-        # inside ForgeClient.upload.ForgeBodyProducer.startProducing
+                         root.common.forge.manifest)) + 1 + \
+            len("".join(map(str, __versioninfo__))) - 3
 
         class UploadPage(Resource):
             def render_POST(self, request):
