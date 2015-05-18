@@ -49,7 +49,7 @@ from veles.compat import is_interactive
 from veles.paths import __root__
 
 __project__ = "Veles Machine Learning Platform"
-__versioninfo__ = 0, 8, 9
+__versioninfo__ = 0, 8, 10
 __version__ = ".".join(map(str, __versioninfo__))
 __license__ = "Samsung Proprietary License"
 __copyright__ = u"© 2013 Samsung Electronics Co., Ltd."
