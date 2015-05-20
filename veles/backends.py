@@ -572,7 +572,7 @@ class OpenCLDevice(Device):
                 with open(device_infos_fnme, "r") as fin:
                     device_infos.update(json.load(fin))
                 found_any = True
-            except OSError:
+            except IOError:
                 pass
             except ValueError as e:
                 self.warning("Failed to load %s: %s", device_infos_fnme, e)
@@ -597,7 +597,7 @@ class OpenCLDevice(Device):
                     with open(device_infos_fnme, "w") as fout:
                         json.dump(device_infos, fout, indent=2, sort_keys=True)
                     found_any = True
-                except OSError:
+                except IOError:
                     pass
             if not found_any:
                 self.warning("Unable to save the analysis results to any of "
