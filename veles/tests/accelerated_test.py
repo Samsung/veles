@@ -37,9 +37,13 @@ def multi_device(numpy=False):
                 res = fn(self)
 
                 # Garbage collection
+                if PY3:
+                    Vector.reset_all()
                 self.parent = self.getParent()
                 self.device = None
                 gc.collect()
+                if PY3:
+                    assert len(gc.garbage) == 0, str(gc.garbage)
 
                 if res:
                     break
