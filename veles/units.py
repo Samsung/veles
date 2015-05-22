@@ -779,6 +779,7 @@ class Unit(Distributable, Verified):
 
     def _track_call(self, fn, name):
         def wrapped_track_call(*args, **kwargs):
+            # The order is important!
             res = fn(*args, **kwargs)
             setattr(self, name, True)
             return res

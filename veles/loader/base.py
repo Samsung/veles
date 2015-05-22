@@ -629,7 +629,7 @@ class Loader(Unit):
         if self.shuffled_indices.mem is None:
             self.shuffled_indices.mem = numpy.arange(
                 self.total_samples, dtype=Loader.INDEX_DTYPE)
-        if self.shuffle_limit <= 0:
+        if self.shuffle_limit <= 0 or self.class_lengths[TRAIN] == 0:
             return
         self.shuffle_limit -= 1
         self.debug("Shuffling, remaining limit is %d", self.shuffle_limit)

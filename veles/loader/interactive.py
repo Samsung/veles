@@ -114,14 +114,16 @@ class InteractiveLoader(Loader):
                 obj.close()
         else:
             food = obj
-        if not isinstance(food, numpy.ndarray):
+        if not isinstance(food, tuple):
+            food = food,
+        if not isinstance(food[0], numpy.ndarray):
             raise ValueError(
                 "Do not know how to digest this food type: %s", type(food))
         self._feed(food)
         self._event.set()
 
     def _feed(self, obj):
-        self.minibatch_data.mem[0] = obj
+        self.minibatch_data.mem[0] = obj[0]
 
     def _load_from_stream(self, stream):
         try:
@@ -139,8 +141,7 @@ class InteractiveLoader(Loader):
             stream.seek(0)
         try:
             img = Image.open(stream)
-            self._food_color_space = MODE_COLOR_MAP[img.mode]
-            return numpy.array(img)
+            return numpy.array(img), MODE_COLOR_MAP[img.mode]
         except Exception as e:
             self.debug("Not an image file: %s", e)
             stream.seek(0)
@@ -218,8 +219,8 @@ class InteractiveImageLoader(InteractiveLoader, ImageLoader):
         InteractiveLoader.fill_minibatch(self)
 
     def _feed(self, data):
-        color = getattr(self, "_food_color_space", self.color_space)
+        color = data[1] if len(data) > 1 else self.color_space
+        data = data[0]
         bbox = ImageLoader.get_image_bbox(self, None, data.shape[:2])
         self.minibatch_data.mem[0], _, _ = self.preprocess_image(
             data, color, True, bbox)
-        del self._food_color_space

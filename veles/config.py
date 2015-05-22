@@ -216,6 +216,10 @@ root.common.update({
         "root": "/usr/share/veles/web",
         "drop_time": 30 * 24 * 3600,
     },
+    "api": {
+        "port": 8180,
+        "path": "/api"
+    },
     "forge": {
         "service_name": "service",
         "upload_name": "upload",
