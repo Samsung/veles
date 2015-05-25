@@ -872,6 +872,10 @@ class CUDNNDevice(CUDADevice):
 
         self.info("Will use CUDNN where applicable")
 
+    @property
+    def cudnn(self):
+        return self._cudnn_
+
 
 @add_metaclass(BackendRegistry)
 class NumpyDevice(Device):

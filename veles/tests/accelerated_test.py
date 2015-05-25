@@ -21,6 +21,7 @@ from veles.logger import Logger
 if PY3:
     from veles.memory import Array
 from veles.opencl_types import dtypes
+from veles.units import Unit
 
 
 def multi_device(numpy=False):
@@ -39,9 +40,12 @@ def multi_device(numpy=False):
                 # Garbage collection
                 if PY3:
                     Array.reset_all()
-                self.parent = self.getParent()
+                self.parent = None
                 self.device = None
                 gc.collect()
+                Unit.reset_thread_pool()
+                gc.collect()
+                self.parent = self.getParent()
                 if PY3:
                     assert len(gc.garbage) == 0, str(gc.garbage)
 
