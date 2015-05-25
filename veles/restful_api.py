@@ -66,10 +66,24 @@ class APIResource(Resource):
                 message="Unsupported Content-Type (must be \"application/json"
                         "\")" % request.URLPath())
             return page.render(request)
-        request.setHeader(b"User-Agent", [b"twisted"])
-        request.setHeader(b"Content-Type", [b"application/json"])
+        request.setHeader(b"Content-Type", b"application/json")
         self._callback(request)
         return NOT_DONE_YET
+
+
+class NumpyJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, numpy.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, numpy.number):
+            return obj.item()
+        elif isinstance(obj, (complex, numpy.complex)):
+            return [obj.real, obj.imag]
+        elif isinstance(obj, set):
+            return list(obj)
+        elif isinstance(obj, bytes):
+            return obj.decode("charmap")
+        return json.JSONEncoder.default(self, obj)
 
 
 @implementer(IUnit, IDistributable)
@@ -115,7 +129,8 @@ class RESTfulAPI(Unit, TriviallyDistributable):
                                       0, self.minibatch_size):
             if request is None:
                 continue
-            request.write(json.dumps({"result": result}).encode("utf-8"))
+            request.write(json.dumps({"result": result},
+                                     cls=NumpyJSONEncoder).encode("utf-8"))
             request.finish()
 
     def fail(self, request, message):

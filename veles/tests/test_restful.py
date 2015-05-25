@@ -79,8 +79,9 @@ class RESTAPITest(unittest.TestCase):
         base_loader.minibatch_data = numpy.zeros((10, 10, 10))
         loader = RestfulLoader(workflow, loader=base_loader, minibatch_size=1)
         loader.link_from(api)
+        workflow.del_ref(base_loader)
         api.link_attrs(loader, "feed", "requests", "minibatch_size")
-        api.results = ["result OK"]
+        api.results = [numpy.ones((3, 3))]
         repeater.link_from(loader)
         workflow.end_point.link_from(api).unlink_from(workflow.start_point)
         workflow.end_point.gate_block <<= True
@@ -122,8 +123,9 @@ class RESTAPITest(unittest.TestCase):
         self.assertIsNotNone(response[0])
         self.assertEqual(response[0].code, 200)
         # We should use deliverBody here, but the response is small enough
-        self.assertEqual(response[0]._bodyBuffer[0],
-                         b'{"result": "result OK"}')
+        self.assertEqual(
+            response[0]._bodyBuffer[0],
+            b'{"result": [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]}')
 
 
 if __name__ == "__main__":
