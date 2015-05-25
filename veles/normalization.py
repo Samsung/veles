@@ -157,9 +157,7 @@ class NormalizerBase(Verified):
         Returns all instance attributes except _initialized and _cache.
         """
         assert self._initialized
-        return {k: v for k, v in self.__dict__.items()
-                if k not in ("_initialized", "_cache", "_logger_")
-                and not hasattr(v, "__call__")}
+        return self._get_state()
 
     def __setattr__(self, key, value):
         if getattr(self, "_initialized", False) and key not in self.__dict__:
@@ -169,7 +167,7 @@ class NormalizerBase(Verified):
         super(NormalizerBase, self).__setattr__(key, value)
 
     def __getstate__(self):
-        state = self.state
+        state = self._get_state()
         state.update(super(NormalizerBase, self).__getstate__())
         if "_cache" in state:
             del state["_cache"]
@@ -190,6 +188,11 @@ class NormalizerBase(Verified):
     def prepare(data):
         return transpose(reshape(
             data, (data.shape[0], data.size // data.shape[0])))
+
+    def _get_state(self):
+        return {k: v for k, v in self.__dict__.items()
+                if k not in ("_initialized", "_cache", "_logger_")
+                and not hasattr(v, "__call__")}
 
 
 class StatelessNormalizer(NormalizerBase):

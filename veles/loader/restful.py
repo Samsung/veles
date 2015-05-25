@@ -54,8 +54,6 @@ class RestfulLoader(Loader):
 
     def __init__(self, workflow, **kwargs):
         super(RestfulLoader, self).__init__(workflow, **kwargs)
-        self._event = threading.Event()
-        self._event.clear()
         loader = kwargs["loader"]
         self._minibatch_data_shape = (self.max_minibatch_size,) + \
             loader.minibatch_data.shape[1:]
@@ -66,11 +64,16 @@ class RestfulLoader(Loader):
         self._labels_mapping = loader.labels_mapping
         self.complete = Bool(False)
         self.max_response_time = kwargs.get("max_response_time", 0.1)
-        self._minibatch_size_ = 0
-        self._lock = threading.Lock()
-        self._flusher = LoopingCall(self.locked_flush)
-        self._requests = [None] * self.max_minibatch_size
+        self._requests = []
         self.derive_from(loader)
+
+    def init_unpickled(self):
+        super(RestfulLoader, self).init_unpickled()
+        self._event_ = threading.Event()
+        self._event_.clear()
+        self._lock_ = threading.Lock()
+        self._flusher_ = LoopingCall(self.locked_flush)
+        self._minibatch_size_ = 0
 
     @property
     def max_response_time(self):
@@ -99,7 +102,9 @@ class RestfulLoader(Loader):
     def load_data(self):
         self.class_lengths[TEST] = self.max_minibatch_size
         self.class_lengths[TRAIN] = self.class_lengths[VALID] = 0
-        self._flusher.start(self.max_response_time)
+        del self._requests[:]
+        self._requests.extend((None,) * self.max_minibatch_size)
+        self._flusher_.start(self.max_response_time)
 
     def create_minibatch_data(self):
         self.minibatch_data.reset(numpy.zeros(
@@ -108,17 +113,17 @@ class RestfulLoader(Loader):
     def fill_minibatch(self):
         self._minibatch_size_ = 0
         try:
-            self._event.wait()
+            self._event_.wait()
         finally:
-            self._event.clear()
+            self._event_.clear()
 
     def stop(self):
-        self._flusher.stop()
-        self._event.set()
+        self._flusher_.stop()
+        self._event_.set()
 
     def feed(self, obj, request):
         assert isinstance(obj, numpy.ndarray)
-        with self._lock:
+        with self._lock_:
             self._feed(obj, request)
             self.requests[self._minibatch_size_] = request
             self._minibatch_size_ += 1
@@ -126,12 +131,12 @@ class RestfulLoader(Loader):
                 self.flush()
 
     def locked_flush(self):
-        with self._lock:
+        with self._lock_:
             self.flush()
 
     def flush(self):
         if self._minibatch_size_ > 0:
-            self._event.set()
+            self._event_.set()
 
     def _feed(self, obj, request):
         self.minibatch_data.mem[self._minibatch_size_] = obj

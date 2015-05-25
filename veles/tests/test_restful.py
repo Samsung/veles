@@ -48,6 +48,7 @@ from veles.dummy import DummyWorkflow
 from veles.loader import Loader, ILoader
 from veles.loader.restful import RestfulLoader
 from veles.logger import Logger
+from veles.pickle2 import pickle
 from veles.plumbing import Repeater
 from veles.restful_api import RESTfulAPI
 from veles.tests import timeout
@@ -126,6 +127,24 @@ class RESTAPITest(unittest.TestCase):
         self.assertEqual(
             response[0]._bodyBuffer[0],
             b'{"result": [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]}')
+
+    def test_pickling(self):
+        workflow = DummyWorkflow()
+        port = 6565 + randint(-1000, 1000)
+        api = RESTfulAPI(workflow, port=port)
+        base_loader = DummyLoader(workflow)
+        base_loader.minibatch_data = numpy.zeros((10, 10, 10))
+        loader = RestfulLoader(workflow, loader=base_loader, minibatch_size=1)
+        workflow.del_ref(base_loader)
+        api.link_attrs(loader, "feed", "requests", "minibatch_size")
+        api.results = [numpy.ones((3, 3))]
+        api.initialize(snapshot=False)
+        new_api = pickle.loads(pickle.dumps(api))
+        self.assertIsInstance(new_api.results, list)
+        self.assertEqual(len(new_api.results), 1)
+        self.assertTrue((new_api.results[0] == numpy.ones((3, 3))).all())
+        self.assertIsInstance(new_api.requests, list)
+        self.assertEqual(len(new_api.requests), 0)
 
 
 if __name__ == "__main__":
