@@ -40,8 +40,7 @@ import numpy
 import time
 from zope.interface import implementer
 
-import veles.error as error
-import veles.memory as formats
+from veles.memory import Array
 from veles.compat import from_none
 from veles.distributable import IDistributable
 from veles.mutable import Bool
@@ -402,7 +401,7 @@ class ImagePlotter(Plotter):
                         value = self.inputs[i][input_field]
                 else:
                     value = self.inputs[i].__dict__[input_field]
-                    if isinstance(self.inputs[i], formats.Vector):
+                    if isinstance(self.inputs[i], Array):
                         value = value[0]
                 pics_to_draw.append(self._prepare_image(value)
                                     if type(value) == numpy.ndarray
@@ -560,7 +559,7 @@ class Histogram(Plotter):
         # ax.patch.set_alpha(0.45)
 
         if len(self.x) != len(self.y):
-            raise error.BadFormatError(
+            raise ValueError(
                 "Shape of X %s not equal shape of Y %s !" %
                 (len(self.x), len(self.y)))
         ymax = numpy.max(self.y) * 1.3
@@ -658,8 +657,8 @@ class MultiHistogram(Plotter):
         self.limit = limit
         self.pp = None
         self.show_figure = nothing
-        self.input = None  # formats.Vector()
-        self.value = formats.Vector()
+        self.input = None  # Array()
+        self.value = Array()
         self.n_bars = n_bars
         self.hist_number = hist_number
 
@@ -748,7 +747,7 @@ class TableMaxMin(Plotter):
         self.row_labels = ["max", "min"]
         self.col_labels = []
         self.y = []
-        self.values = formats.Vector()
+        self.values = Array()
         self.pp = None
         self.show_figure = nothing
 
@@ -779,7 +778,7 @@ class TableMaxMin(Plotter):
 
     def fill(self):
         if len(self.col_labels) != len(self.y):
-            raise error.BadFormatError(
+            raise ValueError(
                 "Shape of col_names %s not equal shape of Y %s !" %
                 (len(self.col_labels), len(self.y)))
         for i, y in enumerate(self.y):

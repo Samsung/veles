@@ -49,7 +49,7 @@ from veles.loader.image import ImageLoader
 from veles.loader.file_image import \
     FileListImageLoader, AutoLabelFileImageLoader, FileImageLoader
 from veles.loader.image_mse import ImageLoaderMSEMixin, FileImageLoaderMSEMixin
-from veles.memory import Vector
+from veles.memory import Array
 
 
 @implementer(IFullBatchLoader)
@@ -58,7 +58,7 @@ class FullBatchImageLoader(ImageLoader, FullBatchLoader):
     """
     def __init__(self, workflow, **kwargs):
         super(FullBatchImageLoader, self).__init__(workflow, **kwargs)
-        self.original_label_values = Vector()
+        self.original_label_values = Array()
 
     class DistortionIterator(object):
         def __init__(self, data, loader):

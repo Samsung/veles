@@ -37,8 +37,6 @@ under the License.
 
 import numpy
 
-import veles.error as error
-
 
 # : CL type defines
 cl_defines = {"float":      {"dtype": "float",
@@ -77,4 +75,4 @@ def numpy_dtype_to_opencl(dtype):
         return "uint"
     if dtype == numpy.uint64:
         return "ulong"
-    raise error.NotExistsError()
+    raise ValueError("Unknown dtype: %s" % dtype)

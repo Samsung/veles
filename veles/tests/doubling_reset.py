@@ -35,12 +35,12 @@ under the License.
 
 
 import numpy
-from veles.memory import Vector, assert_addr
+from veles.memory import Array, assert_addr
 
 
 def patch(self, instance, shape_func, dtype_func):
     def doubling_reset(mem=None):
-        Vector.reset(instance, mem)
+        Array.reset(instance, mem)
         if mem is None:
             return
         instance_name = None

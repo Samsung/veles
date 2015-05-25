@@ -48,7 +48,7 @@ import veles.error as error
 from veles.external.progressbar import ProgressBar
 from veles.loader.base import CLASS_NAME, ILoader, Loader, \
     TRAIN, VALID, TEST, LoaderError
-from veles.memory import Vector
+from veles.memory import Array
 from veles.prng import RandomGenerator
 
 
@@ -138,7 +138,7 @@ class ImageLoader(Loader):
         self.background_color = kwargs.get(
             "background_color", (0xff, 0x14, 0x93))
         self.smart_crop = kwargs.get("smart_crop", True)
-        self.minibatch_label_values = Vector()
+        self.minibatch_label_values = Array()
 
     @property
     def source_dtype(self):

@@ -47,7 +47,6 @@ import sys
 import time
 
 from veles.compat import from_none, is_interactive
-from veles.error import Bug
 from veles.external.daemon import redirect_stream
 from veles.external.progressbar import ProgressBar
 from veles.paths import __root__
@@ -326,4 +325,4 @@ class MongoLogHandler(logging.Handler):
         try:
             self._collection.insert(data, w=0)
         except bson.errors.InvalidDocument:
-            raise Bug("bson failed to encode %s" % data)
+            raise TypeError("bson failed to encode %s" % data)

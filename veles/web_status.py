@@ -45,20 +45,15 @@ from six import print_
 import socket
 import sys
 import time
-
 from tornado.escape import json_decode
 import tornado.gen as gen
 from tornado.ioloop import IOLoop, PeriodicCallback
 import tornado.web as web
 
+from veles.compat import PermissionError, BrokenPipeError
 from veles.config import root
-from veles.error import AlreadyExistsError
 import veles.external.daemon as daemon
 from veles.logger import Logger
-
-if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
-    PermissionError = IOError  # pylint: disable=W0622
-    BrokenPipeError = OSError  # pylint: disable=W0622
 
 
 debug_mode = True
@@ -298,7 +293,7 @@ if __name__ == "__main__":
                 print_("Detected a stale lock file %s" % real_pidfile,
                        file=sys.stderr)
             else:
-                raise AlreadyExistsError(full_pidfile)
+                raise FileExistsError(full_pidfile)
         print("Daemonizing, PID will be referenced by ", full_pidfile)
         try:
             sys.stdout.flush()

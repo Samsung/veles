@@ -41,7 +41,7 @@ import os
 from veles.accelerated_units import TrivialAcceleratedUnit
 from veles.backends import NumpyDevice
 from veles.config import root
-import veles.memory as formats
+from veles.memory import Array
 import veles.prng as rnd
 from veles.prng.uniform import Uniform
 from veles.tests import AcceleratedTest
@@ -53,8 +53,8 @@ class TestRandom1024(AcceleratedTest):
         self.chunk = 4
 
     def _gpu(self):
-        states = formats.Vector()
-        output = formats.Vector()
+        states = Array()
+        output = Array()
 
         states.mem = self.states.copy()
         n_rounds = numpy.array([self.n_rounds], dtype=numpy.int32)
@@ -155,8 +155,8 @@ class TestRandom128(AcceleratedTest):
         self.chunk = 4
 
     def _gpu(self):
-        states = formats.Vector()
-        output = formats.Vector()
+        states = Array()
+        output = Array()
         states.mem = self.states.copy()
         output.mem = numpy.zeros(states.mem.size // 2, dtype=numpy.uint64)
 

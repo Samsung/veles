@@ -54,7 +54,7 @@ from zope.interface import implementer, Interface
 
 from veles.compat import from_none
 from veles.config import root
-from veles.memory import Vector, roundup
+from veles.memory import Array, roundup
 import veles.opencl_types as opencl_types
 from veles.backends import Device, OpenCLDevice, CUDADevice, NumpyDevice, \
     CUDNNDevice
@@ -447,7 +447,7 @@ class AcceleratedUnit(Unit):
     def set_arg(self, index, arg, kernel=None):
         if kernel is None:
             kernel = self._kernel_
-        if isinstance(arg, Vector):
+        if isinstance(arg, Array):
             kernel.set_arg(index, arg.devmem)
         else:
             kernel.set_arg(index, arg)
@@ -456,7 +456,7 @@ class AcceleratedUnit(Unit):
         kernel = kwargs.get("kernel", self._kernel_)
         filtered_args = []
         for arg in args:
-            if isinstance(arg, Vector):
+            if isinstance(arg, Array):
                 filtered_args.append(arg.devmem)
             else:
                 filtered_args.append(arg)
@@ -702,8 +702,8 @@ class DeviceBenchmark(AcceleratedUnit):
         self.dtype = opencl_types.dtypes[self.precision]
         self.size = kwargs.get("size", 1500)
         self.repeats = kwargs.get("repeats", 10)
-        self._input_A_ = Vector()
-        self._input_B_ = Vector()
+        self._input_A_ = Array()
+        self._input_B_ = Array()
         msize = self.size * self.size
         from veles.prng.random_generator import RandomGenerator
         rnd = RandomGenerator(None)

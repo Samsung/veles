@@ -63,15 +63,10 @@ from tornado.template import BaseLoader, Template
 from tornado_smtpclient.client import SMTPAsync
 
 from veles.cmdline import CommandLineBase
-from veles.compat import from_none
+from veles.compat import from_none, PermissionError, FileNotFoundError
 from veles.config import root
 from veles.forge_common import REQUIRED_MANIFEST_FIELDS, validate_requires
 from veles.logger import Logger
-
-
-if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
-    PermissionError = IOError  # pylint: disable=W0622
-    FileNotFoundError = IOError  # pylint: disable=W0622
 
 
 def dirname(path):

@@ -46,7 +46,6 @@ from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit, \
     INumpyUnit
 from veles.backends import NumpyDevice
 from veles.compat import from_none
-import veles.error as error
 import veles.memory as memory
 from veles.opencl_types import numpy_dtype_to_opencl
 from veles.units import UnitCommandLineArgumentsRegistry
@@ -80,8 +79,8 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
     """Loads data entire in memory.
 
     Attributes:
-        original_data: original data (Vector).
-        original_labels: original labels (Vector, dtype=Loader.LABEL_DTYPE)
+        original_data: original data (Array).
+        original_labels: original labels (Array, dtype=Loader.LABEL_DTYPE)
             (in case of classification).
 
     Should be overriden in child class:
@@ -94,9 +93,9 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
 
     def init_unpickled(self):
         super(FullBatchLoader, self).init_unpickled()
-        self._original_data_ = memory.Vector()
+        self._original_data_ = memory.Array()
         self._original_labels_ = []
-        self._mapped_original_labels_ = memory.Vector()
+        self._mapped_original_labels_ = memory.Array()
         self.sources_["fullbatch_loader"] = {}
         self._global_size = None
         self._krn_const = numpy.zeros(2, dtype=Loader.LABEL_DTYPE)
@@ -374,7 +373,7 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
             n_train = nn[l]
             nn[l] = max(int(numpy.round(ratio * nn[l])), 1)
             if nn[l] >= n_train:
-                raise error.NotExistsError(
+                raise ValueError(
                     "There are too few labels for class %d" % l)
             n += nn[l]
         while n > 0:
@@ -436,11 +435,11 @@ class FullBatchLoaderMSEMixin(LoaderMSEMixin):
     hide_from_registry = True
     """FullBatchLoader for MSE workflows.
     Attributes:
-        original_targets: original target (Vector).
+        original_targets: original target (Array).
     """
     def init_unpickled(self):
         super(FullBatchLoaderMSEMixin, self).init_unpickled()
-        self._original_targets_ = memory.Vector()
+        self._original_targets_ = memory.Array()
         self._kernel_target_ = None
         self._global_size_target = None
 

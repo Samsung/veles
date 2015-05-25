@@ -48,7 +48,7 @@ from veles.dummy import DummyWorkflow
 from veles.loader import Loader, ILoader
 from veles.loader.restful import RestfulLoader
 from veles.logger import Logger
-from veles.memory import Vector
+from veles.memory import Array
 from veles.pickle2 import pickle
 from veles.plumbing import Repeater
 from veles.restful_api import RESTfulAPI, NumpyJSONEncoder
@@ -148,7 +148,7 @@ class RESTAPITest(unittest.TestCase):
         self.assertEqual(len(new_api.requests), 0)
 
     def test_map_read(self):
-        vec = Vector(numpy.ones((10, 10)))
+        vec = Array(numpy.ones((10, 10)))
         arr = json.loads(json.dumps(vec, cls=NumpyJSONEncoder))
         self.assertIsInstance(arr, list)
         nparr = numpy.array(arr)

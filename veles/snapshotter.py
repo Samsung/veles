@@ -40,20 +40,15 @@ import gzip
 import logging
 import os
 import snappy
-import sys
 import time
 from zope.interface import implementer
 
-from veles.compat import lzma, from_none
+from veles.compat import lzma, from_none, FileNotFoundError
 from veles.config import root
 from veles.distributable import IDistributable
 from veles.mutable import Bool
 from veles.pickle2 import pickle, best_protocol
 from veles.units import Unit, IUnit
-
-
-if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
-    FileNotFoundError = IOError  # pylint: disable=W0622
 
 
 @implementer(IUnit, IDistributable)

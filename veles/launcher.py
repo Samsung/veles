@@ -71,10 +71,6 @@ from veles.error import MasterSlaveCommunicationError
 from veles.external.pytrie import StringTrie
 
 
-if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
-    FileNotFoundError = IOError  # pylint: disable=W0622
-
-
 def filter_argv(argv, *blacklist):
     ptree = StringTrie({v: i for i, v in enumerate(blacklist)})
     filtered = []

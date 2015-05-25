@@ -41,7 +41,7 @@ import numpy
 import sys
 from zope.interface import implementer
 
-from veles.compat import from_none
+from veles.compat import from_none, BrokenPipeError
 from veles.config import Config, root
 from veles.cmdline import CommandLineBase
 from veles.distributable import IDistributable
@@ -53,10 +53,6 @@ from veles.workflow import Workflow, Repeater, NoMoreJobs
 from veles.launcher import Launcher, filter_argv
 from veles.plotting_units import AccumulatingPlotter
 import veles.prng as prng
-
-
-if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
-    BrokenPipeError = OSError  # pylint: disable=W0622
 
 
 class Tuneable(object):

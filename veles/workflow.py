@@ -48,8 +48,8 @@ import tempfile
 import time
 import threading
 from zope.interface import implementer
-from veles.compat import from_none
 
+from veles.compat import from_none, FileExistsError
 from veles.config import root
 from veles.distributable import IDistributable
 from veles.mutable import LinkableAttribute
@@ -59,10 +59,6 @@ from veles.external.prettytable import PrettyTable
 from veles.external.progressbar import ProgressBar, Percentage, Bar
 import veles.external.pydot as pydot
 from veles.timeit import timeit
-
-
-if (sys.version_info[0] + (sys.version_info[1] / 10.0)) < 3.3:
-    FileExistsError = OSError  # pylint: disable=W0622
 
 
 class MultiMap(OrderedDict, defaultdict):

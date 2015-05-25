@@ -36,7 +36,7 @@ import gc
 import numpy
 
 from veles.config import root
-from veles.memory import Vector
+from veles.memory import Array
 from veles.ocl_blas import OCLBLAS
 from veles.tests import AcceleratedTest, assign_backend
 import veles.prng as prng
@@ -69,9 +69,9 @@ class TestOCLBLASBase(AcceleratedTest):
         rnd = prng.RandomGenerator(None)
         rnd.seed(123)
 
-        a = Vector(numpy.zeros([a_size, common_size], dtype=self.dtype))
-        b = Vector(numpy.zeros([b_size, common_size], dtype=self.dtype))
-        c = Vector(numpy.zeros([a_size, b_size], dtype=self.dtype))
+        a = Array(numpy.zeros([a_size, common_size], dtype=self.dtype))
+        b = Array(numpy.zeros([b_size, common_size], dtype=self.dtype))
+        c = Array(numpy.zeros([a_size, b_size], dtype=self.dtype))
 
         rnd.fill(a.mem)
         rnd.fill(b.mem)

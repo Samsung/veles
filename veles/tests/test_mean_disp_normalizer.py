@@ -39,7 +39,7 @@ import numpy
 from veles.backends import NumpyDevice
 
 from veles.config import root
-from veles.memory import Vector
+from veles.memory import Array
 import veles.opencl_types as opencl_types
 import veles.prng as rnd
 from veles.mean_disp_normalizer import MeanDispNormalizer
@@ -84,9 +84,9 @@ class TestMeanDispNormalizer(AcceleratedTest):
 
     def _test_random(self, device):
         unit = PatchedMeanDispNormalizer(self.parent)
-        unit.input = Vector(self.input.copy())
-        unit.mean = Vector(self.mean.copy())
-        unit.rdisp = Vector(self.rdisp.copy())
+        unit.input = Array(self.input.copy())
+        unit.mean = Array(self.mean.copy())
+        unit.rdisp = Array(self.rdisp.copy())
         unit.initialize(device)
         unit.run()
         unit.output.map_read()

@@ -19,7 +19,7 @@ from veles.config import root
 from veles.dummy import DummyWorkflow
 from veles.logger import Logger
 if PY3:
-    from veles.memory import Vector
+    from veles.memory import Array
 from veles.opencl_types import dtypes
 
 
@@ -38,7 +38,7 @@ def multi_device(numpy=False):
 
                 # Garbage collection
                 if PY3:
-                    Vector.reset_all()
+                    Array.reset_all()
                 self.parent = self.getParent()
                 self.device = None
                 gc.collect()
@@ -99,7 +99,7 @@ class AcceleratedTest(unittest.TestCase, Logger):
 
     def tearDown(self):
         if PY3:
-            Vector.reset_all()
+            Array.reset_all()
         if sys.exc_info() == (None,) * 3:
             del self.parent
         del self.device

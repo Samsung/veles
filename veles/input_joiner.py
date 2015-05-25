@@ -39,7 +39,7 @@ from __future__ import division
 import numpy
 from zope.interface import implementer
 
-from veles.memory import Vector
+from veles.memory import Array
 import veles.opencl_types as opencl_types
 from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit, \
     INumpyUnit
@@ -59,8 +59,8 @@ class InputJoiner(AcceleratedUnit):
         output
 
     Attributes:
-        inputs: list of inputs of type formats.Vector().
-        output: formats.Vector().
+        inputs: list of inputs of type memory.Array().
+        output: memory.Array().
         minibatch_size: size of the minibatch (will be set to the minimum
                         of the first shapes from the inputs
                         if not provided prior to the initialize)
@@ -68,7 +68,7 @@ class InputJoiner(AcceleratedUnit):
     def __init__(self, workflow, **kwargs):
         super(InputJoiner, self).__init__(workflow, **kwargs)
         self.inputs = kwargs["inputs"]
-        self.output = Vector()
+        self.output = Array()
 
     def init_unpickled(self):
         super(InputJoiner, self).init_unpickled()

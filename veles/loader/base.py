@@ -167,9 +167,9 @@ class Loader(Unit):
         self._global_offset = 0
 
         self.minibatch_class = 0
-        self.minibatch_data = memory.Vector()
-        self.minibatch_indices = memory.Vector()
-        self.minibatch_labels = memory.Vector()
+        self.minibatch_data = memory.Array()
+        self.minibatch_indices = memory.Array()
+        self.minibatch_labels = memory.Array()
         self._raw_minibatch_labels = []
         self._labels_mapping = {}
         self._reversed_labels_mapping = []
@@ -179,7 +179,7 @@ class Loader(Unit):
         self._on_initialized = nothing
         self._unique_labels_count = 1  # "None" label
 
-        self.shuffled_indices = memory.Vector()
+        self.shuffled_indices = memory.Array()
         self.normalization_type = kwargs.get("normalization_type", "none")
         self.normalization_parameters = kwargs.get(
             "normalization_parameters", {})
@@ -941,8 +941,8 @@ class LoaderMSEMixin(Unit):
 
     def __init__(self, workflow, **kwargs):
         super(LoaderMSEMixin, self).__init__(workflow, **kwargs)
-        self.class_targets = memory.Vector()
-        self._minibatch_targets = memory.Vector()
+        self.class_targets = memory.Array()
+        self._minibatch_targets = memory.Array()
         self._targets_shape = kwargs.get("targets_shape", tuple())
         self.target_normalization_type = kwargs.get(
             "target_normalization_type", "none")

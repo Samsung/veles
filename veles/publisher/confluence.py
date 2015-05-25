@@ -177,7 +177,7 @@ class Confluence(Logger):
 
     def get_blog_entries(self, space):
         """
-        Returns a page object as a Vector.
+        Returns a page object as a Array.
 
         :param space: The space *key* (usually, 3 capital letters).
         """

@@ -13,7 +13,7 @@ Created on May 23, 2013
 
 This script compares snapshots taken by :class:`veles.snapshotter.Snapshotter`
 in the breadth-first tree traversal order. It prints relative differences
-between contained :class:`veles.memory.Vector` instances.
+between contained :class:`veles.memory.Array` instances.
 
 ███████████████████████████████████████████████████████████████████████████████
 
@@ -46,7 +46,7 @@ import os
 from veles.compat import from_none
 from veles.external.prettytable import PrettyTable
 from veles.logger import Logger
-from veles.memory import Vector
+from veles.memory import Array
 from veles.snapshotter import Snapshotter
 
 
@@ -81,10 +81,10 @@ def get_diffs(first_units, second_units):
     for index, (first_unit, second_unit) in enumerate(zip(first_units,
                                                           second_units)):
         for key, first_val in first_unit.__dict__.items():
-            if not isinstance(first_val, Vector):
+            if not isinstance(first_val, Array):
                 continue
             second_val = getattr(second_unit, key)
-            assert isinstance(second_val, Vector)
+            assert isinstance(second_val, Array)
             if first_val.mem is None:
                 assert second_val.mem is None
                 continue

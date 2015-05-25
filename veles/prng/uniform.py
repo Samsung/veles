@@ -39,7 +39,7 @@ import numpy
 from zope.interface import implementer
 
 import veles.error as error
-from veles.memory import Vector, roundup
+from veles.memory import Array, roundup
 from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit, \
     INumpyUnit
 from veles.prng.random_generator import get
@@ -51,7 +51,7 @@ class Uniform(AcceleratedUnit):
 
     Attributes:
         num_states: number of random states for parallel generation.
-        states: Vector of random states.
+        states: Array of random states.
         prng: veles.prng.RandomGenerator for initial states generation.
         output_bytes: number of output bytes to generate.
     """
@@ -61,10 +61,10 @@ class Uniform(AcceleratedUnit):
     def __init__(self, workflow, **kwargs):
         super(Uniform, self).__init__(workflow, **kwargs)
         self.num_states = kwargs.get("num_states", 256)
-        self.states = Vector()
+        self.states = Array()
         self.prng = kwargs.get("prng", get())
         self.output_bytes = kwargs.get("output_bytes", 0)
-        self.output = Vector()
+        self.output = Array()
         self.cl_const = numpy.zeros(1, dtype=numpy.int32)
 
     def init_unpickled(self):

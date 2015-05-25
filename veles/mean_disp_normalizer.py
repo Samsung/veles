@@ -39,8 +39,7 @@ under the License.
 import numpy
 from zope.interface import implementer
 
-import veles.error as error
-from veles.memory import Vector
+from veles.memory import Array
 from veles.distributable import IDistributable, TriviallyDistributable
 from veles.opencl_types import numpy_dtype_to_opencl
 from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit, \
@@ -62,13 +61,10 @@ class MeanDispNormalizer(AcceleratedUnit, TriviallyDistributable):
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = kwargs.get("view_group", "WORKER")
         super(MeanDispNormalizer, self).__init__(workflow, **kwargs)
-        self.input = None
-        self.mean = None
-        self.rdisp = None
-        self.output = Vector()
-        self.demand("input", "mean", "rdisp")
+        self.output = Array()
         self.global_size = None
         self.local_size = None
+        self.demand("input", "mean", "rdisp")
 
     def init_unpickled(self):
         super(MeanDispNormalizer, self).init_unpickled()
@@ -77,19 +73,19 @@ class MeanDispNormalizer(AcceleratedUnit, TriviallyDistributable):
     def initialize(self, device, **kwargs):
         super(MeanDispNormalizer, self).initialize(device, **kwargs)
 
-        if not isinstance(self.input, Vector) or self.input.mem is None:
-            raise error.BadFormatError("input should be assigned as Vector")
-        if not isinstance(self.mean, Vector) or self.mean.mem is None:
-            raise error.BadFormatError("mean should be assigned as Vector")
-        if not isinstance(self.rdisp, Vector) or self.rdisp.mem is None:
-            raise error.BadFormatError("rdisp should be assigned as Vector")
+        for arr in self.input, self.mean, self.rdisp:
+            if not isinstance(arr, Array):
+                raise TypeError(
+                    "veles.memory.Array type expected (got %s)" % type(arr))
+            if not arr:
+                raise ValueError("Invalid Array state")
         if len(self.input.shape) < 2:
-            raise error.BadFormatError("input should be at least 2D")
+            raise ValueError("input should be at least 2D")
         sample_size = self.mean.size
         if (self.input.sample_size != sample_size or
                 self.rdisp.size != sample_size):
-            raise error.BadFormatError("Sample size of input differs from "
-                                       "mean-rdisp size")
+            raise ValueError(
+                "Sample size of input differs from mean-rdisp size")
 
         if not self.output:
             self.output.reset(numpy.zeros(self.input.shape, self.rdisp.dtype))

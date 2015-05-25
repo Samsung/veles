@@ -14,7 +14,7 @@ from zope.interface import implementer
 from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit, \
     INumpyUnit
 from veles.distributable import IDistributable, TriviallyDistributable
-from veles.memory import Vector
+from veles.memory import Array
 from veles.mutable import Bool
 
 
@@ -42,7 +42,7 @@ class Avatar(AcceleratedUnit, TriviallyDistributable):
                 if self.is_immutable(value):
                     setattr(self, attr, value)
                     continue
-                if not isinstance(value, Vector):
+                if not isinstance(value, Array):
                     cloned = getattr(self, attr, None)
                     if cloned is None:
                         setattr(self, attr, deepcopy(value))
@@ -62,11 +62,11 @@ class Avatar(AcceleratedUnit, TriviallyDistributable):
                     continue
                 vec = getattr(self, attr, None)
                 if vec is None:
-                    vec = Vector()
+                    vec = Array()
                     self.vectors[value] = vec
                     setattr(self, attr, vec)
                 else:
-                    assert isinstance(vec, Vector)
+                    assert isinstance(vec, Array)
                 if not vec and value:
                     vec.reset(value.mem.copy())
 

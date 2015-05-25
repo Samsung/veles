@@ -38,7 +38,7 @@ from time import time
 from zope.interface import implementer
 
 from veles.distributable import TriviallyDistributable
-from veles.memory import Vector
+from veles.memory import Array
 from veles.iplotter import IPlotter  # pylint: disable=W0611
 from veles.graphics_server import GraphicsServer
 from veles.units import Unit, IUnit
@@ -72,7 +72,7 @@ class Plotter(Unit, TriviallyDistributable):
         state = super(Plotter, self).__getstate__()
         if self.stripped_pickle:
             for an, av in state.items():
-                if isinstance(av, Vector):
+                if isinstance(av, Array):
                     state[an] = av.mem
         return state
 

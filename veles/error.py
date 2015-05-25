@@ -41,26 +41,8 @@ class VelesException(Exception):
     pass
 
 
-class NotExistsError(VelesException):
-    """Raised when something does not exist.
-    """
-    pass
-
-
-class AlreadyExistsError(VelesException):
-    """Raised when something already exists.
-    """
-    pass
-
-
 class BadFormatError(VelesException):
     """Raised when bad format of data occured somethere.
-    """
-    pass
-
-
-class OpenCLError(VelesException):
-    """Raised when OpenCL error occured.
     """
     pass
 

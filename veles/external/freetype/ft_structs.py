@@ -12,13 +12,13 @@ Freetype structured types
 
 FT_Library: A handle to a FreeType library instance.
 
-FT_Vector: A simple structure used to store a 2D vector.
+FT_Array: A simple structure used to store a 2D vector.
 
 FT_BBox: A structure used to hold an outline's bounding box.
 
 FT_Matrix: A simple structure used to store a 2x2 matrix.
 
-FT_UnitVector: A simple structure used to store a 2D vector unit vector.
+FT_UnitArray: A simple structure used to store a 2D vector unit vector.
 
 FT_Bitmap: A structure used to describe a bitmap or pixmap to the raster.
 
@@ -396,7 +396,7 @@ class FT_Outline(Structure):
 
     n_points: The number of points in the outline.
 
-    points: A pointer to an array of 'n_points' FT_Vector elements, giving the
+    points: A pointer to an array of 'n_points' FT_Array elements, giving the
             outline's point coordinates.
 
     tags: A pointer to an array of 'n_points' chars, giving each outline

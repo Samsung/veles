@@ -107,8 +107,9 @@ class Watcher(object):
     pass
 
 
-class Vector(Pickleable):
-    """Container class for numpy array backed by GPU buffer.
+class Array(Pickleable):
+    """Container class for a numpy array backed with a backend (e.g. GPU)
+    buffer.
 
     Arguments:
         data(:class:`numpy.ndarray`): `mem` attribute will be assigned to this
@@ -123,7 +124,7 @@ class Vector(Pickleable):
 
     Example of how to use:
         1. Construct an object:
-            a = Vector()
+            a = Array()
         2. Connect units be data:
             u2.b = u1.a
         3. Initialize numpy array:
@@ -146,22 +147,22 @@ class Vector(Pickleable):
         __registered = False
 
     def __init__(self, data=None):
-        super(Vector, self).__init__()
+        super(Array, self).__init__()
         self._device = NumpyDevice()
         self.mem = data
         self._max_value = 1.0
         if six.PY3:
             # Workaround for unspecified destructor call order
             # This is a hard to reduce bug to report it
-            Vector.__vectors__.add(weakref.ref(self))
-            if not Vector.__registered:
-                atexit.register(Vector.reset_all)
-                Vector.__registered = True
+            Array.__vectors__.add(weakref.ref(self))
+            if not Array.__registered:
+                atexit.register(Array.reset_all)
+                Array.__registered = True
 
     def __setstate__(self, state):
-        super(Vector, self).__setstate__(state)
+        super(Array, self).__setstate__(state)
         if six.PY3:
-            Vector.__vectors__.add(weakref.ref(self))
+            Array.__vectors__.add(weakref.ref(self))
 
     @property
     def device(self):
@@ -195,7 +196,7 @@ class Vector(Pickleable):
                 "beforehand.")
         if value is not None and not isinstance(value, numpy.ndarray):
             raise TypeError(
-                "Attempted to set Vector's mem to something which is not a "
+                "Attempted to set Array's mem to something which is not a "
                 "numpy array: %s of type %s" % (value, type(value)))
         self._mem = value
 
@@ -258,7 +259,7 @@ class Vector(Pickleable):
         return ravel(self.mem)
 
     def init_unpickled(self):
-        super(Vector, self).init_unpickled()
+        super(Array, self).init_unpickled()
         self._unset_device()
         self._devmem_ = None
         self._map_arr_ = None
@@ -291,7 +292,7 @@ class Vector(Pickleable):
                     print(key)
         if self.device.pid == os.getpid():
             self.map_read()
-        return super(Vector, self).__getstate__()
+        return super(Array, self).__getstate__()
 
     def __bool__(self):
         return self._mem is not None and len(self._mem) > 0
@@ -326,7 +327,7 @@ class Vector(Pickleable):
     if six.PY3:
         @staticmethod
         def reset_all():
-            for ref in Vector.__vectors__:
+            for ref in Array.__vectors__:
                 vec = ref()
                 if vec is not None:
                     vec.reset()
@@ -335,7 +336,7 @@ class Vector(Pickleable):
         def nothing(*args, **kwargs):
             pass
 
-        for suffix in Vector.backend_methods:
+        for suffix in Array.backend_methods:
             setattr(self, "_backend_" + suffix + "_", nothing)
 
     @threadsafe
@@ -447,11 +448,11 @@ class Vector(Pickleable):
         # references and CPython >= 3.4.0
         if self.device.queue_.handle is None:
             self.warning(
-                "%s: OpenCL device queue is None but Vector devmem was not "
+                "%s: OpenCL device queue is None but Array devmem was not "
                 "explicitly unmapped.", self)
         elif self.devmem.handle is None:
             self.warning(
-                "%s: devmem.handle is None but Vector devmem was not "
+                "%s: devmem.handle is None but Array devmem was not "
                 "explicitly unmapped.", self)
         else:
             self.device.queue_.unmap_buffer(self.devmem, map_arr,

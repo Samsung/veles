@@ -36,7 +36,31 @@ under the License.
 
 import platform
 import six
-from sys import stdin
+from sys import stdin, version_info
+
+
+if (version_info[0] + (version_info[1] / 10.0)) < 3.3:
+    class FileNotFoundError(IOError):
+        pass
+
+    class FileExistsError(IOError):
+        pass
+
+    class IsADirectoryError(IOError):
+        pass
+
+    class PermissionError(IOError):
+        pass
+
+    class BrokenPipeError(OSError):
+        pass
+else:
+    FileNotFoundError = FileNotFoundError
+    FileExistsError = FileExistsError
+    IsADirectoryError = IsADirectoryError
+    PermissionError = PermissionError
+    BrokenPipeError = BrokenPipeError
+
 
 if six.PY3:
     import lzma  # pylint: disable=W0611

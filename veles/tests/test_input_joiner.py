@@ -37,7 +37,7 @@ import gc
 import numpy
 from veles.backends import NumpyDevice
 
-import veles.memory as formats
+from veles.memory import Array
 import veles.input_joiner as input_joiner
 from veles.tests import AcceleratedTest, multi_device
 
@@ -47,11 +47,11 @@ class TestInputJoiner(AcceleratedTest):
         gc.collect()
 
     def _do_test(self, device):
-        a = formats.Vector()
+        a = Array()
         a.mem = numpy.arange(250, dtype=numpy.float32).reshape(10, 25)
-        b = formats.Vector()
+        b = Array()
         b.mem = numpy.arange(50, dtype=numpy.float32).reshape(10, 5)
-        c = formats.Vector()
+        c = Array()
         c.mem = numpy.arange(350, dtype=numpy.float32).reshape(10, 35)
         obj = input_joiner.InputJoiner(self.parent, inputs=[a, b, c])
         obj.initialize(device=device)
@@ -71,11 +71,11 @@ class TestInputJoiner(AcceleratedTest):
         self.assertEqual(nz, c.mem.size, "Failed")
 
     def _do_tst2(self, device):
-        a = formats.Vector()
+        a = Array()
         a.mem = numpy.arange(250, dtype=numpy.float32).reshape(10, 25)
-        b = formats.Vector()
+        b = Array()
         b.mem = numpy.arange(50, dtype=numpy.float32).reshape(10, 5)
-        c = formats.Vector()
+        c = Array()
         c.mem = numpy.arange(350, dtype=numpy.float32).reshape(10, 35)
         obj = input_joiner.InputJoiner(self.parent, inputs=[a, b, c])
         obj.initialize(device=device)
@@ -106,11 +106,11 @@ class TestInputJoiner(AcceleratedTest):
         self.assertEqual(nz, 0, "Failed")
 
     def _do_tst3(self, device):
-        a = formats.Vector()
+        a = Array()
         a.mem = numpy.arange(250, dtype=numpy.float32).reshape(10, 25)
-        b = formats.Vector()
+        b = Array()
         b.mem = numpy.arange(50, dtype=numpy.float32).reshape(10, 5)
-        c = formats.Vector()
+        c = Array()
         c.mem = numpy.arange(350, dtype=numpy.float32).reshape(10, 35)
         obj = input_joiner.InputJoiner(self.parent, inputs=[a, b, c])
         obj.initialize(device=device)
