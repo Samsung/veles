@@ -37,6 +37,7 @@ under the License.
 import argparse
 import cuda4py as cu
 import cuda4py.blas as cublas
+import cuda4py.cudnn as cudnn
 import gc
 from importlib import import_module
 import json
@@ -187,6 +188,27 @@ class Device(Pickleable):
     Attributes:
         _pid_: process id.
     """
+    @staticmethod
+    def assign_backend_methods(obj, backend_methods, device):
+        """Scans backends class hierarchy and assigns found methods to obj.
+        """
+        for suffix in backend_methods:
+            # Scan class hierarchy for backend method
+            checked = []  # this is just for exception message
+            for cls in type(device).mro():
+                backend = getattr(cls, "BACKEND", None)
+                if backend is None:
+                    continue
+                checked.append(cls)
+                backend_method = getattr(obj, backend + "_" + suffix, None)
+                if backend_method is not None:
+                    break
+            else:
+                raise AttributeError(
+                    "No implementation of %s with backends %s found in %s " %
+                    (suffix, checked, type(obj)))
+            setattr(obj, "_backend_" + suffix + "_", backend_method)
+
     def __new__(cls, *args, **kwargs):
         assert issubclass(cls, Device)
         backend = kwargs.get(
@@ -825,6 +847,30 @@ class CUDADevice(Device):
             return len(cu.Devices()) > 0
         except:
             return False
+
+
+@add_metaclass(BackendRegistry)
+class CUDNNDevice(CUDADevice):
+    """CUDNN device class.
+
+    Attributes:
+        _cudnn_: cudnn handle.
+    """
+
+    BACKEND = "cudnn"
+    PRIORITY = 40
+
+    # Allow this class to be created manually
+    def __new__(cls, *args):
+        return object.__new__(cls, *args)
+
+    def __init__(self):
+        super(CUDNNDevice, self).__init__()
+
+        # Get CUDNN instance
+        self._cudnn_ = cudnn.CUDNN(self.context)
+
+        self.info("Will use CUDNN where applicable")
 
 
 @add_metaclass(BackendRegistry)

@@ -56,7 +56,8 @@ from veles.compat import from_none
 from veles.config import root
 from veles.memory import Vector, roundup
 import veles.opencl_types as opencl_types
-from veles.backends import Device, OpenCLDevice, CUDADevice, NumpyDevice
+from veles.backends import Device, OpenCLDevice, CUDADevice, NumpyDevice, \
+    CUDNNDevice
 from veles.pickle2 import pickle, best_protocol
 from veles.timeit import timeit
 from veles.units import Unit, IUnit, UnitCommandLineArgumentsRegistry
@@ -116,8 +117,26 @@ class ICUDAUnit(Interface):
         """
 
 
+class ICUDNNUnit(Interface):
+    """Requires cpu and cuda methods for CUDAUnit descendants.
+    """
+
+    def cudnn_init():
+        """
+        Initialize CUDA-specific stuff. Called inside initialize().
+        """
+
+    def cudnn_run():
+        """Run on GPU/any CUDA capable device.
+        """
+
+    def initialize(device, **kwargs):
+        """initialize() with "device" obligatory argument.
+        """
+
+
 INTERFACE_MAPPING = {OpenCLDevice: IOpenCLUnit, CUDADevice: ICUDAUnit,
-                     NumpyDevice: INumpyUnit}
+                     CUDNNDevice: ICUDNNUnit, NumpyDevice: INumpyUnit}
 
 
 @implementer(IUnit)
@@ -175,10 +194,9 @@ class AcceleratedUnit(Unit):
             raise TypeError(
                 "device must be of type %s (got %s)" % (Device, type(value)))
         self._device = value
-        backend = self.device.backend_name
-        for suffix in self.backend_methods:
-            setattr(self, "_backend_" + suffix + "_",
-                    getattr(self, backend + "_" + suffix))
+
+        Device.assign_backend_methods(self, self.backend_methods, self.device)
+
         if self._sync and self.device.is_async:
             self._original_run_ = self._backend_run_
             self._backend_run_ = self._run_synchronized
@@ -220,7 +238,22 @@ class AcceleratedUnit(Unit):
             raise TypeError("deviec must be of type %s" % Device)
         if self._force_numpy:
             device = NumpyDevice()
-        self.verify_interface(INTERFACE_MAPPING[type(device)])
+
+        # Scan class hierarchy
+        checked = []  # this is just for exception message
+        for cls in type(device).mro():
+            if not hasattr(cls, "BACKEND"):
+                continue
+            checked.append(cls)
+            try:
+                self.verify_interface(INTERFACE_MAPPING[cls])
+                break
+            except NotImplementedError:
+                pass
+        else:
+            raise NotImplementedError("%s does not implement any of %s" %
+                                      (type(self), checked))
+
         if not device.attached(self.thread_pool):
             device.thread_pool_attach(self.thread_pool)
         try:
@@ -229,8 +262,9 @@ class AcceleratedUnit(Unit):
             pass
         self.device = device
         self.intel_opencl_workaround = (
-            self.intel_opencl_workaround and isinstance(device, OpenCLDevice)
-            and device.device_info.is_cpu)
+            self.intel_opencl_workaround and
+            isinstance(device, OpenCLDevice) and
+            device.device_info.is_cpu)
         if isinstance(self.device, NumpyDevice) and \
                 not self._numpy_run_jitted_ and \
                 not root.common.engine.disable_numba:

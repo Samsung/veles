@@ -181,9 +181,7 @@ class Vector(Pickleable):
             return
         self._reset(self.mem)
         self._device = device
-        for suffix in Vector.backend_methods:
-            setattr(self, "_backend_" + suffix + "_",
-                    getattr(self, device.backend_name + "_" + suffix))
+        Device.assign_backend_methods(self, self.backend_methods, self.device)
 
     @property
     def mem(self):
