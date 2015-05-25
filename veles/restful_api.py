@@ -45,6 +45,7 @@ from zope.interface import implementer
 
 from veles.config import root
 from veles.distributable import TriviallyDistributable, IDistributable
+from veles.memory import Vector
 from veles.units import IUnit, Unit
 
 
@@ -73,6 +74,9 @@ class APIResource(Resource):
 
 class NumpyJSONEncoder(json.JSONEncoder):
     def default(self, obj):
+        if isinstance(obj, Vector):
+            obj.map_read()
+            obj = obj.mem
         if isinstance(obj, numpy.ndarray):
             return obj.tolist()
         elif isinstance(obj, numpy.number):

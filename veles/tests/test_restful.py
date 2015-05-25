@@ -48,9 +48,10 @@ from veles.dummy import DummyWorkflow
 from veles.loader import Loader, ILoader
 from veles.loader.restful import RestfulLoader
 from veles.logger import Logger
+from veles.memory import Vector
 from veles.pickle2 import pickle
 from veles.plumbing import Repeater
-from veles.restful_api import RESTfulAPI
+from veles.restful_api import RESTfulAPI, NumpyJSONEncoder
 from veles.tests import timeout
 
 
@@ -145,6 +146,14 @@ class RESTAPITest(unittest.TestCase):
         self.assertTrue((new_api.results[0] == numpy.ones((3, 3))).all())
         self.assertIsInstance(new_api.requests, list)
         self.assertEqual(len(new_api.requests), 0)
+
+    def test_map_read(self):
+        vec = Vector(numpy.ones((10, 10)))
+        arr = json.loads(json.dumps(vec, cls=NumpyJSONEncoder))
+        self.assertIsInstance(arr, list)
+        nparr = numpy.array(arr)
+        self.assertEqual(nparr.shape, (10, 10))
+        self.assertTrue((nparr == 1).all())
 
 
 if __name__ == "__main__":
