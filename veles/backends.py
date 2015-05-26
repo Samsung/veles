@@ -37,7 +37,6 @@ under the License.
 import argparse
 import cuda4py as cu
 import cuda4py.blas as cublas
-import cuda4py.cudnn as cudnn
 import gc
 from importlib import import_module
 import json
@@ -847,34 +846,6 @@ class CUDADevice(Device):
             return len(cu.Devices()) > 0
         except:
             return False
-
-
-@add_metaclass(BackendRegistry)
-class CUDNNDevice(CUDADevice):
-    """CUDNN device class.
-
-    Attributes:
-        _cudnn_: cudnn handle.
-    """
-
-    BACKEND = "cudnn"
-    PRIORITY = 40
-
-    # Allow this class to be created manually
-    def __new__(cls, *args):
-        return object.__new__(cls, *args)
-
-    def __init__(self):
-        super(CUDNNDevice, self).__init__()
-
-        # Get CUDNN instance
-        self._cudnn_ = cudnn.CUDNN(self.context)
-
-        self.info("Will use CUDNN where applicable")
-
-    @property
-    def cudnn(self):
-        return self._cudnn_
 
 
 @add_metaclass(BackendRegistry)

@@ -56,8 +56,7 @@ from veles.compat import from_none
 from veles.config import root
 from veles.memory import Array, roundup
 import veles.opencl_types as opencl_types
-from veles.backends import Device, OpenCLDevice, CUDADevice, NumpyDevice, \
-    CUDNNDevice
+from veles.backends import Device, OpenCLDevice, CUDADevice, NumpyDevice
 from veles.pickle2 import pickle, best_protocol
 from veles.timeit import timeit
 from veles.units import Unit, IUnit, UnitCommandLineArgumentsRegistry
@@ -117,26 +116,8 @@ class ICUDAUnit(Interface):
         """
 
 
-class ICUDNNUnit(Interface):
-    """Requires cpu and cuda methods for CUDAUnit descendants.
-    """
-
-    def cudnn_init():
-        """
-        Initialize CUDA-specific stuff. Called inside initialize().
-        """
-
-    def cudnn_run():
-        """Run on GPU/any CUDA capable device.
-        """
-
-    def initialize(device, **kwargs):
-        """initialize() with "device" obligatory argument.
-        """
-
-
 INTERFACE_MAPPING = {OpenCLDevice: IOpenCLUnit, CUDADevice: ICUDAUnit,
-                     CUDNNDevice: ICUDNNUnit, NumpyDevice: INumpyUnit}
+                     NumpyDevice: INumpyUnit}
 
 
 @implementer(IUnit)
