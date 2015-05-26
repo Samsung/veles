@@ -31,7 +31,7 @@ under the License.
 
 ███████████████████████████████████████████████████████████████████████████████
 """
-
+import base64
 
 import json
 import logging
@@ -103,7 +103,8 @@ class RESTAPITest(unittest.TestCase):
         headers = Headers({b'User-Agent': [b'twisted'],
                            b'Content-Type': [b'application/json']})
         body = FileBodyProducer(BytesIO(json.dumps(
-            {"input": numpy.ones((10, 10)).tolist()}).encode('charmap')))
+            {"input": numpy.ones((10, 10)).tolist(),
+             "codec": "list"}).encode('charmap')))
         d = agent.request(
             b'POST', ("http://localhost:%d/api" % port).encode('charmap'),
             headers=headers, bodyProducer=body)
@@ -155,6 +156,14 @@ class RESTAPITest(unittest.TestCase):
         self.assertEqual(nparr.shape, (10, 10))
         self.assertTrue((nparr == 1).all())
 
+    def test_decode_base64(self):
+        arr = numpy.ones((10, 20), dtype=numpy.int32)
+        fake_resp = {"shape": list(arr.shape), "type": "int32="}
+        data = RESTfulAPI._decode_base64.__get__(self)(
+            None, fake_resp, base64.b64encode(arr.data))
+        self.assertTrue((arr == data).all())
+        self.assertEqual(arr.shape, data.shape)
+        self.assertEqual(arr.dtype, data.dtype)
 
 if __name__ == "__main__":
     Logger.setup_logging(logging.DEBUG)

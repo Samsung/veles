@@ -33,6 +33,7 @@ under the License.
 
 ███████████████████████████████████████████████████████████████████████████████
 """
+import base64
 
 import json
 from itertools import islice
@@ -143,6 +144,51 @@ class RESTfulAPI(Unit, TriviallyDistributable):
         request.write(json.dumps({"error": message}).encode('utf-8'))
         request.finish()
 
+    def _decode_base64(self, request, response, input_obj):
+        # base64 codec
+        if "shape" not in response:
+            self.fail(request, "There is no \"shape\" attribute which "
+                               "defines the input array shape")
+            return None
+        shape = response["shape"]
+        if not isinstance(shape, list) or len(shape) < 1:
+            self.fail(request, "\"shape\" must be a non-trivial array")
+            return None
+        if "type" not in response:
+            self.fail(request, "There is no \"type\" attribute which "
+                               "defines the array data type (e.g., "
+                               "\"float32\" or \"uint8\", see numpy.dtype)"
+                               ".")
+            return None
+        dtype_name = response["type"]
+        if dtype_name is None:
+            # this will result in numpy.float64
+            self.fail(request, "\"type\" must not be null")
+            return None
+        if dtype_name[-1] in "<=>":
+            byte_order = dtype_name[-1]
+            dtype_name = dtype_name[:-1]
+        else:
+            byte_order = None
+        try:
+            dtype = numpy.dtype(dtype_name)
+        except TypeError:
+            self.fail(request, "Invalid \"type\" value. For the list of "
+                               "supported values, see numpy.dtype.")
+            return None
+        if byte_order is not None:
+            dtype = dtype.newbyteorder(byte_order)
+        try:
+            buffer = base64.b64decode(input_obj)
+        except base64.binascii.Error as e:
+            self.fail(request, "Failed to decode base64: %s." % e)
+            return None
+        try:
+            return numpy.frombuffer(buffer, dtype).reshape(shape)
+        except Exception as e:
+            self.fail(request, "Failed to create the numpy array: %s." % e)
+            return None
+
     def serve(self, request):
         raw_response = request.content.read()
         try:
@@ -150,15 +196,27 @@ class RESTfulAPI(Unit, TriviallyDistributable):
         except ValueError:
             self.fail(request, "Failed to parse JSON")
             return
-        if not isinstance(response, dict) or "input" not in response or \
-                not isinstance(response["input"], list):
-            self.fail(request, "Invalid input format")
+        if not isinstance(response, dict) or "input" not in response \
+                or "codec" not in response:
+            self.fail(request, "Invalid input format: there must be \"input\" "
+                               "and \"codec\" attributes")
             return
-        try:
-            data = numpy.array(response["input"], numpy.float32)
-        except ValueError:
-            self.fail(request, "Invalid input array format")
+        input_obj = response["input"]
+        codec = response["codec"]
+        if codec not in ("list", "base64"):
+            self.fail(request, "Invalid codec value: must be either \"list\" "
+                               "or \"base64\"")
             return
+        if codec == "list":
+            try:
+                data = numpy.array(input_obj, numpy.float32)
+            except ValueError:
+                self.fail(request, "Invalid input array format")
+                return
+        else:
+            data = self._decode_base64(request, response, input_obj)
+            if data is None:
+                return
         try:
             self.feed(data, request)
         except Exception as e:
