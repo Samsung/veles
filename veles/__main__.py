@@ -49,11 +49,6 @@ under the License.
 """
 
 import sys
-
-from veles.import_file import get_file_package_and_module, \
-    import_file_as_package, import_file_as_module
-
-
 __unittest = "unittest" in sys.modules
 import atexit
 import binascii
@@ -87,6 +82,8 @@ from veles.cmdline import CommandLineBase
 from veles.compat import from_none, FileNotFoundError, IsADirectoryError, \
     PermissionError
 from veles.external import daemon
+from veles.import_file import get_file_package_and_module, \
+    import_file_as_package, import_file_as_module
 from veles.logger import Logger
 from veles.launcher import Launcher
 from veles.memory import Watcher
@@ -644,6 +641,7 @@ class Main(Logger, CommandLineBase):
     def run(self):
         """Entry point method.
         """
+        veles.validate_environment()
         ret = self._process_special_args()
         if ret is not None:
             return ret

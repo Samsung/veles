@@ -42,7 +42,7 @@ under the License.
 
 from email.utils import parsedate_tz, mktime_tz, formatdate
 from importlib import import_module
-from sys import version_info, modules
+from sys import version_info, modules, executable
 from types import ModuleType
 from warnings import warn
 from veles.compat import is_interactive
@@ -120,6 +120,10 @@ def __html__():
         run_path(os.path.join(__root__, "docs/generate_docs.py"))
     if os.path.exists(page):
         show_file(page)
+
+
+class PythonPathError(Exception):
+    pass
 
 
 class VelesModule(ModuleType):
@@ -279,6 +283,26 @@ class VelesModule(ModuleType):
                     except ImportError:
                         continue
         return self.__plugins
+
+    @staticmethod
+    def validate_environment():
+        """
+        This method verifies the sequence of PYTHONPATH and warns about
+        the crappy ones.
+        """
+        import os
+        from subprocess import call
+        from uuid import uuid4
+
+        pypath = os.path.join(os.getcwd(), str(uuid4()), "crap", "check")
+        if call((executable, "-c",
+                 "import sys; sys.exit(sys.path[1] != \"%s\")" % pypath),
+                env={"PYTHONPATH": pypath}):
+            raise PythonPathError(
+                "Your Python environment looks crappy because PYTHONPATH does "
+                "not have the priority over the other paths. Check your *.pth "
+                "files, e.g. /usr/local/lib/python3.4/dist-packages/"
+                "easy-install.pth. Veles is sensitive to this thing.")
 
 
 if not isinstance(modules[__name__], VelesModule):
