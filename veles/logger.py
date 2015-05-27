@@ -189,7 +189,7 @@ class Logger(object):
         formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: "
                                       "%(message)s", "%Y-%m-%d %H:%M:%S")
         handler.setFormatter(formatter)
-        logging.info("Saving logs to %s", file_name)
+        logging.getLogger("Logger").info("Will save the logs to %s", file_name)
         if not is_interactive():
             logging.getLogger().handlers[0] = handler
             sys.stderr.flush()
@@ -200,12 +200,12 @@ class Logger(object):
         else:
             logging.getLogger().handlers.append(handler)
         logging.getLogger().addFilter(handler)
-        logging.info("Continuing to log in %s", file_name)
+        logging.getLogger("Logger").info("Continuing to log in %s", file_name)
 
     @staticmethod
     def duplicate_all_logging_to_mongo(addr, docid, nodeid):
         handler = MongoLogHandler(addr=addr, docid=docid, nodeid=nodeid)
-        logging.info("Saving logs to Mongo on %s", addr)
+        logging.getLogger("Logger").info("Saving logs to Mongo on %s", addr)
         logging.getLogger().addHandler(handler)
 
     def change_log_message(self, msg):

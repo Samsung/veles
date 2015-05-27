@@ -257,6 +257,10 @@ root.common.update({
         "ocl": {
             # Use clBLAS if it is available
             "clBLAS": False
+        },
+        "cuda": {
+            # Path to nvcc
+            "nvcc": "nvcc"
         }
     }
 })

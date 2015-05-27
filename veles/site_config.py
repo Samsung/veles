@@ -51,7 +51,10 @@ def update(root):
         "engine": {
             "source_dirs": (
                 os.environ.get("VELES_ENGINE_DIRS", "").split(":") +
-                [__root__])
+                [__root__]),
+            "cuda": {
+                "nvcc": "/usr/local/cuda/bin/nvcc"
+            }
         }
     })
 

@@ -380,7 +380,8 @@ class AcceleratedUnit(Unit):
             defines, include_dirs, dtype, "cu", template_kwargs)
         show_logs = self.logger.isEnabledFor(logging.DEBUG)
         self.program_ = self.device.context.create_module(
-            source=source, include_dirs=include_dirs)
+            source=source, include_dirs=include_dirs,
+            nvcc_path=root.common.engine.cuda.nvcc)
         if show_logs and len(self.program_.stderr):
             self.debug("Non-empty CUDA build log encountered: %s",
                        self.program_.stderr)
