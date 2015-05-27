@@ -58,7 +58,7 @@ from veles.memory import Array, roundup
 import veles.opencl_types as opencl_types
 from veles.backends import Device, OpenCLDevice, CUDADevice, NumpyDevice
 from veles.pickle2 import pickle, best_protocol
-from veles.timeit import timeit
+from veles.timeit2 import timeit
 from veles.units import Unit, IUnit, UnitCommandLineArgumentsRegistry
 from veles.workflow import Workflow
 

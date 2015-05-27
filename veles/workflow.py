@@ -58,7 +58,7 @@ from veles.plumbing import StartPoint, EndPoint, Repeater
 from veles.external.prettytable import PrettyTable
 from veles.external.progressbar import ProgressBar, Percentage, Bar
 import veles.external.pydot as pydot
-from veles.timeit import timeit
+from veles.timeit2 import timeit
 
 
 class MultiMap(OrderedDict, defaultdict):

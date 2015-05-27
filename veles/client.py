@@ -55,7 +55,7 @@ from veles.txzmq import ZmqConnection, ZmqEndpoint, SharedIO
 from veles.network_common import NetworkAgent, StringLineReceiver, IDLogger
 from veles.prng import get as get_rg
 from veles.thread_pool import errback
-from veles.timeit import timeit
+from veles.timeit2 import timeit
 
 
 class ZmqDealer(ZmqConnection):

@@ -59,7 +59,7 @@ import veles.graphics_client as graphics_client
 from veles.logger import Logger
 from veles.network_common import interfaces
 from veles.paths import __root__
-from veles.timeit import timeit
+from veles.timeit2 import timeit
 
 
 class ZmqPublisher(ZmqConnection):

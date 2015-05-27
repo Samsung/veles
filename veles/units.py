@@ -51,7 +51,7 @@ from veles.external.progressbar import spin
 from veles.mutable import Bool, LinkableAttribute
 from veles.prng.random_generator import RandomGenerator
 import veles.thread_pool as thread_pool
-from veles.timeit import timeit
+from veles.timeit2 import timeit
 from veles.unit_registry import UnitRegistry
 from veles.verified import Verified
 
