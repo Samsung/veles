@@ -41,9 +41,11 @@ import getpass
 from itertools import chain
 import json
 import os
+import subprocess
 from tempfile import NamedTemporaryFile
 import paramiko
 import platform
+import signal
 from six import BytesIO, add_metaclass
 import socket
 import sys
@@ -636,12 +638,22 @@ class Launcher(logger.Logger):
         if Launcher.graphics_client is not None:
             attempt = 0
             while Launcher.graphics_client.poll() is None and attempt < 10:
+                if attempt == 1:
+                    self.info("Signalling the graphics client to finish "
+                              "normally...")
                 Launcher.graphics_server.shutdown()
                 attempt += 1
                 time.sleep(0.2)
             if Launcher.graphics_client.poll() is None:
                 Launcher.graphics_client.terminate()
-                self.info("Graphics client has been terminated")
+                self.info("Waiting for the graphics client to finish after "
+                          "SIGTERM...")
+                try:
+                    Launcher.graphics_client.wait(0.5)
+                    self.info("Graphics client has been terminated")
+                except subprocess.TimeoutExpired:
+                    os.kill(Launcher.graphics_client.pid, signal.SIGKILL)
+                    self.info("Graphics client has been killed")
             else:
                 self.info("Graphics client returned normally")
 
