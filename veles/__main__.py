@@ -276,9 +276,7 @@ class Main(Logger, CommandLineBase):
         daemon_context.files_preserve = [
             int(fd) for fd in os.listdir("/proc/self/fd")
             if int(fd) > 2]
-        self.info("Daemonized")
-        # Daemonization happens in open()
-        daemon_context.open()
+        daemon_context.open()  # <- the magic happens here
 
     @staticmethod
     def _get_interactive_locals():
@@ -544,11 +542,9 @@ class Main(Logger, CommandLineBase):
                 unit.run()
                 break
 
-    def _run_core(self, wm, background):
+    def _run_core(self, wm):
         if self._dry_run <= 0:
             return
-        if background:
-            self._daemonize()
         if not self.optimization:
             from veles.genetics import fix_config
 
@@ -648,6 +644,8 @@ class Main(Logger, CommandLineBase):
 
         parser = Main.init_parser()
         args = parser.parse_args(self.argv)
+        if args.background:
+            self._daemonize()
         config_file = args.config
         if config_file == "-":
             config_file = "%s_config%s" % os.path.splitext(args.workflow)
@@ -678,7 +676,7 @@ class Main(Logger, CommandLineBase):
         if self.logger.isEnabledFor(logging.DEBUG):
             self._print_config(root)
 
-        self._run_core(wm, args.background)
+        self._run_core(wm)
 
         if not self.interactive:
             self.info("End of job")
