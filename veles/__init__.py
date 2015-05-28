@@ -42,7 +42,7 @@ under the License.
 
 from email.utils import parsedate_tz, mktime_tz, formatdate
 from importlib import import_module
-from sys import version_info, modules, executable
+from sys import version_info, modules
 from types import ModuleType
 from warnings import warn
 from veles.compat import is_interactive
@@ -290,6 +290,7 @@ class VelesModule(ModuleType):
         This method verifies the sequence of PYTHONPATH and warns about
         the crappy ones.
         """
+        from sys import executable
         import os
         from subprocess import call
         from uuid import uuid4
