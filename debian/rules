@@ -40,3 +40,5 @@ override_dh_install:
 	mkdir -p debian/python3-veles/etc/init
 	cp deploy/upstart/*.conf debian/python3-veles/etc/init
 	cp -r web/dist debian/python3-veles/usr/share/veles/web
+	cp veles/znicz/samples/DemoKohonen/kohonen.txt.gz debian/python3-veles/usr/share/veles/znicz/samples/DemoKohonen/kohonen.txt.gz
+	cp veles/znicz/samples/Wine/wine.txt.gz debian/python3-veles/usr/share/veles/znicz/samples/Wine/wine.txt.gz
