@@ -11,6 +11,7 @@ import atexit
 import signal
 import errno
 import platform
+import weakref
 
 try:
     import signalfd
@@ -63,7 +64,6 @@ PY3 = sys.version_info[0] == 3
 PY26 = sys.version_info[:2] == (2, 6)
 VERBOSE = True
 START_TIMEOUT = None
-WORKFLOW = None
 
 try:
     import ctypes
@@ -124,7 +124,7 @@ class Manhole(_ORIGINAL_THREAD):
     Thread that runs the infamous "Manhole".
     """
 
-    def __init__(self, sigmask, start_timeout):
+    def __init__(self, sigmask, start_timeout, workflow):
         super(Manhole, self).__init__()
         self.daemon = True
         self.name = "Manhole"
@@ -133,6 +133,7 @@ class Manhole(_ORIGINAL_THREAD):
         # time to wait for the manhole to get serious (to have a complete start)
         # see: http://emptysqua.re/blog/dawn-of-the-thread/
         self.start_timeout = start_timeout
+        self.workflow = weakref.proxy(workflow)
 
     def start(self):
         super(Manhole, self).start()
@@ -148,8 +149,43 @@ class Manhole(_ORIGINAL_THREAD):
             os.unlink(name)
         sock.bind(name)
         sock.listen(5)
-        cry("Manhole UDS path: " + name)
+        cry("Manhole UDS path: nc -U %s" % name)
         return sock, pid
+
+    def interact(self):
+        dump_stacktraces()
+        from veles.interaction import Shell
+
+        Shell.fix_netcat_colors()
+        shell = Shell(self.workflow, name="Manhole")
+        shell.thread_pool.pause()
+        shell.initialize()
+        try:
+            shell.interact({
+                'dump_stacktraces': dump_stacktraces,
+                'sys': sys,
+                'os': os,
+                'socket': socket,
+                'traceback': traceback,
+                'pause': shell.thread_pool.pause,
+                'resume': shell.thread_pool.resume,
+            })
+        except (EOFError, BrokenPipeError):
+            cry("Client has been dropped.")
+        finally:
+            shell.workflow.del_ref(shell)
+            shell.thread_pool.resume()
+        """
+        import code
+
+        code.InteractiveConsole({
+            'dump_stacktraces': dump_stacktraces,
+            'sys': sys,
+            'os': os,
+            'socket': socket,
+            'traceback': traceback,
+        }).interact()
+        """
 
     def run(self):
         self.serious.set()
@@ -232,7 +268,7 @@ class ManholeConnection(_ORIGINAL_THREAD):
                     for name in names:
                         backup.append((name, getattr(sys, name)))
                         setattr(sys, name, _ORIGINAL_FDOPEN(client_fd, mode, 1 if PY3 else 0))
-                interact()
+                _INST.interact()
                 cry("Finished interaction.")
             finally:
                 try:
@@ -259,41 +295,6 @@ class ManholeConnection(_ORIGINAL_THREAD):
         except Exception:
             cry("ManholeConnection thread failed:")
             cry(traceback.format_exc())
-
-
-def interact():
-    dump_stacktraces()
-    from veles.interaction import Shell
-    Shell.fix_netcat_colors()
-    shell = Shell(WORKFLOW, name="Manhole")
-    shell.thread_pool.pause()
-    shell.initialize()
-    try:
-        shell.interact({
-            'dump_stacktraces': dump_stacktraces,
-            'sys': sys,
-            'os': os,
-            'socket': socket,
-            'traceback': traceback,
-            'pause': shell.thread_pool.pause,
-            'resume': shell.thread_pool.resume,
-        })
-    except (EOFError, BrokenPipeError):
-        cry("Client has been dropped.")
-    finally:
-        shell.workflow.del_ref(shell)
-        shell.thread_pool.resume()
-    """
-    import code
-
-    code.InteractiveConsole({
-        'dump_stacktraces': dump_stacktraces,
-        'sys': sys,
-        'os': os,
-        'socket': socket,
-        'traceback': traceback,
-    }).interact()
-    """
 
 
 def _handle_oneshot(_signum, _frame):
@@ -360,14 +361,13 @@ ALL_SIGNALS = [
 def install(verbose=True, patch_fork=True, activate_on=None,
             sigmask=ALL_SIGNALS, oneshot_on=None, start_timeout=0.5,
             workflow=None):
-    global _STDERR, _INST, _SHOULD_RESTART, VERBOSE, START_TIMEOUT, WORKFLOW  # pylint: disable=W0603
+    global _STDERR, _INST, _SHOULD_RESTART, VERBOSE, START_TIMEOUT  # pylint: disable=W0603
     with _INST_LOCK:
         VERBOSE = verbose
         START_TIMEOUT = start_timeout
         _STDERR = sys.__stderr__
-        WORKFLOW = workflow
-        if not _INST:
-            _INST = Manhole(sigmask, start_timeout)
+        if _INST is None:
+            _INST = Manhole(sigmask, start_timeout, workflow)
             if oneshot_on is not None:
                 oneshot_on = getattr(signal, 'SIG' + oneshot_on) if isinstance(oneshot_on, string) else oneshot_on
                 signal.signal(oneshot_on, _handle_oneshot)

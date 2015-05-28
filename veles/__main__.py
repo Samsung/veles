@@ -443,10 +443,6 @@ class Main(Logger, CommandLineBase):
             self.exception("Failed to create the workflow")
             self.launcher.stop()
             sys.exit(Main.EXIT_FAILURE)
-        if ThreadPool.manhole:
-            from veles.external import manhole
-
-            manhole.WORKFLOW = self.workflow
         if self._workflow_graph:
             self.workflow.generate_graph(filename=self._workflow_graph,
                                          with_data_links=True,

@@ -50,6 +50,7 @@ from twisted.internet import reactor
 from twisted.python import threadpool
 import weakref
 
+from veles.external import manhole
 import veles.logger as logger
 from veles.cmdline import CommandLineArgumentsRegistry, classproperty
 from veles.compat import from_none, is_interactive
@@ -84,7 +85,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     sigint_printed = False
 
     def __init__(self, minthreads=2, maxthreads=1024, queue_size=2048,
-                 name=None):
+                 name=None, workflow=None):
         """
         Initializes a new thread pool.
         """
@@ -110,6 +111,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         self._not_paused = threading.Event()
         self._not_paused.set()
         self.failure = None
+        self.workflow = workflow
 
         if ThreadPool.pools is None:
             # Initialize for the very first time
@@ -121,11 +123,8 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                 signal.signal(signal.SIGINT, ThreadPool.sigint_handler)
             assert ThreadPool.sigint_initial != ThreadPool.sigint_handler
             if not ThreadPool.manhole:
-                signal.signal(signal.SIGUSR1, ThreadPool.sigusr1_handler)
-            else:
-                from veles.external import manhole
-                manhole.install(patch_fork=False)
-            signal.signal(signal.SIGUSR2, ThreadPool.sigusr2_handler)
+                signal.signal(signal.SIGUSR1, self.sigusr1_handler)
+                signal.signal(signal.SIGUSR2, self.sigusr2_handler)
         ThreadPool.pools.append(self)
 
     def __del__(self):
@@ -148,6 +147,19 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             args, _ = parser.parse_known_args(cls.class_argv)
             cls._manhole = args.manhole
         return cls._manhole
+
+    @property
+    def workflow(self):
+        return self._workflow()
+
+    @workflow.setter
+    def workflow(self, value):
+        self._workflow = weakref.ref(value) if value is not None else None
+        if value is not None and self.manhole:
+            self._install_manhole()
+
+    def _install_manhole(self):
+        manhole.install(patch_fork=False, workflow=self.workflow)
 
     def callInThreadWithCallback(self, onResult, func, *args, **kw):
         """
@@ -491,17 +503,20 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                 else:
                     ThreadPool._warn_about_sigint_hysteria(log)
 
-    @staticmethod
-    def sigusr1_handler(sign, frame):
+    def sigusr1_handler(self, sign, frame):
         """
         Private method - handler for SIGUSR1.
         """
-        print("SIGUSR1 was received, dumping the current frames...")
+        self.warning("SIGUSR1 was received, dumping the current frames...")
         ThreadPool.print_thread_stacks()
 
-    @staticmethod
-    def sigusr2_handler(sign, frame):
-        print("SIGUSR2 was received")
+    def sigusr2_handler(self, sign, frame):
+        if self.workflow is not None:
+            self.warning("SIGUSR2 was received, installing the manhole...")
+            self._install_manhole()
+        else:
+            self.warning("SIGUSR2 was received, unable to install the manhole "
+                         "because no workflow's been registered")
 
     @staticmethod
     def print_thread_stacks():
@@ -518,7 +533,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
 
     KNOWN_RUNNING_THREADS = {"IPythonHistorySavingThread", "TwistedReactor",
                              "MainThread", "twisted.internet.reactor",
-                             "test_timeout"}
+                             "test_timeout", "Manhole"}
 
     @staticmethod
     def debug_deadlocks():

@@ -373,6 +373,7 @@ class Launcher(logger.Logger):
         """
         self._workflow = workflow
         workflow.run_is_blocking = False
+        self.workflow.thread_pool.workflow = workflow
         if self.is_slave or self.matplotlib_backend == "":
             workflow.plotters_are_enabled = False
 
