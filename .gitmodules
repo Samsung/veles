@@ -3,11 +3,6 @@
   branch = master
   url = ssh://alserver.rnd.samsung.ru:29418/Znicz
   ignore = dirty
-[submodule "libSoundFeatureExtraction"]
-  path = libSoundFeatureExtraction
-  branch = master
-  url = ssh://alserver.rnd.samsung.ru:29418/SoundFeatureExtraction
-  ignore = dirty
 [submodule "libVeles/libarchive"]
   path = libVeles/libarchive
   branch = master
