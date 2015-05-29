@@ -1,7 +1,7 @@
 [submodule "Znicz"]
   path = veles/znicz
   branch = master
-  url = ssh://alserver.rnd.samsung.ru:29418/Znicz
+  url = https://github.com/samsung/veles.znicz
   ignore = dirty
 [submodule "libVeles/libarchive"]
   path = libVeles/libarchive
@@ -22,4 +22,4 @@
   url = https://github.com/yyuu/pyenv
 [submodule "mastodon"]
   path = mastodon
-  url = ssh://alserver.rnd.samsung.ru:29418/Mastodon
+  url =  https://github.com/samsung/veles.mastodon
