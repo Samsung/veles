@@ -733,7 +733,8 @@ class CUDADevice(Device):
         _min_grid_size, block_size = krn.max_potential_block_size()
         ab_best = krn.max_active_blocks_per_multiprocessor(block_size)
         ab = ab_best
-        min_size = self.context.device.warp_size
+        # Warp size usually 32 and no improvements over 128 with NVIDIA Titan
+        min_size = self.context.device.warp_size * 4
         best_block_size = None
         while (ab >= ab_best and not (block_size & 1) and
                block_size >= min_size):
