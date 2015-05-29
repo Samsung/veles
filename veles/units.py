@@ -443,7 +443,9 @@ class Unit(Distributable, Verified):
 
     @staticmethod
     def reset_thread_pool():
+        pool = Unit._pool_
         Unit._pool_ = None
+        return pool
 
     def stop(self):
         """

@@ -38,7 +38,10 @@ under the License.
 from __future__ import division
 from collections import defaultdict
 from itertools import chain
-import cv2
+try:
+    import cv2
+except ImportError:
+    pass
 import numpy
 from PIL import Image
 from zope.interface import implementer, Interface

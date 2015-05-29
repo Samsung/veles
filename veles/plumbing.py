@@ -30,6 +30,7 @@ class Repeater(TrivialUnit):
             self.warning(
                 "Repeater has more than 2 incoming links: %s. Are you sure?",
                 tuple(self.links_to))
+        return self
 
 
 class UttermostPoint(TrivialUnit):
