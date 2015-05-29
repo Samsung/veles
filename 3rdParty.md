@@ -1,5 +1,5 @@
-Licenses of packages Veles depends on
-=====================================
+Licenses of packages which Veles depends on
+===========================================
 
 The table below was filled using the data obtained via the following script:
 
