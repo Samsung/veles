@@ -13,7 +13,7 @@ Created on Oct 20, 2014
 
 This script update all workflows to VelesForge
 
-Command to run: FORGE_SERVER="http://smaug/forge" PYTHONPATH=`pwd`
+Command to run: FORGE_SERVER="http://velesnet.ml/forge" PYTHONPATH=`pwd`
 veles/scripts/update_forge.py
 
 ███████████████████████████████████████████████████████████████████████████████

@@ -1,43 +1,28 @@
 ---------------------------------------------------------
 NB!
 If you want to build veles container with GPU usage,
-you should copy cuda_X.X.X_linux_XX.run to "cuda" folder
-(docker can copy files only from folder with Dockerfile).
+you should copy cuda_X.X.X_linux_XX.run to this directory
+(docker can copy files only from directory with Dockerfile).
 ---------------------------------------------------------
 
 To build Veles docker image use command:
-$ docker build -t samsung/veles-cpu  cpu/
-$ docker build -t samsung/veles-cuda cuda/
-                       ^              ^
-                   Image Name  Path to Dockerfile
-
+$ docker build -t samsung/veles
 
 To run docker container to test image use command:
-$ docker run --rm --name veles-cpu  samsung/veles-cpu
-              ^              ^             ^
-      Delete Container   Container        Image
-        after Usage        Name           Name
+$ docker run --rm --name veles  samsung/veles
+              ^            ^             ^
+      Delete Container Container        Image
+        after Usage      Name           Name
 OR
 
 $ ./setup-nvidia-devices.sh
 $ export DEVICE_OPTIONS="--device=/dev/nvidia0:/dev/nvidia0 --device=/dev/nvidiactl:/dev/nvidiactl --device=/dev/nvidia-uvm:/dev/nvidia-uvm"
-$ docker run --rm --name veles-cuda ${DEVICE_OPTIONS} samsung/veles-cuda
+$ docker run --rm --name veles ${DEVICE_OPTIONS} samsung/veles
 
-This command run wine test (default command for this image).
-You can change the number of device in "/dev/nvidia0" for cuda container.
+You can change the number of devices in "/dev/nvidia0".
 If these /dev/* files aren't in your system, you should run script "setup-nvidia-devices.sh" before running containers.
-
-
-ENTRYPOINT for images is:
-- samsung/veles-cpu : ENTRYPOINT ["veles", "-p", "''", "--disable-opencl"]
-- samsung/veles-cuda: ENTRYPOINT ["veles", "-p", "''"]
-
-CMD for images is:
-- samsung/veles-cpu : CMD ["-s", "/usr/lib/python3/dist-packages/veles/znicz/samples/wine.py", "-"]
-- samsung/veles-cuda: CMD ["-s", "/usr/lib/python3/dist-packages/veles/znicz/samples/wine.py", "-"]
-
 
 To run docker container with specified options, workflow and config use command:
 $ ./setup-nvidia-devices.sh
 $ export DEVICE_OPTIONS="--device=/dev/nvidia0:/dev/nvidia0 --device=/dev/nvidiactl:/dev/nvidiactl --device=/dev/nvidia-uvm:/dev/nvidia-uvm"
-$ docker run --rm --name veles ${DEVICE_OPTIONS} samsung/veles-cuda [OPTIONS] [path-to-workflow] [path-to-config]
+$ docker run --rm --name veles ${DEVICE_OPTIONS} samsung/veles [OPTIONS] [path-to-workflow] [path-to-config]

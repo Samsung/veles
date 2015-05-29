@@ -20,7 +20,7 @@ Vcs-Browser: http://alserver.rnd.samsung.ru/gerrit/gitweb?p=Veles.git;a=summary
 Package: python3-veles
 Architecture: any
 Depends: ${misc:Depends}, ${python3:Depends},
- libzmq3 (>= 4.1.0+smaug), python3-zmq (>= 14.0.2-smaug), python3-psutil,
+ libzmq3 (>= 4.1.0+veles), python3-zmq (>= 14.0.2-veles), python3-psutil,
  python3-matplotlib (>= 1.4), python3-twisted (>= 14.0.0-1veles1),
  python3-pycparser (>= 2.10),
  python3-cffi (>= 0.8), python3-lxml (>= 3.3.3), python-lxml (>= 3.3.3),

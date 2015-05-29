@@ -4,7 +4,7 @@ Developer's setup (level 2 and 3)
 The following procedure works only if your OS is Ubuntu and you have local
 administrator's rights (that is, ``sudo``).
 
-Besides, you are likely to need access to smaug.rnd.samsung.ru.
+Besides, you are likely to need access to velesnet.ml.
 
 Clone
 :::::
