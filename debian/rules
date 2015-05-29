@@ -18,6 +18,7 @@ override_dh_auto_build:
 	cd ..
 	cd web && ./build.sh
 	cd ..
+	rm .pybuild/python*/build/veles/external/pydev/exec1.py
 
 override_dh_install:
 	dh_install
@@ -40,5 +41,6 @@ override_dh_install:
 	mkdir -p debian/python3-veles/etc/init
 	cp deploy/upstart/*.conf debian/python3-veles/etc/init
 	cp -r web/dist debian/python3-veles/usr/share/veles/web
-	cp veles/znicz/samples/DemoKohonen/kohonen.txt.gz debian/python3-veles/usr/share/veles/znicz/samples/DemoKohonen/kohonen.txt.gz
-	cp veles/znicz/samples/Wine/wine.txt.gz debian/python3-veles/usr/share/veles/znicz/samples/Wine/wine.txt.gz
+	mkdir debian/python3-veles/usr/share/veles/data
+	cp veles/znicz/samples/DemoKohonen/kohonen.txt.gz debian/python3-veles/usr/share/veles/data/kohonen.txt.gz
+	cp veles/znicz/samples/Wine/wine.txt.gz debian/python3-veles/usr/share/veles/data/wine.txt.gz
