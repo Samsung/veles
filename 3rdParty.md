@@ -31,7 +31,7 @@ for d in $(cat requirements.txt); do yolk -f license,name -M $(echo "$d" | sed '
 | python-snappy         | BSD                                        |
 | pycrypto              | Public domain                              |
 | ecdsa                 | MIT                                        |
-| pyzmq                 | LGPL+BSD                                   |
+| pyzmq                 | LGPL, BSD -> BSD                           |
 | wget                  | Public Domain                              |
 | service_identity      | MIT                                        |
 | pygit2                | GPLv2 with linking exception               |
@@ -42,7 +42,7 @@ for d in $(cat requirements.txt); do yolk -f license,name -M $(echo "$d" | sed '
 | h5py                  | BSD                                        |
 | Jinja2                | BSD                                        |
 | pycparser             | BSD                                        |
-| progressbar (bundled) | LGPL                                       |
+| progressbar (bundled) | LGPL, BSD -> BSD                           |
 | fysom (bundled)       | BSD                                        |
 | freetype (bundled)    | BSD                                        |
 | daemon (bundled)      | PSF                                        |
@@ -51,5 +51,5 @@ for d in $(cat requirements.txt); do yolk -f license,name -M $(echo "$d" | sed '
 | manhole (bundled)     | BSD                                        |
 | prettytable (bundled) | BSD                                        |
 | pytrie (bundled)      | BSD                                        |
-| txzmq (rewritten)     | default, was GPL                           |
+| txzmq (rewritten)     | Apache License, Version 2.0 (was GPL)      |
 | xmltodict (bundled)   | BSD                                        |
