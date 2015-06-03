@@ -178,6 +178,7 @@ class MinibatchesLoader(Loader):
         "bz2": bz2.decompress,
         "xz": lzma.decompress,
     }
+    MAPPING = "minibatches_loader"
 
     def __init__(self, workflow, **kwargs):
         super(MinibatchesLoader, self).__init__(workflow, **kwargs)
