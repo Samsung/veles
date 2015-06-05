@@ -71,7 +71,7 @@ def parse_args():
 
 def load_snapshot(path):
     try:
-        return Snapshotter.import_(path)
+        return Snapshotter.import_file(path)
     except Exception as e:
         logging.critical("Failed to load the snapshot at %s", path)
         raise from_none(e)

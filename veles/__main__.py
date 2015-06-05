@@ -407,8 +407,39 @@ class Main(Logger, CommandLineBase):
         self.seeds = seeds
 
     def _load_workflow(self, fname_snapshot):
+        if fname_snapshot.startswith("odbc://"):
+            import pyodbc
+
+            addr = fname_snapshot[7:]
+            parsed = addr.split('&')
+            try:
+                odbc, table, id_, log_id = parsed[:4]
+            except TypeError:
+                self.warning("Invalid ODBC source format. Here is the "
+                             "template: odbc://<odbc data source spec>&"
+                             "<table>&<id>&<log id>[&<optional name>]\n"
+                             "<table> and <log id> may be empty (\"veles\" and"
+                             " <id> value will be used).")
+                return None
+            if not table:
+                table = "veles"
+            if not log_id:
+                log_id = id_
+            if len(parsed) > 4:
+                if len(parsed) > 5:
+                    self.warning("Invalid ODBC source format")
+                    return None
+                name = parsed[-1]
+            else:
+                name = None
+            try:
+                return Snapshotter.import_odbc(odbc, table, id_, log_id, name)
+            except pyodbc.Error as e:
+                self.warning(
+                    "Failed to load the snapshot from ODBC source: %s", e)
+                return None
         try:
-            return Snapshotter.import_(fname_snapshot)
+            return Snapshotter.import_file(fname_snapshot)
         except FileNotFoundError:
             if fname_snapshot.strip() != "":
                 self.warning("Workflow snapshot %s does not exist",

@@ -267,11 +267,19 @@ class Snapshotter(SnapshotterBase):
     }
 
     READ_CODECS = {
-        ".pickle": lambda name: open(name, "rb"),
+        "pickle": lambda name: open(name, "rb"),
         "snappy": lambda n, _: SnappyFile(n, "rb"),
-        ".gz": lambda name: gzip.GzipFile(name, "rb"),
-        ".bz2": lambda name: bz2.BZ2File(name, "rb"),
-        ".xz": lambda name: lzma.LZMAFile(name, "rb")
+        "gz": lambda name: gzip.GzipFile(name, "rb"),
+        "bz2": lambda name: bz2.BZ2File(name, "rb"),
+        "xz": lambda name: lzma.LZMAFile(name, "rb")
+    }
+
+    READ_OBJ_CODECS = {
+        "pickle": lambda n: n,
+        "snappy": lambda n, _: SnappyFile(n, "rb"),
+        "gz": lambda name: gzip.GzipFile(fileobj=name, mode="rb"),
+        "bz2": lambda name: bz2.BZ2File(name, "rb"),
+        "xz": lambda name: lzma.LZMAFile(name, "rb")
     }
 
     def export_file(self):
@@ -303,14 +311,16 @@ class Snapshotter(SnapshotterBase):
         with self._open_fobj(fio) as fout:
             pickle.dump(self.workflow, fout, protocol=best_protocol)
         binary = pyodbc.Binary(fio.getvalue())
-        self.info("Executing SQL insert into \"%s\" (%d bytes)...",
-                  self._table, len(binary))
+        self.info("Executing SQL insert into \"%s\"...", self._table)
+        now = datetime.now()
         self._cursor_.execute(
-            "insert into %s(timestamp, id, log_id, workflow, name, data) "
-            "values (?, ?, ?, ?, ?, ?);" % self._table, datetime.now(),
+            "insert into %s(timestamp, id, log_id, workflow, name, codec, data"
+            ") values (?, ?, ?, ?, ?, ?, ?);" % self._table, now,
             self.launcher.id, self.launcher.log_id,
-            self.launcher.workflow.name, key, binary)
+            self.launcher.workflow.name, key, self.compression, binary)
         self._db_.commit()
+        self.info("Successfully wrote %d bytes as %s @ %s",
+                  len(binary), key, now)
 
     def _open_file(self):
         return Snapshotter.WRITE_CODECS[self.compression](
@@ -321,17 +331,37 @@ class Snapshotter(SnapshotterBase):
             fobj, self.compression_level)
 
     @staticmethod
-    def import_(file_name):
+    def import_file(file_name):
         file_name = file_name.strip()
         if not os.path.exists(file_name):
             raise FileNotFoundError(file_name)
         _, ext = os.path.splitext(file_name)
-        codec = Snapshotter.READ_CODECS[ext]
+        codec = Snapshotter.READ_CODECS[ext[1:]]
         with codec(file_name) as fin:
-            try:
-                return pickle.load(fin)
-            except ImportError as e:
-                logging.getLogger(Snapshotter.__name__).error(
-                    "Are you trying to import snapshot of a different "
-                    "workflow?")
-                raise from_none(e)
+            return Snapshotter._import_fobj(fin)
+
+    @staticmethod
+    def import_odbc(odbc, table, id_, log_id, name=None):
+        conn = pyodbc.connect(odbc)
+        cursor = conn.cursor()
+        query = "select codec, data from %s where id='%s' and log_id='%s'" % (
+            table, id_, log_id)
+        if name is not None:
+            query += " and name = '%s'" % name
+        else:
+            query += " order by timestamp desc limit 1"
+        cursor.execute(query)
+        row = cursor.fetchone()
+        codec = Snapshotter.READ_OBJ_CODECS[row.codec]
+        with codec(BytesIO(row.data)) as fin:
+            return Snapshotter._import_fobj(fin)
+
+    @staticmethod
+    def _import_fobj(fobj):
+        try:
+            return pickle.load(fobj)
+        except ImportError as e:
+            logging.getLogger(Snapshotter.__name__).error(
+                "Are you trying to import snapshot of a different "
+                "workflow?")
+            raise from_none(e)
