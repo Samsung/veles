@@ -134,7 +134,15 @@ class Manhole(_ORIGINAL_THREAD):
         # time to wait for the manhole to get serious (to have a complete start)
         # see: http://emptysqua.re/blog/dawn-of-the-thread/
         self.start_timeout = start_timeout
-        self.workflow = weakref.proxy(workflow)
+        self.workflow = workflow
+
+    @property
+    def workflow(self):
+        return self._workflow()
+
+    @workflow.setter
+    def workflow(self, value):
+        self._workflow = weakref.ref(value)
 
     def start(self):
         super(Manhole, self).start()
