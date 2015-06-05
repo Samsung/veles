@@ -36,12 +36,15 @@ under the License.
 
 
 import bz2
+from datetime import datetime
 import gzip
 import logging
 import os
+import pyodbc
+from six import BytesIO
 import snappy
 import time
-from zope.interface import implementer
+from zope.interface import implementer, Interface
 
 from veles.compat import lzma, from_none, FileNotFoundError
 from veles.config import root
@@ -49,6 +52,18 @@ from veles.distributable import IDistributable
 from veles.mutable import Bool
 from veles.pickle2 import pickle, best_protocol
 from veles.units import Unit, IUnit
+
+
+class ISnapshotter(Interface):
+    def export_file():
+        """
+        Writes the snapshot to the file system.
+        """
+
+    def export_db():
+        """
+        Writes the snapshot to the database.
+        """
 
 
 @implementer(IUnit, IDistributable)
@@ -74,7 +89,11 @@ class SnapshotterBase(Unit):
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = kwargs.get("view_group", "SERVICE")
         super(SnapshotterBase, self).__init__(workflow, **kwargs)
+        self.verify_interface(ISnapshotter)
         self.directory = kwargs.get("directory", root.common.snapshot_dir)
+        self._odbc = kwargs.get("odbc")
+        if self._odbc is not None:
+            self._table = kwargs.get("table", "veles")
         self.prefix = kwargs.get("prefix", "")
         self.compression = kwargs.get("compression", "gz")
         self.compression_level = kwargs.get("compression_level", 6)
@@ -95,6 +114,9 @@ class SnapshotterBase(Unit):
         self.debug("Compression is set to %s", self.compression)
         self.debug("interval = %d", self.interval)
         self.debug("time_interval = %f", self.time_interval)
+        if self._odbc is not None:
+            self._db_ = pyodbc.connect(self._odbc)
+            self._cursor_ = self._db_.cursor()
 
     def run(self):
         if self.is_slave or root.common.disable.snapshotting:
@@ -107,13 +129,15 @@ class SnapshotterBase(Unit):
         if delta < self.time_interval:
             self.debug("%f < %f, dropped", delta, self.time_interval)
             return
-        self.export()
+        if self._odbc is not None:
+            self.export_db()
+        else:
+            self.export_file()
         self.time = time.time()
 
-    def export(self):
-        """This method should be overridden in inherited classes.
-        """
-        pass
+    def stop(self):
+        if self._odbc is not None:
+            self._db_.close()
 
     def generate_data_for_slave(self, slave):
         self.slaves[slave.id] = 1
@@ -204,6 +228,7 @@ class SnappyFile(object):
         self.close()
 
 
+@implementer(ISnapshotter)
 class Snapshotter(SnapshotterBase):
     """Takes workflow snapshots.
 
@@ -231,6 +256,16 @@ class Snapshotter(SnapshotterBase):
         "xz": lambda n, l: lzma.LZMAFile(n, "wb", preset=l)
     }
 
+    WRITE_OBJ_CODECS = {
+        None: lambda n, l: n,
+        "": lambda n, l: n,
+        "snappy": lambda n, _: SnappyFile(n, "wb"),
+        "gz": lambda n, l: gzip.GzipFile(
+            fileobj=n, mode="wb", compresslevel=l),
+        "bz2": lambda n, l: bz2.BZ2File(n, "wb", compresslevel=l),
+        "xz": lambda n, l: lzma.LZMAFile(n, "wb", preset=l)
+    }
+
     READ_CODECS = {
         ".pickle": lambda name: open(name, "rb"),
         "snappy": lambda n, _: SnappyFile(n, "rb"),
@@ -239,7 +274,7 @@ class Snapshotter(SnapshotterBase):
         ".xz": lambda name: lzma.LZMAFile(name, "rb")
     }
 
-    def export(self):
+    def export_file(self):
         ext = ("." + self.compression) if self.compression else ""
         rel_file_name = "%s_%s.%d.pickle%s" % (
             self.prefix, self.suffix, best_protocol, ext)
@@ -261,9 +296,29 @@ class Snapshotter(SnapshotterBase):
         except OSError:
             pass
 
+    def export_db(self):
+        key = ".".join((self.prefix, self.suffix, str(best_protocol)))
+        fio = BytesIO()
+        self.info("Preparing the snapshot...")
+        with self._open_fobj(fio) as fout:
+            pickle.dump(self.workflow, fout, protocol=best_protocol)
+        binary = pyodbc.Binary(fio.getvalue())
+        self.info("Executing SQL insert into \"%s\" (%d bytes)...",
+                  self._table, len(binary))
+        self._cursor_.execute(
+            "insert into %s(timestamp, id, log_id, workflow, name, data) "
+            "values (?, ?, ?, ?, ?, ?);" % self._table, datetime.now(),
+            self.launcher.id, self.launcher.log_id,
+            self.launcher.workflow.name, key, binary)
+        self._db_.commit()
+
     def _open_file(self):
         return Snapshotter.WRITE_CODECS[self.compression](
             self.file_name, self.compression_level)
+
+    def _open_fobj(self, fobj):
+        return Snapshotter.WRITE_OBJ_CODECS[self.compression](
+            fobj, self.compression_level)
 
     @staticmethod
     def import_(file_name):
