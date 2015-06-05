@@ -304,7 +304,8 @@ class Main(Logger, CommandLineBase):
             return import_file_as_package(fname_workflow)
         except Exception as e:
             self.debug("Failed to import \"%s\" through the parent package "
-                       "\"%s\": %s", package_name, e)
+                       "\"%s\": %s", fname_workflow, package_name, e)
+            package_import_error = e
         # We failed to load the package => try module approach
         try:
             return import_file_as_module(fname_workflow)
@@ -317,9 +318,10 @@ class Main(Logger, CommandLineBase):
         except PermissionError:
             self.exception("Cannot read workflow \"%s\"", fname_workflow)
             sys.exit(errno.EACCES)
-        except:
-            self.exception("Failed to load the workflow \"%s\"",
-                           fname_workflow)
+        except Exception as e:
+            self.error("Failed to load the workflow \"%s\".\n"
+                       "Package import error: %s\nModule import error: %s",
+                       fname_workflow, package_import_error, e)
             sys.exit(Main.EXIT_FAILURE)
 
     def _apply_config(self, fname_config, config_list):

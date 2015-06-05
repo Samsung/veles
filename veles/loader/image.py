@@ -590,6 +590,7 @@ class ImageLoader(Loader):
                 assert has_labels
                 different_labels[class_index][label] += 1
                 label_key_map[class_index][label].append(key)
+                self._samples_mapping[label].add(key)
                 pb.inc()
         pb.finish()
 

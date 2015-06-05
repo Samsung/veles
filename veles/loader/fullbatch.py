@@ -415,6 +415,9 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
                 "(%d vs %d)" % (len(self.original_labels),
                                 self.original_data.shape[0]))
 
+        for ind, lbl in enumerate(self.original_labels):
+            self._samples_mapping[lbl].add(ind)
+
         different_labels = tuple(Counter(
             self.original_labels[i]
             for i in self.shuffled_indices[

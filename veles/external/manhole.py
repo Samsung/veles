@@ -88,6 +88,7 @@ LOCAL_PEERCRED = 1
 SO_PEERCRED = 17
 COLOR_HIGHLIGHT = "\033[1;35m" if sys.stdout.isatty() else ""
 COLOR_RESET = "\033[0m" if sys.stdout.isatty() else ""
+system = platform.system()
 
 
 def cry(message):
@@ -105,7 +106,7 @@ def cry(message):
 def get_peercred(sock):
     """Gets the (pid, uid, gid) for the client on the given *connected* socket."""
 
-    if platform.system() == 'Darwin':
+    if system == 'Darwin':
         return struct.unpack('3i', sock.getsockopt(
             SOL_LOCAL, LOCAL_PEERCRED, struct.calcsize('3i')
         ))

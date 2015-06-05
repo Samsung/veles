@@ -173,6 +173,7 @@ class Loader(Unit):
         self._raw_minibatch_labels = []
         self._labels_mapping = {}
         self._reversed_labels_mapping = []
+        self._samples_mapping = defaultdict(set)
 
         self.failed_minibatches = []
         self._total_failed = 0
@@ -235,10 +236,16 @@ class Loader(Unit):
 
     @property
     def labels_mapping(self):
+        """
+        :return: dictionary object label -> integer label (internal)
+        """
         return self._labels_mapping
 
     @property
     def reversed_labels_mapping(self):
+        """
+        :return: dictionary integer label (internal) -> object label
+        """
         return self._reversed_labels_mapping
 
     @property
@@ -263,13 +270,17 @@ class Loader(Unit):
         self.__unique_labels_count = value
 
     @property
+    def samples_mapping(self):
+        return self._samples_mapping
+
+    @property
     def on_initialized(self):
         return self._on_initialized
 
     @on_initialized.setter
     def on_initialized(self, value):
-        if not hasattr(value, "__call__"):
-            raise TypeError("on_initializedmust be callable")
+        if not callable(value):
+            raise TypeError("on_initialized must be callable")
         self._on_initialized = value
 
     @property
@@ -690,20 +701,24 @@ class Loader(Unit):
 
         self._iterate_class(TRAIN, callback)
 
-        if not self.has_labels or len(self.labels_mapping) > 0:
+        if not self.has_labels or (len(self.labels_mapping) > 0 and
+                                   len(self._samples_mapping) > 0):
             return
 
         other_different_labels = defaultdict(int), defaultdict(int)
 
         for index, diff_labels in other_different_labels:
             def other_callback():
-                for lbl in self.raw_minibatch_labels:
+                for sind, lbl in zip(self.minibatch_indices,
+                                     self.raw_minibatch_labels):
                     other_different_labels[index][lbl] += 1  # nopep8 pylint: disable=W0640
+                    self._samples_mapping[lbl].add(sind)
 
             self._iterate_class(index, other_callback)
 
-        self._setup_labels_mapping(
-            other_different_labels + (train_different_labels,))
+        if len(self.labels_mapping) == 0:
+            self._setup_labels_mapping(
+                other_different_labels + (train_different_labels,))
 
     def normalize_minibatch(self):
         self.normalizer.normalize(self.minibatch_data[:self.minibatch_size])
