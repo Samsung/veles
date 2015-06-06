@@ -191,7 +191,7 @@ class NormalizerBase(Verified):
 
     def _get_state(self):
         return {k: v for k, v in self.__dict__.items()
-                if k not in ("_initialized", "_cache", "_logger_")
+                if k not in ("_cache", "_logger_")
                 and not hasattr(v, "__call__")}
 
 
@@ -345,13 +345,21 @@ class PointwiseNormalizer(NormalizerBase):
     def _initialize(self, data):
         self._min = data[0].copy()
         self._max = data[0].copy()
-        dtype = numpy.float32 if data[0].dtype != numpy.float64 \
+        self._reset_cache()
+
+    def _reset_cache(self):
+        dtype = numpy.float32 if self._min.dtype != numpy.float64 \
             else numpy.float64
-        self._cache = [numpy.zeros_like(data[0], dtype=dtype) for _ in (0, 1)]
+        self._cache = [numpy.zeros_like(self._min, dtype=dtype)
+                       for _ in (0, 1)]
 
     def analyze(self, data):
         numpy.minimum(self._min, numpy.min(data, axis=0), self._min)
         numpy.maximum(self._max, numpy.max(data, axis=0), self._max)
+
+    def __setstate__(self, state):
+        super(PointwiseNormalizer, self).__setstate__(state)
+        self._reset_cache()
 
     def _calculate_coefficients(self):
         disp = self._max - self._min
