@@ -162,7 +162,7 @@ class NormalizerBase(Verified):
     def __setattr__(self, key, value):
         if getattr(self, "_initialized", False) and key not in self.__dict__:
             raise AttributeError(
-                "Adding new attributes after initialize() was called is"
+                "Adding new attributes after initialize() was called is "
                 "disabled.")
         super(NormalizerBase, self).__setattr__(key, value)
 
@@ -176,8 +176,12 @@ class NormalizerBase(Verified):
     def __setstate__(self, state):
         self.__dict__.update(state)
         super(NormalizerBase, self).__setstate__(state)
+        initialized = self._initialized
+        self._initialized = False
+        self._cache = None
         self.analyze = self.initialized(self.analyze)
         self.normalize = self.assert_initialized(self.normalize)
+        self._initialized = initialized
 
     def reset(self):
         if hasattr(self, "_cache"):
