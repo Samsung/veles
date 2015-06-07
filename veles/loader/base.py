@@ -960,9 +960,17 @@ class LoaderMSEMixin(Unit):
         self._minibatch_targets = memory.Array()
         self._targets_shape = kwargs.get("targets_shape", tuple())
         self.target_normalization_type = kwargs.get(
-            "target_normalization_type", "none")
+            "target_normalization_type",
+            kwargs.get("normalization_type", "none"))
+        if "target_normalization_type" in kwargs and \
+                self.target_normalization_type != self.normalization_type and \
+                "target_normalization_parameters" not in kwargs:
+            raise ValueError("You set target_normalization_type in %s which "
+                             "is different from normalization_type but did not"
+                             " set target_normalization_parameters.")
         self.target_normalization_parameters = kwargs.get(
-            "target_normalization_parameters", {})
+            "target_normalization_parameters",
+            kwargs.get("normalization_parameters", {}))
 
     @property
     def targets_shape(self):
