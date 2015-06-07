@@ -168,6 +168,7 @@ class NormalizerBase(Verified):
 
     def __getstate__(self):
         state = self._get_state()
+        state["_initialized"] = self._initialized
         state.update(super(NormalizerBase, self).__getstate__())
         if "_cache" in state:
             del state["_cache"]
@@ -195,7 +196,7 @@ class NormalizerBase(Verified):
 
     def _get_state(self):
         return {k: v for k, v in self.__dict__.items()
-                if k not in ("_cache", "_logger_")
+                if k not in ("_initialized", "_cache", "_logger_")
                 and not hasattr(v, "__call__")}
 
 
@@ -381,6 +382,11 @@ class PointwiseNormalizer(NormalizerBase):
         mul, add = self._calculate_coefficients()
         data *= mul
         data += add
+
+    def denormalize(self, data):
+        mul, add = self._calculate_coefficients()
+        data -= add
+        data /= mul
 
 
 class MeanNormalizerBase(object):

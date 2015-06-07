@@ -54,18 +54,9 @@ class RestfulLoader(Loader):
 
     def __init__(self, workflow, **kwargs):
         super(RestfulLoader, self).__init__(workflow, **kwargs)
-        loader = kwargs["loader"]
-        self._minibatch_data_shape = (self.max_minibatch_size,) + \
-            loader.minibatch_data.shape[1:]
-        self.normalization_type = loader.normalization_type
-        self.normalization_parameters = loader.normalization_parameters
-        self._normalizer = loader.normalizer
-        self._unique_labels_count = loader.unique_labels_count
-        self._labels_mapping = loader.labels_mapping
         self.complete = Bool(False)
         self.max_response_time = kwargs.get("max_response_time", 0.1)
         self._requests = []
-        self.derive_from(loader)
 
     def init_unpickled(self):
         super(RestfulLoader, self).init_unpickled()
@@ -92,9 +83,6 @@ class RestfulLoader(Loader):
     @property
     def requests(self):
         return self._requests
-
-    def derive_from(self, loader):
-        pass
 
     def reset_normalization(self):
         pass
@@ -147,6 +135,7 @@ class RestfulImageLoader(RestfulLoader, ImageLoader):
     DISABLE_INTERFACE_VERIFICATION = True
 
     def derive_from(self, loader):
+        super(RestfulImageLoader, self).derive_from(loader)
         self.color_space = loader.color_space
         self._original_shape = loader.original_shape
         self.path_to_mean = loader.path_to_mean

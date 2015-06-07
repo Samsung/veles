@@ -310,8 +310,9 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         self.debug(
             "Data range: (%.6f, %.6f), "
             % (self.original_data.min(), self.original_data.max()))
-        self.normalizer.analyze(self.original_data[
-                                self.class_end_offsets[VALID]:])
+        if self.class_lengths[TRAIN] > 0:
+            self.normalizer.analyze(
+                self.original_data[self.class_end_offsets[VALID]:])
         self.normalizer.normalize(self.original_data.mem)
         self.debug(
             "Normalized data range: (%.6f, %.6f), "
@@ -454,7 +455,6 @@ class FullBatchLoaderMSEMixin(LoaderMSEMixin):
         super(FullBatchLoaderMSEMixin, self).initialize(
             device=device, **kwargs)
         assert self.total_samples > 0
-        self.target_normalizer.reset()
         self.info("Normalizing targets to %s...",
                   self.target_normalization_type)
         self.analyze_and_normalize_targets()
@@ -469,10 +469,12 @@ class FullBatchLoaderMSEMixin(LoaderMSEMixin):
         self.debug(
             "Target range: (%.6f, %.6f)"
             % (self.original_targets.min(), self.original_targets.max()))
-        self.target_normalizer.analyze(self.original_targets.mem)
+        if self.class_lengths[TRAIN] > 0:
+            self.target_normalizer.analyze(self.original_targets.mem)
         self.target_normalizer.normalize(self.original_targets.mem)
         if self.class_targets:
-            self.target_normalizer.analyze(self.class_targets.mem)
+            if self.class_lengths[TRAIN] > 0:
+                self.target_normalizer.analyze(self.class_targets.mem)
             self.target_normalizer.normalize(self.class_targets.mem)
         self.debug(
             "Normalized target range: (%.6f, %.6f)"

@@ -62,19 +62,8 @@ class InteractiveLoader(Loader):
         self._event = threading.Event()
         self._event.clear()
         self._max_minibatch_size = 1
-        loader = kwargs["loader"]
-        self._minibatch_data_shape = (1,) + loader.minibatch_data.shape[1:]
-        self.normalization_type = loader.normalization_type
-        self.normalization_parameters = loader.normalization_parameters
-        self._normalizer = loader.normalizer
-        self._unique_labels_count = loader.unique_labels_count
-        self._labels_mapping = loader.labels_mapping
         self._loadtxt_kwargs = kwargs.get("loadtxt_kwargs", {})
         self.complete = Bool(False)
-        self.derive_from(loader)
-
-    def derive_from(self, loader):
-        pass
 
     def reset_normalization(self):
         pass
@@ -194,6 +183,7 @@ class InteractiveImageLoader(InteractiveLoader, ImageLoader):
     DISABLE_INTERFACE_VERIFICATION = True
 
     def derive_from(self, loader):
+        super(InteractiveImageLoader, self).derive_from(loader)
         self.color_space = loader.color_space
         self._original_shape = loader.original_shape
         self.path_to_mean = loader.path_to_mean

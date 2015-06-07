@@ -226,6 +226,14 @@ class Loader(Unit):
         else:
             self._on_initialized = nothing
 
+    def derive_from(self, loader):
+        self.normalization_type = loader.normalization_type
+        self.normalization_parameters = loader.normalization_parameters
+        self._normalizer = loader.normalizer
+        self._minibatch_data_shape = (1,) + loader.minibatch_data.shape[1:]
+        self._unique_labels_count = loader.unique_labels_count
+        self._labels_mapping = loader.labels_mapping
+
     @property
     def has_labels(self):
         """
@@ -518,7 +526,6 @@ class Loader(Unit):
     def initialize(self, **kwargs):
         """Loads the data, initializes indices, shuffles the training set.
         """
-        self.reset_normalization()
         try:
             super(Loader, self).initialize(**kwargs)
         except AttributeError:
@@ -528,6 +535,8 @@ class Loader(Unit):
         except AttributeError as e:
             self.exception("Failed to load the data")
             raise from_none(e)
+        if self.class_lengths[TRAIN] > 0:
+            self.reset_normalization()
         self.max_minibatch_size = kwargs.get("minibatch_size",
                                              self.max_minibatch_size)
         self.on_before_create_minibatch_data()
@@ -679,6 +688,8 @@ class Loader(Unit):
             self.minibatch_indices[minibatch_size:] = -1
 
     def analyze_dataset(self):
+        if self.class_lengths[TRAIN] == 0:
+            return
         if isinstance(self.normalizer, normalization.StatelessNormalizer):
             self.info('Skipped normalization analysis (type was set to "%s")',
                       type(self.normalizer).MAPPING)
@@ -1014,6 +1025,11 @@ class LoaderMSEMixin(Unit):
     @property
     def minibatch_targets(self):
         return self._minibatch_targets
+
+    def initialize(self, **kwargs):
+        super(LoaderMSEMixin, self).initialize(**kwargs)
+        if self.class_lengths[TRAIN] > 0:
+            self.target_normalizer.reset()
 
     def analyze_dataset(self):
         super(LoaderMSEMixin, self).analyze_dataset()
