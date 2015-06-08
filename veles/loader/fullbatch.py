@@ -404,7 +404,7 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
             nn[l] = max(int(numpy.round(ratio * nn[l])), 1)
             if nn[l] >= n_train:
                 raise ValueError(
-                    "There are too few labels for class %d" % l)
+                    "There are too few labels for class %s: %s" % (l, n_train))
             n += nn[l]
         while n > 0:
             i = rand.randint(offs, offs_test + train_samples)
