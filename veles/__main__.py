@@ -594,8 +594,10 @@ class Main(Logger, CommandLineBase):
         else:
             from veles.genetics import ConfigPopulation
 
+            rand = prng.RandomGenerator(None)
+            rand.state = prng.get().state
             ConfigPopulation(root, self, wm, self._optimization == "multi",
-                             self._population_size or 50).evolve()
+                             self._population_size or 50, rand=rand).evolve()
 
     def _print_logo(self, args):
         if not args.no_logo:
