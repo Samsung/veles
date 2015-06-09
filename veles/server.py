@@ -621,6 +621,7 @@ class Server(NetworkAgent, ServerFactory):
 
     def __init__(self, configuration, workflow, **kwargs):
         super(Server, self).__init__(configuration, workflow)
+        self._listener_ = None
         parser = Server.init_parser(**kwargs)
         self.args, _ = parser.parse_known_args(self.argv)
         self.job_timeout = self.args.job_timeout * 60
@@ -634,7 +635,8 @@ class Server(NetworkAgent, ServerFactory):
         self.domain_name = fqdn[len(host) + 1:] if fqdn != host else ""
         if self.domain_name:
             self.debug("Domain name was resolved to %s", self.domain_name)
-        reactor.listenTCP(self.port, self, interface=self.address)
+        self._listener_ = \
+            reactor.listenTCP(self.port, self, interface=self.address)
         self.info("Accepting new connections on %s:%d",
                   self.address, self.port)
         try:
@@ -709,4 +711,5 @@ class Server(NetworkAgent, ServerFactory):
         return nodes
 
     def close(self):
-        pass
+        if self._listener_ is not None:
+            self._listener_.stopListening()
