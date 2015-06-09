@@ -200,6 +200,8 @@ class Device(Pickleable):
         super(Device, self).init_unpickled()
         self._pid_ = os.getpid()
         self._thread_pool_detach_callbacks_ = {}
+        self._temp_buffer_size = 0
+        self._temp_buffer_ = None
 
     def __del__(self):
         for pool in dict(self._thread_pool_detach_callbacks_):
@@ -368,6 +370,32 @@ class Device(Pickleable):
         parser = Device.init_parser(**kwargs)
         args, _ = parser.parse_known_args(Device.class_argv)
         return args.device
+
+    def _alloc_temp_buffer(self, size):
+        """Allocates device-specific temporary buffer.
+        """
+        raise NotImplementedError()
+
+    def request_temp_buffer(self, size):
+        """Tries to allocate the device specific temporary buffer
+        of max(size, previous max size of this function call) bytes,
+        then frees it.
+        """
+        if size & 1:
+            size += 1
+        if size > self._temp_buffer_size:
+            # Try to allocate the memory on the device
+            buf = self._alloc_temp_buffer(size)
+            del buf
+            self._temp_buffer_size = size
+
+    def get_temp_buffer(self):
+        """Returns allocated device-specific temporary buffer.
+        """
+        if self._temp_buffer_ is None:
+            self._temp_buffer_ = self._alloc_temp_buffer(
+                self._temp_buffer_size)
+        return self._temp_buffer_
 
 
 @add_metaclass(BackendRegistry)
@@ -692,6 +720,16 @@ class OpenCLDevice(Device):
                                 block_size, bool(int(vector_opt)), min_dt)
         device_infos[self.device_info.desc] = device_info
 
+    def _alloc_temp_buffer(self, size):
+        # Allocate the buffer
+        buf = self.queue_.context.create_buffer(
+            cl.CL_MEM_READ_WRITE, size=size)
+        self.sync()
+        # Move it to device
+        self.queue_.copy_buffer(buf, buf, 0, size >> 1, size >> 1)
+        self.sync()
+        return buf
+
 
 @add_metaclass(BackendRegistry)
 class CUDADevice(Device):
@@ -855,6 +893,10 @@ class CUDADevice(Device):
         except:
             return False
 
+    def _alloc_temp_buffer(self, size):
+        # Allocate the buffer
+        return cu.MemAlloc(self.context, size)
+
 
 @add_metaclass(BackendRegistry)
 class NumpyDevice(Device):
@@ -884,3 +926,7 @@ class NumpyDevice(Device):
     @staticmethod
     def iterparse(text):
         yield "numpy", "numpy"
+
+    def _alloc_temp_buffer(self, size):
+        # Allocate the buffer
+        return numpy.zeros(size, dtype=numpy.uint8)
