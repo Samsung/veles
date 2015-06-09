@@ -407,7 +407,8 @@ class Main(Logger, CommandLineBase):
         self.seeds = seeds
 
     def _load_workflow(self, fname_snapshot):
-        if fname_snapshot.startswith("odbc://"):
+        stype = splittype(fname_snapshot)[0]
+        if stype == "odbc":
             import pyodbc
 
             addr = fname_snapshot[7:]
@@ -437,6 +438,17 @@ class Main(Logger, CommandLineBase):
             except pyodbc.Error as e:
                 self.warning(
                     "Failed to load the snapshot from ODBC source: %s", e)
+                return None
+        elif stype in ("http", "https"):
+            try:
+                self.info("Downloading %s...", fname_snapshot)
+                fname_snapshot = self.snapshot_file_name = wget.download(
+                    fname_snapshot, root.common.snapshot_dir)
+                print()
+                sys.stdout.flush()
+            except:
+                self.exception("Failed to fetch the snapshot at \"%s\"",
+                               fname_snapshot)
                 return None
         try:
             return Snapshotter.import_file(fname_snapshot)
@@ -602,19 +614,6 @@ class Main(Logger, CommandLineBase):
         cfg.print_(file=io)
         self.debug("\n%s", io.getvalue().strip())
 
-    def _fetch_snapshot(self, url):
-        if os.path.exists(url) or splittype(url)[0] not in ("http", "https"):
-            self.snapshot_file_name = url
-            return
-        try:
-            self.info("Downloading %s...", url)
-            self.snapshot_file_name = wget.download(
-                url, root.common.snapshot_dir)
-            print()
-        except:
-            self.exception("Failed to fetch the snapshot at \"%s\"", url)
-            self.snapshot_file_name = ""
-
     def setup_logging(self, verbosity):
         try:
             super(Main, self).setup_logging(Main.LOG_LEVEL_MAP[verbosity])
@@ -699,7 +698,6 @@ class Main(Logger, CommandLineBase):
 
         if self.logger.isEnabledFor(logging.DEBUG):
             self._print_config(root)
-        self._fetch_snapshot(args.snapshot)
         wm = self._load_model(workflow_file)
         self._apply_config(config_file, args.config_list)
         if self.logger.isEnabledFor(logging.DEBUG):
