@@ -38,7 +38,8 @@ under the License.
 from __future__ import division
 from collections import Counter
 import numpy
-from opencl4py import CLRuntimeError
+from cuda4py import CUDARuntimeError, CUDA_ERROR_OUT_OF_MEMORY
+from opencl4py import CLRuntimeError, CL_MEM_OBJECT_ALLOCATION_FAILURE
 import six
 from zope.interface import implementer, Interface
 
@@ -207,7 +208,15 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         try:
             self.fill_indices(0, self.max_minibatch_size)
         except CLRuntimeError as e:
-            if e.code == -4:  # CL_MEM_OBJECT_ALLOCATION_FAILURE
+            if e.code == CL_MEM_OBJECT_ALLOCATION_FAILURE:
+                self.warning("Failed to store the entire dataset on the "
+                             "device")
+                self.force_numpy = True
+                self.device = NumpyDevice()
+            else:
+                raise from_none(e)
+        except CUDARuntimeError as e:
+            if e.code == CUDA_ERROR_OUT_OF_MEMORY:
                 self.warning("Failed to store the entire dataset on the "
                              "device")
                 self.force_numpy = True

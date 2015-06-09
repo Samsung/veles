@@ -100,6 +100,10 @@ class RESTfulAPI(Unit, TriviallyDistributable):
         self.path = kwargs.get("path", root.common.api.path)
         self.demand("feed", "requests", "results", "minibatch_size")
 
+    def init_unpickled(self):
+        super(RESTfulAPI, self).init_unpickled()
+        self._listener_ = None
+
     @property
     def port(self):
         return self._port
@@ -123,11 +127,16 @@ class RESTfulAPI(Unit, TriviallyDistributable):
         self._path = value
 
     def initialize(self, **kwargs):
-        reactor.listenTCP(self.port, Site(APIResource(self.path, self.serve)))
+        self._listener_ = reactor.listenTCP(
+            self.port, Site(APIResource(self.path, self.serve)))
         self.info("Listening on 0.0.0.0:%d%s", self.port, self.path)
 
     def run(self):
         reactor.callFromThread(self.respond)
+
+    def stop(self):
+        if self._listener_ is not None:
+            self._listener_.stopListening()
 
     def respond(self):
         for request, result in islice(zip(self.requests, self.results),

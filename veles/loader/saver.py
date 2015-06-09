@@ -48,7 +48,7 @@ from zope.interface import implementer
 from veles import error
 from veles.compat import from_none, lzma
 from veles.config import root
-from veles.loader.base import Loader, ILoader, CLASS_NAME
+from veles.loader.base import Loader, ILoader, CLASS_NAME, TRAIN
 from veles.pickle2 import pickle, best_protocol
 from veles.snapshotter import SnappyFile
 from veles.units import Unit, IUnit
@@ -233,6 +233,11 @@ class MinibatchesLoader(Loader):
         # Virtual end
         self.offset_table.append(self.file.tell() - bm.size)
         self.debug("Offsets: %s", self.offset_table)
+        if self.class_lengths[TRAIN] == 0:
+            assert self.normalization_type == "none", \
+                "You specified \"%s\" normalization but there are no train " \
+                "samples to analyze." % self.normalization_type
+            self.normalizer.analyze(self.minibatch_data.mem)
 
     def create_minibatch_data(self):
         self.minibatch_data.reset(numpy.zeros(

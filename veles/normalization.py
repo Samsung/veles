@@ -42,7 +42,7 @@ from six import add_metaclass
 from zope.interface import implementer, Interface
 
 from veles.compat import from_none
-from veles.numpy_ext import reshape, transpose
+from veles.numpy_ext import reshape, transpose, assert_addr
 from veles.verified import Verified
 from veles.mapped_object_registry import MappedObjectsRegistry
 
@@ -74,8 +74,20 @@ class INormalizer(Interface):
 
     def normalize(data):
         """
-        Performs the array values normalization based on the internal state.
+        Performs the array *inplace* normalization based on the internal state.
         :param data: numpy.ndarray
+        :return Either None or a dict object which can be passed into
+        denormalize() as **kwargs.
+        """
+
+    def denormalize(data, **kwargs):
+        """
+        Inverses the result of applying normalize(), that is, returns the
+        original denormalized data. Warning: it may modify the input array as
+        well, so please copy it beforehand if it is not a desired behavior.
+        :param data: numpy.ndarray
+        :param kwargs: Additional arguments for lossy normalizers.
+        :return denormalized numpy.ndarray.
         """
 
     def _initialize(data):
@@ -156,8 +168,18 @@ class NormalizerBase(Verified):
         """
         Returns all instance attributes except _initialized and _cache.
         """
-        assert self._initialized
+        assert self._initialized, \
+            "Uninitialized normalizers do not have a state"
         return self._get_state()
+
+    @state.setter
+    def state(self, value):
+        if not isinstance(value, dict):
+            raise TypeError(
+                "state must be a dictionary (got %s)" % type(value))
+        self._initialized = False
+        self.__dict__.update(value)
+        self._initialized = True
 
     def __setattr__(self, key, value):
         if getattr(self, "_initialized", False) and key not in self.__dict__:
@@ -179,10 +201,15 @@ class NormalizerBase(Verified):
         super(NormalizerBase, self).__setstate__(state)
         initialized = self._initialized
         self._initialized = False
-        self._cache = None
+        if hasattr(self, "_cache"):
+            self._cache = None
         self.analyze = self.initialized(self.analyze)
         self.normalize = self.assert_initialized(self.normalize)
         self._initialized = initialized
+
+    @property
+    def is_initialized(self):
+        return self._initialized
 
     def reset(self):
         if hasattr(self, "_cache"):
@@ -191,8 +218,30 @@ class NormalizerBase(Verified):
 
     @staticmethod
     def prepare(data):
-        return transpose(reshape(
-            data, (data.shape[0], data.size // data.shape[0])))
+        """
+        Manipulates with the array's shape, collapsing all the dimensions but
+        the first and transposing the resulting 2D matrix.
+        :param data: numpy.ndarray
+        :return tuple (the reshaped and transposed data,
+        the original shape of collapsed dimensions)
+        """
+        shape = data.shape[1:]
+        old_data = data
+        new_data = transpose(reshape(data, (data.shape[0],
+                                            data.size // data.shape[0])))
+        assert_addr(old_data, new_data)
+        return new_data, shape
+
+    @staticmethod
+    def unprepare(data, shape):
+        """
+        Inverses the manipulations in prepare().
+        :param data: numpy.ndarray
+        :param shape: The original shape of collapsed dimensions returned as
+        a second item of the tuple from prepare().
+        :return numpy.ndarray
+        """
+        return reshape(transpose(data), (data.shape[1],) + shape)
 
     def _get_state(self):
         return {k: v for k, v in self.__dict__.items()
@@ -254,12 +303,18 @@ class MeanDispersionNormalizer(NormalizerBase):
         disp[disp == 0] = 1
         data /= disp
 
+    def denormalize(self, data, **kwargs):
+        mean, disp = self._calculate_coefficients()
+        data *= disp
+        data += mean
+        return data
+
 
 @implementer(INormalizer)
 class LinearNormalizer(StatelessNormalizer):
     """
     Normalizes values within the specified range from [min, max] in the current
-    array *sample-wise*. Thus it is different from PointwiseNormalizer, which
+    array *samplewise*. Thus it is different from PointwiseNormalizer, which
     aggregates min and max through analyze() beforehand.
     """
 
@@ -289,7 +344,7 @@ class LinearNormalizer(StatelessNormalizer):
 
     def normalize(self, data):
         orig_shape_data = data
-        data = NormalizerBase.prepare(data)
+        data, _ = NormalizerBase.prepare(data)
         dmin = numpy.min(data, axis=0)
         dmax = numpy.max(data, axis=0)
         imin, imax = self.interval
@@ -301,11 +356,31 @@ class LinearNormalizer(StatelessNormalizer):
                          (imin + imax) / 2, imin, imax)
             zeros = diff == 0
             orig_shape_data[zeros] = (imin + imax) / 2
+            recovery = dmin[zeros].copy()
             dmax[zeros] = imax
             dmin[zeros] = imin
             diff[zeros] = imin - imax
+        else:
+            zeros = None
+            recovery = None
         data *= (imin - imax) / diff
         data += (dmin * imax - dmax * imin) / diff
+        if recovery is not None:
+            dmin[zeros] = dmax[zeros] = recovery
+        return {"dmin": dmin, "dmax": dmax}
+
+    def denormalize(self, data, **kwargs):
+        data, shape = NormalizerBase.prepare(data)
+        dmin = kwargs["dmin"]
+        dmax = kwargs["dmax"]
+        imin, imax = self.interval
+        diff = dmin - dmax
+        if numpy.count_nonzero(diff) < numpy.prod(dmin.shape):
+            zeros = diff == 0
+            diff[zeros] = imin - imax
+        data -= (dmin * imax - dmax * imin) / diff
+        data /= (imin - imax) / diff
+        return NormalizerBase.unprepare(data, shape)
 
 
 @implementer(INormalizer)
@@ -319,10 +394,22 @@ class ExponentNormalizer(StatelessNormalizer):
     MAPPING = "exp"
 
     def normalize(self, data):
-        data = NormalizerBase.prepare(data)
-        data -= data.max(axis=0)
+        data, _ = NormalizerBase.prepare(data)
+        dmax = data.max(axis=0)
+        data -= dmax
         numpy.exp(data, data)
-        data /= data.sum(axis=0)
+        dsum = data.sum(axis=0)
+        data /= dsum
+        return {"dmax": dmax, "dsum": dsum}
+
+    def denormalize(self, data, **kwargs):
+        data, shape = NormalizerBase.prepare(data)
+        dmax = kwargs["dmax"]
+        dsum = kwargs["dsum"]
+        data *= dsum
+        numpy.log(data, data)
+        data += dmax
+        return NormalizerBase.unprepare(data, shape)
 
 
 @implementer(INormalizer)
@@ -335,6 +422,9 @@ class NoneNormalizer(StatelessNormalizer):
 
     def normalize(self, data):
         pass
+
+    def denormalize(self, data, **kwargs):
+        return data
 
 
 @implementer(INormalizer)
@@ -364,7 +454,10 @@ class PointwiseNormalizer(NormalizerBase):
 
     def __setstate__(self, state):
         super(PointwiseNormalizer, self).__setstate__(state)
+        initialized = self._initialized
+        self._initialized = False
         self._reset_cache()
+        self._initialized = initialized
 
     def _calculate_coefficients(self):
         disp = self._max - self._min
@@ -383,10 +476,11 @@ class PointwiseNormalizer(NormalizerBase):
         data *= mul
         data += add
 
-    def denormalize(self, data):
+    def denormalize(self, data, **kwargs):
         mul, add = self._calculate_coefficients()
         data -= add
         data /= mul
+        return data
 
 
 class MeanNormalizerBase(object):
@@ -409,6 +503,10 @@ class MeanNormalizerBase(object):
     def apply_scale(self, data):
         if self.scale != 1:
             data *= self.scale
+
+    def unapply_scale(self, data):
+        if self.scale != 1:
+            data /= self.scale
 
 
 @implementer(INormalizer)
@@ -448,6 +546,11 @@ class ExternalMeanNormalizer(MeanNormalizerBase, StatelessNormalizer):
         data -= self.mean
         self.apply_scale(data)
 
+    def denormalize(self, data, **kwargs):
+        self.unapply_scale(data)
+        data += self.mean
+        return data
+
 
 @implementer(INormalizer)
 class InternalMeanNormalizer(MeanNormalizerBase, NormalizerBase):
@@ -472,3 +575,8 @@ class InternalMeanNormalizer(MeanNormalizerBase, NormalizerBase):
     def normalize(self, data):
         data -= self._calculate_coefficients()
         self.apply_scale(data)
+
+    def denormalize(self, data, **kwargs):
+        self.unapply_scale(data)
+        data += self._calculate_coefficients()
+        return data

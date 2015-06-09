@@ -50,6 +50,7 @@ class MyLoader(Loader):
         self.counter = 0
         self.class_lengths[0] = 100 * 10
         self.class_lengths[1] = self.class_lengths[2] = 0
+        self.normalizer.analyze(self.minibatch_data.mem)
 
     def create_minibatch_data(self):
         self.minibatch_data.reset(numpy.zeros((100, 1), dtype=numpy.float32))

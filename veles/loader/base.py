@@ -689,6 +689,11 @@ class Loader(Unit):
 
     def analyze_dataset(self):
         if self.class_lengths[TRAIN] == 0:
+            assert self.normalizer.is_initialized, \
+                "There are no train samples and the normalizer has not been " \
+                "initialized. Either derive this loader from an existing one" \
+                " (use derive_from()) or provide the normalizer's state " \
+                "manually (use normalizer.state property)."
             return
         if isinstance(self.normalizer, normalization.StatelessNormalizer):
             self.info('Skipped normalization analysis (type was set to "%s")',

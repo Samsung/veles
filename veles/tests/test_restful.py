@@ -78,8 +78,10 @@ class RESTAPITest(unittest.TestCase):
         api = RESTfulAPI(workflow, port=port, path="/api")
         api.link_from(repeater)
         base_loader = DummyLoader(workflow)
-        base_loader.minibatch_data = numpy.zeros((10, 10, 10))
-        loader = RestfulLoader(workflow, loader=base_loader, minibatch_size=1)
+        base_loader.minibatch_data.reset(numpy.zeros((10, 10, 10)))
+        base_loader.normalizer.analyze(base_loader.minibatch_data.mem)
+        loader = RestfulLoader(workflow, minibatch_size=1)
+        loader.derive_from(base_loader)
         loader.link_from(api)
         workflow.del_ref(base_loader)
         api.link_attrs(loader, "feed", "requests", "minibatch_size")
@@ -117,11 +119,17 @@ class RESTAPITest(unittest.TestCase):
 
         def failed(error):
             error.printTraceback()
-            reactor.stop()
+            if reactor.running:
+                reactor.stop()
             self.fail()
 
         d.addCallback(finished)
         d.addErrback(failed)
+
+        def stop():
+            reactor.callFromThread(reactor.stop)
+
+        workflow.thread_pool.register_on_shutdown(stop)
         reactor.run()
         self.assertIsNotNone(response[0])
         self.assertEqual(response[0].code, 200)
@@ -136,7 +144,8 @@ class RESTAPITest(unittest.TestCase):
         api = RESTfulAPI(workflow, port=port)
         base_loader = DummyLoader(workflow)
         base_loader.minibatch_data = numpy.zeros((10, 10, 10))
-        loader = RestfulLoader(workflow, loader=base_loader, minibatch_size=1)
+        loader = RestfulLoader(workflow, minibatch_size=1)
+        loader.derive_from(base_loader)
         workflow.del_ref(base_loader)
         api.link_attrs(loader, "feed", "requests", "minibatch_size")
         api.results = [numpy.ones((3, 3))]
@@ -147,6 +156,7 @@ class RESTAPITest(unittest.TestCase):
         self.assertTrue((new_api.results[0] == numpy.ones((3, 3))).all())
         self.assertIsInstance(new_api.requests, list)
         self.assertEqual(len(new_api.requests), 0)
+        api.stop()
 
     def test_map_read(self):
         vec = Array(numpy.ones((10, 10)))
