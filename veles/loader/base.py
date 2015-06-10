@@ -50,7 +50,7 @@ except ImportError:
 import six
 from zope.interface import implementer, Interface
 
-from veles.compat import from_none, is_interactive
+from veles.compat import from_none, has_colors
 import veles.config as config
 from veles.distributable import IDistributable
 import veles.error as error
@@ -78,6 +78,14 @@ CLASS_NAME = ["test", "validation", "train"]
 class UserLoaderRegistry(MappedUnitRegistry):
     mapping = "loaders"
     base = Unit
+
+    @staticmethod
+    def get_factory(name, **kwargs):
+        if name not in UserLoaderRegistry.loaders:
+            raise ValueError(
+                "\"%s\" is not a valid loader name. Registered names: %s." %
+                (name, list(sorted(UserLoaderRegistry.loaders))))
+        return lambda w: UserLoaderRegistry.loaders[name](w, **kwargs)
 
 
 class LoaderError(Exception):
@@ -884,7 +892,7 @@ class Loader(Unit):
         amin = list(stats.keys())[numpy.argmin(values)]
         lmax = numpy.max(values)
         amax = list(stats.keys())[numpy.argmax(values)]
-        if is_interactive() and stddev > mean / 10:
+        if has_colors() and stddev > mean / 10:
             endstr = "\033[0m"
             if stddev > mean / 2:
                 openstr = "\033[1;31m"  # red

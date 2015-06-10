@@ -36,7 +36,7 @@ under the License.
 
 import platform
 import six
-from sys import stdin, version_info
+from sys import stdout, version_info
 
 
 if (version_info[0] + (version_info[1] / 10.0)) < 3.3:
@@ -144,8 +144,12 @@ PYPY = platform.python_implementation() == "PyPy"
 
 def is_interactive():
     try:
-        import __main__ as main
-        return not hasattr(main, '__file__') or (
-            not stdin.closed and stdin.isatty())
+        import __main__
+        return getattr(__main__, "__loader__",
+                       getattr(__main__, "__file__", None)) is None
     except ImportError:
         return False
+
+
+def has_colors():
+    return is_interactive() or stdout.isatty()

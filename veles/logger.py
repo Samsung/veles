@@ -46,7 +46,7 @@ from six import StringIO
 import sys
 import time
 
-from veles.compat import from_none, is_interactive
+from veles.compat import from_none, has_colors
 from veles.external.daemon import redirect_stream
 from veles.external.progressbar import ProgressBar
 from veles.paths import __root__
@@ -123,7 +123,7 @@ class Logger(object):
         root_logger.handlers[0].stream = sys.stdout
         ProgressBar().logger.level = level
         # Turn on colors in case of an interactive out tty or IPython
-        if is_interactive():
+        if has_colors():
             root = logging.getLogger()
             handler = root.handlers[0]
             handler.setFormatter(Logger.ColorFormatter())
@@ -190,7 +190,7 @@ class Logger(object):
                                       "%(message)s", "%Y-%m-%d %H:%M:%S")
         handler.setFormatter(formatter)
         logging.getLogger("Logger").info("Will save the logs to %s", file_name)
-        if not is_interactive():
+        if not has_colors():
             logging.getLogger().handlers[0] = handler
             sys.stderr.flush()
             stderr = open("%s.stderr%s" % os.path.splitext(file_name), 'a',

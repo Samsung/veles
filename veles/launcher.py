@@ -468,14 +468,30 @@ class Launcher(logger.Logger):
             self._stop_graphics()
             raise from_none(e)
         self.workflow.reset_thread_pool()
-        try:
-            self.workflow.initialize(device=self.device, snapshot=snapshot,
-                                     **kwargs)
-        except Exception as e:
-            self.error("Failed to initialize the workflow")
-            self._stop_graphics()
-            self.device_thread_pool_detach()
-            raise from_none(e)
+
+        def greet_reactor():
+            def set_thread_ident():
+                self._reactor_thread_ident = threading.current_thread().ident
+
+            reactor.callWhenRunning(self.info, "Reactor is running")
+            reactor.callWhenRunning(set_thread_ident)
+
+        def initialize_workflow():
+            try:
+                self.workflow.initialize(device=self.device, snapshot=snapshot,
+                                         **kwargs)
+            except Exception as ie:
+                self.error("Failed to initialize the workflow")
+                self._stop_graphics()
+                self.device_thread_pool_detach()
+                raise from_none(ie)
+
+        if not self.interactive:
+            # delay greet_reactor() until everything else is initialized
+            initialize_workflow()
+        else:
+            greet_reactor()
+            reactor.callWhenRunning(initialize_workflow)
 
         if not self.is_standalone:
             self._agent.initialize()
@@ -498,6 +514,7 @@ class Launcher(logger.Logger):
         for unit in self.workflow:
             if isinstance(unit, Plotter):
                 unit.graphics_server = Launcher.graphics_server
+        greet_reactor()
         self._initialized = True
 
     def run(self):
@@ -505,13 +522,6 @@ class Launcher(logger.Logger):
         periodic status updates.
         """
         self._pre_run()
-
-        def set_thread_ident():
-            self._reactor_thread_ident = threading.current_thread().ident
-
-        reactor.callWhenRunning(self.info, "Reactor is running")
-        reactor.callWhenRunning(set_thread_ident)
-        self.event("work", "begin", height=0.1)
         if self.interactive:
             if not reactor.running and self._reactor_thread is None:
                 reactor._handleSignals()
@@ -562,6 +572,12 @@ class Launcher(logger.Logger):
                            "a meltdown unless you immediately activate the "
                            "emergency graphite protection.")
 
+    @staticmethod
+    def stop_reactor(self):
+        if not self.interactive:
+            self.warning("This is designed for the interactive mode")
+        reactor.stop()
+
     def pause(self):
         self.workflow.thread_pool.pause()
 
@@ -580,8 +596,11 @@ class Launcher(logger.Logger):
             self._notify_update_last_time = self.start_time
             self._notify_status()
         if not self.is_slave:
-            self.workflow.thread_pool.start()
-            self.workflow.thread_pool.callInThread(self.workflow.run)
+            def run_workflow():
+                self.workflow.thread_pool.start()
+                self.workflow.thread_pool.callInThread(self.workflow.run)
+            reactor.callWhenRunning(run_workflow)
+        self.event("work", "begin", height=0.1)
 
     def _on_stop(self):
         if self.workflow is None or not self._initialized:

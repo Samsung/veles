@@ -99,7 +99,6 @@ class AccumulatingPlotter(Plotter):
         self.label = kwargs.get("label", "")
         self.values = []
         self.input_offset = 0
-        self.pp = None
         self.show_figure = nothing
         self.input_field = None
         self.demand("input")

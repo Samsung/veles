@@ -90,7 +90,7 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
     def __init__(self, workflow, **kwargs):
         super(FullBatchLoader, self).__init__(workflow, **kwargs)
         self.verify_interface(IFullBatchLoader)
-        self.validation_ratio = kwargs.get("validation_ratio", None)
+        self.validation_ratio = kwargs.get("validation_ratio", 0)
 
     def init_unpickled(self):
         super(FullBatchLoader, self).init_unpickled()
@@ -120,30 +120,6 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         if not isinstance(value, bool):
             raise TypeError("on_device must be boolean (got %s)" % type(value))
         self.force_numpy = not value
-
-    @property
-    def validation_ratio(self):
-        """
-        Returns the ratio between new train and new validation set lengths.
-        None means no validation set extraction.
-        Negative means move validation to train.
-        """
-        return self._validation_ratio
-
-    @validation_ratio.setter
-    def validation_ratio(self, value):
-        if value is None:
-            self._validation_ratio = None
-            return
-        if not isinstance(value, float):
-            raise TypeError(
-                "validation_ratio must be a floating point value (got %s of "
-                "type %s)" % (value, value.__class__))
-        if value >= 1:
-            raise ValueError(
-                "validation_ratio = %f is out of the allowed range (0, 1)" %
-                value)
-        self._validation_ratio = value
 
     @property
     def original_data(self):

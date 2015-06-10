@@ -163,7 +163,12 @@ class VelesModule(ModuleType):
         Main = import_module("veles.__main__").Main
         if config is None:
             config = "-"
-        main = Main(is_interactive(), workflow, config, *args, **kwargs)
+        if "interactive" in kwargs:
+            interactive = kwargs["interactive"]
+            del kwargs["interactive"]
+        else:
+            interactive = is_interactive()
+        main = Main(interactive, workflow, config, *args, **kwargs)
         main.run()
         return main.launcher
 

@@ -368,7 +368,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                 # The weakly referenced object no longer exists
                 skipped += 1
                 continue
-            self.debug("%d/%d - %s", ind, sdl, str(on_shutdown))
+            self.debug("%d/%d - %s", ind + 1, sdl, str(on_shutdown))
             try:
                 on_shutdown()
             except:
@@ -473,6 +473,15 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             os.getpid())
 
     @staticmethod
+    def _warn_about_sigint_interactive_reactor(log):
+        log.warning(
+            "We are running in interactive mode, so Twisted reactor runs in a "
+            "separate thread. KeyboardInterrupt are not delivered to it to "
+            "enable further workflow runs (Twisted reactor is not restartable)"
+            ", so if you wish to nuke it, explicitly call reactor.stop() or "
+            "launcher.stop_reactor().")
+
+    @staticmethod
     def sigint_handler(sign, frame):
         """
         Private method - handler for SIGINT.
@@ -501,7 +510,10 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
                     ThreadPool.debug_deadlocks()
                     ThreadPool.sigint_printed = True
                 else:
-                    ThreadPool._warn_about_sigint_hysteria(log)
+                    if not is_interactive():
+                        ThreadPool._warn_about_sigint_hysteria(log)
+                    else:
+                        ThreadPool._warn_about_sigint_interactive_reactor(log)
 
     def sigusr1_handler(self, sign, frame):
         """
