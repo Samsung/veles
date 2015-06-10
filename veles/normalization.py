@@ -181,6 +181,14 @@ class NormalizerBase(Verified):
         self.__dict__.update(value)
         self._initialized = True
 
+    @property
+    def coefficients(self):
+        """
+        :return: The specific values which are calculated from state to be
+        actually used inside normalize() and denormalize().
+        """
+        return self._calculate_coefficients()
+
     def __setattr__(self, key, value):
         if getattr(self, "_initialized", False) and key not in self.__dict__:
             raise AttributeError(

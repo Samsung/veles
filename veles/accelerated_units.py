@@ -49,6 +49,7 @@ import os
 import re
 from six import BytesIO, add_metaclass, PY3
 import tarfile
+from tempfile import NamedTemporaryFile
 import time
 from zope.interface import implementer, Interface
 
@@ -342,10 +343,18 @@ class AcceleratedUnit(Unit):
         source, my_defines = self._generate_source(
             defines, include_dirs, dtype, "cl", template_kwargs)
         show_ocl_logs = self.logger.isEnabledFor(logging.DEBUG)
-        self.program_ = self.device.queue_.context.create_program(
-            source, include_dirs,
-            "-cl-nv-verbose" if show_ocl_logs and "cl_nv_compiler_options" in
-            self.device.queue_.device.extensions else "")
+        try:
+            self.program_ = self.device.queue_.context.create_program(
+                source, include_dirs,
+                "-cl-nv-verbose" if show_ocl_logs and "cl_nv_compiler_options"
+                in self.device.queue_.device.extensions else "")
+        except Exception as e:
+            with NamedTemporaryFile(mode="w", prefix="ocl_src_", suffix=".cl",
+                                    delete=False) as fout:
+                fout.write(source)
+                self.error("Failed to build OpenCL program. The input file "
+                           "source was dumped to %s", fout.name)
+            raise from_none(e)
         if show_ocl_logs and len(self.program_.build_logs):
             for s in self.program_.build_logs:
                 s = s.strip()
@@ -379,9 +388,17 @@ class AcceleratedUnit(Unit):
         source, my_defines = self._generate_source(
             defines, include_dirs, dtype, "cu", template_kwargs)
         show_logs = self.logger.isEnabledFor(logging.DEBUG)
-        self.program_ = self.device.context.create_module(
-            source=source, include_dirs=include_dirs,
-            nvcc_path=root.common.engine.cuda.nvcc)
+        try:
+            self.program_ = self.device.context.create_module(
+                source=source, include_dirs=include_dirs,
+                nvcc_path=root.common.engine.cuda.nvcc)
+        except Exception as e:
+            with NamedTemporaryFile(mode="w", prefix="cuda_src_", suffix=".cu",
+                                    delete=False) as fout:
+                fout.write(source)
+                self.error("Failed to build CUDA program. The input file "
+                           "source was dumped to %s", fout.name)
+            raise from_none(e)
         if show_logs and len(self.program_.stderr):
             self.debug("Non-empty CUDA build log encountered: %s",
                        self.program_.stderr)

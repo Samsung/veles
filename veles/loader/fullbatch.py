@@ -168,7 +168,26 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
             return
 
         self.info("Will try to store the entire dataset on the device")
-        self.init_vectors(self.original_data, self.minibatch_data)
+        try:
+            self.init_vectors(self.original_data, self.minibatch_data)
+        except CLRuntimeError as e:
+            if e.code == CL_MEM_OBJECT_ALLOCATION_FAILURE:
+                self.warning("Failed to store the entire dataset on the "
+                             "device")
+                self.force_numpy = True
+                self.device = NumpyDevice()
+                return
+            else:
+                raise from_none(e)
+        except CUDARuntimeError as e:
+            if e.code == CUDA_ERROR_OUT_OF_MEMORY:
+                self.warning("Failed to store the entire dataset on the "
+                             "device")
+                self.force_numpy = True
+                self.device = NumpyDevice()
+                return
+            else:
+                raise from_none(e)
         if self.has_labels:
             self.init_vectors(self._mapped_original_labels_,
                               self.minibatch_labels)
@@ -206,7 +225,8 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
 
     def _after_backend_init(self):
         try:
-            self.fill_indices(0, self.max_minibatch_size)
+            self.fill_indices(0, min(self.max_minibatch_size,
+                                     self.total_samples))
         except CLRuntimeError as e:
             if e.code == CL_MEM_OBJECT_ALLOCATION_FAILURE:
                 self.warning("Failed to store the entire dataset on the "
