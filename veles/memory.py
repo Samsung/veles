@@ -182,7 +182,7 @@ class Array(Pickleable):
             return
         self._reset(self.mem)
         self._device = device
-        Device.assign_backend_methods(self, self.backend_methods, self.device)
+        device.assign_backend_methods(self, self.backend_methods)
 
     @property
     def mem(self):

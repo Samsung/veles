@@ -1025,6 +1025,16 @@ class LoaderMSEMixin(Unit):
             self._target_normalizer = nr.normalizers[
                 self.target_normalization_type](
                 **self.target_normalization_parameters)
+            if isinstance(self._target_normalizer,
+                          normalization.StatelessNormalizer) and \
+                    not isinstance(self._target_normalizer,
+                                   normalization.NoneNormalizer):
+                raise AttributeError(
+                    "The specified normalization type \"%s\" is stateless, "
+                    "that is, there is no way do denormalize the output "
+                    "without knowing the original data traits. Stateless "
+                    "normalizers are restricted in MSE mode since the forward "
+                    "propagation on test data becomes impossible.")
         return self._target_normalizer
 
     @property

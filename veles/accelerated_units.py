@@ -176,7 +176,7 @@ class AcceleratedUnit(Unit):
                 "device must be of type %s (got %s)" % (Device, type(value)))
         self._device = value
 
-        Device.assign_backend_methods(self, self.backend_methods, self.device)
+        self.device.assign_backend_methods(self, self.backend_methods)
 
         if self._sync and self.device.is_async:
             self._original_run_ = self._backend_run_
@@ -235,7 +235,7 @@ class AcceleratedUnit(Unit):
             raise NotImplementedError("%s does not implement any of %s" %
                                       (type(self), checked))
 
-        if not device.attached(self.thread_pool):
+        if not device.is_attached(self.thread_pool):
             device.thread_pool_attach(self.thread_pool)
         try:
             super(AcceleratedUnit, self).initialize(**kwargs)

@@ -525,8 +525,8 @@ You can change evaluation parameters at ``root.name_of_your_workflow.evaluator``
       "evaluator": {"": }
       })
 
-1. `squared_mse`
-2. `error_function_averaged`
+1. `root`
+2. `mean`
 3. `compute_confusion_matrix`
 
 LearningRateAdjuster parameters

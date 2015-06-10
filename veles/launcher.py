@@ -395,7 +395,7 @@ class Launcher(logger.Logger):
             reactor.wakeUp()
 
     def device_thread_pool_detach(self):
-        if self.device.attached(self.workflow.thread_pool):
+        if self.device.is_attached(self.workflow.thread_pool):
             self.device.thread_pool_detach(self.workflow.thread_pool)
 
     @threadsafe

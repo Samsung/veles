@@ -251,7 +251,8 @@ class NormalizerBase(Verified):
 
 class StatelessNormalizer(NormalizerBase):
     """
-    Special case of a normalizer without any internal state.
+    Special case of a normalizer without an internal state. It *must* return
+    something from normalize().
     """
 
     def __init__(self, state=None, **kwargs):

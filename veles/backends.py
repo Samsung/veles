@@ -187,27 +187,6 @@ class Device(Pickleable):
     Attributes:
         _pid_: process id.
     """
-    @staticmethod
-    def assign_backend_methods(obj, backend_methods, device):
-        """Scans backends class hierarchy and assigns found methods to obj.
-        """
-        for suffix in backend_methods:
-            # Scan class hierarchy for backend method
-            checked = []  # this is just for exception message
-            for cls in type(device).mro():
-                backend = getattr(cls, "BACKEND", None)
-                if backend is None:
-                    continue
-                checked.append(cls)
-                backend_method = getattr(obj, backend + "_" + suffix, None)
-                if backend_method is not None:
-                    break
-            else:
-                raise AttributeError(
-                    "No implementation of %s with backends %s found in %s " %
-                    (suffix, checked, type(obj)))
-            setattr(obj, "_backend_" + suffix + "_", backend_method)
-
     def __new__(cls, *args, **kwargs):
         assert issubclass(cls, Device)
         backend = kwargs.get(
@@ -253,12 +232,32 @@ class Device(Pickleable):
         """
         pass
 
-    def attached(self, thread_pool):
+    def is_attached(self, thread_pool):
         return thread_pool in self._thread_pool_detach_callbacks_
+
+    def assign_backend_methods(self, obj, backend_methods):
+        """Scans backends class hierarchy and assigns found methods to obj.
+        """
+        for suffix in backend_methods:
+            # Scan class hierarchy for backend method
+            checked = []  # this is just for exception message
+            for cls in type(self).mro():
+                backend = getattr(cls, "BACKEND", None)
+                if backend is None:
+                    continue
+                checked.append(cls)
+                backend_method = getattr(obj, backend + "_" + suffix, None)
+                if backend_method is not None:
+                    break
+            else:
+                raise AttributeError(
+                    "No implementation of %s with backends %s found in %s " %
+                    (suffix, checked, type(obj)))
+            setattr(obj, "_backend_" + suffix + "_", backend_method)
 
     def thread_pool_attach(self, thread_pool):
         if thread_pool in self._thread_pool_detach_callbacks_:
-            self.warning("Already attached to %s", thread_pool)
+            self.warning("Already is_attached to %s", thread_pool)
             return
         self._register_thread_pool_callbacks(thread_pool)
 
@@ -495,6 +494,10 @@ class OpenCLDevice(Device):
             ocldevmax = ocldevmin
         for dev in range(ocldevmin, ocldevmax + 1):
             yield OpenCLDevice.BACKEND, "%d:%d" % (oclpnum, dev)
+
+    def assign_backend_methods(self, obj, backend_methods):
+        super(OpenCLDevice, self).assign_backend_methods(obj, backend_methods)
+        obj.skip_args = cl.skip
 
     def compute_ratings(self, device_infos):
         devdt = {}
@@ -804,6 +807,10 @@ class CUDADevice(Device):
             ocldevmax = ocldevmin
         for dev in range(ocldevmin, ocldevmax + 1):
             yield CUDADevice.BACKEND, str(dev)
+
+    def assign_backend_methods(self, obj, backend_methods):
+        super(CUDADevice, self).assign_backend_methods(obj, backend_methods)
+        obj.skip_args = cu.skip
 
     def _get_some_device(self, **kwargs):
         """Gets some device from the available CUDA devices.
