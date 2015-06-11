@@ -36,7 +36,7 @@ under the License.
 
 import platform
 import six
-from sys import stdout, version_info
+from sys import stdin, version_info
 
 
 if (version_info[0] + (version_info[1] / 10.0)) < 3.3:
@@ -152,4 +152,4 @@ def is_interactive():
 
 
 def has_colors():
-    return is_interactive() or (not stdout.closed and stdout.isatty())
+    return is_interactive() or (not stdin.closed and stdin.isatty())
