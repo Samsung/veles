@@ -152,4 +152,4 @@ def is_interactive():
 
 
 def has_colors():
-    return is_interactive() or stdout.isatty()
+    return is_interactive() or (not stdout.closed and stdout.isatty())
