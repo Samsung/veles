@@ -196,11 +196,12 @@ class MinibatchesLoader(Loader):
 
     def load_data(self):
         self.file = open(self.file_name, "rb")
-        (codec, self.class_lengths, self.old_max_minibatch_size,
+        (codec, class_lengths, self.old_max_minibatch_size,
          self.class_chunk_lengths,
          self.minibatch_data_shape, self.minibatch_data_dtype,
          self.minibatch_labels_shape, self.minibatch_labels_dtype) = \
             pickle.load(self.file)
+        self.class_lengths[:] = class_lengths
         self._has_labels = self.minibatch_labels_shape is not None
         self.decompress = MinibatchesLoader.CODECS[codec]
 

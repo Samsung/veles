@@ -428,8 +428,8 @@ class ConfigChromosome(Chromosome):
 class ConfigPopulation(Population):
     """Creates population based on Config tree's Tuneable elements.
     """
-    def __init__(self, cfgroot, main, workflow_module, multi, size,
-                 accuracy=0.00001, rand=prng.get()):
+    def __init__(self, main, workflow_module,
+                 accuracy=0.00001, rand=prng.get(), cfgroot=root):
         """Constructor.
 
         Parameters:
@@ -441,7 +441,7 @@ class ConfigPopulation(Population):
         self.root_ = cfgroot
         self.main_ = main
         self.workflow_module_ = workflow_module
-        self.multi = multi
+        self.multi = main.optimization.multi
         self.container = None
         self.evaluations_pending = 0
         self.job_request_queue_ = None
@@ -458,9 +458,9 @@ class ConfigPopulation(Population):
         super(ConfigPopulation, self).__init__(
             ConfigChromosome,
             len(self.registered_tunes_),
-            list(x.min_value for x in self.registered_tunes_),
-            list(x.max_value for x in self.registered_tunes_),
-            size, accuracy, rand)
+            [x.min_value for x in self.registered_tunes_],
+            [x.max_value for x in self.registered_tunes_],
+            main.optimization.size, accuracy, rand)
         self.registered_tunes_.sort(
             key=lambda t: (str(type(t)), t.path, t.name))
         tpt = PrettyTable("path", "details", "class")
@@ -518,7 +518,7 @@ class ConfigPopulation(Population):
     def job_process_main(self, parent_conn, child_conn):
         # Switch off genetics for the contained workflow launches
         self.fix_argv_to_run_standalone(sys, self.main_, CommandLineBase)
-        self.main_.optimization = False
+        self.main_.optimization = None
         child_conn.close()
         while True:
             try:

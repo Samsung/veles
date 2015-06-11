@@ -33,8 +33,9 @@ under the License.
 
 ███████████████████████████████████████████████████████████████████████████████
 """
-import base64
 
+
+import base64
 import json
 from itertools import islice
 from time import strftime, localtime
@@ -46,7 +47,7 @@ from zope.interface import implementer
 
 from veles.config import root
 from veles.distributable import TriviallyDistributable, IDistributable
-from veles.memory import Array
+from veles.numpy_json_encoder import NumpyJSONEncoder
 from veles.units import IUnit, Unit
 
 
@@ -71,24 +72,6 @@ class APIResource(Resource):
         request.setHeader(b"Content-Type", b"application/json")
         self._callback(request)
         return NOT_DONE_YET
-
-
-class NumpyJSONEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, Array):
-            obj.map_read()
-            obj = obj.mem
-        if isinstance(obj, numpy.ndarray):
-            return obj.tolist()
-        elif isinstance(obj, numpy.number):
-            return obj.item()
-        elif isinstance(obj, (complex, numpy.complex)):
-            return [obj.real, obj.imag]
-        elif isinstance(obj, set):
-            return list(obj)
-        elif isinstance(obj, bytes):
-            return obj.decode("charmap")
-        return json.JSONEncoder.default(self, obj)
 
 
 @implementer(IUnit, IDistributable)

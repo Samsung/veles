@@ -22,7 +22,7 @@ Prints a spinning dash every once and a while.
 """
 
 from itertools import cycle
-from sys import stdout
+import sys
 from time import clock
 from threading import Lock
 try:
@@ -38,13 +38,13 @@ __last_flush_time = clock()
 
 def spin(interval=0.2):
     with __lock:
-        stdout.write(next(__symbols))
+        sys.stdout.write(next(__symbols))
         if reactor is None or not reactor.running:
             time = clock()
             global __last_flush_time
             if time - __last_flush_time < interval:
                 return
-            stdout.flush()
+                sys.stdout.flush()
             __last_flush_time = time
         else:
-            reactor.callFromThread(stdout.flush)
+            reactor.callFromThread(sys.stdout.flush)

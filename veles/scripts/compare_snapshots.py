@@ -47,7 +47,7 @@ from veles.compat import from_none
 from veles.external.prettytable import PrettyTable
 from veles.logger import Logger
 from veles.memory import Array
-from veles.snapshotter import Snapshotter
+from veles.snapshotter import SnapshotterToFile
 
 
 SORT_CHOICES = ("dep", "unit", "attr", "avgreldiff", "avgdiff", "maxdiff")
@@ -71,7 +71,7 @@ def parse_args():
 
 def load_snapshot(path):
     try:
-        return Snapshotter.import_file(path)
+        return SnapshotterToFile.import_(path)
     except Exception as e:
         logging.critical("Failed to load the snapshot at %s", path)
         raise from_none(e)

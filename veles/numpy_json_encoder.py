@@ -8,7 +8,9 @@
     \ \_/ / |___| |___| |___/\__/ /
      \___/\____/\_____|____/\____/
 
-Created on Nov 5, 2014
+Created on June 12, 2015
+
+Numpy support class for json.dump(s).
 
 ███████████████████████████████████████████████████████████████████████████████
 
@@ -33,7 +35,25 @@ under the License.
 """
 
 
-import os
+import json
+import numpy
 
-__root__ = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-__home__ = os.path.join(os.environ.get("HOME", "./"), ".veles")
+from veles.memory import Array
+
+
+class NumpyJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Array):
+            obj.map_read()
+            obj = obj.mem
+        if isinstance(obj, numpy.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, numpy.number):
+            return obj.item()
+        elif isinstance(obj, (complex, numpy.complex)):
+            return [obj.real, obj.imag]
+        elif isinstance(obj, set):
+            return list(obj)
+        elif isinstance(obj, bytes):
+            return obj.decode("charmap")
+        return json.JSONEncoder.default(self, obj)

@@ -146,6 +146,8 @@ class VelesModule(ModuleType):
         workflow is initialized; otherwise, blocks until it finishes.
         If this command runs under IPython, it's local variables are passed
         into the workflow's :meth:`__init__()`.
+        If "subprocess" keyword argument is set to True, runs in a separate
+        process.
 
         Arguments:
             workflow: path to the Python file with workflow definition.
@@ -156,7 +158,20 @@ class VelesModule(ModuleType):
                     that "-" must be substituted with "_". For example,
                     "backend" -> "--backend", random_seed -> "--random-seed".
                     See "veles --help" for the complete list.
+
+        Returns:
+            veles.launcher.Launcher instance which can be used to manage the
+            execution (e.g., pause() and resume()); if "subprocess" was set to
+            True, a started multiprocessing.Process instance is returned
+            instead, which can be join()-ed.
         """
+        if kwargs.get("subprocess", False):
+            del kwargs["subprocess"]
+            from multiprocessing import Process
+            proc = Process(target=self.__call__, name="veles.__call__",
+                           args=(workflow, config) + args, kwargs=kwargs)
+            proc.start()
+            return proc
         # FIXME(v.markovtsev): disable R0401 locally when pylint issue is fixed
         # https://bitbucket.org/logilab/pylint/issue/61
         # from veles.__main__ import Main  # pylint: disable=R0401

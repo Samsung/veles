@@ -664,10 +664,10 @@ class OpenCLDevice(Device):
         krnnme = "matrix_multiplication"
         if krnnme not in device_info:
             device_info[krnnme] = {}
-        from veles.dummy import DummyWorkflow
         # FIXME(v.markovtsev): disable R0401 locally when pylint issue is fixed
         # https://bitbucket.org/logilab/pylint/issue/61
         # pylint: disable=R0401
+        dummy = import_module("veles.dummy")
         opencl_units = import_module("veles.accelerated_units")
         benchmark = opencl_units.DeviceBenchmark
         for dtype in root.common.engine.test_precision_types:
@@ -695,7 +695,7 @@ class OpenCLDevice(Device):
                             krnnme, dtype, precision_level,
                             block_size, vector_opt)
                         try:
-                            with DummyWorkflow() as wf:
+                            with dummy.DummyWorkflow() as wf:
                                 u = benchmark(
                                     wf, size=3001, repeats=3,
                                     dtype=dtype,

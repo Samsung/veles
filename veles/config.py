@@ -42,7 +42,7 @@ from six import print_, PY2
 import sys
 
 veles = __import__("veles")
-from veles.paths import __root__
+from veles.paths import __root__, __home__
 
 # : Global config
 root = None
@@ -165,9 +165,6 @@ def validate_kwargs(caller, **kwargs):
                 caller.warning("Stack trace:\n%s" %
                                "".join(format_list(extract_stack(
                                    inspect.currentframe().f_back))))
-
-
-__home__ = os.path.join(os.environ.get("HOME", "./"), ".veles")
 
 root.common.update({
     "mongodb_logging_address": "127.0.0.1:27017",

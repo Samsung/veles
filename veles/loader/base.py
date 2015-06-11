@@ -36,6 +36,7 @@ under the License.
 
 
 from __future__ import division
+import argparse
 from collections import defaultdict
 from copy import copy
 import logging
@@ -44,6 +45,7 @@ import time
 import types
 
 import numpy
+from veles.cmdline import CommandLineArgumentsRegistry
 
 try:
     from scipy.stats import chisquare
@@ -78,7 +80,7 @@ TRIAGE = {"train": TRAIN,
 CLASS_NAME = ["test", "validation", "train"]
 
 
-class UserLoaderRegistry(MappedUnitRegistry):
+class UserLoaderRegistry(MappedUnitRegistry, CommandLineArgumentsRegistry):
     mapping = "loaders"
     base = Unit
 
@@ -166,8 +168,8 @@ class Loader(Unit):
         if self._max_minibatch_size < 1:
             raise ValueError("minibatch_size must be greater than zero")
 
-        self.class_lengths = [0, 0, 0]
-        self.class_end_offsets = [0, 0, 0]
+        self._class_lengths = [0] * len(CLASS_NAME)
+        self._class_end_offsets = [0] * len(CLASS_NAME)
         self._has_labels = False
 
         self.epoch_ended = Bool(False)
@@ -195,6 +197,7 @@ class Loader(Unit):
         self.normalization_type = kwargs.get("normalization_type", "none")
         self.normalization_parameters = kwargs.get(
             "normalization_parameters", {})
+        self.train_ratio = kwargs.get("train_ratio", self.train_ratio)
 
     def init_unpickled(self):
         super(Loader, self).init_unpickled()
@@ -203,6 +206,9 @@ class Loader(Unit):
         self.pending_minibatches_ = defaultdict(list)
         self._minibatch_serve_timestamp_ = time.time()
         self.initialize = self._with_initialized_callback(self.initialize)
+        parser = Loader.init_parser()
+        args, _ = parser.parse_known_args(self.argv)
+        self.train_ratio = args.train_ratio
 
     def __getstate__(self):
         state = super(Loader, self).__getstate__()
@@ -340,6 +346,18 @@ class Loader(Unit):
         return self._normalizer
 
     @property
+    def class_lengths(self):
+        return self._class_lengths
+
+    @property
+    def class_end_offsets(self):
+        return self._class_end_offsets
+
+    @property
+    def effective_class_end_offsets(self):
+        return self._effective_class_end_offsets
+
+    @property
     def global_offset(self):
         return self._global_offset
 
@@ -367,6 +385,11 @@ class Loader(Unit):
         return sum(self.class_lengths)
 
     @property
+    def effective_total_samples(self):
+        return self.total_samples - \
+            int((1.0 - self.train_ratio) * self.class_lengths[TRAIN])
+
+    @property
     def samples_served(self):
         return self._samples_served
 
@@ -374,7 +397,8 @@ class Loader(Unit):
     def samples_served(self, value):
         self._samples_served = value
         if not self.is_slave and value > 0:
-            num, den = divmod(self.samples_served, self.total_samples)
+            num, den = divmod(self.samples_served,
+                              self.effective_total_samples)
             self.epoch_number = num
             now = time.time()
             if now - self._minibatch_serve_timestamp_ >= 10:
@@ -382,7 +406,7 @@ class Loader(Unit):
                 self.info("Served %d samples (%d epochs, %.1f%% current); "
                           "jobs failed: %d/pending: %d",
                           self.samples_served, num,
-                          100. * den / self.total_samples,
+                          100. * den / self.effective_total_samples,
                           len(self.failed_minibatches),
                           self.pending_minibatches_count)
 
@@ -511,14 +535,27 @@ class Loader(Unit):
         self._validation_ratio = value
 
     @property
+    def train_ratio(self):
+        return self._train_ratio
+
+    @train_ratio.setter
+    def train_ratio(self, value):
+        if not isinstance(value, (int, float)):
+            raise TypeError(
+                "train_ratio must be a number (got %s)" % type(value))
+        if value <= 0 or value > 1:
+            raise ValueError("train_ratio must be in (0, 1] (got %f)" % value)
+        self._train_ratio = value
+
+    @property
     def class_ended(self):
-        for offset in self.class_end_offsets:
+        for offset in self.effective_class_end_offsets:
             if self.global_offset == offset:
                 return True
             if self.global_offset < offset:
                 return False
         raise error.Bug("global_offset %d is out of bounds %s" %
-                        (self.global_offset, self.class_end_offsets))
+                        (self.global_offset, self.effective_class_end_offsets))
 
     @property
     def total_failed(self):
@@ -533,6 +570,14 @@ class Loader(Unit):
         assert bool(self.minibatch_data), \
             "May be called after create_minibatch_data()"
         return self.minibatch_data[0].shape
+
+    @staticmethod
+    def init_parser(parser=None):
+        parser = parser or argparse.ArgumentParser()
+        parser.add_argument("--train-ratio", default=1.0, type=float,
+                            help="Use the given fraction of the whole train "
+                                 "dataset.")
+        return parser
 
     def initialize(self, **kwargs):
         """Loads the data, initializes indices, shuffles the training set.
@@ -552,15 +597,18 @@ class Loader(Unit):
                                              self.max_minibatch_size)
         self.on_before_create_minibatch_data()
         self._calc_class_end_offsets()
-        self.info("Samples number: test: %d, validation: %d, train: %d",
-                  *self.class_lengths)
+        sn_log_str = "Samples number: test: %d, validation: %d, train: %d"
+        if self.train_ratio == 1.0:
+            self.info(sn_log_str, *self.class_lengths)
+        else:
+            self.info(sn_log_str + " (used: %d)", *(self.class_lengths + [
+                self.effective_class_end_offsets[TRAIN] -
+                self.effective_class_end_offsets[VALID]]))
 
         self.minibatch_labels.reset(numpy.zeros(
             self.max_minibatch_size, dtype=Loader.LABEL_DTYPE)
             if self.has_labels else None)
-        del self.raw_minibatch_labels[:]
-        self.raw_minibatch_labels.extend(
-            None for _ in range(self.max_minibatch_size))
+        self.raw_minibatch_labels[:] = (None,) * self.max_minibatch_size
         self.minibatch_indices.reset(numpy.zeros(
             self.max_minibatch_size, dtype=Loader.INDEX_DTYPE))
 
@@ -789,7 +837,8 @@ class Loader(Unit):
         return False
 
     def class_index_by_sample_index(self, index):
-        for class_index, class_offset in enumerate(self.class_end_offsets):
+        for class_index, class_offset in enumerate(
+                self.effective_class_end_offsets):
             if index < class_offset:
                 return class_index, class_offset - index
         raise error.Bug("Could not convert sample index to class index, "
@@ -806,6 +855,9 @@ class Loader(Unit):
             self.class_end_offsets[i] = total_samples
         if total_samples == 0:
             raise ValueError("There is no data to serve")
+        self._effective_class_end_offsets = list(self.class_end_offsets)
+        self._effective_class_end_offsets[TRAIN] -= \
+            int((1.0 - self.train_ratio) * self.class_lengths[TRAIN])
 
     def _update_flags(self):
         """Resets epoch_ended and last_minibatch.
@@ -831,7 +883,7 @@ class Loader(Unit):
         if self.is_slave:
             return self.minibatch_offset, self.minibatch_size
         # Shuffle again when the end of data is reached.
-        if self.global_offset >= self.total_samples:
+        if self.global_offset >= self.effective_total_samples:
             self.global_offset = 0
             self.shuffle()
 
@@ -840,7 +892,7 @@ class Loader(Unit):
             self.global_offset)
         minibatch_size = min(remainder, self.max_minibatch_size)
         self.global_offset += minibatch_size
-        self.train_ended <<= self.global_offset >= self.total_samples
+        self.train_ended <<= self.global_offset >= self.effective_total_samples
         return self.global_offset, minibatch_size
 
     def _on_successful_serve(self):

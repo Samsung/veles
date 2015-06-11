@@ -40,6 +40,7 @@ import datetime
 import hashlib
 import inspect
 from itertools import chain
+import json
 import logging
 import os
 import six
@@ -53,6 +54,8 @@ from veles.compat import from_none, FileExistsError
 from veles.config import root
 from veles.distributable import IDistributable
 from veles.mutable import LinkableAttribute
+from veles.numpy_json_encoder import NumpyJSONEncoder
+from veles.result_provider import IResultProvider
 from veles.units import Unit, IUnit, Container
 from veles.plumbing import StartPoint, EndPoint, Repeater
 from veles.external.prettytable import PrettyTable
@@ -97,6 +100,7 @@ class Workflow(Container):
             "enable_plotters", not root.common.disable.plotting)
         self._sync = kwargs.get("sync", True)  # do not move down
         self._units = tuple()
+        self._result_file = kwargs.get("result_file")
         super(Workflow, self).__init__(workflow,
                                        generate_data_for_slave_threadsafe=True,
                                        apply_data_from_slave_threadsafe=True,
@@ -106,8 +110,6 @@ class Workflow(Container):
         self.end_point = EndPoint(self)
         self.negotiates_on_connect = True
         self._checksum = None
-        self._history = []
-        self.fitness = None
         self.debug("My checksum is %s", self.checksum)
 
     def init_unpickled(self):
@@ -257,10 +259,6 @@ class Workflow(Container):
         return self.start_point.dependent_units()
 
     @property
-    def history(self):
-        return self._history
-
-    @property
     def is_main(self):
         """
         :return:
@@ -268,6 +266,20 @@ class Workflow(Container):
             otherwise, False.
         """
         return self.workflow.workflow is self
+
+    @property
+    def result_file(self):
+        return self._result_file
+
+    @result_file.setter
+    def result_file(self, value):
+        if value is None:
+            self._result_file = None
+            return
+        if not isinstance(value, six.string_types):
+            raise TypeError(
+                "result_file must be a string (got %s)" % type(value))
+        self._result_file = value
 
     def initialize(self, **kwargs):
         """Initializes all the units belonging to this Workflow, in dependency
@@ -360,6 +372,8 @@ class Workflow(Container):
         self.is_running = False
         if not self.is_master:
             self.event("run", "end")
+        if self.result_file is not None:
+            self.write_results()
         if self.is_standalone and self.is_main:
             self.workflow.on_workflow_finished()
         elif self.is_slave:
@@ -459,7 +473,6 @@ class Workflow(Container):
             return False
         self.debug("Generating a job for slave %s", slave.id)
         self.event("generate_data", "begin", slave=slave.id)
-        self._record_history("generate", slave.id)
         for unit in self.units_in_dependency_order:
             if not unit.negotiates_on_connect:
                 try:
@@ -503,7 +516,6 @@ class Workflow(Container):
         sid = slave.id if slave is not None else "self"
         self.debug("Applying the update from slave %s", sid)
         self.event("apply_data", "begin", slave=slave.id)
-        self._record_history("apply", sid)
         for i, unit in enumerate(self.units_in_dependency_order):
             if data[i] is not None and not unit.negotiates_on_connect:
                 try:
@@ -788,19 +800,30 @@ class Workflow(Container):
             if time_all > 0:
                 self.info(u"Workflow methods run time:\n%s", table)
 
-    def print_history(self):
-        table = PrettyTable("operation", "time", "slave")
-        table.align["operation"] = "r"
-        for row in self.history:
-            table.add_row(*row)
-        print(table)
+    def gather_results(self):
+        results = {"id": self.launcher.id, "log_id": self.launcher.log_id}
+        for unit in self:
+            if IResultProvider.providedBy(unit):
+                results.update(unit.get_metric_values())
+        return results
 
-    def validate_history(self):
-        pass
-
-    def _record_history(self, op, sid):
-        self._history.append((
-            op, datetime.datetime.fromtimestamp(time.time()), sid))
+    def write_results(self, file=None):
+        if file is None:
+            file = self.result_file
+        if isinstance(file, six.string_types):
+            fileobj = open(file, "w")
+            need_close = True
+        else:
+            fileobj = file
+            need_close = False
+        results = self.gather_results()
+        try:
+            json.dump(results, fileobj, indent=4, sort_keys=True,
+                      cls=NumpyJSONEncoder)
+        finally:
+            if need_close:
+                fileobj.close()
+        self.info("Successfully wrote %d results to %s", len(results), file)
 
     @property
     def checksum(self):

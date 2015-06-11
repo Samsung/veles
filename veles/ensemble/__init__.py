@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # pylint: disable=C0302
 """
 .. invisible:
      _   _ _____ _     _____ _____
@@ -8,7 +8,9 @@
     \ \_/ / |___| |___| |___/\__/ /
      \___/\____/\_____|____/\____/
 
-Created on Nov 5, 2014
+Created on Jub 11, 2015
+
+Ensemble of machine learning algorithms engine.
 
 ███████████████████████████████████████████████████████████████████████████████
 
@@ -32,8 +34,4 @@ under the License.
 ███████████████████████████████████████████████████████████████████████████████
 """
 
-
-import os
-
-__root__ = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-__home__ = os.path.join(os.environ.get("HOME", "./"), ".veles")
+from .model_workflow import EnsembleModelWorkflow

@@ -37,6 +37,7 @@ under the License.
 
 from zope.interface.verify import verifyObject, verifyClass
 
+from veles.compat import from_none
 from veles.logger import Logger
 import veles.zope_verify_fix  # pylint: disable=W0611
 
@@ -50,17 +51,16 @@ class Verified(Logger):
             return
         if not iface.providedBy(self):
             raise NotImplementedError(
-                "Unit %s does not implement %s interface" % (repr(self),
-                                                             iface.__name__))
+                "Unit %s does not implement %s interface"
+                % (repr(self), iface.__name__))
         try:
             verifyObject(iface, self)
-        except:
-            self.error("%s does not pass verifyObject(%s)", str(self),
-                       str(iface))
-            raise
+        except Exception as e:
+            self.error("%s does not pass verifyObject(%s)", self, iface)
+            raise from_none(e)
         try:
             verifyClass(iface, self.__class__)
-        except:
+        except Exception as e:
             self.error("%s does not pass verifyClass(%s)",
-                       str(self.__class__), str(iface))
-            raise
+                       self.__class__, iface)
+            raise from_none(e)

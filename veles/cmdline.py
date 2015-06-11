@@ -180,14 +180,39 @@ class CommandLineBase(object):
                                  "model, show workflow graph and plots",
                             action='store_true')
         parser.add_argument(
-            "--optimize", type=str, default="no",
-            help="Do optimization of the parameters using the genetic "
-                 "algorithm. Possible values: no: off; single: "
-                 "local sequential optimization; multi: use master's nodes to "
-                 "do the distributed optimization (each instance will run in "
-                 "standalone mode). \"single\" and \"multi\" may end with the "
-                 "colon with a number; that number sets the population size.")
-        parser.add_argument("--workflow-graph", type=str, default="",
+            "--optimize", default="",
+            help="Do optimization of the model's parameters using the genetic "
+                 "algorithm. Format: <type>:<size>. Possible types: "
+                 "\"\" (empty, default): no optimization; \"single\": perform "
+                 "a serial optimization on this computer; \"multi\": use "
+                 "master's nodes to do a distributed optimization (each "
+                 "instance will run in standalone mode). <size> is the number "
+                 "of species in the population (if not sure, set to 50)."
+                 "\"none\" does not require setting the size.")
+        parser.add_argument("--ensemble-stage",
+                            choices=["model", "master"],
+                            help="Ensemble assembling stage. \"model\" is the "
+                                 "first stage when different models are "
+                                 "trained, \"master\" is the second stage when"
+                                 " the top level classifier is trained. If "
+                                 "-l/--listen-address is specified, the "
+                                 "first stage goes in parallel on connected "
+                                 "slaves.")
+        parser.add_argument("--ensemble-definition", default="",
+                            help="Ensemble of trained models assembly "
+                                 "definition. Used by the first stage "
+                                 "(--ensemble-stage=\"model\"). Format: "
+                                 "<size>:<ratio>, where size is the number of "
+                                 "models to train and ratio is the part of "
+                                 "the training set to use during the training "
+                                 "for each model (picked randomly).")
+        parser.add_argument("--ensemble-aux-file", default="",
+                            help="Intermediate JSON file which is generated "
+                                 "on stage 1 (\"model\") and consumed on stage"
+                                 " 2 (\"master\"). It is a list of snapshots "
+                                 "with achieved metrics and outputs, coupled "
+                                 "with ground truth (validation) data.")
+        parser.add_argument("--workflow-graph", default="",
                             help="Save workflow graph to file.")
         parser.add_argument("--dump-unit-attributes", default="no",
                             help="Print unit __dict__-s after workflow "

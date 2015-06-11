@@ -69,7 +69,6 @@ from veles.plotter import Plotter
 import veles.logger as logger
 from veles.server import Server as MasterManager
 from veles.thread_pool import ThreadPool
-from veles.error import MasterSlaveCommunicationError
 from veles.external.pytrie import StringTrie
 
 
@@ -89,7 +88,7 @@ def filter_argv(argv, *blacklist):
         if ptree.longest_prefix(arg, None) is None:
             filtered.append(arg)
         else:
-            maybe_value = arg not in boolean_args
+            maybe_value = arg not in boolean_args and '=' not in arg
     return filtered
 
 
@@ -135,6 +134,8 @@ class Launcher(logger.Logger):
                     "%s.%d%s" % (log_base_name[0], os.getpid(),
                                  log_base_name[1]))
             logger.Logger.redirect_all_logging_to_file(log_file)
+
+        self._result_file = self.args.result_file
 
         self.info("My Python is %s %s", platform.python_implementation(),
                   platform.python_version())
@@ -194,12 +195,12 @@ class Launcher(logger.Logger):
                             default=kwargs.get("master_address", ""),
                             help="Workflow will be launched in client mode "
                             "and connected to the master at the specified "
-                            "address.").mode = ["slave"]
+                            "address.").mode = ("slave",)
         parser.add_argument("-l", "--listen-address", type=str,
                             default=kwargs.get("listen_address", ""),
                             help="Workflow will be launched in server mode "
                                  "and will accept client connections at the "
-                                 "specified address.").mode = ["master"]
+                                 "specified address.").mode = ("master",)
         parser.add_argument("-p", "--matplotlib-backend", type=str, nargs='?',
                             const="",
                             default=kwargs.get(
@@ -222,11 +223,7 @@ class Launcher(logger.Logger):
                                  "separated by commas. Slave format is "
                                  "host/OpenCLPlatformNumber:OpenCLDevice(s)xN,"
                                   "examples: host/0:0, host/1:0-2, "
-                                  "host/0:2-3x3.").mode = ["master"]
-        parser.add_argument("--validate-history",
-                            default=False, help="Check the apply/generate "
-                            "history on master.", action='store_true'
-                            ).mode = ["master"]
+                                  "host/0:2-3x3.").mode = ("master",)
         parser.add_argument("-f", "--log-file", type=str,
                             default=kwargs.get("log_file", ""),
                             help="The file name where logs will be copied.")
@@ -243,14 +240,18 @@ class Launcher(logger.Logger):
                             help="Log identifier (used my Mongo logger).")
         parser.add_argument("--yarn-nodes", type=str, default=None,
                             help="Discover the nodes from this YARN "
-                            "ResourceManager's address.").mode = ["master"]
+                            "ResourceManager's address.").mode = ("master",)
         parser.add_argument("--max-nodes", type=int, default=0,
                             help="Max number of slaves launched. 0 means "
-                            "unlimited number.").mode = ["master"]
+                            "unlimited number.").mode = ("master",)
         parser.add_argument("--slave-launch-transform", type=str, default="%s",
                             help="Transformation of the slave remote launch "
                             "command given over ssh (%%s corresponds to the "
-                            "original command).").mode = ["master"]
+                            "original command).").mode = ("master",)
+        parser.add_argument("--result-file",
+                            help="The path where to store the execution "
+                                 "results (in JSON format).").mode = \
+            ("master", "standalone")
         return parser
 
     @property
@@ -318,6 +319,10 @@ class Launcher(logger.Logger):
         return not self.is_master and not self.is_slave
 
     @property
+    def is_main(self):
+        return False
+
+    @property
     def mode(self):
         if self.is_master:
             return "master"
@@ -376,6 +381,7 @@ class Launcher(logger.Logger):
         self.workflow.thread_pool.workflow = workflow
         if self.is_slave or self.matplotlib_backend == "":
             workflow.plotters_are_enabled = False
+        workflow.result_file = self._result_file
 
     def del_ref(self, workflow):
         pass
@@ -461,12 +467,14 @@ class Launcher(logger.Logger):
             self._stop_graphics()
             raise from_none(e)
         try:
-            if not self.is_master:
+            if not self.is_master and not kwargs.get("no_device", False):
                 self._device = Device()
         except Exception as e:
             self.error("Failed to create the OpenCL device")
             self._stop_graphics()
             raise from_none(e)
+        if "no_device" in kwargs:
+            del kwargs["no_device"]
         self.workflow.reset_thread_pool()
 
         def greet_reactor():
@@ -617,11 +625,6 @@ class Launcher(logger.Logger):
         if not self.is_standalone:
             self.agent.close()
         self.workflow.thread_pool.shutdown()
-        if self.args.validate_history:
-            try:
-                self.workflow.validate_history()
-            except MasterSlaveCommunicationError as e:
-                self.error("Workflow history validation was failed: %s", e)
 
     threadsafe = staticmethod(threadsafe)
 
@@ -739,7 +742,8 @@ class Launcher(logger.Logger):
         filtered_argv = filter_argv(
             sys.argv, "-l", "--listen-address", "-n", "--nodes", "-p",
             "--matplotlib-backend", "-b", "--background", "-s", "--stealth",
-            "-d", "--device", "--slave-launch-transform")[1:]
+            "-a", "--backend", "-d", "--device", "--slave-launch-transform",
+            "--result-file")[1:]
         host = self.args.listen_address[0:self.args.listen_address.index(':')]
         port = self.args.listen_address[len(host) + 1:]
         # No way we can send 'localhost' or empty host name to a slave.

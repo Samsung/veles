@@ -48,10 +48,12 @@ under the License.
 ███████████████████████████████████████████████████████████████████████████████
 """
 
+
 import sys
 __unittest = "unittest" in sys.modules
 import atexit
 import binascii
+from collections import namedtuple
 from email.utils import formatdate
 import errno
 import gc
@@ -60,7 +62,8 @@ import numpy
 import os
 import resource
 import runpy
-from six import print_, StringIO, PY3
+from six import print_, StringIO, PY3, string_types
+
 if PY3:
     from urllib.parse import splittype
 else:
@@ -89,10 +92,12 @@ from veles.launcher import Launcher
 from veles.memory import Watcher
 from veles.pickle2 import setup_pickle_debug
 from veles import prng
-from veles.snapshotter import Snapshotter
+from veles.snapshotter import SnapshotterToDB, SnapshotterToFile
 from veles.thread_pool import ThreadPool
 import veles.accelerated_units  # do not remove or options like --force-numpy
-# or --sync-run in accelerated_units will be disabled
+# or --sync-run in accelerated_units will disappear
+import veles.loader.base  # do not remove or options like --train-ratio
+# will disappear
 
 unload_unittest()
 
@@ -108,6 +113,12 @@ def create_args_parser_sphinx():
     return CommandLineBase.init_parser(True)
 
 
+OptimizationTuple = namedtuple("OptimizationTuple", ("multi", "size"))
+EnsembleModelTuple = namedtuple("EnsembleModelTuple", (
+    "size", "train_ratio", "aux_file"))
+EnsembleMasterTuple = namedtuple("EnsembleMasterTuple", ("aux_file",))
+
+
 class Main(Logger, CommandLineBase):
     """
     Entry point of any VELES engine executions.
@@ -121,6 +132,9 @@ class Main(Logger, CommandLineBase):
         Main.setup_argv(not interactive, True, *args, **kwargs)
         super(Main, self).__init__()
         self._interactive = interactive
+        self._ensemble_model = None
+        self._ensemble_master = None
+        self._optimization = None
 
     @property
     def interactive(self):
@@ -128,15 +142,59 @@ class Main(Logger, CommandLineBase):
 
     @property
     def optimization(self):
-        return self._optimization != "no"
+        return self._optimization
 
     @optimization.setter
     def optimization(self, value):
-        if value:
-            if not self.optimization:
-                raise ValueError("Genetics cannot be forced to be used")
+        if value is None:
+            self._optimization = None
             return
-        self._optimization = "no"
+        if not isinstance(value, tuple) or len(value) != 2 or \
+                not isinstance(value[0], bool) or \
+                not isinstance(value[1], int):
+            raise ValueError("Invalid optimization value")
+        if value[1] < 5:
+            raise ValueError("Population size may not be less than 5")
+        self._optimization = OptimizationTuple(*value)
+
+    @property
+    def ensemble_model(self):
+        return self._ensemble_model
+
+    @ensemble_model.setter
+    def ensemble_model(self, value):
+        if value is None:
+            self._ensemble_model = None
+            return
+        if not isinstance(value, tuple) or len(value) != 3 or \
+                not isinstance(value[0], int) or \
+                not isinstance(value[1], (float, int)) or \
+                not isinstance(value[2], string_types):
+            raise ValueError("Invalid ensemble_model value")
+        ratio = value[1]
+        if ratio <= 0 or ratio > 1:
+            raise ValueError(
+                "Training set ratio must be in (0, 1] (got %s)" % ratio)
+        self._ensemble_model = EnsembleModelTuple(*value)
+
+    @property
+    def ensemble_master(self):
+        return self._ensemble_master
+
+    @ensemble_master.setter
+    def ensemble_master(self, value):
+        if value is None:
+            self._ensemble_master = None
+            return
+        if not isinstance(value, tuple) or len(value) != 1 or \
+                not isinstance(value[0], string_types):
+            raise ValueError("Invalid ensemble_master value")
+        self._ensemble_master = EnsembleMasterTuple(*value)
+
+    @property
+    def regular(self):
+        return not self.optimization and not self.ensemble_model and \
+            not self.ensemble_master
 
     def _process_special_args(self):
         if "--frontend" in sys.argv:
@@ -257,18 +315,42 @@ class Main(Logger, CommandLineBase):
 
     def _parse_optimization(self, args):
         optparsed = args.optimize.split(':')
-        if len(optparsed) > 2:
+        if not optparsed[0]:
+            return
+        if optparsed[0] not in ("single", "multi"):
+            raise ValueError(
+                "Ivalid optimization type \"%s\", may be either \"single\" or "
+                "\"multi\"" % optparsed[0])
+        if len(optparsed) != 2:
             raise ValueError("\"%s\" is not a valid optimization setting" %
                              args.optimize)
-        self._optimization = optparsed[0]
-        if len(optparsed) > 1:
+        try:
+            self.optimization = optparsed[0] == "multi", int(optparsed[1])
+        except ValueError:
+            raise from_none(ValueError(
+                "\"%s\" is not a valid optimization size" % optparsed[1]))
+
+    def _parse_ensemble(self, args):
+        stage = args.ensemble_stage
+        if stage is None:
+            return
+        aux_file = args.ensemble_aux_file
+        if stage == "model":
+            optparsed = args.ensemble_definition.split(":")
+            if len(optparsed) != 2:
+                raise ValueError(
+                    "--ensemble-definition must be specified as"
+                    "<number of instances>:<training set ratio>")
             try:
-                self._population_size = int(optparsed[1])
-            except:
-                raise ValueError("\"%s\" is not a valid optimization size" %
-                                 optparsed[1])
-        else:
-            self._population_size = 0
+                params = int(optparsed[0]), float(optparsed[1])
+            except ValueError:
+                raise from_none(
+                    "Failed to parse ensemble parameters from (%s, %s)" %
+                    optparsed)
+            self.ensemble_model = params + (aux_file,)
+            return
+        assert stage == "master"
+        self.ensemble_master = (aux_file,)
 
     def _daemonize(self):
         daemon_context = daemon.DaemonContext()
@@ -434,7 +516,7 @@ class Main(Logger, CommandLineBase):
             else:
                 name = None
             try:
-                return Snapshotter.import_odbc(odbc, table, id_, log_id, name)
+                return SnapshotterToDB.import_(odbc, table, id_, log_id, name)
             except pyodbc.Error as e:
                 self.warning(
                     "Failed to load the snapshot from ODBC source: %s", e)
@@ -451,7 +533,7 @@ class Main(Logger, CommandLineBase):
                                fname_snapshot)
                 return None
         try:
-            return Snapshotter.import_file(fname_snapshot)
+            return SnapshotterToFile.import_(fname_snapshot)
         except FileNotFoundError:
             if fname_snapshot.strip() != "":
                 self.warning("Workflow snapshot %s does not exist",
@@ -504,6 +586,7 @@ class Main(Logger, CommandLineBase):
             sys.exit(Main.EXIT_FAILURE)
         self.main_called = True
         kwargs["snapshot"] = self.snapshot
+        kwargs["no_device"] = not self.regular
 
         try:
             self.launcher.initialize(**kwargs)
@@ -588,16 +671,19 @@ class Main(Logger, CommandLineBase):
             return
         if not self.optimization:
             from veles.genetics import fix_config
-
             fix_config(root)
+        if self.regular:
             self.run_module(wm)
-        else:
+        elif self.optimization:
             from veles.genetics import ConfigPopulation
-
             rand = prng.RandomGenerator(None)
             rand.state = prng.get().state
-            ConfigPopulation(root, self, wm, self._optimization == "multi",
-                             self._population_size or 50, rand=rand).evolve()
+            ConfigPopulation(self, wm, rand=rand).evolve()
+        elif self.ensemble_model:
+            import veles.ensemble.model_workflow as workflow
+            self.run_module(workflow, model=wm, **self.ensemble_model.__dict__)
+        else:
+            raise NotImplementedError("Unsupported execution mode")
 
     def _print_logo(self, args):
         if not args.no_logo:
@@ -643,9 +729,9 @@ class Main(Logger, CommandLineBase):
         self.info("Peak resident memory used: %s Kb",
                   self.format_decimal(res.ru_maxrss))
 
-    def run_module(self, module):
+    def run_module(self, module, **kwargs):
         self.debug("Calling %s.run()...", module.__name__)
-        module.run(self._load, self._main)
+        module.run(self._load, self._main, **kwargs)
         if not self.main_called and self._dry_run > 2:
             self.warning("main() was not called by run() in %s",
                          module.__file__)
@@ -687,6 +773,7 @@ class Main(Logger, CommandLineBase):
         self._dump_attrs = args.dump_unit_attributes
         self.snapshot_file_name = args.snapshot
         self._parse_optimization(args)
+        self._parse_ensemble(args)
 
         self.setup_logging(args.verbosity)
         self._print_logo(args)
