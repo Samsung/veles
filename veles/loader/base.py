@@ -991,7 +991,8 @@ class LoaderMSEMixin(Unit):
                 "target_normalization_parameters" not in kwargs:
             raise ValueError("You set target_normalization_type in %s which "
                              "is different from normalization_type but did not"
-                             " set target_normalization_parameters.")
+                             " set target_normalization_parameters." %
+                             self.target_normalization_type)
         self.target_normalization_parameters = kwargs.get(
             "target_normalization_parameters",
             kwargs.get("normalization_parameters", {}))
@@ -1042,7 +1043,8 @@ class LoaderMSEMixin(Unit):
                     "that is, there is no way do denormalize the output "
                     "without knowing the original data traits. Stateless "
                     "normalizers are restricted in MSE mode since the forward "
-                    "propagation on test data becomes impossible.")
+                    "propagation on test data becomes impossible." %
+                    self.target_normalization_type)
         return self._target_normalizer
 
     @property
