@@ -42,6 +42,7 @@ for d in $(cat requirements.txt); do yolk -f license,name -M $(echo "$d" | sed '
 | h5py                  | BSD                                        |
 | Jinja2                | BSD                                        |
 | pycparser             | BSD                                        |
+| pyodbc                | MIT                                        |
 | progressbar (bundled) | LGPL, BSD -> BSD                           |
 | fysom (bundled)       | BSD                                        |
 | freetype (bundled)    | BSD                                        |
