@@ -30,27 +30,33 @@
                     {% endif %}
                 </ac:rich-text-body>
             </ac:structured-macro>
-            {% if errors_pt is defined %}
             <h1>Results</h1>
             <table>
                 <tbody>
                     <tr>
+                        <th>metric</th>
                         <th>set</th>
-                        <th>accuracy</th>
-                        <th>errors</th>
+                        <th>value</th>
                     </tr>
-                    {% for i in range(3) %}
-                    {% if class_lengths[i] > 0 %}
-                    <tr>
-                        <td>{{ set_names[i] }}</td>
-                        <td>{{ (100 - errors_pt[i])|round(2) }}%</td>
-                        <td>{{ errors_pt[i]|round(2) }}%</td>
-                    </tr>
-                    {% endif %}
+                    {% for key, set_val in results | dictsort %}
+                        {% if set_vals is mapping %}
+                            {% for set_name, val in set_vals | dictsort %}
+                                <tr>
+                                    <td>{{ key }}</td>
+                                    <td>{{ set_name }}</td>
+                                    <td>{{ val }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td>{{ key }}</td>
+                                <td>-</td>
+                                <td>{{ set_vals }}</td>
+                            </tr>
+                        {% endif %}
                     {% endfor %}
                 </tbody>
             </table>
-            {% endif %}
             <h1>Source data</h1>
             <ac:structured-macro ac:name="chart">
                 <ac:parameter ac:name="title">Samples</ac:parameter>

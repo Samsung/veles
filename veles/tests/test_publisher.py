@@ -97,8 +97,7 @@ class TestPublisher(unittest.TestCase, Logger):
         self.publisher.initialize()
 
     def test_init_info(self):
-        info = self.publisher.init_info()
-        self.publisher.add_info(info)
+        info = self.publisher.gather_info()
         self.assertIsInstance(info, dict)
         self.assertEqual(info["plots"], {})
         self.assertIsInstance(info["workflow_graph"], dict)
@@ -137,8 +136,7 @@ class TestPublisher(unittest.TestCase, Logger):
         self.assertIsInstance(info["seeds"], list)
 
     def test_confluence_render(self):
-        info = self.publisher.init_info()
-        self.publisher.add_info(info)
+        info = self.publisher.gather_info()
         info["errors_pt"] = 0, 0.5, 0.6
         info["seeds"].append(b"abcd1234")
         conf = ConfluenceBackend(None, server="", username="", password="",

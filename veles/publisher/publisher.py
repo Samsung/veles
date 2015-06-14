@@ -35,13 +35,13 @@ under the License.
 ███████████████████████████████████████████████████████████████████████████████
 """
 
-
 import json
 import logging
 import os
 import platform
-from six import BytesIO, StringIO
 from time import time
+
+from six import BytesIO, StringIO
 from zope.interface import implementer
 
 from veles.config import root
@@ -49,6 +49,7 @@ from veles.distributable import TriviallyDistributable, IDistributable
 from veles.loader import Loader
 from veles.plotter import Plotter
 from veles.publisher.registry import PublishingBackendRegistry
+from veles.result_provider import IResultProvider
 from veles.units import Unit, IUnit, nothing
 
 
@@ -75,6 +76,7 @@ class Publisher(Unit, TriviallyDistributable):
         self.wants_workflow_graph = not root.common.disable.publishing
         # Instance of veles.loader.Loader
         self._loader_unit = kwargs.get("loader")
+        self._result_providers = set()
 
     @property
     def backends(self):
@@ -127,9 +129,16 @@ class Publisher(Unit, TriviallyDistributable):
                 (Loader, type(value)))
         self._loader_unit = value
 
+    @property
+    def result_providers(self):
+        return self._result_providers
+
     def initialize(self, **kwargs):
         if self.is_slave or root.common.disable.publishing:
             return
+        self.result_providers.add(self.loader_unit)
+        for prov in self.result_providers:
+            prov.verify_interface(IResultProvider)
         try:
             import matplotlib
             matplotlib.use(self.matplotlib_backend)
@@ -147,8 +156,7 @@ class Publisher(Unit, TriviallyDistributable):
     def run(self):
         if self.is_slave or root.common.disable.publishing:
             return
-        info = self.init_info()
-        self.add_info(info)
+        info = self.gather_info()
         if self.logger.isEnabledFor(logging.DEBUG):
             self._debug_info(info)
         self.info("Publishing the results...")
@@ -156,7 +164,7 @@ class Publisher(Unit, TriviallyDistributable):
             self.debug("Rendering %s...", backend_class)
             self._backend_instances[backend_class].render(info)
 
-    def init_info(self):
+    def gather_info(self):
         self.info("Gathering the results...")
         info = {
             "plots": self._gather_plots() if self._include_plots else {},
@@ -213,10 +221,10 @@ class Publisher(Unit, TriviallyDistributable):
                          "normalization": unit.normalization_type,
                          "normalization_parameters":
                          unit.normalization_parameters})
+        info["results"] = results = {}
+        for prov in self.result_providers:
+            results.update(prov.get_metric_values())
         return info
-
-    def add_info(self, info):
-        pass
 
     def _gather_plots(self):
         plots = {}

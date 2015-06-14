@@ -40,9 +40,11 @@ from collections import defaultdict
 from copy import copy
 import logging
 import marshal
-import numpy
 import time
 import types
+
+import numpy
+
 try:
     from scipy.stats import chisquare
 except ImportError:
@@ -61,6 +63,7 @@ from veles.mutable import Bool
 import veles.normalization as normalization
 from veles.opencl_types import dtypes
 import veles.prng as random_generator
+from veles.result_provider import IResultProvider
 from veles.units import Unit, IUnit, nothing
 from veles.unit_registry import MappedUnitRegistry
 
@@ -110,7 +113,7 @@ class ILoader(Interface):
         """
 
 
-@implementer(IDistributable, IUnit)
+@implementer(IDistributable, IUnit, IResultProvider)
 @six.add_metaclass(UserLoaderRegistry)
 class Loader(Unit):
     """Loads data and provides minibatch output interface.
@@ -642,6 +645,12 @@ class Loader(Unit):
             self.info("Jobs failed: %d/pending: %d",
                       len(self.failed_minibatches),
                       self.pending_minibatches_count)
+
+    def get_metric_names(self):
+        return {"Total epochs"}
+
+    def get_metric_values(self):
+        return {"Total epochs": self.epoch_number}
 
     def reset_normalization(self):
         self.normalizer.reset()
