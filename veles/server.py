@@ -181,6 +181,12 @@ class SlaveDescription(namedtuple(
                 del args[f]
         return SlaveDescription(**args)
 
+    def __hash__(self):
+        return hash(self.id)
+
+    def __eq__(self, other):
+        return self.id == other.id
+
 
 class VelesProtocol(StringLineReceiver, IDLogger):
     """A communication controller from server to client.
@@ -220,10 +226,12 @@ class VelesProtocol(StringLineReceiver, IDLogger):
         'events': [
             {'name': 'connect', 'src': 'INIT', 'dst': 'WAIT'},
             {'name': 'identify', 'src': 'WAIT', 'dst': 'WORK'},
-            {'name': 'request_job', 'src': 'WORK', 'dst': 'GETTING_JOB'},
+            {'name': 'request_job', 'src': ('WORK', 'IDLE'),
+             'dst': 'GETTING_JOB'},
             {'name': 'obtain_job', 'src': 'GETTING_JOB', 'dst': 'WORK'},
             {'name': 'refuse_job', 'src': 'GETTING_JOB', 'dst': 'WORK'},
             {'name': 'postpone_job', 'src': 'GETTING_JOB', 'dst': 'WORK'},
+            {'name': 'idle', 'src': 'WORK', 'dst': 'IDLE'},
             {'name': 'drop', 'src': '*', 'dst': 'INIT'},
         ],
         'callbacks': {
@@ -234,6 +242,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
             'onpostpone_job': setWaiting,
             'onrequest_job': setWaiting,
             'onrefuse_job': setWaiting,
+            'onidle': setWaiting,
             'ondrop': onDropped
         }
     }
@@ -383,6 +392,8 @@ class VelesProtocol(StringLineReceiver, IDLogger):
 
     def updateReceived(self, data):
         self.debug("update was received")
+        if self._balance == 1:
+            self.state.idle()
         upd = threads.deferToThreadPool(
             reactor, self.host.workflow.thread_pool,
             self.host.workflow.apply_data_from_slave, data,
@@ -395,7 +406,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
         self._last_job_submit_time = now
 
     def updateFinished(self, result):
-        if self.state.current not in ('WORK', 'GETTING_JOB'):
+        if self.state.current not in ('WORK', 'GETTING_JOB', 'IDLE'):
             self.warning("Update was finished in an invalid state %s",
                          self.state.current)
             return
@@ -577,7 +588,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
                        "the update", self._balance)
             return
         self._balance += 1
-        self.debug("generating the job, balance %d", self._balance)
+        self.debug("generating the job, balance is %d", self._balance)
         if self._last_job_submit_time == 0:
             self._last_job_submit_time = time.time()
         job = threads.deferToThreadPool(
@@ -589,8 +600,10 @@ class VelesProtocol(StringLineReceiver, IDLogger):
         self._scheduleDropOnTimeout()
 
     def _refuseJob(self):
+        self._balance -= 1
         self.state.refuse_job()
         self.host.zmq_connection.reply(self.id, b'job', False)
+        self.debug("refused the job, balance is %d", self._balance)
 
     def _scheduleDropOnTimeout(self):
         if not self._drop_on_timeout or len(self.jobs_processed) < 3:

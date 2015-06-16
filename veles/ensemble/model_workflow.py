@@ -35,6 +35,7 @@ under the License.
 """
 
 
+from collections import defaultdict
 import json
 import os
 import subprocess
@@ -56,11 +57,15 @@ class EnsembleModelManager(Unit):
     def __init__(self, workflow, **kwargs):
         super(EnsembleModelManager, self).__init__(workflow, **kwargs)
         self._model_ = kwargs["model"]
-        self._size = kwargs["size"]
+        self.size = kwargs["size"]
         self._train_ratio = kwargs["train_ratio"]
-        self._aux_file = kwargs["aux_file"]
-        self._results = []
-        self._complete = Bool(lambda: len(self.results) == self.size)
+        self._aux_file = kwargs.get("aux_file")
+        self._model_index = 0
+        self._complete = Bool(lambda: None not in self.results)
+
+    def init_unpickled(self):
+        super(EnsembleModelManager, self).init_unpickled()
+        self._pending_ = defaultdict(set)
 
     @property
     def complete(self):
@@ -72,41 +77,67 @@ class EnsembleModelManager(Unit):
 
     @property
     def size(self):
-        return self._size
+        return len(self.results)
+
+    @size.setter
+    def size(self, value):
+        if not isinstance(value, int):
+            raise TypeError("size must be an integer (got %s)" % type(value))
+        if value < 1:
+            raise ValueError("size must be > 0 (got %d)" % value)
+        self._results = [None] * value
+
+    @property
+    def aux_file(self):
+        return self._aux_file
+
+    @property
+    def size_trained(self):
+        return sum(1 for r in self.results if r is not None)
+
+    @property
+    def size_left(self):
+        return self.size - self.size_trained - \
+            sum(len(s) for s in self._pending_.values())
 
     def initialize(self, **kwargs):
-        if not os.path.exists(self._aux_file):
-            with open(self._aux_file, "w") as _:
+        if self.is_slave:
+            self.size = 1
+            return
+        if self.aux_file is None:
+            raise ValueError("aux_file (--ensemble-aux-file) may not be None")
+        if not os.path.exists(self.aux_file):
+            with open(self.aux_file, "w") as _:
                 pass
-        elif not os.access(self._aux_file, os.W_OK):
-            raise ValueError("Cannot write to %s" % self._aux_file)
+        elif not os.access(self.aux_file, os.W_OK):
+            raise ValueError("Cannot write to %s" % self.aux_file)
 
     def run(self):
         argv = filter_argv(
-            sys.argv, "-l", "--listen-address", "-n", "--nodes",
-            "-b", "--background", "-s", "--stealth", "--ensemble-stage",
-            "--ensemble-definition", "--ensemble-aux-file",
+            sys.argv, "-l", "--listen-address", "-m", "--master-address", "-n",
+            "--nodes", "-b", "--background", "-s", "--stealth",
+            "--ensemble-stage", "--ensemble-definition", "--ensemble-aux-file",
             "--slave-launch-transform", "--result-file")[1:]
-        index = len(self.results)
+        index = sum(1 for r in self.results if r is not None)
         with NamedTemporaryFile(
                 prefix="veles-ensemble-", suffix=".json", mode="r") as fin:
             argv = ["--result-file", fin.name, "--stealth", "--train-ratio",
                     str(self._train_ratio), "--log-id",
                     self.launcher.log_id] + argv + \
-                   ["root.common.ensemble.model_index=%d" % index,
+                   ["root.common.ensemble.model_index=%d" % self._model_index,
                     "root.common.ensemble.size=%d" % self.size]
-            self.info("Training model %d / %d...\n%s",
-                      index + 1, self.size, "-" * 80)
+            self.info("Training model %d / %d (#%d)...\n%s",
+                      index + 1, self.size, self._model_index, "-" * 80)
+            self._model_index += 1
             self.debug("%s", " ".join(argv))
             __main__ = os.path.join(__root__, "veles", "__main__.py")
             env = {"PYTHONPATH": os.getenv("PYTHONPATH", __root__)}
             env.update(os.environ)
             if subprocess.call([sys.executable, __main__] + argv, env=env):
                 self.warning("Failed to train model #%d", index + 1)
-                self._results.append(None)
                 return
             try:
-                self._results.append(json.load(fin))
+                self.results[index] = json.load(fin)
             except ValueError as e:
                 fin.seek(0, os.SEEK_SET)
                 with NamedTemporaryFile(
@@ -114,27 +145,40 @@ class EnsembleModelManager(Unit):
                         delete=False) as fout:
                     fout.write(fin.read())
                     self.warning("Failed to parse %s: %s", fout.name, e)
-                self._results.append(None)
 
     def stop(self):
+        if self.is_slave:
+            return
         self.info("Dumping the results to %s...", self._aux_file)
         with open(self._aux_file, "w") as fout:
-            json.dump(self._results, fout)
+            json.dump(self.results, fout)
 
     def generate_data_for_master(self):
-        pass
+        return self._model_index - 1, self.results[0]
 
     def generate_data_for_slave(self, slave):
-        pass
+        for i, r in enumerate(self.results):
+            if r is None and i not in self._pending_[slave]:
+                self.info("Enqueued model #%d / %d to %s", i + 1, self.size,
+                          slave.id)
+                self._pending_[slave].add(i)
+                self.has_data_for_slave = self.size_left > 0
+                return i
 
     def apply_data_from_master(self, data):
-        pass
+        self._model_index = data
+        self.results[0] = None
 
     def apply_data_from_slave(self, data, slave):
-        pass
+        if slave is None:
+            return
+        model_index, result = data
+        self._pending_[slave].remove(model_index)
+        self._results[model_index] = result
 
     def drop_slave(self, slave):
-        pass
+        if slave in self._pending_:
+            self._pending_[slave].clear()
 
 
 class EnsembleModelWorkflow(Workflow):

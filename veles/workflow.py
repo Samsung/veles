@@ -515,7 +515,7 @@ class Workflow(Container):
             raise ValueError("data must be a list")
         sid = slave.id if slave is not None else "self"
         self.debug("Applying the update from slave %s", sid)
-        self.event("apply_data", "begin", slave=slave.id)
+        self.event("apply_data", "begin", slave=sid)
         for i, unit in enumerate(self.units_in_dependency_order):
             if data[i] is not None and not unit.negotiates_on_connect:
                 try:
@@ -523,7 +523,7 @@ class Workflow(Container):
                 except:
                     self.error("Unit %s failed to apply data from slave", unit)
                     raise
-        self.event("apply_data", "end", slave=slave.id)
+        self.event("apply_data", "end", slave=sid)
         self.debug("Done with applying the update from slave %s", sid)
         return True
 

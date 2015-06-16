@@ -275,6 +275,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
 
     def job_received(self, job):
         if not job:
+            # False, None or empty string mean job refusal
             self.info("Job was refused")
             self.state.refuse_job()
         elif job == b"NEED_UPDATE":
@@ -292,7 +293,8 @@ class VelesProtocol(StringLineReceiver, IDLogger):
             self.request_update()
         if job == b"NEED_UPDATE":
             return
-        if not job and not self.host.async:
+        if not job:
+            # No jobs are available => terminate itself
             self.host.launcher.stop()
             return
         try:
@@ -403,8 +405,8 @@ class Client(NetworkAgent, ReconnectingClientFactory):
         super(Client, self).__init__(configuration, workflow)
         parser = Client.init_parser()
         args, _ = parser.parse_known_args(self.argv)
-        self._async = args.async
-        self._death_probability = args.death_probability
+        self._async = args.async_slave
+        self._death_probability = args.slave_death_probability
         self._initial_data = None
         self.id = None
         self.state = fysom.Fysom(VelesProtocol.FSM_DESCRIPTION, self)
@@ -420,13 +422,16 @@ class Client(NetworkAgent, ReconnectingClientFactory):
         Initializes an instance of argparse.ArgumentParser.
         """
         parser = kwargs.get("parser", argparse.ArgumentParser())
-        parser.add_argument("--async",
+        parser.add_argument("--async-slave",
                             default=kwargs.get("async", False),
                             help="Activate asynchronous master-slave protocol "
-                            "on slaves.", action='store_true')
-        parser.add_argument("--death-probability", type=float, default=0.0,
+                            "(influences slaves only).", action='store_true') \
+            .mode = ("master", "slave")
+        parser.add_argument("--slave-death-probability", type=float,
+                            default=0.0,
                             help="Each slave will die with the probability "
-                            "specified by this value.")
+                            "specified by this value.") \
+            .mode = ("master", "slave")
         return parser
 
     @property
