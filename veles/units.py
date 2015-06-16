@@ -393,19 +393,44 @@ class Unit(Distributable, Verified):
 
     @property
     def is_master(self):
+        """
+        :return: value indicating whether this unit is running in master mode.
+        If True, is_standalone and is_slave are False.
+        """
         return self.workflow.is_master
 
     @property
     def is_slave(self):
+        """
+        :return: value indicating whether this unit is running in slave mode.
+        If True, is_standalone and is_master are False.
+        """
         return self.workflow.is_slave
 
     @property
     def is_standalone(self):
+        """
+        :return: value indicating whether this unit is running in standalone
+        mode. If True, is_master and is_slave are False.
+        """
         return self.workflow.is_standalone
 
     @property
     def interactive(self):
+        """
+        :return: value indicating whether this unit is running interactively,
+        e.g. in IPython Notebook or in python terminal session.
+        """
         return self.workflow.interactive
+
+    @property
+    def testing(self):
+        """
+        :return: value indicating whether this unit is running in test mode,
+        that is, no learning shall be done and this unit is considered trained
+        and ready for the usage.
+        """
+        return self.workflow.testing
 
     @property
     def run_was_called(self):

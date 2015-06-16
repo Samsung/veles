@@ -41,6 +41,7 @@ import os
 import subprocess
 import sys
 from tempfile import NamedTemporaryFile
+from six import string_types
 from zope.interface import implementer
 
 from veles.paths import __root__
@@ -129,29 +130,34 @@ class EnsembleModelManager(Unit):
             self.info("Training model %d / %d (#%d)...\n%s",
                       index + 1, self.size, self._model_index, "-" * 80)
             self._model_index += 1
-            self.debug("%s", " ".join(argv))
-            __main__ = os.path.join(__root__, "veles", "__main__.py")
-            env = {"PYTHONPATH": os.getenv("PYTHONPATH", __root__)}
-            env.update(os.environ)
-            if subprocess.call([sys.executable, __main__] + argv, env=env):
-                self.warning("Failed to train model #%d", index + 1)
+            train_result = self._exec(argv, fin, "train")
+            if train_result is None:
                 return
             try:
-                self.results[index] = json.load(fin)
-            except ValueError as e:
-                fin.seek(0, os.SEEK_SET)
-                with NamedTemporaryFile(
-                        prefix="veles-ensemble-", suffix=".json", mode="w",
-                        delete=False) as fout:
-                    fout.write(fin.read())
-                    self.warning("Failed to parse %s: %s", fout.name, e)
+                id_ = train_result["id"]
+                log_id = train_result["log_id"]
+                snapshot = train_result["Snapshot"]
+            except KeyError:
+                self.error("Model #%d did not return a valid result",
+                           self._model_index)
+                return
+            self.info("Evaluating model %d / %d (#%d)...\n%s",
+                      index + 1, self.size, self._model_index, "-" * 80)
+            argv = ["--test", "--snapshot", self._to_snapshot_arg(
+                id_, log_id, snapshot)] + argv
+            fin.seek(0, os.SEEK_SET)
+            test_result = self._exec(argv, fin, "test")
+            if test_result is None:
+                return
+            self.results[index] = train_result
+            self.results[index].update(test_result)
 
     def stop(self):
         if self.is_slave:
             return
         self.info("Dumping the results to %s...", self._aux_file)
         with open(self._aux_file, "w") as fout:
-            json.dump(self.results, fout)
+            json.dump(self.results, fout, indent=4, sort_keys=True)
 
     def generate_data_for_master(self):
         return self._model_index - 1, self.results[0]
@@ -179,6 +185,32 @@ class EnsembleModelManager(Unit):
     def drop_slave(self, slave):
         if slave in self._pending_:
             self._pending_[slave].clear()
+
+    def _exec(self, argv, fin, action):
+        self.debug("exec: %s", " ".join(argv))
+        __main__ = os.path.join(__root__, "veles", "__main__.py")
+        env = {"PYTHONPATH": os.getenv("PYTHONPATH", __root__)}
+        env.update(os.environ)
+        if subprocess.call([sys.executable, __main__] + argv, env=env):
+            self.warning("Failed to %s model #%d", action, self._model_index)
+            return
+        try:
+            return json.load(fin)
+        except ValueError as e:
+            fin.seek(0, os.SEEK_SET)
+            with NamedTemporaryFile(
+                    prefix="veles-ensemble-", suffix=".json", mode="w",
+                    delete=False) as fout:
+                fout.write(fin.read())
+                self.warning("Failed to parse %s: %s", fout.name, e)
+
+    @staticmethod
+    def _to_snapshot_arg(id_, log_id, snapshot):
+        if isinstance(snapshot, string_types):
+            return snapshot
+        # ODBC case
+        return ("%s&" * 4 + "%s") % (
+            snapshot["odbc"], snapshot["table"], id_, log_id, snapshot["name"])
 
 
 class EnsembleModelWorkflow(Workflow):

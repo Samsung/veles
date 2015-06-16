@@ -114,10 +114,13 @@ class Launcher(logger.Logger):
 
     def __init__(self, interactive=False, **kwargs):
         super(Launcher, self).__init__()
+        self._initialized = False
+        self._running = False
         parser = Launcher.init_parser(**kwargs)
         self.args, _ = parser.parse_known_args(self.argv)
         self.args.master_address = self.args.master_address.strip()
         self.args.listen_address = self.args.listen_address.strip()
+        self.testing = self.args.test
         self.args.matplotlib_backend = self.args.matplotlib_backend.strip()
         self._slaves = [x.strip() for x in self.args.nodes.split(',')
                         if x.strip() != ""]
@@ -155,8 +158,6 @@ class Launcher(logger.Logger):
         self._webagg_port = 0
         self._agent = None
         self._workflow = None
-        self._initialized = False
-        self._running = False
         self._start_time = None
         self._device = NumpyDevice()
         self._interactive = interactive
@@ -201,6 +202,10 @@ class Launcher(logger.Logger):
                             help="Workflow will be launched in server mode "
                                  "and will accept client connections at the "
                                  "specified address.").mode = ("master",)
+        parser.add_argument("-t", "--test",
+                            default=kwargs.get("test", False),
+                            help="Use the (assumably) trained model.",
+                            action='store_true')
         parser.add_argument("-p", "--matplotlib-backend", type=str, nargs='?',
                             const="",
                             default=kwargs.get(
@@ -257,6 +262,17 @@ class Launcher(logger.Logger):
     @property
     def interactive(self):
         return self._interactive
+
+    @property
+    def testing(self):
+        return self._testing
+
+    @testing.setter
+    def testing(self, value):
+        if not isinstance(value, bool):
+            raise TypeError("testing must be boolean (got %s)" % type(value))
+        assert not self.is_initialized, "Too late for setting this"
+        self._testing = value
 
     @property
     def id(self):
@@ -605,6 +621,7 @@ class Launcher(logger.Logger):
             self._notify_status()
         if not self.is_slave:
             def run_workflow():
+                self.workflow.stopped = False
                 self.workflow.thread_pool.start()
                 self.workflow.thread_pool.callInThread(self.workflow.run)
             reactor.callWhenRunning(run_workflow)

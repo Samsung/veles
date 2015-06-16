@@ -156,14 +156,17 @@ class Loader(Unit):
 
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = "LOADER"
-        self.last_minibatch = Bool(False)
+        self.last_minibatch = Bool()
         super(Loader, self).__init__(workflow, **kwargs)
         self.verify_interface(ILoader)
 
         self.prng = kwargs.get("prng", random_generator.get())
 
-        self.shuffle_limit = kwargs.get(
-            "shuffle_limit", numpy.iinfo(numpy.uint32).max)
+        if not self.testing:
+            self.shuffle_limit = kwargs.get(
+                "shuffle_limit", numpy.iinfo(numpy.uint32).max)
+        else:
+            self.shuffle_limit = 0
         self._max_minibatch_size = kwargs.get("minibatch_size", 100)
         if self._max_minibatch_size < 1:
             raise ValueError("minibatch_size must be greater than zero")
@@ -172,9 +175,10 @@ class Loader(Unit):
         self._class_end_offsets = [0] * len(CLASS_NAME)
         self._has_labels = False
 
-        self.epoch_ended = Bool(False)
+        self.epoch_ended = Bool()
         self.epoch_number = 0
-        self.train_ended = Bool(False)
+        self.train_ended = Bool()
+        self.test_ended = Bool()
 
         self.samples_served = 0
         self._global_offset = 0
@@ -695,10 +699,15 @@ class Loader(Unit):
                       self.pending_minibatches_count)
 
     def get_metric_names(self):
-        return {"Total epochs"}
+        if not self.testing:
+            return {"Total epochs"}
+        else:
+            return set()
 
     def get_metric_values(self):
-        return {"Total epochs": self.epoch_number}
+        if not self.testing:
+            return {"Total epochs": self.epoch_number}
+        return {}
 
     def reset_normalization(self):
         self.normalizer.reset()
@@ -893,6 +902,7 @@ class Loader(Unit):
         minibatch_size = min(remainder, self.max_minibatch_size)
         self.global_offset += minibatch_size
         self.train_ended <<= self.global_offset >= self.effective_total_samples
+        self.test_ended <<= self.global_offset >= self.class_end_offsets[TEST]
         return self.global_offset, minibatch_size
 
     def _on_successful_serve(self):

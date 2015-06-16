@@ -53,6 +53,10 @@ class DummyLauncher(object):
         return False
 
     @property
+    def testing(self):
+        return False
+
+    @property
     def is_slave(self):
         return False
 

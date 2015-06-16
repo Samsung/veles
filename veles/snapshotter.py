@@ -354,13 +354,21 @@ class SnapshotterToDB(SnapshotterBase):
         self._odbc = kwargs["odbc"]
         self._table = kwargs.get("table", "veles")
 
+    @property
+    def odbc(self):
+        return self._odbc
+
+    @property
+    def table(self):
+        return self._table
+
     def initialize(self, **kwargs):
         super(SnapshotterToDB, self).initialize(**kwargs)
-        self._db_ = pyodbc.connect(self._odbc)
+        self._db_ = pyodbc.connect(self.odbc)
         self._cursor_ = self._db_.cursor()
 
     def stop(self):
-        if self._odbc is not None:
+        if self.odbc is not None:
             self._db_.close()
 
     def export(self):
@@ -371,11 +379,11 @@ class SnapshotterToDB(SnapshotterBase):
         with self._open_fobj(fio) as fout:
             pickle.dump(self.workflow, fout, protocol=best_protocol)
         binary = pyodbc.Binary(fio.getvalue())
-        self.info("Executing SQL insert into \"%s\"...", self._table)
+        self.info("Executing SQL insert into \"%s\"...", self.table)
         now = datetime.now()
         self._cursor_.execute(
             "insert into %s(timestamp, id, log_id, workflow, name, codec, data"
-            ") values (?, ?, ?, ?, ?, ?, ?);" % self._table, now,
+            ") values (?, ?, ?, ?, ?, ?, ?);" % self.table, now,
             self.launcher.id, self.launcher.log_id,
             self.launcher.workflow.name, self.destination, self.compression,
             binary)
@@ -398,6 +406,11 @@ class SnapshotterToDB(SnapshotterBase):
         codec = SnapshotterToDB.READ_CODECS[row.codec]
         with codec(BytesIO(row.data)) as fin:
             return SnapshotterToDB._import_fobj(fin)
+
+    def get_metric_values(self):
+        return {"Snapshot": {"odbc": self.odbc,
+                             "table": self.table,
+                             "name": self.destination}}
 
     def _open_fobj(self, fobj):
         return SnapshotterToDB.WRITE_CODECS[self.compression](
