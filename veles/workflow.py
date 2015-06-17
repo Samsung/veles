@@ -818,8 +818,7 @@ class Workflow(Container):
             need_close = False
         results = self.gather_results()
         try:
-            json.dump(results, fileobj, indent=4, sort_keys=True,
-                      cls=NumpyJSONEncoder)
+            json.dump(results, fileobj, sort_keys=True, cls=NumpyJSONEncoder)
         finally:
             if need_close:
                 fileobj.close()

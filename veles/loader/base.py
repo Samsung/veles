@@ -586,6 +586,9 @@ class Loader(Unit):
     def initialize(self, **kwargs):
         """Loads the data, initializes indices, shuffles the training set.
         """
+        if self.testing:
+            self.shuffle_limit = 0
+            self.global_offset = 0
         try:
             super(Loader, self).initialize(**kwargs)
         except AttributeError:

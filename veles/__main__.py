@@ -62,7 +62,7 @@ import numpy
 import os
 import resource
 import runpy
-from six import print_, StringIO, PY3, string_types
+from six import print_, StringIO, PY3
 
 if PY3:
     from urllib.parse import splittype
@@ -114,9 +114,7 @@ def create_args_parser_sphinx():
 
 
 OptimizationTuple = namedtuple("OptimizationTuple", ("multi", "size"))
-EnsembleModelTuple = namedtuple("EnsembleModelTuple", (
-    "size", "train_ratio", "aux_file"))
-EnsembleMasterTuple = namedtuple("EnsembleMasterTuple", ("aux_file",))
+EnsembleTuple = namedtuple("EnsembleTuple", ("size", "train_ratio"))
 
 
 class Main(Logger, CommandLineBase):
@@ -132,8 +130,7 @@ class Main(Logger, CommandLineBase):
         Main.setup_argv(not interactive, True, *args, **kwargs)
         super(Main, self).__init__()
         self._interactive = interactive
-        self._ensemble_model = None
-        self._ensemble_master = None
+        self._ensemble = None
         self._optimization = None
 
     @property
@@ -158,43 +155,27 @@ class Main(Logger, CommandLineBase):
         self._optimization = OptimizationTuple(*value)
 
     @property
-    def ensemble_model(self):
-        return self._ensemble_model
+    def ensemble(self):
+        return self._ensemble
 
-    @ensemble_model.setter
-    def ensemble_model(self, value):
+    @ensemble.setter
+    def ensemble(self, value):
         if value is None:
-            self._ensemble_model = None
+            self._ensemble = None
             return
-        if not isinstance(value, tuple) or len(value) != 3 or \
+        if not isinstance(value, tuple) or len(value) != 2 or \
                 not isinstance(value[0], int) or \
-                not isinstance(value[1], (float, int)) or \
-                not isinstance(value[2], string_types):
-            raise ValueError("Invalid ensemble_model value")
+                not isinstance(value[1], (float, int)):
+            raise ValueError("Invalid ensemble value")
         ratio = value[1]
         if ratio <= 0 or ratio > 1:
             raise ValueError(
                 "Training set ratio must be in (0, 1] (got %s)" % ratio)
-        self._ensemble_model = EnsembleModelTuple(*value)
-
-    @property
-    def ensemble_master(self):
-        return self._ensemble_master
-
-    @ensemble_master.setter
-    def ensemble_master(self, value):
-        if value is None:
-            self._ensemble_master = None
-            return
-        if not isinstance(value, tuple) or len(value) != 1 or \
-                not isinstance(value[0], string_types):
-            raise ValueError("Invalid ensemble_master value")
-        self._ensemble_master = EnsembleMasterTuple(*value)
+        self._ensemble = EnsembleTuple(*value)
 
     @property
     def regular(self):
-        return not self.optimization and not self.ensemble_model and \
-            not self.ensemble_master
+        return not self.optimization and not self.ensemble
 
     def _process_special_args(self):
         if "--frontend" in sys.argv:
@@ -331,26 +312,20 @@ class Main(Logger, CommandLineBase):
                 "\"%s\" is not a valid optimization size" % optparsed[1]))
 
     def _parse_ensemble(self, args):
-        stage = args.ensemble_stage
-        if stage is None:
+        if args.ensemble is None:
             return
-        aux_file = args.ensemble_aux_file
-        if stage == "model":
-            optparsed = args.ensemble_definition.split(":")
-            if len(optparsed) != 2:
-                raise ValueError(
-                    "--ensemble-definition must be specified as"
-                    "<number of instances>:<training set ratio>")
-            try:
-                params = int(optparsed[0]), float(optparsed[1])
-            except ValueError:
-                raise from_none(
-                    "Failed to parse ensemble parameters from (%s, %s)" %
-                    optparsed)
-            self.ensemble_model = params + (aux_file,)
-            return
-        assert stage == "master"
-        self.ensemble_master = (aux_file,)
+
+        optparsed = args.ensemble.split(":")
+        if len(optparsed) != 2:
+            raise ValueError(
+                "--ensemble must be specified as"
+                "<number of instances>:<training set ratio>")
+        try:
+            self.ensemble = int(optparsed[0]), float(optparsed[1])
+        except ValueError:
+            raise from_none(
+                "Failed to parse ensemble parameters from (%s, %s)" %
+                optparsed)
 
     def _daemonize(self):
         daemon_context = daemon.DaemonContext()
@@ -679,9 +654,9 @@ class Main(Logger, CommandLineBase):
             rand = prng.RandomGenerator(None)
             rand.state = prng.get().state
             ConfigPopulation(self, wm, rand=rand).evolve()
-        elif self.ensemble_model:
+        elif self.ensemble:
             import veles.ensemble.model_workflow as workflow
-            self.run_module(workflow, model=wm, **self.ensemble_model.__dict__)
+            self.run_module(workflow, model=wm, **self.ensemble.__dict__)
         else:
             raise NotImplementedError("Unsupported execution mode")
 

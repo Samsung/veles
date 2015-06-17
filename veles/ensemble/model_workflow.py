@@ -49,18 +49,18 @@ from veles.distributable import IDistributable
 from veles.launcher import filter_argv
 from veles.mutable import Bool
 from veles.plumbing import Repeater
+from veles.result_provider import IResultProvider
 from veles.units import IUnit, Unit
 from veles.workflow import Workflow
 
 
-@implementer(IUnit, IDistributable)
+@implementer(IUnit, IDistributable, IResultProvider)
 class EnsembleModelManager(Unit):
     def __init__(self, workflow, **kwargs):
         super(EnsembleModelManager, self).__init__(workflow, **kwargs)
         self._model_ = kwargs["model"]
         self.size = kwargs["size"]
         self._train_ratio = kwargs["train_ratio"]
-        self._aux_file = kwargs.get("aux_file")
         self._model_index = 0
         self._complete = Bool(lambda: None not in self.results)
 
@@ -89,10 +89,6 @@ class EnsembleModelManager(Unit):
         self._results = [None] * value
 
     @property
-    def aux_file(self):
-        return self._aux_file
-
-    @property
     def size_trained(self):
         return sum(1 for r in self.results if r is not None)
 
@@ -101,24 +97,23 @@ class EnsembleModelManager(Unit):
         return self.size - self.size_trained - \
             sum(len(s) for s in self._pending_.values())
 
+    @property
+    def train_ratio(self):
+        return self._train_ratio
+
+    @property
+    def model(self):
+        return self._model_
+
     def initialize(self, **kwargs):
         if self.is_slave:
             self.size = 1
-            return
-        if self.aux_file is None:
-            raise ValueError("aux_file (--ensemble-aux-file) may not be None")
-        if not os.path.exists(self.aux_file):
-            with open(self.aux_file, "w") as _:
-                pass
-        elif not os.access(self.aux_file, os.W_OK):
-            raise ValueError("Cannot write to %s" % self.aux_file)
 
     def run(self):
         argv = filter_argv(
             sys.argv, "-l", "--listen-address", "-m", "--master-address", "-n",
             "--nodes", "-b", "--background", "-s", "--stealth",
-            "--ensemble-stage", "--ensemble-definition", "--ensemble-aux-file",
-            "--slave-launch-transform", "--result-file")[1:]
+            "--ensemble", "--slave-launch-transform", "--result-file")[1:]
         index = sum(1 for r in self.results if r is not None)
         with NamedTemporaryFile(
                 prefix="veles-ensemble-", suffix=".json", mode="r") as fin:
@@ -152,13 +147,6 @@ class EnsembleModelManager(Unit):
             self.results[index] = train_result
             self.results[index].update(test_result)
 
-    def stop(self):
-        if self.is_slave:
-            return
-        self.info("Dumping the results to %s...", self._aux_file)
-        with open(self._aux_file, "w") as fout:
-            json.dump(self.results, fout, indent=4, sort_keys=True)
-
     def generate_data_for_master(self):
         return self._model_index - 1, self.results[0]
 
@@ -185,6 +173,12 @@ class EnsembleModelManager(Unit):
     def drop_slave(self, slave):
         if slave in self._pending_:
             self._pending_[slave].clear()
+
+    def get_metric_names(self):
+        return {"models"}
+
+    def get_metric_values(self):
+        return {"models": self.results}
 
     def _exec(self, argv, fin, action):
         self.debug("exec: %s", " ".join(argv))
