@@ -80,15 +80,19 @@ def filter_argv(argv, *blacklist):
         a.option_strings for a in CommandLineBase.init_parser()._actions
         if isinstance(a, (argparse._StoreTrueAction,
                           argparse._StoreFalseAction))))
-    for arg in argv:
-        if maybe_value:
-            maybe_value = False
-            if not arg or arg[0] != "-":
-                continue
+    i = -1
+    while i + 1 < len(argv):
+        i += 1
+        arg = argv[i]
+        has_value = arg.startswith("-") and arg not in boolean_args \
+            and '=' not in arg and arg != "-"
         if ptree.longest_prefix(arg, None) is None:
             filtered.append(arg)
-        else:
-            maybe_value = arg not in boolean_args and '=' not in arg
+            if has_value:
+                i += 1
+                filtered.append(argv[i])
+        elif has_value:
+            i += 1
     return filtered
 
 

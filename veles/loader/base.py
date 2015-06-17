@@ -704,12 +704,15 @@ class Loader(Unit):
     def get_metric_names(self):
         if not self.testing:
             return {"Total epochs"}
-        else:
-            return set()
+        if self.has_labels:
+            return {"Labels"}
+        return set()
 
     def get_metric_values(self):
         if not self.testing:
             return {"Total epochs": self.epoch_number}
+        if self.has_labels:
+            return {"Labels": self.reversed_labels_mapping}
         return {}
 
     def reset_normalization(self):

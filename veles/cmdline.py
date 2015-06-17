@@ -190,14 +190,19 @@ class CommandLineBase(object):
                  "of species in the population (if not sure, set to 50)."
                  "\"none\" does not require setting the size.")
         parser.add_argument(
-            "--ensemble",
-            help="Parameters for the ensemble of trained models. Format is "
-                 "<size>:<ratio>, where size is the number of models to train "
-                 "and ratio is the part of the training set to use during the "
-                 "training for each model (picked randomly). The models' "
-                 "evaluation results will be written to --result-file. They "
-                 "include achieved metric values and outputs on the test "
-                 "dataset (loader must support test mode).")
+            "--ensemble-train",
+            help="Parameters to assemble the ensemble of trained models. "
+                 "Format is <size>:<ratio>, where size is the number of models"
+                 " to train and ratio is the part of the training set to use "
+                 "during the training for each model (picked randomly). The "
+                 "models' evaluation results will be written to --result-file."
+                 " They include achieved metric values and outputs on the test"
+                 " dataset (loader must support test mode).")
+        parser.add_argument(
+            "--ensemble-test",
+            help="Test the trained ensemble (see --ensemble-train). The value "
+                 "of this argument must be a path to --result-file with the "
+                 "ensemble_train definition. --test is ignored.")
         parser.add_argument("--workflow-graph", default="",
                             help="Save workflow graph to file.")
         parser.add_argument("--dump-unit-attributes", default="no",

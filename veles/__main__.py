@@ -62,7 +62,7 @@ import numpy
 import os
 import resource
 import runpy
-from six import print_, StringIO, PY3
+from six import print_, StringIO, PY3, string_types
 
 if PY3:
     from urllib.parse import splittype
@@ -114,7 +114,8 @@ def create_args_parser_sphinx():
 
 
 OptimizationTuple = namedtuple("OptimizationTuple", ("multi", "size"))
-EnsembleTuple = namedtuple("EnsembleTuple", ("size", "train_ratio"))
+EnsembleTrainTuple = namedtuple("EnsembleTrainTuple", ("size", "train_ratio"))
+EnsembleTestTuple = namedtuple("EnsembleTestTuple", ("input_file",))
 
 
 class Main(Logger, CommandLineBase):
@@ -130,7 +131,8 @@ class Main(Logger, CommandLineBase):
         Main.setup_argv(not interactive, True, *args, **kwargs)
         super(Main, self).__init__()
         self._interactive = interactive
-        self._ensemble = None
+        self._ensemble_train = None
+        self._ensemble_test = None
         self._optimization = None
 
     @property
@@ -155,27 +157,42 @@ class Main(Logger, CommandLineBase):
         self._optimization = OptimizationTuple(*value)
 
     @property
-    def ensemble(self):
-        return self._ensemble
+    def ensemble_train(self):
+        return self._ensemble_train
 
-    @ensemble.setter
-    def ensemble(self, value):
+    @ensemble_train.setter
+    def ensemble_train(self, value):
         if value is None:
-            self._ensemble = None
+            self._ensemble_train = None
             return
         if not isinstance(value, tuple) or len(value) != 2 or \
                 not isinstance(value[0], int) or \
                 not isinstance(value[1], (float, int)):
-            raise ValueError("Invalid ensemble value")
+            raise ValueError("Invalid ensemble_train value")
         ratio = value[1]
         if ratio <= 0 or ratio > 1:
             raise ValueError(
                 "Training set ratio must be in (0, 1] (got %s)" % ratio)
-        self._ensemble = EnsembleTuple(*value)
+        self._ensemble_train = EnsembleTrainTuple(*value)
+
+    @property
+    def ensemble_test(self):
+        return self._ensemble_test
+
+    @ensemble_test.setter
+    def ensemble_test(self, value):
+        if value is None:
+            self._ensemble_test = None
+            return
+        if not isinstance(value, string_types):
+            raise TypeError(
+                "ensemble_test must be a string (got %s)" % type(value))
+        self._ensemble_test = EnsembleTestTuple(value)
 
     @property
     def regular(self):
-        return not self.optimization and not self.ensemble
+        return not self.optimization and not self.ensemble_train and \
+            not self.ensemble_test
 
     def _process_special_args(self):
         if "--frontend" in sys.argv:
@@ -311,21 +328,30 @@ class Main(Logger, CommandLineBase):
             raise from_none(ValueError(
                 "\"%s\" is not a valid optimization size" % optparsed[1]))
 
-    def _parse_ensemble(self, args):
-        if args.ensemble is None:
+    def _parse_ensemble_train(self, args):
+        if args.ensemble_train is None:
             return
 
-        optparsed = args.ensemble.split(":")
+        optparsed = args.ensemble_train.split(":")
         if len(optparsed) != 2:
             raise ValueError(
-                "--ensemble must be specified as"
+                "--ensemble-train must be specified as"
                 "<number of instances>:<training set ratio>")
         try:
-            self.ensemble = int(optparsed[0]), float(optparsed[1])
+            self.ensemble_train = int(optparsed[0]), float(optparsed[1])
         except ValueError:
             raise from_none(
                 "Failed to parse ensemble parameters from (%s, %s)" %
                 optparsed)
+
+    def _parse_ensemble_test(self, args):
+        if args.ensemble_test is None:
+            return
+        if self.ensemble_train is not None:
+            raise ValueError(
+                "--ensemble-train and --ensemble-test may not be used "
+                "together")
+        self.ensemble_test = args.ensemble_test
 
     def _daemonize(self):
         daemon_context = daemon.DaemonContext()
@@ -649,16 +675,40 @@ class Main(Logger, CommandLineBase):
             fix_config(root)
         if self.regular:
             self.run_module(wm)
-        elif self.optimization:
+        elif self.optimization is not None:
             from veles.genetics import ConfigPopulation
             rand = prng.RandomGenerator(None)
             rand.state = prng.get().state
             ConfigPopulation(self, wm, rand=rand).evolve()
-        elif self.ensemble:
+        elif self.ensemble_train is not None:
             import veles.ensemble.model_workflow as workflow
-            self.run_module(workflow, model=wm, **self.ensemble.__dict__)
+            self.run_module(workflow, model=wm, **self.ensemble_train.__dict__)
+        elif self.ensemble_test is not None:
+            import veles.ensemble.test_workflow as workflow
+            self.run_module(workflow, model=wm, **self.ensemble_test.__dict__)
         else:
             raise NotImplementedError("Unsupported execution mode")
+
+    def _apply_args(self, args):
+        if args.background:
+            self._daemonize()
+        if not args.workflow:
+            raise ValueError("Workflow path may not be empty")
+        config_file = args.config
+        if not config_file:
+            raise ValueError("Configuration path may not be empty")
+        if config_file == "-":
+            config_file = "%s_config%s" % os.path.splitext(args.workflow)
+        self.workflow_file = os.path.abspath(args.workflow)
+        self.config_file = os.path.abspath(config_file)
+        self._visualization_mode = args.visualize
+        self._workflow_graph = args.workflow_graph
+        self._dry_run = Main.DRY_RUN_CHOICES.index(args.dry_run)
+        self._dump_attrs = args.dump_unit_attributes
+        self.snapshot_file_name = args.snapshot
+        self._parse_optimization(args)
+        self._parse_ensemble_train(args)
+        self._parse_ensemble_test(args)
 
     def _print_logo(self, args):
         if not args.no_logo:
@@ -726,29 +776,16 @@ class Main(Logger, CommandLineBase):
         self._main(**kwargs_main)
 
     def run(self):
-        """Entry point method.
+        """Entry point for the VELES execution engine.
         """
         veles.validate_environment()
+
         ret = self._process_special_args()
         if ret is not None:
             return ret
-
         parser = Main.init_parser()
         args = parser.parse_args(self.argv)
-        if args.background:
-            self._daemonize()
-        config_file = args.config
-        if config_file == "-":
-            config_file = "%s_config%s" % os.path.splitext(args.workflow)
-        self.config_file = config_file = os.path.abspath(config_file)
-        self.workflow_file = workflow_file = os.path.abspath(args.workflow)
-        self._visualization_mode = args.visualize
-        self._workflow_graph = args.workflow_graph
-        self._dry_run = Main.DRY_RUN_CHOICES.index(args.dry_run)
-        self._dump_attrs = args.dump_unit_attributes
-        self.snapshot_file_name = args.snapshot
-        self._parse_optimization(args)
-        self._parse_ensemble(args)
+        self._apply_args(args)
 
         self.setup_logging(args.verbosity)
         self._print_logo(args)
@@ -762,8 +799,8 @@ class Main(Logger, CommandLineBase):
 
         if self.logger.isEnabledFor(logging.DEBUG):
             self._print_config(root)
-        wm = self._load_model(workflow_file)
-        self._apply_config(config_file, args.config_list)
+        wm = self._load_model(self.workflow_file)
+        self._apply_config(self.config_file, args.config_list)
         if self.logger.isEnabledFor(logging.DEBUG):
             self._print_config(root)
 

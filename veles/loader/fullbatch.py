@@ -72,6 +72,7 @@ class FullBatchLoaderBase(Loader):
 class IFullBatchLoader(Interface):
     def load_data():
         """Load the data here.
+        Must be set: class_lengths, original_data, [original_labels].
         """
 
 
@@ -254,13 +255,15 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
         self.minibatch_data.reset(numpy.zeros(
             (self.max_minibatch_size,) + self.shape, dtype=self.dtype))
 
-    def create_originals(self, dshape):
+    def create_originals(self, dshape, labels=True):
         """
         Create original_data.mem and original_labels.mem.
         :param dshape: Future original_data.shape[1:]
         """
         self.original_data.reset(
             numpy.zeros((self.total_samples,) + dshape, self.dtype))
+        if not labels:
+            return
         self._mapped_original_labels_.reset(
             numpy.zeros(self.total_samples, Loader.LABEL_DTYPE))
         del self.original_labels[:]

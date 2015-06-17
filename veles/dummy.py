@@ -46,14 +46,11 @@ from veles.workflow import Workflow
 class DummyLauncher(object):
     def __init__(self):
         self.stopped = False
+        self.testing = False
         self.id = str(uuid.uuid4())
 
     @property
     def interactive(self):
-        return False
-
-    @property
-    def testing(self):
         return False
 
     @property
@@ -116,6 +113,10 @@ class DummyWorkflow(Workflow):
     @property
     def interactive(self):
         return False
+
+    @property
+    def launcher(self):
+        return self._launcher
 
 
 @implementer(IUnit)
