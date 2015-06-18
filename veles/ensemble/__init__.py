@@ -33,5 +33,3 @@ under the License.
 
 ███████████████████████████████████████████████████████████████████████████████
 """
-
-from .model_workflow import EnsembleModelWorkflow

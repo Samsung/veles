@@ -86,7 +86,7 @@ class EnsembleTestManager(EnsembleModelManagerBase):
             argv = ["--test", "--result-file", fin.name, "--stealth",
                     "--log-id", self.launcher.log_id, "--snapshot",
                     self._to_snapshot_arg(id_, log_id, snapshot)] + \
-                self._filtered_argv
+                self._filtered_argv_ + ["root.common.disable.publishing=True"]
             try:
                 self.info("Evaluating model %d / %d (#%d)...\n%s",
                           index + 1, self.size, self._model_index, "-" * 80)

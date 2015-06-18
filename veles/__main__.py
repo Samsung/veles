@@ -113,7 +113,7 @@ def create_args_parser_sphinx():
     return CommandLineBase.init_parser(True)
 
 
-OptimizationTuple = namedtuple("OptimizationTuple", ("multi", "size"))
+OptimizationTuple = namedtuple("OptimizationTuple", ("size", "generations"))
 EnsembleTrainTuple = namedtuple("EnsembleTrainTuple", ("size", "train_ratio"))
 EnsembleTestTuple = namedtuple("EnsembleTestTuple", ("input_file",))
 
@@ -148,12 +148,17 @@ class Main(Logger, CommandLineBase):
         if value is None:
             self._optimization = None
             return
-        if not isinstance(value, tuple) or len(value) != 2 or \
-                not isinstance(value[0], bool) or \
-                not isinstance(value[1], int):
-            raise ValueError("Invalid optimization value")
-        if value[1] < 5:
+        if not isinstance(value, tuple) or len(value) != 2:
+            raise TypeError(
+                "Invalid optimization value: expected a tuple of length 2, got"
+                " %s" % type(value))
+        if not isinstance(value[0], int) or \
+                not isinstance(value[1], (int, type(None))):
+            raise TypeError("Invalid optimization value types: %s", value)
+        if value[0] < 5:
             raise ValueError("Population size may not be less than 5")
+        if value[1] is not None and value[1] < 1:
+            raise ValueError("At least 1 generation must be set")
         self._optimization = OptimizationTuple(*value)
 
     @property
@@ -312,21 +317,17 @@ class Main(Logger, CommandLineBase):
             connection.put(cmdline[0])
 
     def _parse_optimization(self, args):
-        optparsed = args.optimize.split(':')
-        if not optparsed[0]:
+        if args.optimize is None:
             return
-        if optparsed[0] not in ("single", "multi"):
-            raise ValueError(
-                "Ivalid optimization type \"%s\", may be either \"single\" or "
-                "\"multi\"" % optparsed[0])
-        if len(optparsed) != 2:
-            raise ValueError("\"%s\" is not a valid optimization setting" %
-                             args.optimize)
+        optparsed = args.optimize.split(':')
+        if len(optparsed) > 2:
+            raise ValueError("Invalid --optimize value: %s" % args.optimize)
         try:
-            self.optimization = optparsed[0] == "multi", int(optparsed[1])
+            self.optimization = int(optparsed[0]), \
+                int(optparsed[1]) if len(optparsed) == 2 else None
         except ValueError:
             raise from_none(ValueError(
-                "\"%s\" is not a valid optimization size" % optparsed[1]))
+                "\"%s\" is not a valid --optimize value" % args.optimize))
 
     def _parse_ensemble_train(self, args):
         if args.ensemble_train is None:
@@ -408,6 +409,11 @@ class Main(Logger, CommandLineBase):
             sys.exit(Main.EXIT_FAILURE)
 
     def _apply_config(self, fname_config, config_list):
+        def fail():
+            self.exception("Failed to apply the configuration \"%s\"",
+                           fname_config)
+            sys.exit(Main.EXIT_FAILURE)
+
         self.info("Applying the configuration from %s...", fname_config)
         try:
             runpy.run_path(fname_config)
@@ -421,10 +427,30 @@ class Main(Logger, CommandLineBase):
         except PermissionError:
             self.exception("Cannot read configuration \"%s\"", fname_config)
             sys.exit(errno.EACCES)
+        except TypeError as e:
+            self.debug("Filed to import \"%s\": %s -> assumed pickle",
+                       fname_config, e)
+            from veles.pickle2 import pickle
+            try:
+                with open(fname_config, "rb") as fin:
+                    cfg = pickle.load(fin)
+            except:
+                fail()
+            for subcfg in cfg:
+                root[subcfg].update(cfg[subcfg])
+        except SyntaxError as e:
+            self.debug("Filed to import \"%s\": %s -> assumed json",
+                       fname_config, e)
+            import json
+            try:
+                with open(fname_config, "r") as fin:
+                    cfg = json.load(fin)
+            except:
+                fail()
+            for subcfg in cfg:
+                root[subcfg].update(cfg[subcfg])
         except:
-            self.exception("Failed to apply the configuration \"%s\"",
-                           fname_config)
-            sys.exit(Main.EXIT_FAILURE)
+            fail()
         override_cfg = "\n".join(config_list)
         self.debug("Overriding the configuration with %s", override_cfg)
         try:
@@ -676,10 +702,8 @@ class Main(Logger, CommandLineBase):
         if self.regular:
             self.run_module(wm)
         elif self.optimization is not None:
-            from veles.genetics import ConfigPopulation
-            rand = prng.RandomGenerator(None)
-            rand.state = prng.get().state
-            ConfigPopulation(self, wm, rand=rand).evolve()
+            import veles.genetics.optimization_workflow as workflow
+            self.run_module(workflow, model=wm, **self.optimization.__dict__)
         elif self.ensemble_train is not None:
             import veles.ensemble.model_workflow as workflow
             self.run_module(workflow, model=wm, **self.ensemble_train.__dict__)

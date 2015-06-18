@@ -35,7 +35,6 @@ under the License.
 """
 
 
-import argparse
 from collections import defaultdict
 import json
 import os
@@ -59,6 +58,7 @@ from veles.workflow import Workflow
 @add_metaclass(UnitCommandLineArgumentsRegistry)
 class EnsembleModelManagerBase(Unit):
     def __init__(self, workflow, **kwargs):
+        kwargs["view_group"] = kwargs.get("view_group", "EVALUATOR")
         super(EnsembleModelManagerBase, self).__init__(workflow, **kwargs)
         self._model_ = kwargs["model"]
         self._model_index = 0
@@ -68,6 +68,7 @@ class EnsembleModelManagerBase(Unit):
     def init_unpickled(self):
         super(EnsembleModelManagerBase, self).init_unpickled()
         self._pending_ = defaultdict(set)
+        self._filtered_argv_ = []
 
     @property
     def complete(self):
@@ -91,15 +92,11 @@ class EnsembleModelManagerBase(Unit):
         return self._model_
 
     def initialize(self, **kwargs):
-        self._filtered_argv = filter_argv(
+        self._filtered_argv_[:] = filter_argv(
             self.argv, "-l", "--listen-address", "-m", "--master-address",
             "-n", "--nodes", "-b", "--background", "-s", "--stealth",
             "--ensemble-train", "--ensemble-test", "--slave-launch-transform",
-            "--result-file")
-
-    @staticmethod
-    def init_parser(parser=None):
-        return parser or argparse.ArgumentParser()
+            "--result-file", "--pdb-on-finish")
 
     def generate_data_for_master(self):
         return self._model_index - 1, self.results[0]
@@ -127,6 +124,7 @@ class EnsembleModelManagerBase(Unit):
     def drop_slave(self, slave):
         if slave in self._pending_:
             self._pending_[slave].clear()
+            self.has_data_for_slave = self.size_left > 0
 
     def get_metric_names(self):
         return {"models"}
@@ -148,7 +146,7 @@ class EnsembleModelManagerBase(Unit):
         except ValueError as e:
             fin.seek(0, os.SEEK_SET)
             with NamedTemporaryFile(
-                    prefix="veles-ensemble_train-", suffix=".json", mode="w",
+                    prefix="veles-ensemble-", suffix=".json", mode="w",
                     delete=False) as fout:
                 fout.write(fin.read())
                 self.warning("Failed to parse %s: %s", fout.name, e)

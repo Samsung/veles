@@ -151,6 +151,7 @@ class ZmqRouter(ZmqConnection, Logger):
                 io=shmem, pickles_compression=self.pickles_compression
                 if not is_ipc else None)
         except ZmqConnection.IOOverflow:
+            pickles_size = shmem.size
             self.shmem[node_id] = None
             io_overflow = True
         except KeyError:

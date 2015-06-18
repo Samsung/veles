@@ -67,11 +67,11 @@ class CommandLineArgumentsRegistry(type):
 
     def __init__(cls, name, bases, clsdict):
         super(CommandLineArgumentsRegistry, cls).__init__(name, bases, clsdict)
+        cls.argv = property(lambda _: CommandLineBase.argv)
         # if the class does not have it's own init_parser(), no-op
         init_parser = clsdict.get('init_parser', None)
         if init_parser is None:
             return
-        cls.argv = property(lambda _: CommandLineBase.argv)
         # early check for the method existence
         if not isinstance(init_parser, staticmethod):
             raise TypeError("init_parser must be a static method since the "
@@ -180,15 +180,14 @@ class CommandLineBase(object):
                                  "model, show workflow graph and plots",
                             action='store_true')
         parser.add_argument(
-            "--optimize", default="",
-            help="Do optimization of the model's parameters using the genetic "
-                 "algorithm. Format: <type>:<size>. Possible types: "
-                 "\"\" (empty, default): no optimization; \"single\": perform "
-                 "a serial optimization on this computer; \"multi\": use "
-                 "master's nodes to do a distributed optimization (each "
-                 "instance will run in standalone mode). <size> is the number "
-                 "of species in the population (if not sure, set to 50)."
-                 "\"none\" does not require setting the size.")
+            "--optimize",
+            help="Perform optimization of the model's parameters using the "
+                 "genetic algorithm. Format: <size>[:<generations>], where "
+                 "<size> is the number of species in the population (if not "
+                 "sure, set it to 50) and <generations> is the optional limit "
+                 "of evaluated generations. If <generations> is not set, "
+                 "the optimization will continue until there is no fitness "
+                 "improvement.")
         parser.add_argument(
             "--ensemble-train",
             help="Parameters to assemble the ensemble of trained models. "

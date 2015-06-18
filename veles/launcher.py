@@ -221,6 +221,9 @@ class Launcher(logger.Logger):
                             help="Do not launch the graphics client. Server "
                             "will still be started unless matplotlib backend "
                             "is an empty string.", action='store_true')
+        parser.add_argument("--pdb-on-finish", default=False,
+                            help="Drop into pdb session on workflow finish.",
+                            action='store_true')
         parser.add_argument("-s", "--stealth",
                             default=kwargs.get("stealth", False),
                             help="Do not report own status to the Web Status "
@@ -638,6 +641,9 @@ class Launcher(logger.Logger):
 
     @threadsafe
     def _on_stop_locked(self):
+        if self.args.pdb_on_finish:
+            import pdb
+            pdb.set_trace()
         self.info("Stopping everything (%s mode)", self.mode)
         self._initialized = False
         self._running = False
@@ -764,7 +770,7 @@ class Launcher(logger.Logger):
             sys.argv, "-l", "--listen-address", "-n", "--nodes", "-p",
             "--matplotlib-backend", "-b", "--background", "-s", "--stealth",
             "-a", "--backend", "-d", "--device", "--slave-launch-transform",
-            "--result-file")[1:]
+            "--result-file", "--pdb-on-finish")[1:]
         host = self.args.listen_address[0:self.args.listen_address.index(':')]
         port = self.args.listen_address[len(host) + 1:]
         # No way we can send 'localhost' or empty host name to a slave.

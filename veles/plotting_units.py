@@ -396,7 +396,7 @@ class ImagePlotter(Plotter):
             for i, input_field in enumerate(self.input_fields):
                 value = None
                 if type(input_field) == int:
-                    if input_field >= 0 and input_field < len(self.inputs[i]):
+                    if 0 <= input_field < len(self.inputs[i]):
                         value = self.inputs[i][input_field]
                 else:
                     value = self.inputs[i].__dict__[input_field]

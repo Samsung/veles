@@ -63,7 +63,7 @@ class Plotter(Unit, TriviallyDistributable):
         view_group = kwargs.get("view_group", "PLOTTER")
         kwargs["view_group"] = view_group
         super(Plotter, self).__init__(workflow, **kwargs)
-        self.redraw_threshold = 0.5
+        self.redraw_threshold = 2
         self._last_run_ = 0
         self._remembers_gates = False
         self._server_ = None
@@ -101,13 +101,16 @@ class Plotter(Unit, TriviallyDistributable):
 
     def run(self):
         self.fill()
-        if self.workflow.plotters_are_enabled and \
-           (time() - self._last_run_) > self.redraw_threshold:
-            assert self.graphics_server is not None
-            self._last_run_ = time()
-            self.stripped_pickle = True
-            self.graphics_server.enqueue(self)
-            self.stripped_pickle = False
+        if time() - self._last_run_ <= self.redraw_threshold:
+            self.debug("Skipped due to redraw time threshold")
+            return
+        if not self.workflow.plotters_are_enabled:
+            return
+        assert self.graphics_server is not None
+        self._last_run_ = time()
+        self.stripped_pickle = True
+        self.graphics_server.enqueue(self)
+        self.stripped_pickle = False
 
     def fill(self):
         pass

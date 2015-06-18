@@ -76,7 +76,7 @@ class SharedIO(object):
         name = state["name"]
         size = state["size"]
         cached = SharedIO.CACHE.get("%s:%d" % (name, size))
-        if not cached is None:
+        if cached is not None:
             assert cached.size == size
             self.shmem = cached.shmem
             self.file = cached.file

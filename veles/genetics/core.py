@@ -45,14 +45,14 @@ under the License.
 """
 
 
+import copy
 import numpy
-import pickle
-from twisted.internet import reactor
+from zope.interface import Interface
 
-from veles.config import root
 from veles.distributable import Pickleable
-from veles.external.progressbar import ProgressBar
+from veles.mutable import Bool
 import veles.prng as prng
+from veles.verified import Verified
 
 
 def schwefel(values):
@@ -119,11 +119,18 @@ def num_to_bin(numbers, accuracy, codes):
     return binary
 
 
+class IChromosome(Interface):
+    def evaluate():
+        """
+        Calculates the fitness of this species.
+        """
+
+
 class InlineObject(object):
     pass
 
 
-class Chromosome(Pickleable):
+class Chromosome(Pickleable, Verified):
     """Chromosome (for now it is the same as individual).
 
     Abstract methods:
@@ -133,13 +140,14 @@ class Chromosome(Pickleable):
         size: current number of genes.
         binary: binary representation of genes as string with "0"s and "1"s.
         numeric: list of numeric genes.
+        rand: the random number generator.
     """
-    def __init__(self, size, min_values, max_values, accuracy, codes,
-                 binary=None, numeric=None, rand=prng.get()):
+    def __init__(self, population, binary=None, numeric=None, size=None,
+                 rand=None):
         """Constructs the chromosome and computes it's fitness.
 
         Parameters:
-            size: number of genes or 0.
+            size: number of genes (may be None).
             min_values: list of minimum values for genes.
             max_values: list of maximum values for genes.
             accuracy: floating point approximation accuracy.
@@ -148,8 +156,13 @@ class Chromosome(Pickleable):
             numeric: list of numeric genes.
         """
         super(Chromosome, self).__init__()
+        self.verify_interface(IChromosome)
 
-        self.rand = rand
+        min_values = population.optimization.min_values
+        max_values = population.optimization.max_values
+        accuracy = 1.0 / population.optimization.accuracy
+        codes = population.codes
+        self.rand = rand or prng.get()
 
         self.optimization = InlineObject()
         self.optimization.choice = "betw"
@@ -157,7 +170,9 @@ class Chromosome(Pickleable):
 
         self.min_values = min_values
         self.max_values = max_values
-        if size:
+        assert len(self.min_values) == len(self.max_values)
+        if size is not None:
+            assert size > 0
             self.size = size
             self.binary = ""
             self.numeric = []
@@ -199,15 +214,32 @@ class Chromosome(Pickleable):
     def valid(self):
         return True
 
+    @property
+    def min_values(self):
+        return self._min_values
+
+    @min_values.setter
+    def min_values(self, value):
+        if not isinstance(value, (list, tuple)):
+            raise TypeError(
+                "min_values must be an array (got %s)" % type(value))
+        self._min_values = value
+
+    @property
+    def max_values(self):
+        return self._max_values
+
+    @max_values.setter
+    def max_values(self, value):
+        if not isinstance(value, (list, tuple)):
+            raise TypeError(
+                "max_values must be an array (got %s)" % type(value))
+        self._max_values = value
+
     def copy(self):
-        return pickle.loads(pickle.dumps(self))
-
-    def evaluate(self):
-        """Computes fitness
-
-        Should assign self.fitness.
-        """
-        raise NotImplementedError()
+        clone = copy.deepcopy(self)
+        clone.fitness = None
+        return clone
 
     def numeric_correct(self):
         for pos in range(len(self.numeric)):
@@ -339,15 +371,17 @@ class Chromosome(Pickleable):
 class Population(Pickleable):
     """Base class for a species population.
     """
+    MAX_GENERATIONS = 1000000
 
-    def __init__(self, chromosome_class, optimization_size,
+    def __init__(self, chromosome_factory, optimization_size,
                  min_values, max_values, population_size, accuracy=0.00001,
-                 rand=prng.get()):
+                 rand=prng.get(), max_generations=None, crossing_attempts=10):
         super(Population, self).__init__()
 
         self.rand = rand
-
-        self.chromosome_class = chromosome_class
+        self.size = population_size
+        self.chromosome_factory = chromosome_factory
+        self.chromosomes = []
 
         self.optimization = InlineObject()
         self.optimization.choice = "betw"
@@ -355,22 +389,21 @@ class Population(Pickleable):
         self.optimization.size = optimization_size
         self.optimization.min_values = min_values
         self.optimization.max_values = max_values
+        assert len(min_values) == len(max_values)
         self.optimization.accuracy = accuracy
-
-        self.chromosomes = []
-
-        self.population_size = population_size
 
         self.fitness = None
         self.average_fit = None
         self.best_fit = None
         self.worst_fit = None
         self.median_fit = None
-        self.prev_fitness = -1.0e30
-        self.prev_average_fit = -1.0e30
-        self.prev_best_fit = -1.0e30
-        self.prev_worst_fit = -1.0e30
-        self.prev_median_fit = -1.0e30
+
+        self.prev = InlineObject()
+        self.prev.fitness = -1.0e30
+        self.prev.average_fit = -1.0e30
+        self.prev.best_fit = -1.0e30
+        self.prev.worst_fit = -1.0e30
+        self.prev.median_fit = -1.0e30
 
         self.roulette_select_size = 0.75
         self.random_select_size = 0.5
@@ -417,9 +450,30 @@ class Population(Pickleable):
                          "probability": 0.35}}
 
         self.generation = 0
+        self.max_generations = max_generations or self.MAX_GENERATIONS
+        self.crossing_attempts = crossing_attempts
+        self.improved = Bool(True)
+        self.on_generation_changed_callback = lambda: None
 
-        self.prev_state_fnme = None
-        self.crossing_attempts = 10
+        for _ in range(self.size):
+            self.add(self.new(size=self.optimization.size))
+        if self.optimization.code == "gray":
+            self.compute_gray_codes()
+
+    @property
+    def chromosome_factory(self):
+        return self._chromosome_factory
+
+    @chromosome_factory.setter
+    def chromosome_factory(self, value):
+        if not callable(value):
+            raise TypeError(
+                "chromosome_factory must be callable (got %s)" % type(value))
+        self._chromosome_factory = value
+
+    @property
+    def pending_size(self):
+        return sum(1 for c in self if c.fitness is None)
 
     def __repr__(self):
         return "%s with %d chromosomes" % (
@@ -440,12 +494,11 @@ class Population(Pickleable):
         """
         return len(self.chromosomes)
 
-    def new(self, size, min_values, max_values, accuracy, codes, binary=None,
-            numeric=None):
+    def new(self, binary=None, numeric=None, size=None):
         population = self
         kwargs = {k: v for k, v in locals().items() if k != "self"}
         kwargs["rand"] = self.rand
-        return self.chromosome_class(**kwargs)
+        return self.chromosome_factory(**kwargs)  # pylint: disable=E1102
 
     def add(self, chromo):
         assert isinstance(chromo, Chromosome)
@@ -456,17 +509,66 @@ class Population(Pickleable):
         truncates up to maximum population size.
         """
         self.chromosomes.sort(key=lambda x: x.fitness, reverse=True)
-        del self.chromosomes[self.population_size:]
+        del self.chromosomes[self.size:]
 
-    def evaluate(self, callback):
+    def evaluate(self, index):
         """Sequential evaluation.
         """
-        for i, u in enumerate(self):
-            if u.fitness is None:
-                self.info("Will evaluate chromosome number %d (%.2f%%)",
-                          i, 100.0 * i / len(self))
-                u.evaluate()
-        callback()
+        self[index].evaluate()
+        self.update()
+
+    def peek(self):
+        for chromo in self:
+            if chromo.fitness is None:
+                return chromo
+
+    def update(self):
+        if self.pending_size > 0:
+            return
+
+        self.info("Making the new generation #%d...", self.generation + 1)
+        self.sort()  # kill excessive worst ones
+        self.fitness = sum(u.fitness for u in self)
+
+        self.average_fit = self.fitness / self.size
+        self.best_fit = self[0].fitness
+        self.worst_fit = self[-1].fitness
+        self.median_fit = self[self.size // 2].fitness
+
+        this_population_size = len(self)
+
+        self.info("Breeding...")
+        # Choose parents for breeding
+        chromos = self.select()
+        # Breed, children will be appended
+        for cross in self.crossing.pipeline:
+            cross(chromos)
+
+        self.info("Mutating...")
+        # Mutate parents
+        for mutnme, mutparams in self.mutations.items():
+            if not mutparams["use"]:
+                continue
+            mut_pool = list(range(this_population_size))
+            for _i_mut in range(int(
+                    this_population_size * mutparams["chromosomes"])):
+                if not len(mut_pool):
+                    break
+                rand = self.rand.choice(mut_pool)
+                mutating = self[rand].copy()
+                mutating.mutate(
+                    mutnme, int(this_population_size * mutparams["points"]),
+                    mutparams["probability"])
+                if self.optimization.code == "gray":
+                    mutating.numeric = bin_to_num(
+                        [mutating.binary], self.delimeter,
+                        self.optimization.accuracy, self.codes)[0]
+                self.add(mutating)
+                mut_pool.remove(rand)
+
+        self.debug("Total population size: %d", len(self))
+        self.on_generation_changed()
+        self.on_generation_changed_callback()
 
     def select(self):
         """Current selection procedure.
@@ -561,12 +663,8 @@ class Population(Pickleable):
             i += 1
         num1, num2 = bin_to_num((cross1, cross2), self.dl,
                                 self.optimization.accuracy, self.codes)
-        chromo1 = self.new(
-            0, self.min_values, self.max_values,
-            1.0 / self.optimization.accuracy, self.codes, cross1, num1)
-        chromo2 = self.new(
-            0, self.min_values, self.max_values,
-            1.0 / self.optimization.accuracy, self.codes, cross2, num2)
+        chromo1 = self.new(cross1, num1)
+        chromo2 = self.new(cross2, num2)
         chromo1.size = len(chromo1.numeric)
         chromo2.size = len(chromo2.numeric)
         return chromo1, chromo2
@@ -590,10 +688,7 @@ class Population(Pickleable):
                     cross += parent2[i]
             numeric = bin_to_num([cross], self.dl,
                                  self.optimization.accuracy, self.codes)[0]
-            chromo = self.new(
-                0, self.min_values, self.max_values,
-                1.0 / self.optimization.accuracy, self.codes, cross,
-                numeric)
+            chromo = self.new(cross, numeric)
         else:
             rand1 = self.rand.randint(len(parents))
             parent1 = parents[rand1].numeric
@@ -606,10 +701,7 @@ class Population(Pickleable):
                     cross.append(parent1[i])
                 else:
                     cross.append(parent2[i])
-            chromo = self.new(
-                0, self.optimization.min_values,
-                self.optimization.max_values,
-                1.0 / self.optimization.accuracy, self.codes, None, cross)
+            chromo = self.new(None, cross)
         return chromo,
 
     def cross_arithmetic(self, parents):
@@ -648,14 +740,8 @@ class Population(Pickleable):
                                      self.codes))
         else:
             bin1, bin2 = "", ""
-        chromo1 = self.new(0, self.optimization.min_values,
-                           self.optimization.max_values,
-                           1.0 / self.optimization.accuracy,
-                           self.codes, bin1, cross1)
-        chromo2 = self.new(0, self.optimization.min_values,
-                           self.optimization.max_values,
-                           1.0 / self.optimization.accuracy,
-                           self.codes, bin2, cross2)
+        chromo1 = self.new(bin1, cross1)
+        chromo2 = self.new(bin2, cross2)
         return chromo1, chromo2
 
     def cross_geometric(self, parents):
@@ -695,10 +781,7 @@ class Population(Pickleable):
         if self.optimization.code == "gray":
             binary = num_to_bin(cross, self.optimization.accuracy,
                                 self.codes)
-        chromo = self.new(0, self.optimization.min_values,
-                          self.optimization.max_values,
-                          1.0 / self.optimization.accuracy,
-                          self.codes, binary, cross)
+        chromo = self.new(binary, cross)
         return chromo,
 
     def compute_gray_codes(self):
@@ -715,149 +798,33 @@ class Population(Pickleable):
         # +1 symbol 1/0 for positive/negative
         self.delimeter += 1
 
-    def do_evolution_step(self, callback):
-        """Evolves the population (one step) asynchronously.
-
-        callback will be called after the step is finished.
-        """
-        fin = self.get_pickle_fin()
-        if fin is not None:
-            self.chromosomes = pickle.load(fin)
-            fin.close()
-
-        chromo_count = self.population_size - len(self.chromosomes)
-        if chromo_count > 0:
-            self.info("Creating %d chromosomes...", chromo_count)
-            for _ in ProgressBar(term_width=20)(range(chromo_count)):
-                chromo = self.new(self.optimization.size,
-                                  self.optimization.min_values,
-                                  self.optimization.max_values,
-                                  1.0 / self.optimization.accuracy,
-                                  self.codes)
-                self.add(chromo)
-
-        if self.optimization.code == "gray":
-            self.compute_gray_codes()
-
-        def continue_callback():
-            self.sort()  # kill excessive worst ones
-            self.fitness = sum(u.fitness for u in self)
-
-            self.average_fit = self.fitness / self.population_size
-            self.best_fit = self.chromosomes[0].fitness
-            self.worst_fit = self.chromosomes[-1].fitness
-            self.median_fit = \
-                self.chromosomes[self.population_size // 2].fitness
-
-            this_population_size = len(self)
-
-            self.info("Breeding")
-            # Choose parents for breeding
-            chromos = self.select()
-            # Breed, children will be appended
-            for cross in self.crossing.pipeline:
-                cross(chromos)
-
-            self.info("Mutating")
-            # Mutate parents
-            for mutnme, mutparams in self.mutations.items():
-                if not mutparams["use"]:
-                    continue
-                mut_pool = list(range(this_population_size))
-                for _i_mut in range(int(this_population_size *
-                                        mutparams["chromosomes"])):
-                    if not len(mut_pool):
-                        break
-                    rand = self.rand.choice(mut_pool)
-                    mutating = self.chromosomes[rand].copy()
-                    mutating.mutate(mutnme, int(this_population_size *
-                                                mutparams["points"]),
-                                    mutparams["probability"])
-                    if self.optimization.code == "gray":
-                        mutating.numeric = bin_to_num(
-                            [mutating.binary], self.delimeter,
-                            self.optimization.accuracy, self.codes)[0]
-                    self.add(mutating)
-                    mut_pool.remove(rand)
-
-            fout = self.get_pickle_fout()
-            if fout is not None:
-                pickle.dump(self.chromosomes, fout,
-                            protocol=pickle.HIGHEST_PROTOCOL)
-            callback()
-
-        self.evaluate(continue_callback)
-
-    def get_pickle_fin(self):
-        if self.prev_state_fnme is None:
-            return None
-        try:
-            return open(self.prev_state_fnme, "rb")
-        except OSError:
-            return None
-
-    def get_pickle_fout(self):
-        try:
-            self.prev_state_fnme = "%s/chromosomes_%d_%.2f.pickle" % (
-                root.common.snapshot_dir, self.generation, self.best_fit)
-            return open(self.prev_state_fnme, "wb")
-        except OSError:
-            return None
-
-    def _evolve(self):
-        """Evolve until the completion.
-        """
-        repeat = [False]  # matters only for standalone evolution
-
-        def after_evolution_step():
-            if not self.on_after_evolution_step():
-                if reactor.running:
-                    reactor.callLater(0, self._evolve)
-                else:
-                    repeat[0] = True
-            self.generation += 1
-
-        try:
-            self.do_evolution_step(after_evolution_step)
-        except KeyboardInterrupt:
-            self.error("Evolution was interrupted")
-
-        return repeat[0]
-
-    def evolve(self):
-        """This method can be overriden.
-        """
-        while self._evolve():
-            # Evolve until convergence in standalone mode
-            pass
-        # On master, self._evolve will schedule population evaluation
-        # and leave this function immediately.
-
-    def on_after_evolution_step(self):
+    def on_generation_changed(self):
         """Called after an evolution step.
 
         Returns:
             True to stop evolution.
         """
-        self.log_statistics()
-        # Conservative stop condition
-        if (self.prev_fitness >= self.fitness and
-                self.prev_average_fit >= self.average_fit and
-                self.prev_best_fit >= self.best_fit and
-                self.prev_worst_fit >= self.worst_fit and
-                self.prev_median_fit >= self.median_fit):
-            self.info("No population improvement detected, "
-                      "will stop evolution")
-            return True
-        self.prev_fitness = self.fitness
-        self.prev_average_fit = self.average_fit
-        self.prev_best_fit = self.best_fit
-        self.prev_worst_fit = self.worst_fit
-        self.prev_median_fit = self.median_fit
-        return False
-
-    def log_statistics(self):
-        self.info("Generations completed %d: fitness: best=%.2f total=%.2f "
-                  "average=%.2f median=%.2f worst=%.2f", self.generation + 1,
+        self.info("Generations completed %d: fitness: best=%.3f total=%.3f "
+                  "average=%.3f median=%.3f worst=%.3f", self.generation,
                   self.best_fit, self.fitness,
                   self.average_fit, self.median_fit, self.worst_fit)
+        # Conservative stop condition
+        if (self.prev.fitness >= self.fitness and
+                self.prev.average_fit >= self.average_fit and
+                self.prev.best_fit >= self.best_fit and
+                self.prev.worst_fit >= self.worst_fit and
+                self.prev.median_fit >= self.median_fit):
+            self.info("No fitness improvement, stopped evolving")
+            self.improved <<= False
+            return
+        if self.generation > self.max_generations:
+            self.info("Generation limit was hit, stopped evolving")
+            self.improved <<= False
+            return
+        self.generation += 1
+        self.prev.fitness = self.fitness
+        self.prev.average_fit = self.average_fit
+        self.prev.best_fit = self.best_fit
+        self.prev.worst_fit = self.worst_fit
+        self.prev.median_fit = self.median_fit
+        self.improved <<= True

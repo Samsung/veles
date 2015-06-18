@@ -45,8 +45,4 @@ under the License.
 """
 
 
-from veles.genetics.simple import Chromosome, Population, schwefel
-from veles.genetics.config import (Range,
-                                   ConfigChromosome,
-                                   ConfigPopulation,
-                                   fix_config)
+from veles.genetics.config import fix_config, Range

@@ -271,7 +271,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
                     data)
             self.request_job()
             return
-        self.disconnect("Invalid state %s", self.state.current)
+        self.disconnect("disconnect: invalid state %s", self.state.current)
 
     def job_received(self, job):
         if not job:
@@ -330,7 +330,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
 
     def job_finished(self, update):
         if self.state.current != "BUSY":
-            self.error("Invalid state %s", self.state.current)
+            self.error("job_finished: invalid state %s", self.state.current)
             return
         self._last_update = update
         self.state.complete_job()
@@ -412,7 +412,7 @@ class Client(NetworkAgent, ReconnectingClientFactory):
         self.state = fysom.Fysom(VelesProtocol.FSM_DESCRIPTION, self)
         self.zmq_connection = None
         self.disconnect_time = None
-        self.reconnection_interval = 1
+        self.reconnection_interval = reconnection_interval
         self.reconnection_attempts = reconnection_attempts
         reactor.connectTCP(self.address, self.port, self, timeout=timeout)
 

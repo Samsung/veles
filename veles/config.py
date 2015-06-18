@@ -79,6 +79,8 @@ class Config(object):
         __protected__[self].update(names)
 
     def __getattr__(self, name):
+        if name in ("__copy__", "__deepcopy__",):
+            raise AttributeError()
         if name in ("keys", "values"):
             return getattr(self.__content__, name)
         temp = Config("%s.%s" % (self.__path__, name))
@@ -258,6 +260,11 @@ root.common.update({
         "cuda": {
             # Path to nvcc
             "nvcc": "nvcc"
+        }
+    },
+    "genetics": {
+        "disable": {
+            "plotters": True
         }
     }
 })

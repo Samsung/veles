@@ -122,8 +122,6 @@ class Loader(Unit):
 
     Attributes:
         prng: veles.prng.RandomGenerator instance.
-        validation_ratio: used by extract_validation_from_train() as a default
-                          ratio.
         max_minibatch_size: maximal size of a minibatch.
         total_samples: total number of samples in the dataset.
         class_lengths: number of samples per class.
@@ -152,7 +150,7 @@ class Loader(Unit):
         "minibatch_data", "minibatch_class", "minibatch_data", "has_labels", \
         "minibatch_labels", "minibatch_size", "max_minibatch_size", \
         "total_samples", "last_minibatch", "class_lengths", "shuffle_limit", \
-        "reversed_labels_mapping"
+        "reversed_labels_mapping", "global_offset"
 
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = "LOADER"
@@ -520,23 +518,6 @@ class Loader(Unit):
         if not isinstance(value, random_generator.RandomGenerator):
             raise TypeError("prng must be an instance of RandomGenerator")
         self._prng = value
-
-    @property
-    def validation_ratio(self):
-        return getattr(self, "_validation_ratio", None)
-
-    @validation_ratio.setter
-    def validation_ratio(self, value):
-        if isinstance(value, int):
-            if value != 0:
-                raise ValueError("validation_ratio must be in [0, 1).")
-            self._validation_ratio = 0.0
-            return
-        if not isinstance(value, float):
-            raise TypeError("validation_ratio must be a float")
-        if value < 0 or value >= 1:
-            raise ValueError("validation_ratio must be in [0, 1).")
-        self._validation_ratio = value
 
     @property
     def train_ratio(self):

@@ -41,7 +41,7 @@ import gzip
 import logging
 import os
 import pyodbc
-from six import BytesIO
+from six import BytesIO, add_metaclass
 import snappy
 import time
 from zope.interface import implementer, Interface
@@ -53,6 +53,7 @@ from veles.mapped_object_registry import MappedObjectsRegistry
 from veles.mutable import Bool
 from veles.pickle2 import pickle, best_protocol
 from veles.result_provider import IResultProvider
+from veles.unit_registry import UnitRegistry
 from veles.units import Unit, IUnit
 
 
@@ -64,7 +65,21 @@ class ISnapshotter(Interface):
         """
 
 
+class SnapshotterRegistry(UnitRegistry, MappedObjectsRegistry):
+    """Metaclass to record Unit descendants. Used for introspection and
+    analytical purposes.
+    Classes derived from Unit may contain 'hide' attribute which specifies
+    whether it should not appear in the list of registered units. Usually
+    hide = True is applied to base units which must not be used directly, only
+    subclassed. There is also a 'hide_all' attribute, do disable the
+    registration of the whole inheritance tree, so that all the children are
+    automatically hidden.
+    """
+    mapping = "snapshotters"
+
+
 @implementer(IUnit, IDistributable, IResultProvider)
+@add_metaclass(SnapshotterRegistry)
 class SnapshotterBase(Unit):
     hide_from_registry = True
     """Base class for various data exporting units.
@@ -244,19 +259,6 @@ class SnappyFile(object):
 
     def __exit__(self, *args, **kwargs):
         self.close()
-
-
-class SnapshotterRegistry(MappedObjectsRegistry):
-    """Metaclass to record Unit descendants. Used for introspection and
-    analytical purposes.
-    Classes derived from Unit may contain 'hide' attribute which specifies
-    whether it should not appear in the list of registered units. Usually
-    hide = True is applied to base units which must not be used directly, only
-    subclassed. There is also a 'hide_all' attribute, do disable the
-    registration of the whole inheritance tree, so that all the children are
-    automatically hidden.
-    """
-    mapping = "snapshotters"
 
 
 @implementer(ISnapshotter)

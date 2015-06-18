@@ -94,6 +94,7 @@ class Workflow(Container):
         fitness: numeric fitness or None (used by genetic optimization).
     """
     hide_from_registry_all = True
+    json_encoder = NumpyJSONEncoder
 
     def __init__(self, workflow, **kwargs):
         self._plotters_are_enabled = kwargs.get(
@@ -119,6 +120,7 @@ class Workflow(Container):
         self._stop_ = self.stop
         self.thread_pool.register_on_shutdown(self._stop_)
         self._is_running = False
+        self._slave_error_ = False
         self._run_time_started_ = time.time()
         self._sync_event_ = threading.Event()
         self._sync_event_.set()
@@ -374,7 +376,7 @@ class Workflow(Container):
             self.event("run", "end")
         if self.result_file is not None:
             self.write_results()
-        if self.is_standalone and self.is_main:
+        if self.is_main and (self.is_standalone or self._slave_error_):
             self.workflow.on_workflow_finished()
         elif self.is_slave:
             self._do_job_callback_(self.generate_data_for_master())
@@ -549,6 +551,7 @@ class Workflow(Container):
             self.run()
         except:
             self.exception("Failed to do the job")
+            self._slave_error_ = True
             self.stop()
 
     run_timed = staticmethod(run_timed)
@@ -818,7 +821,7 @@ class Workflow(Container):
             need_close = False
         results = self.gather_results()
         try:
-            json.dump(results, fileobj, sort_keys=True, cls=NumpyJSONEncoder)
+            json.dump(results, fileobj, sort_keys=True, cls=self.json_encoder)
         finally:
             if need_close:
                 fileobj.close()
@@ -838,5 +841,5 @@ class Workflow(Container):
                 self.exception("Failed to calculate checksum of %s",
                                model_name)
                 raise
-            self._checksum = sha1.hexdigest()
+            self._checksum = sha1.hexdigest() + "_%d" % len(self)
         return self._checksum

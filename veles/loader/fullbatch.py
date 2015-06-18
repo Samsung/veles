@@ -81,6 +81,8 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
     """Loads data entire in memory.
 
     Attributes:
+        validation_ratio: specifies which part of the merged train +
+        validation set goes to validation.
         original_data: original data (Array).
         original_labels: original labels (Array, dtype=Loader.LABEL_DTYPE)
             (in case of classification).
@@ -91,7 +93,7 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
     def __init__(self, workflow, **kwargs):
         super(FullBatchLoader, self).__init__(workflow, **kwargs)
         self.verify_interface(IFullBatchLoader)
-        self.validation_ratio = kwargs.get("validation_ratio", 0)
+        self.validation_ratio = kwargs.get("validation_ratio", None)
 
     def init_unpickled(self):
         super(FullBatchLoader, self).init_unpickled()
@@ -129,6 +131,26 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
     @property
     def original_labels(self):
         return self._original_labels_
+
+    @property
+    def validation_ratio(self):
+        return getattr(self, "_validation_ratio", None)
+
+    @validation_ratio.setter
+    def validation_ratio(self, value):
+        if value is None:
+            self._validation_ratio = None
+            return
+        if isinstance(value, int):
+            if value != 0:
+                raise ValueError("validation_ratio must be in [0, 1).")
+            self._validation_ratio = 0.0
+            return
+        if not isinstance(value, float):
+            raise TypeError("validation_ratio must be a float")
+        if value < 0 or value >= 1:
+            raise ValueError("validation_ratio must be in [0, 1).")
+        self._validation_ratio = value
 
     def get_ocl_defines(self):
         """Add definitions before building the kernel during initialize().

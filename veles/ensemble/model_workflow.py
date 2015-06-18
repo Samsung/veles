@@ -82,9 +82,10 @@ class EnsembleModelManager(EnsembleModelManagerBase):
                 prefix="veles-ensemble-", suffix=".json", mode="r") as fin:
             argv = ["--result-file", fin.name, "--stealth", "--train-ratio",
                     str(self._train_ratio), "--log-id",
-                    self.launcher.log_id] + self._filtered_argv + \
+                    self.launcher.log_id] + self._filtered_argv_ + \
                    ["root.common.ensemble.model_index=%d" % self._model_index,
-                    "root.common.ensemble.size=%d" % self.size]
+                    "root.common.ensemble.size=%d" % self.size,
+                    "root.common.disable.publishing=True"]
             try:
                 self.info("Training model %d / %d (#%d)...\n%s",
                           index + 1, self.size, self._model_index, "-" * 80)

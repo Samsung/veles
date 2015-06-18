@@ -39,11 +39,11 @@ under the License.
 import six
 from six.moves import cPickle as pickle  # pylint: disable=W0611
 import sys
-from pickle import PicklingError, UnpicklingError
+from pickle import PicklingError, UnpicklingError, HIGHEST_PROTOCOL
 
 
 # : The best protocol value for pickle().
-best_protocol = 4 if sys.version_info > (3, 4) else sys.version_info[0]
+best_protocol = HIGHEST_PROTOCOL
 
 
 def augment__str__(fn):
