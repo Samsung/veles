@@ -266,8 +266,8 @@ root.common.update({
         "disable": {
             "plotters": True
         },
-        "evaluation_transform": lambda v, t: v
-    }
+    },
+    "evaluation_transform": lambda v, t: v
 })
 
 # Allow to override the settings above
