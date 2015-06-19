@@ -678,7 +678,10 @@ class Workflow(Container):
                             key not in Workflow.HIDDEN_UNIT_ATTRS and
                             not key.endswith('_') and
                             self.filter_unit_graph_attrs(val)):
-                        if key[0] == '_' and hasattr(unit, key[1:]):
+                        try:
+                            if key[0] == '_' and hasattr(unit, key[1:]):
+                                key = key[1:]
+                        except AssertionError:
                             key = key[1:]
                         attrs[id(val)].append((unit, key))
             for ref in refs:
