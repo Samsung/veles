@@ -265,7 +265,8 @@ root.common.update({
     "genetics": {
         "disable": {
             "plotters": True
-        }
+        },
+        "evaluation_transform": lambda v, t: v
     }
 })
 
