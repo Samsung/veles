@@ -154,6 +154,7 @@ class SnapshotterBase(Unit):
 
     def stop(self):
         if self._skipped_counter > 0 and not self.skip:
+            self._skipped_counter = 0
             self.export()
 
     def generate_data_for_slave(self, slave):
@@ -228,7 +229,8 @@ class SnappyFile(object):
             if self.buffer_pos == 0 and len(data) > len(self.buffer):
                 size = (len(data) // len(self.buffer)) * len(self.buffer)
                 self._file.write(self._compressor.compress(data[:size]))
-                break
+                data = data[size:]
+                continue
             remainder = len(self.buffer) - self.buffer_pos
             self.buffer[self.buffer_pos:] = data[:remainder]
             self._file.write(self._compressor.compress(bytes(self.buffer)))

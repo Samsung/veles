@@ -95,7 +95,7 @@ def setup_pickle_debug():
     def load(self):
         try:
             return orig_load(self)
-        except (UnpicklingError, ImportError, AssertionError):
+        except (UnpicklingError, ImportError, AssertionError, KeyError):
             import traceback
             import pdb
             six.print_("\033[1;31mUnpickling failure\033[0m", file=sys.stderr)

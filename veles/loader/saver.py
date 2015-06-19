@@ -80,9 +80,9 @@ class MinibatchesSaver(Unit):
     def __init__(self, workflow, **kwargs):
         super(MinibatchesSaver, self).__init__(workflow, **kwargs)
         kwargs["view_group"] = kwargs.get("view_group", "SERVICE")
-        self.file_name = kwargs.get(
+        self.file_name = os.path.abspath(kwargs.get(
             "file_name", os.path.join(root.common.cache_dir,
-                                      "minibatches.sav"))
+                                      "minibatches.dat")))
         self.compression = kwargs.get("compression", "snappy")
         self.compression_level = kwargs.get("compression_level", 9)
         self.class_chunk_sizes = kwargs.get("class_chunk_sizes", (0, 0, 1))
@@ -90,7 +90,15 @@ class MinibatchesSaver(Unit):
         self.demand(
             "minibatch_data", "minibatch_labels", "minibatch_class",
             "class_lengths", "max_minibatch_size", "minibatch_size",
-            "shuffle_limit", "has_labels")
+            "shuffle_limit", "has_labels", "labels_mapping")
+
+    def init_unpickled(self):
+        super(MinibatchesSaver, self).init_unpickled()
+        self._file_ = None
+
+    @property
+    def file(self):
+        return self._file_
 
     @property
     def effective_class_chunk_sizes(self):
@@ -110,15 +118,16 @@ class MinibatchesSaver(Unit):
             raise error.VelesException(
                 "You must disable shuffling in your loader (set shuffle_limit "
                 "to 0)")
-        self.file = open(self.file_name, "wb")
+        self._file_ = open(self.file_name, "wb")
         pickle.dump(self.get_header_data(), self.file, protocol=best_protocol)
 
     def get_header_data(self):
         return self.compression, self.class_lengths, self.max_minibatch_size, \
             self.effective_class_chunk_sizes, \
             self.minibatch_data.shape, self.minibatch_data.dtype, \
-            self.minibatch_labels.shape if self.has_labels else None,\
-            self.minibatch_labels.dtype if self.has_labels else None
+            self.minibatch_labels.shape if self.has_labels else None, \
+            self.minibatch_labels.dtype if self.has_labels else None, \
+            self.labels_mapping
 
     def prepare_chunk_data(self):
         self.minibatch_data.map_read()
@@ -159,6 +168,7 @@ class MinibatchesSaver(Unit):
         pickle.dump(self.offset_table, self.file, protocol=best_protocol)
         self.debug("Offset table took %d bytes", self.file.tell() - pos)
         self.file.close()
+        self.info("Wrote %s", self.file_name)
 
 
 def decompress_snappy(data):
@@ -183,7 +193,7 @@ class MinibatchesLoader(Loader):
     def __init__(self, workflow, **kwargs):
         super(MinibatchesLoader, self).__init__(workflow, **kwargs)
         self.file_name = kwargs["file_name"]
-        self.file = None
+        self._file_ = None
         self.offset_table = []
         self.chunk_numbers = None
         self.mb_chunk_numbers = None
@@ -194,15 +204,21 @@ class MinibatchesLoader(Loader):
         self.minibatch_labels_dtype = None
         self.decompress = None
 
+    @property
+    def file(self):
+        return self._file_
+
     def load_data(self):
-        self.file = open(self.file_name, "rb")
+        self._file_ = open(self.file_name, "rb")
         (codec, class_lengths, self.old_max_minibatch_size,
          self.class_chunk_lengths,
          self.minibatch_data_shape, self.minibatch_data_dtype,
-         self.minibatch_labels_shape, self.minibatch_labels_dtype) = \
+         self.minibatch_labels_shape, self.minibatch_labels_dtype,
+         self._labels_mapping) = \
             pickle.load(self.file)
         self.class_lengths[:] = class_lengths
         self._has_labels = self.minibatch_labels_shape is not None
+        self._reversed_labels_mapping[:] = sorted(self.labels_mapping)
         self.decompress = MinibatchesLoader.CODECS[codec]
 
         self.chunk_numbers = []
@@ -263,6 +279,10 @@ class MinibatchesLoader(Loader):
             self.minibatch_data[index] = mb_data[chunk_offset]
             if self.has_labels:
                 self.minibatch_labels[index] = mb_labels[chunk_offset]
+
+    def map_minibatch_labels(self):
+        # Already done in fill_minibatch()
+        pass
 
     def get_address(self, index):
         class_index, class_remainder = self.class_index_by_sample_index(index)

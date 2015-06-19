@@ -150,7 +150,7 @@ class Loader(Unit):
         "minibatch_data", "minibatch_class", "minibatch_data", "has_labels", \
         "minibatch_labels", "minibatch_size", "max_minibatch_size", \
         "total_samples", "last_minibatch", "class_lengths", "shuffle_limit", \
-        "reversed_labels_mapping", "global_offset"
+        "labels_mapping", "reversed_labels_mapping", "global_offset"
 
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = "LOADER"
