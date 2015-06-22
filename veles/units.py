@@ -140,7 +140,6 @@ class Unit(Distributable, Verified):
         self._gate_skip = Bool(False)
         self._ignores_gate = Bool(kwargs.get("ignore_gate", False))
         self._run_calls = 0
-        self._stopped = False
         self._remembers_gates = True
         timings = get(root.common.timings, None)
         if timings is not None and isinstance(timings, set):
@@ -179,6 +178,7 @@ class Unit(Distributable, Verified):
         self._gate_lock_ = threading.Lock()
         self._run_lock_ = threading.Lock()
         self._is_initialized = False
+        self._stopped_ = False
         if hasattr(self, "run"):
             self.run = self._check_run_conditions(self.run)
             self.run = self._track_call(self.run, "run_was_called")
@@ -436,11 +436,11 @@ class Unit(Distributable, Verified):
 
     @property
     def stopped(self):
-        return self._stopped
+        return self._stopped_
 
     @stopped.setter
     def stopped(self, value):
-        self._stopped = value
+        self._stopped_ = value
 
     @property
     def total_run_time(self):
