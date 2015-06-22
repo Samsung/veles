@@ -51,8 +51,7 @@ import veles.memory as memory
 from veles.opencl_types import numpy_dtype_to_opencl
 from veles.units import UnitCommandLineArgumentsRegistry
 from veles.loader.base import ILoader, Loader, LoaderMSEMixin, \
-    UserLoaderRegistry
-
+    UserLoaderRegistry, LoaderWithValidationRatio
 
 TRAIN = 2
 VALID = 1
@@ -65,7 +64,7 @@ class FullBatchUserLevelLoaderRegistry(UnitCommandLineArgumentsRegistry,
 
 
 @six.add_metaclass(FullBatchUserLevelLoaderRegistry)
-class FullBatchLoaderBase(Loader):
+class FullBatchLoaderBase(LoaderWithValidationRatio):
     pass
 
 
@@ -93,7 +92,6 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
     def __init__(self, workflow, **kwargs):
         super(FullBatchLoader, self).__init__(workflow, **kwargs)
         self.verify_interface(IFullBatchLoader)
-        self.validation_ratio = kwargs.get("validation_ratio", None)
 
     def init_unpickled(self):
         super(FullBatchLoader, self).init_unpickled()

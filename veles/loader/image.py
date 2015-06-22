@@ -50,7 +50,7 @@ from veles.compat import from_none
 import veles.error as error
 from veles.external.progressbar import ProgressBar
 from veles.loader.base import CLASS_NAME, ILoader, Loader, \
-    TRAIN, VALID, TEST, LoaderError
+    TRAIN, VALID, TEST, LoaderError, LoaderWithValidationRatio
 from veles.memory import Array
 from veles.prng import RandomGenerator
 
@@ -103,7 +103,7 @@ class IImageLoader(Interface):
 
 
 @implementer(ILoader)
-class ImageLoader(Loader):
+class ImageLoader(LoaderWithValidationRatio):
     """Base class for all image loaders. It is generally used for loading large
     datasets.
 

@@ -451,10 +451,12 @@ class Main(Logger, CommandLineBase):
                 root[subcfg].update(cfg[subcfg])
         except:
             fail()
-        override_cfg = "\n".join(config_list)
-        self.debug("Overriding the configuration with %s", override_cfg)
+        self._override_config("\n".join(config_list))
+
+    def _override_config(self, cmds):
+        self.debug("Overriding the configuration with %s", cmds)
         try:
-            exec(override_cfg)
+            exec(cmds)
         except:
             self.exception("Invalid configuration overloads")
             sys.exit(Main.EXIT_FAILURE)
