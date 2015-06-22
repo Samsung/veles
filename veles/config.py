@@ -264,7 +264,12 @@ root.common.update({
     },
     "genetics": {
         "disable": {
-            "plotters": True
+            "plotting": True
+        },
+    },
+    "ensemble": {
+        "disable": {
+            "plotting": True
         },
     },
     "evaluation_transform": lambda v, t: v

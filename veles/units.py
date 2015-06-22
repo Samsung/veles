@@ -129,7 +129,7 @@ class Unit(Distributable, Verified):
     def __init__(self, workflow, **kwargs):
         self.name = kwargs.get("name")
         self.view_group = kwargs.get("view_group")
-        self._demanded = []
+        self._demanded = set()
         self._id = str(uuid.uuid4())
         self._links_from = {}
         self._links_to = {}
@@ -185,9 +185,10 @@ class Unit(Distributable, Verified):
             self.run = self._measure_time(self.run, Unit.timers)
         if hasattr(self, "initialize"):
             self.initialize = self._ensure_reproducible_rg(self.initialize)
-            self.initialize = self._retry_call(self.initialize,
-                                               "_is_initialized")
-            self.initialize = self._check_attrs(self.initialize, self.demanded)
+            self.initialize = self._retry_call(
+                self.initialize, "_is_initialized")
+            self.initialize = self._check_attrs(
+                self.initialize, sorted(self.demanded))
         if hasattr(self, "stop"):
             self.stop = self._track_call(self.stop, "_stopped")
         Unit.timers[self.id] = 0
@@ -257,22 +258,6 @@ class Unit(Distributable, Verified):
     @property
     def demanded(self):
         return self._demanded
-
-    def demand(self, *args):
-        """
-        Adds attributes which must be linked before initialize(), setting each
-        to None.
-        """
-        for attr in args:
-            if getattr(self, attr, None) is not None:
-                continue
-            try:
-                setattr(self, attr, None)
-            except AttributeError as e:
-                self.error("Are you trying to set the value of a property "
-                           "without a setter?")
-                raise from_none(e)
-        self.demanded.extend(args)
 
     @property
     def links_from(self):
@@ -667,6 +652,24 @@ class Unit(Distributable, Verified):
         return (isinstance(value, tuple) or isinstance(value, int) or
                 isinstance(value, float) or isinstance(value, complex) or
                 isinstance(value, bool) or isinstance(value, str))
+
+    def demand(self, *args):
+        """
+        Adds attributes which must be linked before initialize(), setting each
+        to None.
+        """
+        for attr in args:
+            if attr in self._demanded:
+                continue
+            if getattr(self, attr, None) is not None:
+                continue
+            try:
+                setattr(self, attr, None)
+            except AttributeError as e:
+                self.error("Are you trying to set the value of a property "
+                           "without a setter?")
+                raise from_none(e)
+        self.demanded.update(args)
 
     def _close_gate(self):
         for unit in self._iter_links(self.links_from):

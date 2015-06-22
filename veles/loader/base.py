@@ -150,7 +150,8 @@ class Loader(Unit):
         "minibatch_data", "minibatch_class", "minibatch_data", "has_labels", \
         "minibatch_labels", "minibatch_size", "max_minibatch_size", \
         "total_samples", "last_minibatch", "class_lengths", "shuffle_limit", \
-        "labels_mapping", "reversed_labels_mapping", "global_offset"
+        "labels_mapping", "reversed_labels_mapping", "global_offset", \
+        "minibatch_offset"
 
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = "LOADER"
@@ -570,6 +571,7 @@ class Loader(Unit):
         if self.testing:
             self.shuffle_limit = 0
             self.global_offset = 0
+            del self.failed_minibatches[:]
         try:
             super(Loader, self).initialize(**kwargs)
         except AttributeError:

@@ -74,8 +74,8 @@ class GeneticsOptimizer(Unit):
         self._config = copy.deepcopy(kwargs.get("config", root))
         if "config" not in kwargs:
             del self.config.common
-        self.disable_plotters = kwargs.get(
-            "disable_plotters", root.common.genetics.disable.plotters)
+        self.plotters_are_disabled = kwargs.get(
+            "plotters_are_disabled", root.common.genetics.disable.plotting)
         self._tuneables = []
         process_config(self.config, Range, self._add_tuneable)
         if len(self.tuneables) == 0:
@@ -226,7 +226,7 @@ class GeneticsOptimizer(Unit):
                 argv = ["--result-file", fres.name, "--stealth", "--log-id",
                         self.launcher.log_id] + self._filtered_argv_ + \
                     ["root.common.disable.publishing=True"]
-                if self.disable_plotters:
+                if self.plotters_are_disabled:
                     argv = ["-p", ""] + argv
                 i = -1
                 while "=" in argv[i]:

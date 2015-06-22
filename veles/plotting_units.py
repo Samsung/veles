@@ -534,17 +534,18 @@ class ImmediatePlotter(Plotter):
 @implementer(IPlotter)
 class Histogram(Plotter):
     """
-    Plotter for drawing histogram.
+    Plotter for drawing histograms.
+
+    Demands:
+        x: bar coordinates on the horizontal axis.
+        y: bar heights.
     """
     def __init__(self, workflow, **kwargs):
-        name = kwargs.get("name", "Histogram")
-        kwargs["name"] = name
         super(Histogram, self).__init__(workflow, **kwargs)
-        self.gl_min = 0
-        self.gl_max = 1
+        self.require_input()
+
+    def require_input(self):
         self.demand("x", "y")
-        self.pp = None
-        self.show_figure = nothing
 
     def redraw(self):
         fig = self.pp.figure(self.name)
@@ -562,52 +563,44 @@ class Histogram(Plotter):
                 "Shape of X %s not equal shape of Y %s !" %
                 (len(self.x), len(self.y)))
         ymax = numpy.max(self.y) * 1.3
-        ymin = numpy.min(self.y)
         xmax = numpy.max(self.x)
         xmin = numpy.min(self.x)
         nbars = len(self.x)
-
-        width = ((xmax - xmin) / nbars) * 0.8
         t0 = 0.65 * ymax
-        l1 = width * 0.5
 
         if nbars < 11:
             l3 = 20
             koef = 0.5 * ymax
             l2 = 0.235 * ymax
-
-        if nbars < 31 and nbars > 10:
-            l3 = 25 - (0.5) * nbars
+        elif nbars <= 30:
+            l3 = 25 - 0.5 * nbars
             koef = 0.635 * ymax - 0.0135 * nbars * ymax
             l2 = 0.2975 * ymax - 0.00625 * nbars * ymax
-
-        if nbars < 41 and nbars > 30:
-            l3 = 16 - (0.2) * nbars
+        elif nbars <= 40:
+            l3 = 16 - 0.2 * nbars
             koef = 0.32 * ymax - 0.003 * nbars * ymax
             l2 = 0.17 * ymax - 0.002 * nbars * ymax
-
-        if nbars < 51 and nbars > 40:
+        elif nbars <= 50:
             l3 = 8
             koef = 0.32 * ymax - 0.003 * nbars * ymax
             l2 = 0.17 * ymax - 0.002 * nbars * ymax
-
-        if nbars > 51:
+        else:
             l3 = 8
             koef = 0.17 * ymax
             l2 = 0.07 * ymax
 
         width = ((xmax - xmin) / nbars) * 0.8
-        N = numpy.linspace(xmin, xmax, num=nbars,
-                           endpoint=True)
-        ax.bar(N, self.y, color='#ffa0ef', width=width,
-               edgecolor='lavender')
+        N = numpy.linspace(xmin, xmax, num=nbars, endpoint=True)
+        ax.bar(N, self.y, color='#ffa0ef', width=width, edgecolor='lavender')
         # , edgecolor='red')
         # D889B8
         # B96A9A
-        ax.set_xlabel("X min = %.6g, max = %.6g" %
-                      (self.gl_min, self.gl_max), fontsize=20)
+        if hasattr(self, "gl_min"):
+            assert hasattr(self, "gl_max")
+            ax.set_xlabel("X min = %.6g, max = %.6g" %
+                          (self.gl_min, self.gl_max), fontsize=20)
         ax.set_ylabel('Y', fontsize=20)
-        ax.axis([xmin, xmax + ((xmax - xmin) / nbars), ymin, ymax])
+        ax.axis([xmin, xmax + ((xmax - xmin) / nbars), 0, ymax])
         ax.grid(True)
         leg = ax.legend("Y ")  # 'upper center')
         frame = leg.get_frame()
@@ -619,15 +612,68 @@ class Histogram(Plotter):
 
         for x, y in zip(N, self.y):
             if y > koef - l2 * 0.75:
-                self.pp.text(x + l1, y - l2 * 0.75, '%.0f' % y, ha='center',
-                             va='bottom', fontsize=l3, rotation=90)
+                ax.text(x + width / 2, y - l2 * 0.75,
+                        '%.0f' % y, ha='center', va='bottom',
+                        fontsize=l3, rotation=90)
             else:
-                self.pp.text(x + l1, t0, '%.0f' % y, ha='center', va='bottom',
-                             fontsize=l3, rotation=90)
+                ax.text(x + width / 2, t0,
+                        '%.0f' % y, ha='center', va='bottom',
+                        fontsize=l3, rotation=90)
 
         self.show_figure(fig)
         fig.canvas.draw()
         return fig
+
+
+class AutoHistogramPlotter(Histogram):
+    """
+    Plots histograms of 1D data series with automatically determined number of
+    bins.
+    """
+    def __init__(self, workflow, **kwargs):
+        super(AutoHistogramPlotter, self).__init__(workflow, **kwargs)
+
+    def require_input(self):
+        self.demand("input")
+
+    @property
+    def bin_size(self):
+        """
+        :return: The size of each bin according to Freedman–Diaconis rule.
+        """
+        return (numpy.max(self.input) - numpy.min(self.input)) / self.nbins
+
+    @property
+    def nbins(self):
+        assert len(self.input) > 1
+        iqr = numpy.percentile(self.input, 75, interpolation='higher') - \
+            numpy.percentile(self.input, 25, interpolation='lower')
+        bs = 2 * iqr * numpy.power(len(self.input), -1 / 3)
+        nb = numpy.round((self.gl_max - self.gl_min) / bs)
+        if nb < 3:
+            nb = 3
+        return nb
+
+    @property
+    def x(self):
+        return numpy.arange(self.gl_min, self.gl_max, self.bin_size)
+
+    @property
+    def y(self):
+        return numpy.histogram(self.input, self.nbins)[0]
+
+    @property
+    def gl_min(self):
+        return numpy.min(self.input)
+
+    @property
+    def gl_max(self):
+        return numpy.max(self.input)
+
+    def redraw(self):
+        if len(self.input) < 2:
+            return
+        super(AutoHistogramPlotter, self).redraw()
 
 
 @implementer(IPlotter)
@@ -637,29 +683,14 @@ class MultiHistogram(Plotter):
     Must be assigned before initialize():
         input
         input_field
-
-    Updates after run():
-
-    Creates within initialize():
-
     """
     def __init__(self, workflow, **kwargs):
-        name = kwargs.get("name", "Histogram")
-        limit = kwargs.get("limit", 64)
-        n_bars = kwargs.get("n_bars", 25)
-        hist_number = kwargs.get("hist_number", 16)
-        kwargs["name"] = name
-        kwargs["limit"] = limit
-        kwargs["n_bars"] = n_bars
-        kwargs["hist_number"] = hist_number
         super(MultiHistogram, self).__init__(workflow, **kwargs)
-        self.limit = limit
-        self.pp = None
-        self.show_figure = nothing
-        self.input = None  # Array()
+        self.limit = kwargs.get("limit", 64)
         self.value = Array()
-        self.n_bars = n_bars
-        self.hist_number = hist_number
+        self.n_bars = kwargs.get("n_bars", 25)
+        self.hist_number = kwargs.get("hist_number", 16)
+        self.demand("input")
 
     def initialize(self, **kwargs):
         super(MultiHistogram, self).initialize(**kwargs)
@@ -669,7 +700,6 @@ class MultiHistogram(Plotter):
             [self.hist_number, self.n_bars], dtype=numpy.int64)
 
     def redraw(self):
-
         fig = self.pp.figure(self.name)
         fig.clf()
         fig.patch.set_facecolor('#E8D6BB')

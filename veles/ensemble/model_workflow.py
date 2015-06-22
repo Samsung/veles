@@ -39,8 +39,10 @@ import os
 from tempfile import NamedTemporaryFile
 from zope.interface import implementer
 
+from veles.config import root
 from veles.ensemble.base_workflow import EnsembleWorkflowBase, \
     EnsembleModelManagerBase
+from veles.plotting_units import AutoHistogramPlotter
 from veles.units import IUnit
 
 
@@ -50,6 +52,9 @@ class EnsembleModelManager(EnsembleModelManagerBase):
         super(EnsembleModelManager, self).__init__(workflow, **kwargs)
         self.size = kwargs["size"]
         self._train_ratio = kwargs["train_ratio"]
+        self._fitnesses = []
+        self.plotters_are_disabled = kwargs.get(
+            "plotters_are_disabled", root.common.ensemble.disable.plotting)
 
     @property
     def size(self):
@@ -66,6 +71,18 @@ class EnsembleModelManager(EnsembleModelManagerBase):
     @property
     def train_ratio(self):
         return self._train_ratio
+
+    @property
+    def fitnesses(self):
+        return self._fitnesses
+
+    @property
+    def plotters_are_disabled(self):
+        return self._plotters_are_disabled
+
+    @plotters_are_disabled.setter
+    def plotters_are_disabled(self, value):
+        self._plotters_are_disabled = value
 
     def initialize(self, **kwargs):
         super(EnsembleModelManager, self).initialize(**kwargs)
@@ -86,6 +103,8 @@ class EnsembleModelManager(EnsembleModelManagerBase):
                    ["root.common.ensemble.model_index=%d" % self._model_index,
                     "root.common.ensemble.size=%d" % self.size,
                     "root.common.disable.publishing=True"]
+            if self.plotters_are_disabled:
+                argv.append("root.common.disable.plotting=True")
             try:
                 self.info("Training model %d / %d (#%d)...\n%s",
                           index + 1, self.size, self._model_index, "-" * 80)
@@ -110,6 +129,7 @@ class EnsembleModelManager(EnsembleModelManagerBase):
                     return
                 self.results[index] = train_result
                 self.results[index].update(test_result)
+                self._fitnesses.append(train_result["EvaluationFitness"])
             finally:
                 self._model_index += 1
 
@@ -117,6 +137,14 @@ class EnsembleModelManager(EnsembleModelManagerBase):
 class EnsembleModelWorkflow(EnsembleWorkflowBase):
     KWATTRS = set(EnsembleModelManager.KWATTRS)
     MANAGER_UNIT = EnsembleModelManager
+
+    def __init__(self, workflow, **kwargs):
+        super(EnsembleModelWorkflow, self).__init__(workflow, **kwargs)
+        self.histogram = AutoHistogramPlotter(self)
+        self.histogram.input = self.ensemble.fitnesses
+        self.histogram.link_from(self.ensemble)
+        self.repeater.unlink_from(self.ensemble)
+        self.repeater.link_from(self.histogram)
 
 
 def run(load, main, **kwargs):

@@ -36,6 +36,8 @@ under the License.
 import io
 import logging
 import matplotlib
+from veles.compat import from_none
+
 matplotlib.use("cairo")
 import matplotlib.cm as cm
 import matplotlib.lines as lines
@@ -82,7 +84,7 @@ class Test(unittest.TestCase):
             fio.name = tmp_file.name
         return plotter, fio
 
-    def compare_images(self, plotter, fio):
+    def compare_images(self, plotter, fio, tolerance=10):
         img1, img2 = [numpy.array(Image.open(fn)) for fn in (
             fio,
             os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -90,7 +92,10 @@ class Test(unittest.TestCase):
         diff = numpy.linalg.norm(img1 - img2)
         print("Difference:", diff)
         try:
-            self.assertLess(diff, 10)
+            self.assertLess(diff, tolerance)
+        except Exception as e:
+            print(fio.name)
+            raise from_none(e)
         finally:
             fio.close()
         if hasattr(fio, "name"):
@@ -151,11 +156,13 @@ class Test(unittest.TestCase):
 
     def testHistogram(self):
         h = Histogram(self, name="Histogram Test")
+        h.gl_min = 0.0
+        h.gl_max = 1.0
         h.x = numpy.arange(0, 1.1, 0.1)
         h.y = numpy.zeros(11)
         for i in numpy.arange(-1, 1.2, 0.2):
             h.y[int(numpy.round((i + 1) / 0.2))] = i * i
-        self.compare_images(*self.run_plotter(h))
+        self.compare_images(*self.run_plotter(h), tolerance=300)
 
 
 if __name__ == "__main__":

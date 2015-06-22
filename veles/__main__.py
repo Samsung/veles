@@ -408,7 +408,11 @@ class Main(Logger, CommandLineBase):
                        fname_workflow, package_import_error, e)
             sys.exit(Main.EXIT_FAILURE)
 
-    def _apply_config(self, fname_config, config_list):
+    def _apply_config(self, fname_config):
+        if not self.config_file:
+            self.warning("Configuration path is empty")
+            return
+
         def fail():
             self.exception("Failed to apply the configuration \"%s\"",
                            fname_config)
@@ -451,9 +455,9 @@ class Main(Logger, CommandLineBase):
                 root[subcfg].update(cfg[subcfg])
         except:
             fail()
-        self._override_config("\n".join(config_list))
 
-    def _override_config(self, cmds):
+    def _override_config(self, config_list):
+        cmds = "\n".join(config_list)
         self.debug("Overriding the configuration with %s", cmds)
         try:
             exec(cmds)
@@ -721,12 +725,10 @@ class Main(Logger, CommandLineBase):
         if not args.workflow:
             raise ValueError("Workflow path may not be empty")
         config_file = args.config
-        if not config_file:
-            raise ValueError("Configuration path may not be empty")
         if config_file == "-":
             config_file = "%s_config%s" % os.path.splitext(args.workflow)
         self.workflow_file = os.path.abspath(args.workflow)
-        self.config_file = os.path.abspath(config_file)
+        self.config_file = os.path.abspath(config_file) if config_file else ""
         self._visualization_mode = args.visualize
         self._workflow_graph = args.workflow_graph
         self._dry_run = Main.DRY_RUN_CHOICES.index(args.dry_run)
@@ -826,7 +828,8 @@ class Main(Logger, CommandLineBase):
         if self.logger.isEnabledFor(logging.DEBUG):
             self._print_config(root)
         wm = self._load_model(self.workflow_file)
-        self._apply_config(self.config_file, args.config_list)
+        self._apply_config(self.config_file)
+        self._override_config(args.config_list)
         if self.logger.isEnabledFor(logging.DEBUG):
             self._print_config(root)
 

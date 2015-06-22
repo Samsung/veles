@@ -156,7 +156,7 @@ class FileListLoaderBase(Unit):
         super(FileListLoaderBase, self).__init__(workflow, **kwargs)
         self.path_to_test_text_file = kwargs.get("path_to_test_text_file", "")
         self.path_to_val_text_file = kwargs.get("path_to_val_text_file", "")
-        self.path_to_train_text_file = kwargs["path_to_train_text_file"]
+        self.path_to_train_text_file = kwargs.get("path_to_train_text_file")
         self._labels = {}
 
     @property
@@ -180,7 +180,9 @@ class FileListLoaderBase(Unit):
                     path_to_image, _, label = line.partition(' ')
                     if label:
                         self.labels[path_to_image] = label
-                        files.append(path_to_image)
+                    else:
+                        assert self.testing
+                    files.append(path_to_image)
         if not len(files):
             self.warning("No files were taken from %s" % pathname)
             return []

@@ -213,8 +213,9 @@ class CommandLineBase(object):
             'workflow', help='Path to Python script with the VELES model.'
         ).pretty_name = "workflow file"
         parser.add_argument(
-            'config', help="Path to the configuration file"
-                           "(pass \"-\" to set as <workflow>_config.py)."
+            'config', help="Path to the configuration file "
+                           "(pass \"-\" to make it <workflow>_config.py, "
+                           "pass empty to ignore)."
         ).pretty_name = "configuration file"
         arg = parser.add_argument(
             'config_list',
