@@ -657,6 +657,7 @@ class Unit(Distributable, Verified):
         """
         Adds attributes which must be linked before initialize(), setting each
         to None.
+        :param args: The dependency attributes to add.
         """
         for attr in args:
             if attr in self._demanded:
@@ -670,6 +671,16 @@ class Unit(Distributable, Verified):
                            "without a setter?")
                 raise from_none(e)
         self.demanded.update(args)
+
+    def undemand(self, **args):
+        """
+        Cancels demand().
+        :param args: The dependency attributes to remove.
+        """
+        for attr in args:
+            self.demanded.remove(attr)
+            if hasattr(self, attr):
+                delattr(self, attr)
 
     def _close_gate(self):
         for unit in self._iter_links(self.links_from):
