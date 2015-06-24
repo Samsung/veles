@@ -22,7 +22,9 @@ Veles Machine Learning Platform
     manualrst_veles_basics
     manualrst_veles_snapshotting
     manualrst_veles_graphics
+    manualrst_veles_publishing
     manualrst_veles_genetic_optimization
+    manualrst_veles_ensembles
     manualrst_veles_advanced
     manualrst_veles_workflow_creation
     manualrst_veles_workflow_parameters

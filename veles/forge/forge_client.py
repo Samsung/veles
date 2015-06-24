@@ -39,8 +39,14 @@ from argparse import ArgumentParser
 import json
 import logging
 import os
-from pip.backwardcompat import uses_pycache
-from pip.util import normalize_path
+try:
+    from pip.compat import uses_pycache
+except ImportError:
+    from pip.backwardcompat import uses_pycache
+try:
+    from pip.utils import normalize_path
+except ImportError:
+    from pip.util import normalize_path
 from pip import wheel
 from pkg_resources import working_set, Requirement, Distribution, \
     VersionConflict, SOURCE_DIST, PY_MAJOR

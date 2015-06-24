@@ -38,20 +38,10 @@ You can start Veles by two methods:
     
 Both methods execute :mod:`veles.__main__`, and they are absolutely equivalent.
 
-Three execution modes
-:::::::::::::::::::::
-
-Veles model can be executed in three modes (actually, four, but the fourth one
-is a combination of the previous three):
-
-    * Standalone (default)
-    * Master (``-l/--listen-address``)
-    * Slave (``-m/--master-address``)
+.. include:: manualrst_veles_modes.rst
     
-Standalone mode execute Model(Workflow) on a single computing node, which is
-particularly useful for debugging and simple models which are not so computationally
-expensive. To understand the remaining two modes, look at the scheme of how
-distributed Veles works:
+Master/slave
+::::::::::::
 
 .. image:: _static/master-slave.png
 

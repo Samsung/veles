@@ -755,8 +755,8 @@ class Workflow(Container):
         """
         Returns an iterable of tuples of length 2. First element is the unit
         identifier, second is the accumulated run time.
-        :param by_name: If True, use unit name as identifier; otherwise,
-                        unit class name.
+        :param by_name: If True, use unit name as identifier; otherwise, \
+            unit class name.
         """
         timers = {}
         key_unit_map = {}
