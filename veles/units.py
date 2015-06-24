@@ -672,7 +672,7 @@ class Unit(Distributable, Verified):
                 raise from_none(e)
         self.demanded.update(args)
 
-    def undemand(self, **args):
+    def undemand(self, *args):
         """
         Cancels demand().
         :param args: The dependency attributes to remove.
