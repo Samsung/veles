@@ -35,8 +35,8 @@ under the License.
 """
 
 
-from veles.publisher.confluence import Confluence
-from veles.publisher.jinja2_template_backend import Jinja2TemplateBackend
+from veles.publishing.confluence import Confluence
+from veles.publishing.jinja2_template_backend import Jinja2TemplateBackend
 
 
 class ConfluenceBackend(Jinja2TemplateBackend):

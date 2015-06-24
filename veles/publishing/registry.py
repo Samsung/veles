@@ -10,7 +10,7 @@
 
 Created on Apr 23, 2015
 
-Base class for publishing backends which use Jinja2 templates.
+Publishing backends registry.
 
 ███████████████████████████████████████████████████████████████████████████████
 
@@ -34,31 +34,17 @@ under the License.
 ███████████████████████████████████████████████████████████████████████████████
 """
 
-import binascii
-import os
-import sys
-from jinja2 import Environment, FileSystemLoader
-
-from veles.publisher.backend import Backend
+from veles.mapped_object_registry import MappedObjectsRegistry
 
 
-class Jinja2TemplateBackend(Backend):
-    def __init__(self, template, **kwargs):
-        super(Jinja2TemplateBackend, self).__init__(template, **kwargs)
-        self.environment = Environment(
-            trim_blocks=kwargs.get("trim_blocks", True),
-            lstrip_blocks=kwargs.get("lstrip_blocks", True),
-            loader=FileSystemLoader(os.path.dirname(
-                sys.modules[type(self).__module__].__file__)))
-        if template is None:
-            self.template = self.environment.get_template(
-                "%s_template.%s" % (self.MAPPING, self.TEMPLATE_EXT))
-        else:
-            self.template = self.environment.from_string(template)
-
-    def render(self, info):
-        info["hexlify"] = binascii.hexlify
-        self.info("Rendering the template...")
-        content = self.template.render(**info)
-        self.debug("Rendered:\n%s", content)
-        return content
+class PublishingBackendRegistry(MappedObjectsRegistry):
+    """Metaclass to record publishing backends. Used by
+    :class:`veles.publishing.Publisher`.
+    Classes derived from Unit may contain 'hide' attribute which specifies
+    whether it should not appear in the list of registered units. Usually
+    hide = True is applied to base units which must not be used directly, only
+    subclassed. There is also a 'hide_all' attribute, do disable the
+    registration of the whole inheritance tree, so that all the children are
+    automatically hidden.
+    """
+    mapping = "backends"

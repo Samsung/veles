@@ -48,7 +48,7 @@ from veles.config import root
 from veles.distributable import TriviallyDistributable, IDistributable
 from veles.loader import Loader
 from veles.plotter import Plotter
-from veles.publisher.registry import PublishingBackendRegistry
+from veles.publishing.registry import PublishingBackendRegistry
 from veles.result_provider import IResultProvider
 from veles.units import Unit, IUnit, nothing
 

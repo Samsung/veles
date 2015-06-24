@@ -48,8 +48,8 @@ from veles.launcher import Launcher
 from veles.logger import Logger
 from veles.loader import Loader, ILoader
 from veles.pickle2 import pickle, best_protocol
-from veles.publisher import Publisher
-from veles.publisher.confluence_backend import ConfluenceBackend
+from veles.publishing import Publisher
+from veles.publishing.confluence_backend import ConfluenceBackend
 
 
 @implementer(ILoader)

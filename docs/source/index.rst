@@ -30,6 +30,8 @@ Veles Machine Learning Platform
     manualrst_veles_workflow_parameters
     manualrst_veles_units
     manualrst_veles_units_kwargs
+
+    manualrst_veles_forge
     
     veles
     dependencies

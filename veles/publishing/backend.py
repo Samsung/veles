@@ -10,7 +10,7 @@
 
 Created on Apr 23, 2015
 
-Publishing backends registry.
+Base publishing backend class.
 
 ███████████████████████████████████████████████████████████████████████████████
 
@@ -34,17 +34,14 @@ under the License.
 ███████████████████████████████████████████████████████████████████████████████
 """
 
-from veles.mapped_object_registry import MappedObjectsRegistry
+from six import add_metaclass
+
+from veles.logger import Logger
+from veles.publishing.registry import PublishingBackendRegistry
 
 
-class PublishingBackendRegistry(MappedObjectsRegistry):
-    """Metaclass to record publishing backends. Used by
-    :class:`veles.publisher.Publisher`.
-    Classes derived from Unit may contain 'hide' attribute which specifies
-    whether it should not appear in the list of registered units. Usually
-    hide = True is applied to base units which must not be used directly, only
-    subclassed. There is also a 'hide_all' attribute, do disable the
-    registration of the whole inheritance tree, so that all the children are
-    automatically hidden.
-    """
-    mapping = "backends"
+@add_metaclass(PublishingBackendRegistry)
+class Backend(Logger):
+    def __init__(self, template, **kwargs):
+        super(Backend, self).__init__()
+        self.template = template

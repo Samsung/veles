@@ -36,6 +36,9 @@ ensemble. If plotters are desired to work, set
 
    veles ... root.common.ensemble.disable.plotting=False
 
+You would probably like to store snapshots in a database, which is possible with
+ODBC snapshotter configuration. For more details, see :doc:`manualrst_veles_snapshotting`.
+
 (2) How to evaluate the models
 ::::::::::::::::::::::::::::::
 

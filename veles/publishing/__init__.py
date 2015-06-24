@@ -35,4 +35,4 @@ under the License.
 """
 
 from .publisher import Publisher
-import veles.publisher.confluence_backend
+import veles.publishing.confluence_backend
