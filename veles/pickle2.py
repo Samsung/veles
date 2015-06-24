@@ -56,6 +56,8 @@ def augment__str__(fn):
     return __str__
 
 
+__pe__str__ = PicklingError.__str__
+__upe__str__ = UnpicklingError.__str__
 PicklingError.__str__ = augment__str__(PicklingError.__str__)
 UnpicklingError.__str__ = augment__str__(UnpicklingError.__str__)
 del augment__str__
@@ -105,3 +107,5 @@ def setup_pickle_debug():
 
     pickle._Pickler.save = save
     pickle._Unpickler.load = load
+    PicklingError.__str__ = __pe__str__
+    UnpicklingError.__str__ = __upe__str__

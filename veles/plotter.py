@@ -68,6 +68,51 @@ class Plotter(Unit, TriviallyDistributable):
         self._remembers_gates = False
         self._server_ = None
 
+    def init_unpickled(self):
+        super(Plotter, self).init_unpickled()
+        for pkg in self.MATPLOTLIB_PKG_MAPPING:
+            setattr(self, "_%s_" % pkg, None)
+
+    @property
+    def matplotlib(self):
+        return self._matplotlib_
+
+    @matplotlib.setter
+    def matplotlib(self, value):
+        self._matplotlib_ = value
+
+    @property
+    def pp(self):
+        return self._pp_
+
+    @pp.setter
+    def pp(self, value):
+        self._pp_ = value
+
+    @property
+    def cm(self):
+        return self._cm_
+
+    @cm.setter
+    def cm(self, value):
+        self._cm_ = value
+
+    @property
+    def lines(self):
+        return self._lines_
+
+    @lines.setter
+    def lines(self, value):
+        self._lines_ = value
+
+    @property
+    def patches(self):
+        return self._patches_
+
+    @patches.setter
+    def patches(self, value):
+        self._patches_ = value
+
     def __getstate__(self):
         state = super(Plotter, self).__getstate__()
         if self.stripped_pickle:
@@ -130,4 +175,5 @@ class Plotter(Unit, TriviallyDistributable):
         return pkgs
 
     def set_matplotlib(self, pkgs):
-        self.__dict__.update(**pkgs)
+        for key, val in pkgs.items():
+            setattr(self, key, val)
