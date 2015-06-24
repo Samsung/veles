@@ -188,7 +188,7 @@ class Unit(Distributable, Verified):
             self.initialize = self._retry_call(
                 self.initialize, "_is_initialized")
             self.initialize = self._check_attrs(
-                self.initialize, sorted(self.demanded))
+                self.initialize, self.demanded)
         if hasattr(self, "stop"):
             self.stop = self._track_call(self.stop, "_stopped")
         Unit.timers[self.id] = 0
@@ -874,7 +874,7 @@ class Unit(Distributable, Verified):
     def _check_attrs(self, fn, attrs):
         def wrapped_check_attrs(*args, **kwargs):
             validate_kwargs(self, **kwargs)
-            for attr in attrs:
+            for attr in sorted(attrs):
                 val = getattr(self, attr, None)
                 if val is None:
                     raise AttributeError("Attribute %s of unit %s is not "

@@ -365,17 +365,22 @@ class Workflow(Container):
         if not self.is_running:
             # Break an infinite loop if Workflow belongs to Workflow
             return
-        self.log(logging.INFO if self.interactive else logging.DEBUG,
-                 "Finished")
+        if self.workflow is not None:
+            self.log(logging.INFO if self.interactive else logging.DEBUG,
+                     "Finished")
+        else:
+            self.debug("Finished with no parent workflow")
         self.stopped = True
         run_time = time.time() - self._run_time_started_
         self._run_time_ += run_time
         self._method_time_["run"] += run_time
         self.is_running = False
-        if not self.is_master:
-            self.event("run", "end")
         if self.result_file is not None:
             self.write_results()
+        if self.workflow is None:
+            return
+        if not self.is_master:
+            self.event("run", "end")
         if self.is_main and (self.is_standalone or self._slave_error_):
             self.workflow.on_workflow_finished()
         elif self.is_slave:
