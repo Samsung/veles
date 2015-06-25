@@ -288,7 +288,7 @@ class Array(Pickleable):
             self.map_read()
         state = super(Array, self).__getstate__()
         if self.shallow_pickle and self.mem is not None:
-            state["mem"] = self.mem.shape, self.mem.dtype
+            state["_mem"] = self.mem.shape, self.mem.dtype
         return state
 
     def __setstate__(self, state):
