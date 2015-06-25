@@ -342,11 +342,14 @@ class AcceleratedUnit(Unit):
         include_dirs = self._get_include_dirs("ocl")
         source, my_defines = self._generate_source(
             defines, include_dirs, dtype, "cl", template_kwargs)
-        show_ocl_logs = self.logger.isEnabledFor(logging.DEBUG)
+        show_logs = self.logger.isEnabledFor(logging.DEBUG)
+        if show_logs:
+            self.debug("%s: source code\n%s\n%s", cache_file_name, "-" * 80,
+                       source)
         try:
             self.program_ = self.device.queue_.context.create_program(
                 source, include_dirs,
-                "-cl-nv-verbose" if show_ocl_logs and "cl_nv_compiler_options"
+                "-cl-nv-verbose" if show_logs and "cl_nv_compiler_options"
                 in self.device.queue_.device.extensions else "")
         except Exception as e:
             with NamedTemporaryFile(mode="w", prefix="ocl_src_", suffix=".cl",
@@ -355,7 +358,7 @@ class AcceleratedUnit(Unit):
                 self.error("Failed to build OpenCL program. The input file "
                            "source was dumped to %s", fout.name)
             raise from_none(e)
-        if show_ocl_logs and len(self.program_.build_logs):
+        if show_logs and len(self.program_.build_logs):
             for s in self.program_.build_logs:
                 s = s.strip()
                 if not s:
@@ -388,6 +391,9 @@ class AcceleratedUnit(Unit):
         source, my_defines = self._generate_source(
             defines, include_dirs, dtype, "cu", template_kwargs)
         show_logs = self.logger.isEnabledFor(logging.DEBUG)
+        if show_logs:
+            self.debug("%s: source code\n%s\n%s", cache_file_name, "-" * 80,
+                       source)
         try:
             self.program_ = self.device.context.create_module(
                 source=source, include_dirs=include_dirs,
