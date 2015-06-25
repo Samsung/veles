@@ -122,13 +122,12 @@ def __html__():
         show_file(page)
 
 
-class PythonPathError(Exception):
-    pass
-
-
 class VelesModule(ModuleType):
     """Redefined module class with added properties which are lazily evaluated.
     """
+
+    class PythonPathError(Exception):
+        pass
 
     def __init__(self, *args, **kwargs):
         super(VelesModule, self).__init__(__name__, *args, **kwargs)
@@ -304,13 +303,13 @@ class VelesModule(ModuleType):
                         continue
         return self.__plugins
 
-    @staticmethod
-    def validate_environment():
+    @classmethod
+    def validate_environment(cls):
         """
         This method verifies the sequence of PYTHONPATH and warns about
         the crappy ones.
         """
-        from sys import executable
+        from sys import version_info, executable  # pylint: disable=W0404,W0621
         import os
         from subprocess import call
         from uuid import uuid4
@@ -319,11 +318,17 @@ class VelesModule(ModuleType):
         if call((executable, "-c",
                  "import sys; sys.exit(sys.path[1] != \"%s\")" % pypath),
                 env={"PYTHONPATH": pypath}):
-            raise PythonPathError(
+            excmsg = (
                 "Your Python environment looks crappy because PYTHONPATH does "
-                "not have the priority over the other paths. Check your *.pth "
-                "files, e.g. /usr/local/lib/python3.4/dist-packages/"
-                "easy-install.pth. Veles is sensitive to this thing.")
+                "not have priority over other paths. Veles is sensitive to "
+                "PYTHONPATH order. To reproduce the problem, run:\n"
+                "PYTHONPATH=/tmp %s -c \"import sys; print(sys.path)\"\n"
+                "Check your *.pth files, e.g. "
+                "/usr/local/lib/python%d.%d/dist-packages/easy-install.pth. "
+                "Perhaps, you should set sys.__egginsert to 1 on the first "
+                "line of that file." %
+                (executable, version_info.major, version_info.minor))
+            raise cls.PythonPathError(excmsg)
 
 
 if not isinstance(modules[__name__], VelesModule):
