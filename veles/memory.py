@@ -146,11 +146,12 @@ class Array(Pickleable):
         __vectors__ = set()
         __registered = False
 
-    def __init__(self, data=None):
+    def __init__(self, data=None, shallow_pickle=False):
         super(Array, self).__init__()
         self._device = NumpyDevice()
         self.mem = data
         self._max_value = 1.0
+        self._shallow_pickle = shallow_pickle
         if six.PY3:
             # Workaround for unspecified destructor call order
             # This is a hard to reduce bug to report it
@@ -158,11 +159,6 @@ class Array(Pickleable):
             if not Array.__registered:
                 atexit.register(Array.reset_all)
                 Array.__registered = True
-
-    def __setstate__(self, state):
-        super(Array, self).__setstate__(state)
-        if six.PY3:
-            Array.__vectors__.add(weakref.ref(self))
 
     @property
     def device(self):
@@ -258,6 +254,10 @@ class Array(Pickleable):
     def plain(self):
         return ravel(self.mem)
 
+    @property
+    def shallow_pickle(self):
+        return self._shallow_pickle
+
     def init_unpickled(self):
         super(Array, self).init_unpickled()
         self._unset_device()
@@ -284,15 +284,19 @@ class Array(Pickleable):
     def __getstate__(self):
         """Get data from OpenCL device before pickling.
         """
-        if self.device is None:
-            import gc
-
-            for key, val in gc.get_referrers(self)[0].items():
-                if val is self:
-                    print(key)
-        if self.device.pid == os.getpid():
+        if not self.shallow_pickle and self.device.pid == os.getpid():
             self.map_read()
-        return super(Array, self).__getstate__()
+        state = super(Array, self).__getstate__()
+        if self.shallow_pickle and self.mem is not None:
+            state["mem"] = self.mem.shape, self.mem.dtype
+        return state
+
+    def __setstate__(self, state):
+        super(Array, self).__setstate__(state)
+        if six.PY3:
+            Array.__vectors__.add(weakref.ref(self))
+        if self.shallow_pickle and isinstance(self.mem, tuple):
+            self.mem = numpy.zeros(*self.mem)
 
     def __bool__(self):
         return self._mem is not None and len(self._mem) > 0

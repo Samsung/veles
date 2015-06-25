@@ -119,7 +119,7 @@ class SnapshotterBase(Unit):
         self.time = 0
         self._skipped_counter = 0
         self.skip = Bool(False)
-        self._warned_about_size = False
+        self._warn_about_size = kwargs.get("warn_about_size", True)
         self.demand("suffix")
 
     def init_unpickled(self):
@@ -128,7 +128,7 @@ class SnapshotterBase(Unit):
 
     def __getstate__(self):
         state = super(SnapshotterBase, self).__getstate__()
-        state["_warned_about_size"] = True
+        state["_warn_about_size"] = False
         return state
 
     @property
@@ -138,6 +138,17 @@ class SnapshotterBase(Unit):
     @property
     def slaves(self):
         return self._slaves
+
+    @property
+    def warn_about_size(self):
+        return self._warn_about_size
+
+    @warn_about_size.setter
+    def warn_about_size(self, value):
+        if not isinstance(value, bool):
+            raise TypeError(
+                "warn_about_size must be boolean (got %s)" % type(value))
+        self._warn_about_size = value
 
     def initialize(self, **kwargs):
         self.time = time.time()
@@ -190,22 +201,28 @@ class SnapshotterBase(Unit):
         return {"Snapshot": self.destination}
 
     def check_snapshot_size(self, size):
-        if size > self.SIZE_WARNING_THRESHOLD and not self._warned_about_size:
-            self._warned_about_size = True
+        if size > self.SIZE_WARNING_THRESHOLD and self._warn_about_size:
+            self._warn_about_size = False
             psizes = []
-            for unit in self.workflow:
-                unit.stripped_pickle = True
-                psize = len(pickle.dumps(unit, protocol=4))
-                psizes.append((psize, unit))
-                unit.stripped_pickle = False
+            try:
+                for unit in self.workflow:
+                    unit.stripped_pickle = True
+                    psize = len(pickle.dumps(unit, protocol=4))
+                    psizes.append((psize, unit))
+                    unit.stripped_pickle = False
+            except:
+                self.warning("The snapshot size looks too big: %d bytes", size)
+                return
+            import gc
+            gc.collect()
             psizes.sort(reverse=True)
             pstable = PrettyTable("Unit", "Size")
             pstable.align["Unit"] = "l"
             for size, unit in psizes[:5]:
                 pstable.add_row(str(unit), size)
             self.warning(
-                "The snapshot size looks too big: %d bytes. Here are "
-                "the top 5 big units:\n%s", size, pstable)
+                "The snapshot size looks too big: %d bytes. Here are top 5 "
+                "big units:\n%s", size, pstable)
 
     def _slave_ended(self, slave):
         if slave is None:
