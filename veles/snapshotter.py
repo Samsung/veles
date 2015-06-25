@@ -151,6 +151,7 @@ class SnapshotterBase(Unit):
             return
         self.export()
         self.time = time.time()
+        return True
 
     def stop(self):
         if self._skipped_counter > 0 and not self.skip:
@@ -206,11 +207,12 @@ class SnappyFile(object):
             self._file = open(file_name_or_obj, file_mode)
         else:
             self._file = file_name_or_obj
-        self.buffer = bytearray(buffer_size)
         self.buffer_pos = 0
         if file_mode == "wb":
+            self.buffer = bytearray(buffer_size)
             self._compressor = snappy.StreamCompressor()
         else:
+            self.buffer = None
             self._decompressor = snappy.StreamDecompressor()
 
     @property
@@ -239,10 +241,36 @@ class SnappyFile(object):
         self.buffer_pos += len(data)
         self.buffer[self.buffer_pos - len(data):self.buffer_pos] = data
 
-    def read(self):
-        return self._decompressor.decompress(self._file.read(len(self.buffer)))
+    def read(self, length=None):
+        if length is None:
+            return self._decompressor.decompress(self._file.read())
+        else:
+            if self.buffer is not None and \
+                    length <= len(self.buffer) - self.buffer_pos:
+                result = self.buffer[self.buffer_pos:self.buffer_pos + length]
+                self.buffer_pos += length
+                if self.buffer_pos == len(self.buffer):
+                    self.buffer = None
+                return result
+            if self.buffer is None:
+                result = bytes()
+            else:
+                result = self.buffer[self.buffer_pos:]
+                length -= len(self.buffer) - self.buffer_pos
+            while self.buffer is None or length > 0:
+                self.buffer = self._file.read(snappy._CHUNK_MAX + 32)
+                self.buffer = self._decompressor.decompress(self.buffer)
+                result += self.buffer
+                length -= len(self.buffer)
+            self.buffer_pos = len(self.buffer) + length
+            return result[:length]
+
+    def readline(self):
+        raise NotImplementedError()
 
     def flush(self):
+        if not hasattr(self, "_compressor"):
+            return
         if self.buffer_pos > 0:
             self._file.write(self._compressor.compress(
                 bytes(self.buffer[:self.buffer_pos])))
@@ -280,7 +308,7 @@ class SnapshotterToFile(SnapshotterBase):
 
     READ_CODECS = {
         "pickle": lambda name: open(name, "rb"),
-        "snappy": lambda n, _: SnappyFile(n, "rb"),
+        "snappy": lambda n: SnappyFile(n, "rb"),
         "gz": lambda name: gzip.GzipFile(name, "rb"),
         "bz2": lambda name: bz2.BZ2File(name, "rb"),
         "xz": lambda name: lzma.LZMAFile(name, "rb")
@@ -347,7 +375,7 @@ class SnapshotterToDB(SnapshotterBase):
 
     READ_CODECS = {
         "pickle": lambda n: n,
-        "snappy": lambda n, _: SnappyFile(n, "rb"),
+        "snappy": lambda n: SnappyFile(n, "rb"),
         "gz": lambda name: gzip.GzipFile(fileobj=name, mode="rb"),
         "bz2": lambda name: bz2.BZ2File(name, "rb"),
         "xz": lambda name: lzma.LZMAFile(name, "rb")
