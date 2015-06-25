@@ -126,6 +126,11 @@ class SnapshotterBase(Unit):
         super(SnapshotterBase, self).init_unpickled()
         self._slaves = {}
 
+    def __getstate__(self):
+        state = super(SnapshotterBase, self).__getstate__()
+        state["_warned_about_size"] = True
+        return state
+
     @property
     def destination(self):
         return self._destination
