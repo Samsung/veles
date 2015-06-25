@@ -777,8 +777,6 @@ class TableMaxMin(Plotter):
         self.col_labels = []
         self.y = []
         self.values = Array()
-        self.pp = None
-        self.show_figure = nothing
 
     def initialize(self, **kwargs):
         super(TableMaxMin, self).initialize(**kwargs)

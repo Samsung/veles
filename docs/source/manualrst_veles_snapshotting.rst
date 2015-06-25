@@ -24,7 +24,8 @@ unpickling. :func:`__getstate__` and :func:`__setstate__` methods are used, so
 child classes must call :func:`super()` to override them.
 
 Snapshots can be compressed with `Snappy <https://en.wikipedia.org/wiki/Snappy_(software)>`_,
-GZIP, BZIP2 and LZMA2 (xz) algorithms.
+Gzip, Bzip2 and Lzma2 (xz) algorithms. The default compression is Gzip. To change
+the compression type, pass "compression" argument to :func:`__init__()`:
 
 
 How to link snapshotters

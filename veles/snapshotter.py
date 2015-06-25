@@ -49,6 +49,7 @@ from zope.interface import implementer, Interface
 from veles.compat import lzma, from_none, FileNotFoundError
 from veles.config import root
 from veles.distributable import IDistributable
+from veles.external.prettytable import PrettyTable
 from veles.mapped_object_registry import MappedObjectsRegistry
 from veles.mutable import Bool
 from veles.pickle2 import pickle, best_protocol
@@ -81,7 +82,6 @@ class SnapshotterRegistry(UnitRegistry, MappedObjectsRegistry):
 @implementer(IUnit, IDistributable, IResultProvider)
 @add_metaclass(SnapshotterRegistry)
 class SnapshotterBase(Unit):
-    hide_from_registry = True
     """Base class for various data exporting units.
 
     Defines:
@@ -100,6 +100,9 @@ class SnapshotterBase(Unit):
         skip - If True, run() is skipped but _skipped_counter is incremented.
     """
 
+    hide_from_registry = True
+    SIZE_WARNING_THRESHOLD = 200 * 1000 * 1000
+
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = kwargs.get("view_group", "SERVICE")
         super(SnapshotterBase, self).__init__(workflow, **kwargs)
@@ -116,6 +119,7 @@ class SnapshotterBase(Unit):
         self.time = 0
         self._skipped_counter = 0
         self.skip = Bool(False)
+        self._warned_about_size = False
         self.demand("suffix")
 
     def init_unpickled(self):
@@ -179,6 +183,24 @@ class SnapshotterBase(Unit):
 
     def get_metric_values(self):
         return {"Snapshot": self.destination}
+
+    def check_snapshot_size(self, size):
+        if size > self.SIZE_WARNING_THRESHOLD and not self._warned_about_size:
+            self._warned_about_size = True
+            psizes = []
+            for unit in self.workflow:
+                unit.stripped_pickle = True
+                psize = len(pickle.dumps(unit, protocol=4))
+                psizes.append((psize, unit))
+                unit.stripped_pickle = False
+            psizes.sort(reverse=True)
+            pstable = PrettyTable("Unit", "Size")
+            pstable.align["Unit"] = "l"
+            for size, unit in psizes[:5]:
+                pstable.add_row(str(unit), size)
+            self.warning(
+                "The snapshot size looks too big: %d bytes. Here are "
+                "the top 5 big units:\n%s", size, pstable)
 
     def _slave_ended(self, slave):
         if slave is None:
@@ -328,6 +350,7 @@ class SnapshotterToFile(SnapshotterBase):
         self.info("Snapshotting to %s..." % self.destination)
         with self._open_file() as fout:
             pickle.dump(self.workflow, fout, protocol=best_protocol)
+        self.check_snapshot_size(os.path.getsize(self.destination))
         file_name_link = os.path.join(
             self.directory, "%s_current.%d.pickle%s" % (
                 self.prefix, best_protocol, ext))
@@ -410,6 +433,7 @@ class SnapshotterToDB(SnapshotterBase):
         self.info("Preparing the snapshot...")
         with self._open_fobj(fio) as fout:
             pickle.dump(self.workflow, fout, protocol=best_protocol)
+        self.check_snapshot_size(len(fio.getvalue()))
         binary = pyodbc.Binary(fio.getvalue())
         self.info("Executing SQL insert into \"%s\"...", self.table)
         now = datetime.now()

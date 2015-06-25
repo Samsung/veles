@@ -61,10 +61,9 @@ def errback(failure, thread_pool=None):
         reactor.callFromThread(failure.raiseException)
     else:
         tmap = {thr.ident: thr.name for thr in threading.enumerate()}
-        thread_pool.error("Unhandled error inside %s: %s",
+        thread_pool.error("Unhandled error inside %s:\n%s",
                           tmap[threading.current_thread().ident],
-                          failure.value)
-        failure.printTraceback()
+                          failure.getTraceback())
         thread_pool.failure = failure
         thread_pool.shutdown(execute_remaining=False, force=True)
 
