@@ -57,11 +57,16 @@ class TestDownloader(unittest.TestCase):
         random.seed()
         module = "http.server" if PY3 else "SimpleHTTPServer"
         port = random.randint(2048, 32000)
-        server = Popen((sys.executable, "-m", module, str(port)),
-                       cwd=os.path.join(os.path.dirname(__file__), "res"))
+        with open(os.devnull, "w") as devnull:
+            # Python 2.7 subprocess package does not have DEVNULL
+            server = Popen((sys.executable, "-m", module, str(port)),
+                           cwd=os.path.join(os.path.dirname(__file__), "res"),
+                           stderr=devnull)
         sleep(1)
         tempdir = gettempdir()
         file = "wine_ensemble.json"
+        if not hasattr(sys.stdout, "fileno"):
+            sys.stdout.fileno = lambda: 0
         try:
             downloader = Downloader(
                 self.parent,

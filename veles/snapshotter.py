@@ -310,7 +310,26 @@ class SnappyFile(object):
             return result[:length]
 
     def readline(self):
-        raise NotImplementedError()
+        result = bytes()
+        while True:
+            if self.buffer is not None:
+                i = self.buffer_pos
+            else:
+                self.buffer = self._file.read(snappy._CHUNK_MAX + 32)
+                self.buffer = self._decompressor.decompress(self.buffer)
+                if len(self.buffer) == 0:
+                    self.buffer = None
+                    continue
+                i = 0
+            while i < len(self.buffer) and self.buffer[i] != b"\n":
+                i += 1
+            i += 1
+            result += self.buffer[self.buffer_pos:i]
+            if i < len(self.buffer):
+                self.buffer_pos = i
+                return result
+            self.buffer = None
+            self.buffer_pos = 0
 
     def flush(self):
         if not hasattr(self, "_compressor"):

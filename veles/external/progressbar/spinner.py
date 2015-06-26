@@ -44,7 +44,7 @@ def spin(interval=0.2):
             global __last_flush_time
             if time - __last_flush_time < interval:
                 return
-                sys.stdout.flush()
+            sys.stdout.flush()
             __last_flush_time = time
         else:
             reactor.callFromThread(sys.stdout.flush)

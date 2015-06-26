@@ -36,15 +36,19 @@ under the License.
 
 
 import bson
-import codecs
 from copy import copy
 import logging.handlers
 import os
 from pymongo import MongoClient
 import re
-from six import StringIO
+from six import StringIO, PY3
 import sys
 import time
+
+if PY3:
+    from codecs import getwriter
+else:
+    from veles.external.kitchen.text.converters import getwriter
 
 from veles.compat import from_none, has_colors
 from veles.external.daemon import redirect_stream
@@ -134,11 +138,11 @@ class Logger(object):
         they use 'ascii' encoding by default
         """
 
-        def ensure_utf8_stream(s):
-            if not isinstance(s, StringIO):
-                s = codecs.getwriter("utf-8")(getattr(s, "buffer", s))
-                s.encoding = "utf-8"
-            return s
+        def ensure_utf8_stream(stream):
+            if not isinstance(stream, StringIO):
+                stream = getwriter("utf-8")(getattr(stream, "buffer", stream))
+                stream.encoding = "utf-8"
+            return stream
 
         sys.stdout, sys.stderr = (ensure_utf8_stream(s)
                                   for s in (sys.stdout, sys.stderr))
