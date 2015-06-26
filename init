@@ -16,7 +16,7 @@ if ! grep -q vars .git/modules/Znicz/config; then
         smudge = /bin/sh .vars.sh smudge' >> .git/modules/Znicz/config
 fi
 
-function refresh() {
+refresh() {
   path="$(pwd)"
   cd $1
   rm __init__.py
