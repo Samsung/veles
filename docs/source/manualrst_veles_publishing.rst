@@ -30,19 +30,11 @@ this is for Confluence::
    }
 
 A typical report consists of several sections.
-#. General information about the workflow, containing the image by the path which is taken from
-   the manifest file, if it exists. Manifest file is JSON metadata required by VelesForge,
-   so refer to :doc:`manualrst_veles_forge`.
-#. Achieved results. The values in that table are taken from units which implement
-   :class:`veles.result_provider.IResultProvider` interface. For example,
-   achieved best accuracy, RMSE, total number of epochs, etc.
-#. Source data basic analytics: test, validation and train sets ratio and sizes.
-   Label distribution in case of classification task. Normalization type and parameters
-   used.
-#. Run statistics: elapsed time, unit run time profile. Talking about unit run times,
-   one should remember that GPU accelerated units use asunchronous GPU pipeline,
-   returning the control at once, so to see the real profile, pass ``--sync-run``
-   command line argument.
+
+#. General information about the workflow, containing the image by the path which is taken from the manifest file, if it exists. Manifest file is JSON metadata required by VelesForge, so refer to :doc:`manualrst_veles_forge`.
+#. Achieved results. The values in that table are taken from units which implement :class:`veles.result_provider.IResultProvider` interface. For example, achieved best accuracy, RMSE, total number of epochs, etc.
+#. Source data basic analytics: test, validation and train sets ratio and sizes. Label distribution in case of classification task. Normalization type and parameters used.
+#. Run statistics: elapsed time, unit run time profile. Talking about unit run times, one should remember that GPU accelerated units use asunchronous GPU pipeline, returning the control at once, so to see the real profile, pass ``--sync-run`` command line argument.
 #. The configuration used.
 #. Random seeds.
 #. Workflow scheme as if it was written by ``--workflow-graph``.

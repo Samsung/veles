@@ -24,9 +24,22 @@ unpickling. :func:`__getstate__` and :func:`__setstate__` methods are used, so
 child classes must call :func:`super()` to override them.
 
 Snapshots can be compressed with `Snappy <https://en.wikipedia.org/wiki/Snappy_(software)>`_,
-Gzip, Bzip2 and Lzma2 (xz) algorithms. The default compression is Gzip. To change
+Gzip, Bzip2 and Lzma algorithms. The default compression is Gzip. To change
 the compression type, pass "compression" argument to :func:`__init__()`:
 
++-------------+----------------+
+| Compression | Argument value |
++=============+================+
+| no          | "" or None     |
++-------------+----------------+
+| Snappy      | "snappy"       |
++-------------+----------------+
+| Gzip        | "gz"           |
++-------------+----------------+
+| Bzip2       | "bz2"          |
++-------------+----------------+
+| Lzma        | "xz"           |
++-------------+----------------+
 
 How to link snapshotters
 ::::::::::::::::::::::::
@@ -51,17 +64,23 @@ In case of manual workflow construction, you must link
 `veles.snapshotter.SnasphotterToDB` or any of it's children and pass "odbc" and
 "table" constructor arguments.
 
-The table scheme is as follows::
+The table scheme is as follows:
 
-   +-----------+--------------+
-   | Field     | Type         |
-   +-----------+--------------+
-   | timestamp | datetime     |
-   | id        | char(36)     |
-   | log_id    | char(36)     |
-   | workflow  | varchar(100) |
-   | name      | varchar(100) |
-   | codec     | varchar(10)  |
-   | data      | longblob     |
-   +-----------+--------------+
++-----------+--------------+
+| Field     | Type         |
++===========+==============+
+| timestamp | datetime     |
++-----------+--------------+
+| id        | char(36)     |
++-----------+--------------+
+| log_id    | char(36)     |
++-----------+--------------+
+| workflow  | varchar(100) |
++-----------+--------------+
+| name      | varchar(100) |
++-----------+--------------+
+| codec     | varchar(10)  |
++-----------+--------------+
+| data      | longblob     |
++-----------+--------------+
 
