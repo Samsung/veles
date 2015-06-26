@@ -407,7 +407,7 @@ class Loader(Unit):
             if now - self._minibatch_serve_timestamp_ >= 10:
                 self._minibatch_serve_timestamp_ = now
                 self.info("Served %d samples (%d epochs, %.1f%% current); "
-                          "jobs failed: %d/pending: %d",
+                          "jobs failed: %d; pending: %d",
                           self.samples_served, num,
                           100. * den / self.effective_total_samples,
                           len(self.failed_minibatches),
