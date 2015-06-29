@@ -55,6 +55,11 @@ class TestInputJoiner(AcceleratedTest):
         c.mem = numpy.arange(350, dtype=numpy.float32).reshape(10, 35)
         obj = input_joiner.InputJoiner(self.parent, inputs=[a, b, c])
         obj.initialize(device=device)
+
+        # Replace one element without copying back to device
+        b.map_write()
+        b.mem[b.shape[0] // 2] = -1
+
         obj.run()
         obj.output.map_read()
         nz = numpy.count_nonzero(

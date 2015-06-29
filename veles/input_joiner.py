@@ -69,6 +69,7 @@ class InputJoiner(AcceleratedUnit):
         super(InputJoiner, self).__init__(workflow, **kwargs)
         self.inputs = kwargs["inputs"]
         self.output = Array()
+        self.registered_inputs = {}
 
     def init_unpickled(self):
         super(InputJoiner, self).init_unpickled()
@@ -86,10 +87,37 @@ class InputJoiner(AcceleratedUnit):
         if len(self._inputs) == 0:
             raise ValueError("inputs may not be empty")
 
+    def register_offset_length_attributes(self, inp):
+        idx = len(self.registered_inputs)
+        attrs = ("offset_%d" % idx, "length_%d" % idx)
+        for attr in attrs:
+            setattr(self, attr, -1)
+        self.registered_inputs[inp] = attrs
+        return attrs
+
+    def _init_offset_length_attributes(self):
+        offsets = []
+        lengths = []
+        offset = 0
+        for inp in self.inputs:
+            offsets.append(offset)
+            lengths.append(inp.sample_size)
+            offset += lengths[-1]
+        for inp, attrs in self.registered_inputs.items():
+            try:
+                idx = self.inputs.index(inp)
+                vals = (offsets[idx], lengths[idx])
+            except ValueError:
+                vals = (-1, -1)
+            for i, attr in enumerate(attrs):
+                setattr(self, attr, vals[i])
+
     def initialize(self, device, **kwargs):
         if any(i.mem is None for i in self.inputs):
             # Not yet ready to initialize
             return True
+
+        self._init_offset_length_attributes()
 
         super(InputJoiner, self).initialize(device=device, **kwargs)
 
@@ -137,7 +165,12 @@ class InputJoiner(AcceleratedUnit):
             low = high
 
     def ocl_run(self):
+        for inp in self.inputs:
+            inp.unmap()
         self.execute_kernel(*((self.output.shape[0],),) * 2)
 
     def cuda_run(self):
+        for inp in self.inputs:
+            inp.unmap()
+        # TODO(a.kazantsev): rewrite CUDA kernel for proper grid size
         self.execute_kernel((1, 1, 1), (self.output.shape[0], 1, 1))
