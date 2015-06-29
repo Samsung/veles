@@ -179,6 +179,10 @@ root.common.update({
     "veles_dir": os.path.join(__root__, "veles"),
     "veles_user_dir": __home__,
     "veles_dist_config_dir": "/etc/default/veles",
+    "dependencies": {
+        "basedir": "/usr/share/veles",
+        "dirname": ".pip"
+    },
     "help_dir": "/usr/share/doc/python3-veles",
     "disable": {
         "spinning_run_progress": not sys.stdout.isatty(),

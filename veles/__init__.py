@@ -47,6 +47,9 @@ from types import ModuleType
 from warnings import warn
 from veles.compat import is_interactive
 from veles.paths import __root__
+from veles.dot_pip import install_dot_pip
+
+install_dot_pip()
 
 __project__ = "Veles Machine Learning Platform"
 __versioninfo__ = 0, 9, 0
