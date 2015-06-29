@@ -49,9 +49,9 @@ from veles.compat import is_interactive
 from veles.paths import __root__
 
 __project__ = "Veles Machine Learning Platform"
-__versioninfo__ = 0, 8, 11
+__versioninfo__ = 0, 9, 0
 __version__ = ".".join(map(str, __versioninfo__))
-__license__ = "Samsung Proprietary License"
+__license__ = "Apache 2.0"
 __copyright__ = u"© 2013 Samsung Electronics Co., Ltd."
 __authors__ = ["Gennady Kuznetsov", "Vadim Markovtsev", "Alexey Kazantsev",
                "Lyubov Podoynitsina", "Denis Seresov", "Dmitry Senin",
