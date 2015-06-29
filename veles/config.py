@@ -70,7 +70,7 @@ class Config(object):
 
     def __update__(self, tree):
         for k, v in tree.items():
-            if isinstance(v, dict):
+            if isinstance(v, dict) and not v.get("dict", False):
                 getattr(self, k).__update__(v)
             else:
                 setattr(self, k, v)

@@ -113,6 +113,26 @@ class TestNormalizers(unittest.TestCase):
         self.assertTrue((arr[1] == 0.5).all())
         self.assertTrue((arr[2] == 0.5).all())
 
+    def test_range_linear(self):
+        nclass = NormalizerRegistry.normalizers["range_linear"]
+        ln = nclass()
+        arr = numpy.ones((3, 10), dtype=numpy.float32)
+        arr[:, 0] = 2
+        arr[:, -1] = 0
+        ln.analyze(arr)
+        ln = pickle.loads(pickle.dumps(ln))
+        ln.normalize(arr)
+        self.assertEqual(numpy.max(arr), 1.0)
+        self.assertEqual(numpy.min(arr), -1.0)
+        ln = nclass(interval=(-2, 2))
+        ln.analyze(arr)
+        ln = pickle.loads(pickle.dumps(ln))
+        orig = arr.copy()
+        ln.normalize(arr)
+        back = ln.denormalize(arr)
+        self.assertIsInstance(back, numpy.ndarray)
+        self.assertTrue((orig == back).all())
+
     def test_exp(self):
         nclass = NormalizerRegistry.normalizers["exp"]
         ln = nclass()

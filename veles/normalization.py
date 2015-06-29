@@ -319,18 +319,9 @@ class MeanDispersionNormalizer(NormalizerBase):
         return data
 
 
-@implementer(INormalizer)
-class LinearNormalizer(StatelessNormalizer):
-    """
-    Normalizes values within the specified range from [min, max] in the current
-    array *samplewise*. Thus it is different from PointwiseNormalizer, which
-    aggregates min and max through analyze() beforehand.
-    """
-
-    MAPPING = "linear"
-
+class IntervalNormalizer(NormalizerBase):
     def __init__(self, state=None, **kwargs):
-        super(LinearNormalizer, self).__init__(state, **kwargs)
+        super(IntervalNormalizer, self).__init__(state, **kwargs)
         if state is None:
             self.interval = kwargs.get("interval", (-1, 1))
 
@@ -350,6 +341,17 @@ class LinearNormalizer(StatelessNormalizer):
                     "Each value in the interval must be either an int or a "
                     "float (got %s of %s)" % (v, v.__class__))
         self._interval = float(vmin), float(vmax)
+
+
+@implementer(INormalizer)
+class LinearNormalizer(StatelessNormalizer, IntervalNormalizer):
+    """
+    Normalizes values within the specified range from [min, max] in the current
+    array *samplewise*. Thus it is different from PointwiseNormalizer, which
+    aggregates min and max through analyze() beforehand.
+    """
+
+    MAPPING = "linear"
 
     def normalize(self, data):
         orig_shape_data = data
@@ -390,6 +392,75 @@ class LinearNormalizer(StatelessNormalizer):
         data -= (dmin * imax - dmax * imin) / diff
         data /= (imin - imax) / diff
         return NormalizerBase.unprepare(data, shape)
+
+
+@implementer(INormalizer)
+class RangeLinearNormalizer(IntervalNormalizer):
+    """
+    Normalizes values within the specified range from [min, max] in the current
+    array *samplewise*. Thus it is different from PointwiseNormalizer, which
+    aggregates min and max through analyze() beforehand.
+
+    This class is different from LinearNormalizer because it requires that all
+    input values must lie in the specified range.
+    """
+
+    MAPPING = "range_linear"
+
+    def _initialize(self, data):
+        self._min = numpy.min(data)
+        self._max = numpy.max(data)
+
+    @property
+    def min(self):
+        return self._min
+
+    @property
+    def max(self):
+        return self._max
+
+    def analyze(self, data):
+        for extr in "min", "max":
+            yours = getattr(numpy, extr)(data)
+            mine = getattr(self, extr)
+            if yours != mine:
+                raise ValueError(
+                    "RangeLinearNormalizer may not be applied to this data "
+                    "because it's %s is %f while the global %s is %f" %
+                    (extr, yours, extr, mine))
+
+    def normalize(self, data):
+        orig_shape_data = data
+        data, _ = NormalizerBase.prepare(data)
+        dmin = numpy.min(data, axis=0)
+        dmax = numpy.max(data, axis=0)
+        imin, imax = self.interval
+        diff = dmin - dmax
+        if numpy.count_nonzero(diff) < numpy.prod(dmin.shape):
+            self.warning("There are uniform samples and the normalization "
+                         "type is linear, they are set to the middle %.2f "
+                         "of the normalization interval [%.2f, %.2f]",
+                         (imin + imax) / 2, imin, imax)
+            zeros = diff == 0
+            orig_shape_data[zeros] = (imin + imax) / 2
+            dmax[zeros] = imax
+            dmin[zeros] = imin
+            diff[zeros] = imin - imax
+        data *= (imin - imax) / diff
+        data += (dmin * imax - dmax * imin) / diff
+
+    def denormalize(self, data, **kwargs):
+        data, shape = NormalizerBase.prepare(data)
+        dmin = self.min
+        dmax = self.max
+        diff = dmin - dmax
+        imin, imax = self.interval
+        data -= (dmin * imax - dmax * imin) / diff
+        data /= (imin - imax) / diff
+        return NormalizerBase.unprepare(data, shape)
+
+    def _calculate_coefficients(self):
+        return self.interval + (self.min, self.max)
 
 
 @implementer(INormalizer)
