@@ -39,6 +39,7 @@ import unittest
 
 from six import BytesIO, PY3
 from twisted.internet import reactor
+from veles.backends import NumpyDevice
 
 import veles.client as client
 from veles.txzmq.connection import ZmqConnection
@@ -60,6 +61,7 @@ class TestWorkflow(Workflow):
         self._launcher = DummyLauncher()
         super(TestWorkflow, self).__init__(self._launcher, **kwargs)
         self.is_running = True
+        self.device = NumpyDevice()
 
     @Workflow.run_timed
     @Workflow.method_timed

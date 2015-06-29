@@ -238,7 +238,7 @@ class Launcher(logger.Logger):
                                   "host/0:2-3x3.").mode = ("master",)
         parser.add_argument("-f", "--log-file", type=str,
                             default=kwargs.get("log_file", ""),
-                            help="The file name where logs will be copied.")
+                            help="The file name where logs will be written.")
         parser.add_argument("--log-file-pid", default=False,
                             action='store_true',
                             help="Insert process ID into the log file name.")
@@ -615,6 +615,53 @@ class Launcher(logger.Logger):
     def resume(self):
         self.workflow.thread_pool.resume()
 
+    def launch_remote_progs(self, host, *progs, cwd=None, python_path=None):
+        self.info("Launching %d instance(s) on %s", len(progs), host)
+        if cwd is None:
+            cwd = os.getcwd()
+        self.debug("launch_remote_progs: cwd: %s", cwd)
+        if python_path is None:
+            python_path = os.getenv("python_path")
+        if os.path.splitext(os.path.basename(sys.argv[0]))[0] == "__main__":
+            if python_path is None:
+                python_path = cwd
+            else:
+                python_path += ":" + cwd
+        if python_path is not None:
+            self.debug("launch_remote_progs: PYTHONPATH: %s", python_path)
+            ppenv = "export PYTHONPATH='%s' && " % python_path
+        else:
+            ppenv = ""
+        pc = paramiko.SSHClient()
+        try:
+            pc.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            try:
+                pc.connect(host, look_for_keys=True, timeout=0.2)
+            except paramiko.ssh_exception.SSHException:
+                self.exception("Failed to connect to %s", host)
+                return
+            buf_size = 128
+            channel = pc.get_transport().open_session()
+            channel.get_pty()
+            for prog in progs:
+                prog = prog.replace(r'"', r'\"').replace(r"'", r"\'")
+                cmd = self._slave_launch_transform % ("cd '%s' && %s%s" %
+                                                      (cwd, ppenv, prog))
+                self.debug("Executing %s", cmd)
+                channel.exec_command(cmd)
+                answer = channel.recv(buf_size)
+                if answer:
+                    buf = channel.recv(buf_size)
+                    while buf:
+                        answer += buf
+                        buf = channel.recv(buf_size)
+                    self.warning("SSH returned:\n%s", answer.decode('utf-8'))
+            channel.close()
+        except:
+            self.exception("Failed to launch '%s' on %s", progs, host)
+        finally:
+            pc.close()
+
     @threadsafe
     def _pre_run(self):
         if not self._initialized:
@@ -750,7 +797,7 @@ class Launcher(logger.Logger):
         sock.close()
         if result != 0:
             self.info("Launching the web status server")
-            self._launch_remote_progs(
+            self.launch_remote_progs(
                 root.common.web.host,
                 "PYTHONPATH=%s %s 2>>%s" %
                 (os.path.dirname(root.common.veles_dir),
@@ -770,15 +817,15 @@ class Launcher(logger.Logger):
             sys.argv, "-l", "--listen-address", "-n", "--nodes", "-p",
             "--matplotlib-backend", "-b", "--background", "-s", "--stealth",
             "-a", "--backend", "-d", "--device", "--slave-launch-transform",
-            "--result-file", "--pdb-on-finish")[1:]
-        host = self.args.listen_address[0:self.args.listen_address.index(':')]
+            "--result-file", "--pdb-on-finish", "--respawn",
+            "--job-timeout")[1:]
+        host = self.args.listen_address[:self.args.listen_address.index(':')]
         port = self.args.listen_address[len(host) + 1:]
         # No way we can send 'localhost' or empty host name to a slave.
-        if not host or host == "0.0.0.0" or host == "localhost" or \
-           host == "127.0.0.1":
+        if not host or host in ("0.0.0.0", "localhost", "127.0.0.1"):
             host = socket.gethostname()
-        filtered_argv.insert(0, "-m %s:%s -b -i \"%s\"" % (host, port,
-                                                           self.log_id))
+        filtered_argv.insert(0, "-m %s:%s -b -i \"%s\"" %
+                             (host, port, self.log_id))
         slave_args = " ".join(filtered_argv)
         self.debug("Slave args: %s", slave_args)
         total_slaves = 0
@@ -793,55 +840,9 @@ class Launcher(logger.Logger):
             if total_slaves + len(progs) > max_slaves:
                 progs = progs[:max_slaves - total_slaves]
             total_slaves += len(progs)
-            self._launch_remote_progs(host, *progs)
+            self.launch_remote_progs(host, *progs)
             if total_slaves >= max_slaves:
                 break
-
-    def _launch_remote_progs(self, host, *progs):
-        self.info("Launching %d instance(s) on %s", len(progs), host)
-        cwd = os.getcwd()
-        self.debug("cwd: %s", os.getcwd())
-        PYTHONPATH = os.getenv("PYTHONPATH")
-        if os.path.splitext(os.path.basename(sys.argv[0]))[0] == "__main__":
-            if PYTHONPATH is None:
-                PYTHONPATH = cwd
-            else:
-                PYTHONPATH += ":" + cwd
-        if PYTHONPATH is not None:
-            self.debug("PYTHONPATH: %s", PYTHONPATH)
-            ppenv = "export PYTHONPATH='%s' && " % PYTHONPATH
-        else:
-            ppenv = ""
-        pc = paramiko.SSHClient()
-        try:
-            pc.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            try:
-                pc.connect(host, look_for_keys=True, timeout=0.2)
-            except paramiko.ssh_exception.SSHException:
-                self.exception("Failed to connect to %s", host)
-                return
-            buf_size = 128
-            channel = pc.get_transport().open_session()
-            channel.get_pty()
-            for prog in progs:
-                prog = prog.replace(r'"', r'\"').replace(r"'", r"\'")
-                cmd = self._slave_launch_transform % ("cd '%s' && %s%s" %
-                                                      (cwd, ppenv, prog))
-                self.debug("Executing %s", cmd)
-                channel.exec_command(cmd)
-                answer = channel.recv(buf_size)
-                if answer:
-                    self.warning("SSH returned %s", answer)
-                    if len(answer) == buf_size:
-                        self.warning("SSH answer looks longer than %d bytes, "
-                                     "draining the stream...", buf_size)
-                        while channel.recv(buf_size):
-                            pass
-            channel.close()
-        except:
-            self.exception("Failed to launch '%s' on %s", progs, host)
-        finally:
-            pc.close()
 
     def _set_webagg_port(self, port):
         self.info("Found out the WebAgg port: %d", port)

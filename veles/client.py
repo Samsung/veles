@@ -8,7 +8,9 @@
     \ \_/ / |___| |___| |___/\__/ /
      \___/\____/\_____|____/\____/
 
-Created on Jan 22, 2014
+Created on Jan 22, 2014.
+
+Slave part of the master-slave interoperability.
 
 ███████████████████████████████████████████████████████████████████████████████
 
@@ -36,10 +38,10 @@ import argparse
 from copy import copy
 import datetime
 import json
-import time
-
+import os
 import six
-from six import add_metaclass
+import sys
+import time
 from twisted.internet import reactor, threads
 from twisted.internet.defer import CancelledError
 from twisted.internet.protocol import ReconnectingClientFactory
@@ -362,7 +364,13 @@ class VelesProtocol(StringLineReceiver, IDLogger):
                 'power': self.host.workflow.computing_power,
                 'checksum': self.host.workflow.checksum,
                 'mid': self.host.mid,
-                'pid': self.host.pid}
+                'pid': self.host.pid,
+                "backend": self.host.workflow.device.backend_name,
+                "device": self.host.workflow.device.id,
+                "argv": sys.argv,
+                "executable": sys.executable,
+                "PYTHONPATH": os.getenv("PYTHONPATH"),
+                "cwd": os.getcwd()}
 
     def send_id(self):
         common = self._common_id()
@@ -393,7 +401,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
         self.transport.loseConnection()
 
 
-@add_metaclass(CommandLineArgumentsRegistry)
+@six.add_metaclass(CommandLineArgumentsRegistry)
 class Client(NetworkAgent, ReconnectingClientFactory):
     """
     Twisted factory which operates on a TCP socket for commands and a ZeroMQ

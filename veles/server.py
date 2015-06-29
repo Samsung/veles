@@ -8,7 +8,9 @@
     \ \_/ / |___| |___| |___/\__/ /
      \___/\____/\_____|____/\____/
 
-Created on Jan 14, 2014
+Created on Jan 14, 2014.
+
+Master part of the master-slave interoperability.
 
 ███████████████████████████████████████████████████████████████████████████████
 
@@ -207,8 +209,11 @@ class VelesProtocol(StringLineReceiver, IDLogger):
         self.info("Accepted %s", self.address)
 
     def onIdentified(self, e):
-        self.info("New node joined from %s (%s)",
-                  self.address, str(self.nodes[self.id]))
+        desc = dict(self.nodes[self.id])
+        for val in "executable", "argv", "PYTHONPATH", "cwd":
+            if val in desc:
+                del desc[val]
+        self.info("New node joined from %s (%s)", self.address, desc)
         self.setWaiting(e)
 
     def onJobObtained(self, e):
@@ -328,6 +333,8 @@ class VelesProtocol(StringLineReceiver, IDLogger):
                 SlaveDescription.make(self.nodes[self.id])) \
                 .addErrback(errback)
             d.addCallback(self._retryJobRequests)
+            if self.host.must_respawn:
+                reactor.callLater(1, self._respawn, self.nodes[self.id])
             self._erase_self()
 
     def lineReceived(self, line):
@@ -549,17 +556,20 @@ class VelesProtocol(StringLineReceiver, IDLogger):
             raise Exception("Newly connected client did not send "
                             "it's process id, sending back the error "
                             "message")
-        self.nodes[self.id] = {'power': power, 'mid': mid, 'pid': pid,
-                               'id': self.id, 'jobs': 0}
+        self.nodes[self.id] = {
+            "power": power, "mid": mid, "pid": pid, "id": self.id, "jobs": 0,
+            "backend": msg.get("backend"), "device": msg.get("device"),
+            "argv": msg.get("argv"), "executable": msg.get("executable"),
+            "PYTHONPATH": msg.get("PYTHONPATH"), "cwd": msg.get("cwd")}
         dns.lookupPointer(
-            '.'.join(reversed(self.addr.host.split('.'))) + '.in-addr.arpa') \
+            ".".join(reversed(self.addr.host.split("."))) + ".in-addr.arpa") \
             .addCallback(self._resolveAddr).addErrback(self._failToResolveAddr)
         return power, mid, pid
 
     def _failToResolveAddr(self, failure):
         self.warning("Failed to resolve %s: %s", self.addr.host,
                      failure.getErrorMessage())
-        self.nodes[self.id]['host'] = self.addr.host
+        self.nodes[self.id]["host"] = self.addr.host
 
     def _resolveAddr(self, result):
         answers = result[0]
@@ -571,7 +581,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
         if self.host.domain_name and host.endswith(self.host.domain_name):
             host = host[:-(len(self.host.domain_name) + 1)]
         self.debug("Address %s was resolved to %s", self.addr, host)
-        self.nodes[self.id]['host'] = host
+        self.nodes[self.id]["host"] = host
 
     def _sendError(self, err):
         """
@@ -581,7 +591,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
             err:    The error message.
         """
         self.error(err)
-        self.sendLine({'error': err})
+        self.sendLine({"error": err})
 
     def _requestJob(self):
         if self._balance > 1:
@@ -603,7 +613,7 @@ class VelesProtocol(StringLineReceiver, IDLogger):
     def _refuseJob(self):
         self._balance -= 1
         self.state.refuse_job()
-        self.host.zmq_connection.reply(self.id, b'job', False)
+        self.host.zmq_connection.reply(self.id, b"job", False)
         self.debug("refused the job, balance is %d", self._balance)
 
     def _scheduleDropOnTimeout(self):
@@ -623,8 +633,26 @@ class VelesProtocol(StringLineReceiver, IDLogger):
                    timeout)
         self.transport.loseConnection()
         self.host.blacklist.add(self.id)
-        # TODO(v.markovtsev): inform Launcher to start a new node, if current
-        # was started via ssh
+
+    def _respawn(self, desc, effort=1):
+        executable = desc["executable"]
+        cwd = desc["cwd"]
+        python_path = desc["PYTHONPATH"]
+        argv = desc["argv"]
+        if any(x is None for x in (executable, argv, cwd)):
+            self.warning("Failed to respawn: not enough information")
+            return
+        if "-b" not in argv and "--background" not in argv:
+            argv.insert(1, "-b")
+        effort += 1
+        self.info("Respawning...")
+        try:
+            self.host.workflow.launcher.launch_remote_progs(
+                self.addr.host, "%s %s" % (executable, " ".join(argv)),
+                cwd=cwd, python_path=python_path)
+        except:
+            reactor.callLater(1 << effort, self._respawn, self.nodes[self.id],
+                              effort)
 
 
 @six.add_metaclass(CommandLineArgumentsRegistry)
@@ -639,6 +667,7 @@ class Server(NetworkAgent, ServerFactory):
         parser = Server.init_parser(**kwargs)
         self.args, _ = parser.parse_known_args(self.argv)
         self.job_timeout = self.args.job_timeout * 60
+        self.must_respawn = self.args.respawn
         self.nodes = {}
         self.protocols = {}
         self.job_requests = set()
@@ -667,7 +696,7 @@ class Server(NetworkAgent, ServerFactory):
                               "ipc": "ipc://%s" % self.zmq_ipc_fn,
                               "tcp": "tcp://*:%d" % self.zmq_tcp_port}
         self.info("ZeroMQ endpoints: %s",
-                  ' '.join(sorted(self.zmq_endpoints.values())))
+                  " ".join(sorted(self.zmq_endpoints.values())))
 
     def __repr__(self):
         return "veles.Server with %d nodes and %d protocols on %s:%d" % (
@@ -682,7 +711,11 @@ class Server(NetworkAgent, ServerFactory):
         parser.add_argument("--job-timeout", type=int,
                             default=kwargs.get("job_timeout", 2),
                             help="Slaves which remain in WORK state longer "
-                            "than this time (in mins) will be dropped.")
+                            "than this time (in mins) will be dropped.") \
+            .mode = ("master",)
+        parser.add_argument("--respawn", default=False,
+                            help="Relaunch dropped slaves via SSH.",
+                            action='store_true').mode = ("master",)
         return parser
 
     def choose_endpoint(self, sid, mid, pid, hip):

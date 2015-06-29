@@ -427,11 +427,11 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
         ThreadPool._exit()
         sysexit_initial = ThreadPool.__dict__["sysexit_initial"]
         if sys.exit == ThreadPool.exit:
-            print("Detected an infinite recursion in sys.exit(), "
-                  "restoring %s" % sysexit_initial,
-                  file=sys.stderr)
             assert sysexit_initial != ThreadPool.exit
             sys.exit = sysexit_initial
+            logging.getLogger("ThreadPool").warning(
+                "Detected an infinite recursion in sys.exit(), restored %s",
+                sysexit_initial)
         sys.exit(retcode)
 
     @staticmethod

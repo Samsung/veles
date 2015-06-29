@@ -214,6 +214,10 @@ class Device(Pickleable):
         return type(self).BACKEND
 
     @property
+    def id(self):
+        return None
+
+    @property
     def pid(self):
         """Process ID.
         """
@@ -443,6 +447,7 @@ class OpenCLDevice(Device):
         super(OpenCLDevice, self).__init__()
 
         self._blas = None
+        self._id = None
 
         # Workaround for NVIDIA
         # (fixes incorrect behaviour with OpenCL binaries)
@@ -488,6 +493,10 @@ class OpenCLDevice(Device):
             table.add_row(self.device_info.desc, dtype, rating,
                           bs_vo[0], bs_vo[1], self.device_info.version)
         self.info(log_configs + str(table))
+
+    @property
+    def id(self):
+        return self._id
 
     @property
     def blas(self):
@@ -578,6 +587,7 @@ class OpenCLDevice(Device):
             platforms = None
         if platforms is None or len(platforms.platforms) == 0:
             raise DeviceNotFoundError("No OpenCL devices were found")
+        self._id = device
         if device == "":
             context = platforms.create_some_context()
         else:
@@ -752,6 +762,7 @@ class CUDADevice(Device):
     def __init__(self):
         super(CUDADevice, self).__init__()
         self._context_ = None
+        self._id = None
         self._blas_ = {}
 
         # Get the device
@@ -768,6 +779,18 @@ class CUDADevice(Device):
             self.context.device.pci_bus_id)
         self.info(log_configs + str(table))
 
+    @property
+    def id(self):
+        return self._id
+
+    @property
+    def context(self):
+        return self._context_
+
+    @property
+    def exists(self):
+        return self._context_ is not None
+
     def suggest_block_size(self, krn):
         if krn is None:
             raise ValueError("Received None as an argument")
@@ -778,7 +801,7 @@ class CUDADevice(Device):
         min_size = self.context.device.warp_size * 4
         best_block_size = None
         while (ab >= ab_best and not (block_size & 1) and
-               block_size >= min_size):
+                block_size >= min_size):
             ab_best = ab
             best_block_size = block_size
             block_size >>= 1
@@ -792,14 +815,6 @@ class CUDADevice(Device):
     def _unregister_thread_pool_callbacks(self, pool):
         super(CUDADevice, self)._unregister_thread_pool_callbacks(pool)
         self.context.pop_current()
-
-    @property
-    def context(self):
-        return self._context_
-
-    @property
-    def exists(self):
-        return self._context_ is not None
 
     def _on_thread_enter(self):
         self._context_.push_current()
@@ -861,6 +876,7 @@ class CUDADevice(Device):
             devices = None
         if devices is None or not len(devices):
             raise DeviceNotFoundError("No CUDA devices were found")
+        self._id = device
         if device == "":
             context = devices.create_some_context()
         else:
