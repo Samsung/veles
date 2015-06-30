@@ -615,13 +615,11 @@ class Launcher(logger.Logger):
     def resume(self):
         self.workflow.thread_pool.resume()
 
-    def launch_remote_progs(self, host, *progs, cwd=None, python_path=None):
+    def launch_remote_progs(self, host, *progs, **kwargs):
         self.info("Launching %d instance(s) on %s", len(progs), host)
-        if cwd is None:
-            cwd = os.getcwd()
+        cwd = kwargs.get("cwd", os.getcwd())
         self.debug("launch_remote_progs: cwd: %s", cwd)
-        if python_path is None:
-            python_path = os.getenv("python_path")
+        python_path = kwargs.get("python_path", os.getenv("PYTHONPATH"))
         if os.path.splitext(os.path.basename(sys.argv[0]))[0] == "__main__":
             if python_path is None:
                 python_path = cwd
