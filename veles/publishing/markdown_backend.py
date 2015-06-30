@@ -55,6 +55,7 @@ class MarkdownBackend(Jinja2TemplateBackend):
         self.file = kwargs.get("file")
         self.use_github_css = kwargs.get("github_css", True)
         self.html = kwargs.get("html", True)
+        self.image_format = kwargs.get("image_format", "svg")
 
     @property
     def file(self):
@@ -96,8 +97,20 @@ class MarkdownBackend(Jinja2TemplateBackend):
             self._html_template = self.environment.get_template(
                 "markdown_template.html")
 
+    @property
+    def image_format(self):
+        return self._image_format
+
+    @image_format.setter
+    def image_format(self, value):
+        if value not in ("svg", "png"):
+            raise ValueError("Only png or svg image formats are supported")
+        self._image_format = value
+
     def render(self, info):
+        info["imgformat"] = self.image_format
         content = super(MarkdownBackend, self).render(info)
+        del info["imgformat"]
         if self.file is None:
             return content
         if isinstance(self.file, string_types):
@@ -112,7 +125,7 @@ class MarkdownBackend(Jinja2TemplateBackend):
         with file:
             self.info("Generating HTML...")
             html = self._html_template.render(
-                github_css=self.use_github_css,
+                github_css=self.use_github_css, imgformat=self.image_format,
                 markdown=markdown.markdown(content, extensions=(
                     "markdown.extensions.smarty", "markdown.extensions.tables",
                     "markdown.extensions.codehilite",
@@ -138,9 +151,9 @@ class MarkdownBackend(Jinja2TemplateBackend):
         progress = ProgressBar(2 + len(info["plots"]))
         progress.term_width = progress.maxval + 7
         progress.start()
-        fn = os.path.join(basedir, "workflow.svg")
+        fn = os.path.join(basedir, "workflow.%s" % self.image_format)
         with open(fn, "wb") as fout:
-            fout.write(info["workflow_graph"]["svg"])
+            fout.write(info["workflow_graph"][self.image_format])
         progress.inc()
         self.debug("Saved %s", fn)
         fn = os.path.join(basedir, info["image"]["name"])
@@ -149,9 +162,9 @@ class MarkdownBackend(Jinja2TemplateBackend):
         progress.inc()
         self.debug("Saved %s", fn)
         for key, data in info["plots"].items():
-            fn = os.path.join(basedir, "%s.svg" % key)
+            fn = os.path.join(basedir, "%s.%s" % (key, self.image_format))
             with open(fn, "wb") as fout:
-                fout.write(data["svg"])
+                fout.write(data[self.image_format])
             progress.inc()
             self.debug("Saved %s", fn)
         progress.finish()

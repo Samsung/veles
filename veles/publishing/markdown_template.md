@@ -10,17 +10,20 @@ Task
 <img style="float: left;" src="{{ image["name"] }}" alt="Task image" id="task_image">
 {% endif %}
 
-#### Description
+!!! block ""
+    #### Description
+    
+    {{ description }}
 
-{{ description }}
+!!! block ""
+    #### Workflow path
+    
+    {{ workflow_file }}
 
-#### Workflow path
-
-{{ workflow_file }}
-
-#### Configuration path
-
-{{ config_file }}
+!!! block ""
+    #### Configuration path
+    
+    {{ config_file }}
 
 {% macro ellipsis(value, maxlen) %}{{ value
 if value|string|length < maxlen else
@@ -122,7 +125,7 @@ Configuration
     Workflow scheme
     ---------------
     
-    <img src="workflow.svg" id="workflow_scheme">
+    <img src="workflow.{{ imgformat }}" id="workflow_scheme">
 
 Plots
 -----
@@ -131,6 +134,6 @@ Plots
 !!! block ""
     #### {{ name }}
     
-    <img src="{{ name }}.svg" class="plot">
+    <img src="{{ name }}.{{ imgformat }}" class="plot">
 
 {% endfor %}
