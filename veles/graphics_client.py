@@ -37,17 +37,18 @@ under the License.
 
 
 import argparse
+from collections import defaultdict
 import datetime
 import errno
+import functools
 import gc
 import logging
 from importlib import import_module
 import os
 import signal
 import socket
-import threading
-
 import snappy
+import threading
 import tornado.ioloop as ioloop
 from twisted.internet.error import ReactorNotRunning
 from twisted.internet import reactor
@@ -98,6 +99,7 @@ class GraphicsClient(Logger):
         self._shutted_down = False
         self.webagg_fifo = webagg_fifo
         self._gc_counter = 0
+        self._balance = defaultdict(int)
         self._dump_dir = kwargs.get("dump_dir")
         self._pdf_lock = threading.Lock()
         self._pdf_trigger = False
@@ -209,21 +211,38 @@ class GraphicsClient(Logger):
 
             if self.backend == "no":
                 return
+            if self._balance[plotter.id] > 0:
+                self.warning("Skipped %s: too frequent updates or too slow "
+                             "drawing", plotter)
+                return
+            self._balance[plotter.id] += 1
             plotter.set_matplotlib(self.pkgs)
             plotter.show_figure = self.show_figure
             if not IPlotter.providedBy(plotter):
                 self.warning("%s does not provide IPlotter interface", plotter)
+                self._balance[plotter.id] -= 1
                 return
             try:
                 plotter.verify_interface(IPlotter)
             except:
                 self.exception("Plotter %s is not fully implemented, skipped",
                                plotter)
+                self._balance[plotter.id] -= 1
                 return
             if self._pdf_trigger or self.backend == "pdf":
-                reactor.callFromThread(self._save_pdf, plotter)
+                payload = functools.partial(self._save_pdf, plotter)
             else:
-                reactor.callFromThread(plotter.redraw)
+                payload = plotter.redraw
+
+            def work():
+                self.debug("Begin rendering %s", plotter)
+                try:
+                    payload()
+                finally:
+                    self._balance[plotter.id] -= 1
+                    self.debug("End rendering %s", plotter)
+
+            reactor.callFromThread(work)
         else:
             self.debug("Received the command to terminate")
             self.shutdown()

@@ -38,7 +38,7 @@
                         <th>set</th>
                         <th>value</th>
                     </tr>
-                    {% for key, set_val in results | dictsort %}
+                    {% for key, set_vals in results | dictsort %}
                         {% if set_vals is mapping %}
                             {% for set_name, val in set_vals | dictsort %}
                                 <tr>
@@ -133,30 +133,27 @@
             <table>
                 <tbody>
                     <tr>
-                        <td>type of normalization</td>
-                        <td>{{ normalization }}</td>
+                        <th>domain</th>
+                        <th>type</th>
+                        <th>parameters</th>
                     </tr>
                     <tr>
-                        <td>normalization parameters</td>
+                        <td>samples</td>
+                        <td>{{ normalization }}</td>
                         <td>{{ normalization_parameters }}</td>
                     </tr>
+                    {% if target_normalization is defined %}
+                    <tr>
+                        <td>targets</td>
+                        <td>{{ target_normalization }}</td>
+                        <td>{{ target_normalization_parameters }}</td>
+                    </tr>
+                    {% endif %}
                 </tbody>
             </table>
             <h1>Run stats</h1>
-            <table>
-                <tbody>
-                    <tr>
-                        <td>elapsed time</td>
-                        <td>{{ days }} days, {{ hours }} hours, {{ mins }}
-                            minutes, {{ secs|round(1) }} secs
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>number of epochs</td>
-                        <td>{{ epochs }}</td>
-                    </tr>
-                </tbody>
-            </table>
+            <p>Elapsed time: {{ days }} days, {{ hours }} hours, {{ mins }}
+                minutes, {{ secs|round(1) }} secs</p>
             <ac:structured-macro ac:name="chart">
                 <ac:parameter ac:name="title">Unit run time</ac:parameter>
                 <ac:parameter ac:name="type">pie</ac:parameter>

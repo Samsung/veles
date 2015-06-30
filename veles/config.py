@@ -73,6 +73,8 @@ class Config(object):
             if isinstance(v, dict) and not v.get("dict", False):
                 getattr(self, k).__update__(v)
             else:
+                if isinstance(v, dict) and "dict" in v:
+                    del v["dict"]
                 setattr(self, k, v)
 
     def protect(self, *names):

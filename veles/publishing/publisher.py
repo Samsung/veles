@@ -221,6 +221,11 @@ class Publisher(Unit, TriviallyDistributable):
                          "normalization": unit.normalization_type,
                          "normalization_parameters":
                          unit.normalization_parameters})
+            if hasattr(unit, "target_normalizer"):
+                info.update({
+                    "target_normalization": unit.target_normalization_type,
+                    "target_normalization_parameters":
+                    unit.target_normalization_parameters})
         info["results"] = results = {}
         for prov in self.result_providers:
             results.update(prov.get_metric_values())
