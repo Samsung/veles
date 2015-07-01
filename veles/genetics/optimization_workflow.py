@@ -49,7 +49,8 @@ from veles.compat import from_none
 from veles.config import root
 from veles.distributable import IDistributable
 from veles.genetics.config import process_config, Range, print_config, \
-    ConfigChromosome, ConfigPopulation, GeneticsJSONEncoder
+    ConfigChromosome, ConfigPopulation
+from veles.json_encoders import ConfigJSONEncoder
 from veles.launcher import filter_argv
 from veles.mutable import Bool
 from veles.pickle2 import best_protocol, pickle
@@ -322,7 +323,7 @@ class OptimizationWorkflow(Workflow):
         self.end_point.link_from(self.plotter_avg)
         self.end_point.gate_block = ~self.optimizer.complete
         self.repeater.gate_block = self.optimizer.complete
-        self.json_encoder = GeneticsJSONEncoder
+        self.json_encoder = ConfigJSONEncoder
 
 
 def run(load, main, **kwargs):

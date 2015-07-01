@@ -38,6 +38,7 @@ under the License.
 import json
 import numpy
 
+from veles.config import Config
 from veles.memory import Array
 
 
@@ -57,3 +58,10 @@ class NumpyJSONEncoder(json.JSONEncoder):
         elif isinstance(obj, bytes):
             return obj.decode("charmap")
         return json.JSONEncoder.default(self, obj)
+
+
+class ConfigJSONEncoder(NumpyJSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Config):
+            return obj.__content__
+        return super(ConfigJSONEncoder, self).default(obj)

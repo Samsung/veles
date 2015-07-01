@@ -47,7 +47,7 @@ from zope.interface import implementer
 
 from veles.config import root
 from veles.distributable import TriviallyDistributable, IDistributable
-from veles.numpy_json_encoder import NumpyJSONEncoder
+from veles.json_encoders import NumpyJSONEncoder
 from veles.units import IUnit, Unit
 
 

@@ -39,7 +39,6 @@ from zope.interface import implementer
 
 from veles.config import Config
 from veles.genetics.core import Chromosome, Population, IChromosome
-from veles.numpy_json_encoder import NumpyJSONEncoder
 from veles.units import Unit
 
 
@@ -179,13 +178,6 @@ def print_config(cfgroot):
     for name, cfg in cfgroot.__content__.items():
         if name != "common":
             cfg.print_()
-
-
-class GeneticsJSONEncoder(NumpyJSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, Config):
-            return obj.__content__
-        return super(GeneticsJSONEncoder, self).default(obj)
 
 
 @implementer(IChromosome)

@@ -54,7 +54,7 @@ from veles.compat import from_none, FileExistsError
 from veles.config import root
 from veles.distributable import IDistributable
 from veles.mutable import LinkableAttribute
-from veles.numpy_json_encoder import NumpyJSONEncoder
+from veles.json_encoders import NumpyJSONEncoder
 from veles.result_provider import IResultProvider
 from veles.units import Unit, IUnit, Container
 from veles.plumbing import StartPoint, EndPoint, Repeater
