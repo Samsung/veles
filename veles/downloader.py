@@ -69,7 +69,7 @@ class Downloader(Unit, TriviallyDistributable):
         self.url = kwargs["url"]
         self._files = set()
         self.files = kwargs.get("files", tuple())
-        self.directory = kwargs.get("directory", root.common.datasets_root)
+        self.directory = kwargs.get("directory", root.common.dirs.datasets)
 
     @property
     def directory(self):

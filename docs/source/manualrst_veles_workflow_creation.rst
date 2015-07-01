@@ -62,7 +62,7 @@ See supported parameters with descriptions and default
 values in :doc:`manualrst_veles_workflow_parameters`.
 
 Alternatively, it is possible to pass parameters using :class:`veles.config.Config` (see
-:doc:`manualrst_veles_config`) like in the example below.
+:doc:`manualrst_veles_using_configs`) like in the example below.
 
 .. code-block:: python
 

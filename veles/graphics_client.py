@@ -47,8 +47,12 @@ from importlib import import_module
 import os
 import signal
 import socket
-import snappy
 import threading
+
+from veles.dot_pip import install_dot_pip
+install_dot_pip()
+
+import snappy
 import tornado.ioloop as ioloop
 from twisted.internet.error import ReactorNotRunning
 from twisted.internet import reactor
@@ -333,13 +337,13 @@ class GraphicsClient(Logger):
                     return
             if self._pdf_pages is None:
                 now = datetime.datetime.now()
-                out_dir = os.path.join(root.common.cache_dir, "plots")
+                out_dir = os.path.join(root.common.dirs.cache, "plots")
                 try:
                     os.makedirs(out_dir, mode=0o775)
                 except OSError:
                     pass
                 self._pdf_file_name = os.path.join(
-                    root.common.cache_dir, "plots/veles_%s.pdf" %
+                    root.common.dirs.cache, "plots/veles_%s.pdf" %
                     (now.strftime('%Y-%m-%d_%H:%M:%S')))
                 self.debug("Saving figures to %s...", self._pdf_file_name)
                 import matplotlib.backends.backend_pdf as backend_pdf

@@ -47,9 +47,7 @@ from types import ModuleType
 from warnings import warn
 from veles.compat import is_interactive
 from veles.paths import __root__
-from veles.dot_pip import install_dot_pip
 
-install_dot_pip()
 
 __project__ = "Veles Machine Learning Platform"
 __versioninfo__ = 0, 9, 0
@@ -112,11 +110,11 @@ def __html__():
     from veles.config import root
     from veles.portable import show_file
 
-    if not os.path.exists(root.common.help_dir):
+    if not os.path.exists(root.common.dirs.help):
         print("\"%s\" does not exist, unable to open the docs" %
-              root.common.help_dir)
+              root.common.dirs.help)
         return
-    page = os.path.join(root.common.help_dir, "index.html")
+    page = os.path.join(root.common.dirs.help, "index.html")
     if not os.path.exists(page):
         from runpy import run_path
         print("Building the documentation...")
@@ -139,6 +137,7 @@ class VelesModule(ModuleType):
         self.__modules_cache_ = None
         self.__plugins = None
         self.__loc = None
+        self.allow_root = False
 
     def __call__(self, workflow, config=None, *args, **kwargs):
         """
@@ -306,6 +305,17 @@ class VelesModule(ModuleType):
                         continue
         return self.__plugins
 
+    @property
+    def allow_root(self):
+        return self._allow_root
+
+    @allow_root.setter
+    def allow_root(self, value):
+        if not isinstance(value, bool):
+            raise TypeError(
+                "allow_root must be boolean (got %s)" % type(value))
+        self._allow_root = value
+
     @classmethod
     def validate_environment(cls):
         """
@@ -332,6 +342,18 @@ class VelesModule(ModuleType):
                 "line of that file." %
                 (executable, version_info.major, version_info.minor))
             raise cls.PythonPathError(excmsg)
+
+    def check_root(self):
+        from os import getuid, getenv
+
+        if getuid() == 0 and not self.allow_root \
+                and getenv("VELES_ALLOW_ROOT") is None:
+            raise PermissionError(
+                "Veles detected your attempt to run this script with root "
+                "privileges. Most likely this is because the code must be "
+                "fixed and you are too lazy to find out where and how. Bad, "
+                "bad boy! If you REALLY need it, set veles.allow_root to True "
+                "or define VELES_ALLOW_ROOT environment variable.")
 
 
 if not isinstance(modules[__name__], VelesModule):

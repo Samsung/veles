@@ -99,7 +99,7 @@ class RandomGenerator(Pickleable):
 
     @property
     def seed_file_name(self):
-        return os.path.join(root.common.cache_dir,
+        return os.path.join(root.common.dirs.cache,
                             "random_seed_%s.npy" % str(self.key))
 
     @threadsafe

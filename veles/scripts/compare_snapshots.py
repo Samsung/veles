@@ -40,9 +40,11 @@ under the License.
 
 import argparse
 import logging
-import numpy
 import os
 
+from veles.dot_pip import install_dot_pip
+install_dot_pip()
+import numpy
 from veles.compat import from_none
 from veles.external.prettytable import PrettyTable
 from veles.logger import Logger

@@ -62,7 +62,7 @@ class TestMeanDispNormalizer(AcceleratedTest):
 
     def setUp(self):
         super(TestMeanDispNormalizer, self).setUp()
-        dtype = opencl_types.dtypes[root.common.precision_type]
+        dtype = opencl_types.dtypes[root.common.engine.precision_type]
         self.mean = numpy.zeros([256, 256, 4], dtype=dtype)
         rnd.get().fill(self.mean, 0, 255)
         numpy.around(self.mean, 0, self.mean)

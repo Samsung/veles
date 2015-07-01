@@ -380,7 +380,7 @@ class SnapshotterToFile(SnapshotterBase):
     def __init__(self, workflow, **kwargs):
         kwargs["view_group"] = kwargs.get("view_group", "SERVICE")
         super(SnapshotterToFile, self).__init__(workflow, **kwargs)
-        self.directory = kwargs.get("directory", root.common.snapshot_dir)
+        self.directory = kwargs.get("directory", root.common.dirs.snapshots)
 
     def export(self):
         ext = ("." + self.compression) if self.compression else ""

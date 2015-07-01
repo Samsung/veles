@@ -35,16 +35,20 @@ under the License.
 
 
 import argparse
-from bson import json_util
 from collections import defaultdict
 import logging
 import json
-import motor
 import os
-from six import print_
 import socket
 import sys
 import time
+
+from veles.dot_pip import install_dot_pip
+install_dot_pip()
+
+from bson import json_util
+import motor
+from six import print_
 from tornado.escape import json_decode
 import tornado.gen as gen
 from tornado.ioloop import IOLoop, PeriodicCallback

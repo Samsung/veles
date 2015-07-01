@@ -44,6 +44,8 @@ import subprocess
 import os
 import sys
 
+from veles.dot_pip import install_dot_pip
+install_dot_pip()
 from veles.config import root
 from veles.scripts.generate_frontend import scan_workflows
 from veles.logger import Logger

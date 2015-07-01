@@ -60,17 +60,17 @@ The default value is "auto".
 
         "engine": {"backend": "ocl"},
 
-"cache_dir" parameter sets the path to cache directory where temporary files stored.
+"dirs.cache" parameter sets the path to cache directory where temporary files stored.
 Plotters saving PDFs (killall -SIGUSR2 python3) :doc:`manualrst_veles_graphics`,
 ImageSaver saving pictures and OpenCL caches code.
 
 .. code-block:: python
 
-        root.common.cache_dir = os.path.join(root.common.veles_user_dir, "cache")
+        root.common.dirs.cache = os.path.join(root.common.dirs.user, "cache")
 
-"snapshot_dir" parameter sets the path to snapshots directory
+"dirs.snapshots" parameter sets the path to snapshots directory
 
 .. code-block:: python
 
-        root.common.snapshot_dir = os.path.join(
-            root.common.veles_user_dir, "snapshots")
+        root.common.dirs.snapshots = os.path.join(
+            root.common.dirs.user, "snapshots")

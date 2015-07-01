@@ -52,6 +52,8 @@ import re
 import sys
 import time
 
+from veles.dot_pip import install_dot_pip
+install_dot_pip()
 from veles.loader.libsndfile_loader import SndFileMixin
 from veles.snd_features import SoundFeatures
 from libSoundFeatureExtraction.python.sound_feature_extraction.library import \

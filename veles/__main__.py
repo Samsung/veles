@@ -51,6 +51,7 @@ under the License.
 
 import sys
 __unittest = "unittest" in sys.modules
+# Standard library imports go here
 import atexit
 import binascii
 from collections import namedtuple
@@ -58,28 +59,26 @@ from email.utils import formatdate
 import errno
 import gc
 import logging
-import numpy
 import os
 import resource
 import runpy
-from six import print_, StringIO, PY3, string_types
 
+import veles
+from veles.dot_pip import install_dot_pip
+
+# Enable locally installed dependencies
+install_dot_pip()
+
+# 3rd party imports go here
+import numpy
+from six import print_, StringIO, PY3, string_types
 if PY3:
     from urllib.parse import splittype
 else:
     from urllib import splittype
 import wget
 
-import veles
-
-
-def unload_unittest():
-    if not __unittest and "unittest" in sys.modules:
-        # Ensure unittest package is unloaded if it should be
-        for k in [k for k in sys.modules if k.startswith("unittest")]:
-            del sys.modules[k]
-unload_unittest()
-
+# Veles imports go here
 from veles.config import root
 from veles.cmdline import CommandLineBase
 from veles.compat import from_none, FileNotFoundError, IsADirectoryError, \
@@ -99,7 +98,16 @@ import veles.accelerated_units  # do not remove or options like --force-numpy
 import veles.loader.base  # do not remove or options like --train-ratio
 # will disappear
 
+
+def unload_unittest():
+    if not __unittest and "unittest" in sys.modules:
+        # Ensure unittest package is unloaded if it should be
+        for k in [k for k in sys.modules if k.startswith("unittest")]:
+            del sys.modules[k]
+
 unload_unittest()
+del __unittest
+del unload_unittest
 
 __doc__ += (" " * 7 +  # pylint: disable=W0622
             ("\n" + " " * 7).join(veles.__logo__.split('\n')) +
@@ -500,7 +508,7 @@ class Main(Logger, CommandLineBase):
                 if os.path.exists(new_fname):
                     fname = new_fname
                 else:
-                    fname = os.path.join(root.common.veles_dir, fname)
+                    fname = os.path.join(root.common.dirs.veles, fname)
                     if not os.path.exists(fname):
                         self.critical("Neither %s nor %s exist. Cannot seed "
                                       "the random generator.", new_fname,
@@ -558,7 +566,7 @@ class Main(Logger, CommandLineBase):
             try:
                 self.info("Downloading %s...", fname_snapshot)
                 fname_snapshot = self.snapshot_file_name = wget.download(
-                    fname_snapshot, root.common.snapshot_dir)
+                    fname_snapshot, root.common.dirs.snapshots)
                 print()
                 sys.stdout.flush()
             except:

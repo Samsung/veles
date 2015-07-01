@@ -43,9 +43,11 @@ import json
 import os
 import sys
 import threading
-import tornado.template as template
 import warnings
 
+from veles.dot_pip import install_dot_pip
+install_dot_pip()
+import tornado.template as template
 from veles.config import root
 from veles.cmdline import CommandLineBase
 from veles.import_file import try_to_import_file, is_module
@@ -93,7 +95,7 @@ def scan_workflows(debug_imports):
     workflows = []
     warnings.simplefilter("ignore")
     UnitRegistry.enabled = False
-    root_dir = root.common.veles_dir
+    root_dir = root.common.dirs.veles
     for path, _, files in os.walk(root_dir, followlinks=True):
         relpath = os.path.relpath(path, root_dir)
         skip = False

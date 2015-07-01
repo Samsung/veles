@@ -41,8 +41,10 @@ from veles.paths import __root__
 def update(root):
     root.common.update({
         "mongodb_logging_address": "smaug:27017",
-        "datasets_root": "/data/veles/datasets",
-        "help_dir": os.path.join(__root__, "docs/html"),
+        "dirs": {
+            "datasets": "/data/veles/datasets",
+            "help": os.path.join(__root__, "docs/html"),
+        },
         "web": {
             "host": "smaug",
             "port": 8090,

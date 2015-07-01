@@ -14,7 +14,7 @@ in the algorithm. Therefore Workflow passes config parameters to the Unit during
 creation (instantiation).
 To simplify the process the `root` (Config type) is declared as a global object
 visible from any part of the program. It is also could be changed (overwritten)
-from the command line. For detailed explanation, please see :doc:`manualrst_veles_config`
+from the command line. For detailed explanation, please see :doc:`manualrst_veles_using_configs`
 
 As we know the :class:`veles.znicz.standard_workflow.StandardWorkflow` was designed to simplify life of the inexperienced user.
 In our code the :class:`veles.znicz.standard_workflow.StandardWorkflow` passes configuration to the embedded Units during creation.
@@ -31,8 +31,8 @@ change in :class:`veles.znicz.standard_workflow.StandardWorkflow`. Also you can 
   from veles.config import root
 
 
-  root.common.precision_type = "float"
-  root.common.precision_level = 1
+  root.common.engine.precision_type = "float"
+  root.common.engine.precision_level = 1
   root.common.engine.backend = "cuda"
 
   root.my_workflow.update({
@@ -89,8 +89,8 @@ You can change common parameters at ``root.common`` (we use keyword `common` as 
 
 .. code-block:: python
 
-   root.common.precision_type = "float"
-   root.common.precision_level = 1
+   root.common.engine.precision_type = "float"
+   root.common.engine.precision_level = 1
    root.common.engine.backend = "cuda"
 
 Most importants common parameters are:

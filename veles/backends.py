@@ -97,7 +97,7 @@ class DeviceInfo(Logger):
                     deconv: convolutional back propagation,
                     all other: simple matrix multiplication.
             precision: precision level for summation (0, 1, 2)
-                       (defaults to root.common.precision_level).
+                       (defaults to root.common.engine.precision_level).
 
         Returns:
             BLOCK_SIZE, VECTOR_OPT
@@ -106,7 +106,7 @@ class DeviceInfo(Logger):
         if type(dtype) != str:
             dtype = opencl_types.numpy_dtype_to_opencl(dtype)
         krnnme = kwargs.get("kernel", "matrix_multiplication")
-        precision = kwargs.get("precision", root.common.precision_level)
+        precision = kwargs.get("precision", root.common.engine.precision_level)
         krninfo = self.device_info.get(krnnme)
         if krninfo is None:
             # Benchmark for other kernel types is not implemented,

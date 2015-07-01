@@ -298,7 +298,7 @@ class AcceleratedUnit(Unit):
         if not isinstance(cache_file_name, str):
             raise ValueError("cache_file_name must be a string")
         if dtype is None:
-            dtype = root.common.precision_type
+            dtype = root.common.engine.precision_type
         elif type(dtype) != str:
             dtype = opencl_types.numpy_dtype_to_opencl(dtype)
         return self._backend_build_program_(
@@ -308,7 +308,7 @@ class AcceleratedUnit(Unit):
                      cache_is_valid, template_kwargs):
         cache_file_name = "%s.%s.%d" % (cache_file_name, suffix, (2, 3)[PY3])
         if not os.path.isabs(cache_file_name):
-            cache_file_name = os.path.join(root.common.cache_dir,
+            cache_file_name = os.path.join(root.common.dirs.cache,
                                            cache_file_name)
         cache_file_name = "%s.cache" % cache_file_name
         if self.cache and os.path.exists(cache_file_name):
@@ -482,7 +482,7 @@ class AcceleratedUnit(Unit):
     def _adjust_defines(self, my_defines, dtype):
         my_defines.update(opencl_types.cl_defines[dtype])
         if "PRECISION_LEVEL" not in my_defines:
-            my_defines["PRECISION_LEVEL"] = root.common.precision_level
+            my_defines["PRECISION_LEVEL"] = root.common.engine.precision_level
         if "GPU_FORCE_64BIT_PTR" not in my_defines:  # for AMD
             my_defines["GPU_FORCE_64BIT_PTR"] = os.getenv(
                 "GPU_FORCE_64BIT_PTR", 1)
@@ -634,7 +634,7 @@ class AcceleratedUnit(Unit):
         suffix = "." + suffix
         cache_file_name = cache_file_name + suffix + (".3" if PY3 else ".2")
         if not os.path.isabs(cache_file_name):
-            cache_file_name = os.path.join(root.common.cache_dir,
+            cache_file_name = os.path.join(root.common.dirs.cache,
                                            cache_file_name)
         try:
             with tarfile.open("%s.cache" % cache_file_name, "w:gz") as tar:
@@ -703,7 +703,7 @@ class DeviceBenchmark(AcceleratedUnit):
 
     def __init__(self, workflow, **kwargs):
         super(DeviceBenchmark, self).__init__(workflow, **kwargs)
-        self.precision = kwargs.get("dtype", root.common.precision_type)
+        self.precision = kwargs.get("dtype", root.common.engine.precision_type)
         self.dtype = opencl_types.dtypes[self.precision]
         self.size = kwargs.get("size", 1500)
         self.repeats = kwargs.get("repeats", 10)
@@ -718,7 +718,7 @@ class DeviceBenchmark(AcceleratedUnit):
         self.block_size = kwargs.get("block_size")
         self.vector_opt = kwargs.get("vector_opt")
         self.precision_level = kwargs.get("precision_level",
-                                          root.common.precision_level)
+                                          root.common.engine.precision_level)
         self.return_time = kwargs.get("return_time", False)
         self.dry_run_first = kwargs.get("dry_run_first", False)
 

@@ -42,10 +42,13 @@ import json
 import logging
 from mimetypes import guess_type
 import os
-from PIL import Image
-import pyinotify
 import sys
 
+from veles.dot_pip import install_dot_pip
+install_dot_pip()
+
+from PIL import Image
+import pyinotify
 from tornado.escape import json_decode
 from tornado.ioloop import IOLoop
 import tornado.gen as gen

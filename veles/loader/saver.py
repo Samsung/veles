@@ -81,7 +81,7 @@ class MinibatchesSaver(Unit):
         super(MinibatchesSaver, self).__init__(workflow, **kwargs)
         kwargs["view_group"] = kwargs.get("view_group", "SERVICE")
         self.file_name = os.path.abspath(kwargs.get(
-            "file_name", os.path.join(root.common.cache_dir,
+            "file_name", os.path.join(root.common.dirs.cache,
                                       "minibatches.dat")))
         self.compression = kwargs.get("compression", "snappy")
         self.compression_level = kwargs.get("compression_level", 9)

@@ -90,7 +90,7 @@ class OCLBLAS(Logger):
         self._const_i = numpy.zeros(3, dtype=numpy.uint64)
         try:
             if (root.common.engine.ocl.clBLAS is not True or
-                    root.common.precision_level > 0):
+                    root.common.engine.precision_level > 0):
                 raise ValueError()
             if "CLBLAS_STORAGE_PATH" not in os.environ:
                 found = False

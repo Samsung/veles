@@ -67,7 +67,7 @@ class TestRandom1024(AcceleratedTest):
         output.initialize(self.device)
 
         obj.sources_["random"] = {'LOG_CHUNK': self.chunk}
-        obj.build_program({}, os.path.join(root.common.cache_dir,
+        obj.build_program({}, os.path.join(root.common.dirs.cache,
                                            "test_random"))
 
         krn = obj.get_kernel("random_xorshift1024star")
@@ -166,7 +166,7 @@ class TestRandom128(AcceleratedTest):
         output.initialize(self.device)
 
         obj.sources_["random"] = {'LOG_CHUNK': self.chunk}
-        obj.build_program({}, os.path.join(root.common.cache_dir,
+        obj.build_program({}, os.path.join(root.common.dirs.cache,
                                            "test_random"))
         obj.assign_kernel("random_xorshift128plus")
         obj.set_args(states, output)

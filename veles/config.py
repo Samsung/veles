@@ -68,6 +68,26 @@ class Config(object):
             value if isinstance(value, dict) else value.__content__)
         return self
 
+    def protect(self, *names):
+        """
+        Makes the specified children names readonly.
+        :param names: The names of sub-nodes to restrict modification of.
+        """
+        __protected__[self].update(names)
+
+    def print_(self, indent=1, width=80, file=sys.stdout):
+        def fix_contents(obj):
+            fixed_contents = content = obj.__content__
+            for k, v in content.items():
+                if isinstance(v, Config):
+                    fixed_contents[k] = fix_contents(v)
+            return fixed_contents
+
+        print_('-' * width, file=file)
+        print_('Configuration "%s":' % self.__path__, file=file)
+        pprint(fix_contents(self), indent=indent, width=width, stream=file)
+        print_('-' * width, file=file)
+
     def __update__(self, tree):
         for k, v in tree.items():
             if isinstance(v, dict) and not v.get("dict", False):
@@ -76,9 +96,6 @@ class Config(object):
                 if isinstance(v, dict) and "dict" in v:
                     del v["dict"]
                 setattr(self, k, v)
-
-    def protect(self, *names):
-        __protected__[self].update(names)
 
     def __getattr__(self, name):
         if name in ("__copy__", "__deepcopy__",):
@@ -105,19 +122,6 @@ class Config(object):
 
     def __repr__(self):
         return '<Config "%s": %s>' % (self.__path__, repr(self.__content__))
-
-    def print_(self, indent=1, width=80, file=sys.stdout):
-        def fix_contents(obj):
-            fixed_contents = content = obj.__content__
-            for k, v in content.items():
-                if isinstance(v, Config):
-                    fixed_contents[k] = fix_contents(v)
-            return fixed_contents
-
-        print_('-' * width, file=file)
-        print_('Configuration "%s":' % self.__path__, file=file)
-        pprint(fix_contents(self), indent=indent, width=width, stream=file)
-        print_('-' * width, file=file)
 
     def __getstate__(self):
         """
@@ -171,21 +175,19 @@ def validate_kwargs(caller, **kwargs):
                                    inspect.currentframe().f_back))))
 
 root.common.update({
-    "mongodb_logging_address": "127.0.0.1:27017",
-    "precision_type": "double",  # float or double
-    "precision_level": 0,  # 0 - use simple summation
-                           # Only for ocl backend:
-                           # 1 - use Kahan summation (9% slower)
-                           # 2 - use multipartials summation (90% slower)
-    "datasets_root": os.path.join(__home__, "data"),
-    "veles_dir": os.path.join(__root__, "veles"),
-    "veles_user_dir": __home__,
-    "veles_dist_config_dir": "/etc/default/veles",
+    "dirs": {
+        "veles": os.path.join(__root__, "veles"),
+        "user": __home__,
+        "dist_config": "/etc/default/veles",
+        "help": "/usr/share/doc/python3-veles",
+        "datasets": os.path.join(__home__, "data"),
+        "snapshots": os.path.join(__home__, "snapshots"),
+        "cache": os.path.join(__home__, "cache")
+    },
     "dependencies": {
         "basedir": "/usr/share/veles",
         "dirname": ".pip"
     },
-    "help_dir": "/usr/share/doc/python3-veles",
     "disable": {
         "spinning_run_progress": not sys.stdout.isatty(),
         "plotting": "unittest" in sys.modules,
@@ -203,6 +205,7 @@ root.common.update({
     "exceptions": {
         "run_after_stop": False,
     },
+    "mongodb_logging_address": "127.0.0.1:27017",
     "graphics": {
         "multicast_address": "239.192.1.1",
         "blacklisted_ifaces": set(),
@@ -237,6 +240,11 @@ root.common.update({
     },
     "engine": {
         "backend": "auto",
+        "precision_type": "double",  # float or double
+        "precision_level": 0,  # 0 - use simple summation
+                               # only for ocl backend:
+                               # 1 - use Kahan summation (9% slower)
+                               # 2 - use multipartials summation (90% slower)
         "test_known_device": False,
         "test_unknown_device": True,
         "test_precision_types": ("float", "double"),
@@ -288,8 +296,8 @@ try:
     del update
 except ImportError:
     pass
-for site_path in (root.common.veles_dist_config_dir,
-                  root.common.veles_user_dir, os.getcwd()):
+for site_path in (root.common.dirs.dist_config,
+                  root.common.dirs.user, os.getcwd()):
     sys.path.insert(0, site_path)
     try:
         __import__("site_config").update(root)
@@ -299,26 +307,18 @@ for site_path in (root.common.veles_dist_config_dir,
         del sys.path[0]
 
 root.common.web.templates = os.path.join(root.common.web.root, "templates")
-root.common.cache_dir = os.path.join(root.common.veles_user_dir, "cache")
-root.common.snapshot_dir = os.path.join(root.common.veles_user_dir,
-                                        "snapshots")
-for d in (root.common.cache_dir, root.common.snapshot_dir,
-          root.common.datasets_root):
+for d in (root.common.dirs.cache, root.common.dirs.snapshots,
+          root.common.dirs.datasets):
     if not os.path.exists(d):
         try:
             os.makedirs(d)
         except OSError:
             pass
 
-# Make some settings read-only
-root.common.protect("cache_dir", "snapshot_dir", "pickles_compression",
-                    "veles_user_dir")
+# Make some important settings readonly.
+root.common.protect("pickles_compression")
+root.common.dirs.protect("veles", "user", "snapshots", "cache")
 
-if os.getuid() == 0 and not getattr(veles, "allow_root", False) \
-        and os.getenv("VELES_ALLOW_ROOT") is None:
-    raise PermissionError(
-        "I have detected your attempt to run this VELES-based script with root"
-        " privileges. Most likely this is because the code must be fixed and "
-        "you are too lazy to find out where and how. Bad, bad boy! "
-        "If you REALLY need it, set veles.allow_root to True or define "
-        "VELES_ALLOW_ROOT environment variable.")
+# If something is using settings, then we must check if we are running with
+# root rights and if so, whether we are explicitly allowed to.
+veles.check_root()

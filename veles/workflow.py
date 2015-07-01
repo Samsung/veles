@@ -633,7 +633,7 @@ class Workflow(Container):
             visited_units.add(unit)
             node = pydot.Node(hex(id(unit)))
             unit_file_name = os.path.relpath(inspect.getfile(unit.__class__),
-                                             root.common.veles_dir)
+                                             root.common.dirs.veles)
             if six.PY2 and unit_file_name.endswith('.pyc'):
                 unit_file_name = unit_file_name[:-1]
             node.set("label",
@@ -711,13 +711,13 @@ class Workflow(Container):
         if write_on_disk:
             if not filename:
                 try:
-                    os.mkdir(os.path.join(root.common.cache_dir, "plots"),
+                    os.mkdir(os.path.join(root.common.dirs.cache, "plots"),
                              mode=0o775)
                 except FileExistsError:
                     pass
                 (_, filename) = tempfile.mkstemp(
                     os.path.splitext(filename)[1], "workflow_",
-                    dir=os.path.join(root.common.cache_dir, "plots"))
+                    dir=os.path.join(root.common.dirs.cache, "plots"))
             if not quiet:
                 self.debug("Saving the workflow graph to %s", filename)
             try:

@@ -85,7 +85,7 @@ class AcceleratedTest(unittest.TestCase, Logger):
     def setUp(self):
         self.device = self.DEVICE()
         self.parent = self.getParent()
-        self._dtype = dtypes[root.common.precision_type]
+        self._dtype = dtypes[root.common.engine.precision_type]
         gc.collect()
 
     def getParent(self):

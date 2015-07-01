@@ -313,7 +313,7 @@ class Loader(Unit):
 
     @property
     def dtype(self):
-        return dtypes[config.root.common.precision_type]
+        return dtypes[config.root.common.engine.precision_type]
 
     @property
     def normalization_type(self):
