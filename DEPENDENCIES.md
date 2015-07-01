@@ -27,7 +27,7 @@ for d in $(cat requirements.txt); do yolk -f license,name -M $(echo "$d" | sed '
 | jpeg4py               | Simplified BSD                             |
 | cffi                  | MIT                                        |
 | Glymur                | MIT                                        |
-| lockfile              | None                                       |
+| lockfile              | MIT                                        |
 | python-snappy         | BSD                                        |
 | pycrypto              | Public domain                              |
 | ecdsa                 | MIT                                        |
