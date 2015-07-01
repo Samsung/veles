@@ -164,10 +164,11 @@ class AccumulatingPlotter(Plotter):
     def fill(self):
         if self.input_field is None:
             try:
-                value = float(self.input)
+                value = None if self.input is None else float(self.input)
             except TypeError:
-                raise from_none(TypeError("input has a wrong type %s - must be"
-                                          " float" % self.input.__class__))
+                raise from_none(
+                    TypeError("input %s has a wrong type - "
+                              "must be float or None" % repr(self.input)))
         elif isinstance(self.input_field, int):
             if self.input_field < 0 or self.input_field >= len(self.input):
                 return
@@ -176,7 +177,7 @@ class AccumulatingPlotter(Plotter):
             value = self.input.__dict__[self.input_field]
         if type(value) == numpy.ndarray:
             value = value[self.input_offset]
-        self.values.append(float(value))
+        self.values.append(value)
 
 
 @implementer(IPlotter)
