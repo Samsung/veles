@@ -386,6 +386,7 @@ class FullBatchLoader(AcceleratedUnit, FullBatchLoaderBase):
                     shuffled_indices[i], shuffled_indices[offs]
 
                 offs += 1
+                train_samples -= 1
                 n -= 1
             self.class_lengths[VALID] = offs - offs_test
             self.class_lengths[TRAIN] = \
