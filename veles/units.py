@@ -618,6 +618,20 @@ class Unit(Distributable, Verified):
                     dst.link_from(last)
         return self
 
+    def derefed_links_to(self):
+        """
+        :return: Sorted units in links_to. Weak references are automatically
+        dereferenced.
+        """
+        return sorted(list(self._iter_links(self.links_to)))
+
+    def derefed_links_from(self):
+        """
+        :return: Sorted units in links_from. Weak references are automatically
+        dereferenced.
+        """
+        return sorted(list(self._iter_links(self.links_from)))
+
     def link_attrs(self, other, *args, **kwargs):
         """
         Assigns attributes from other to self, respecting whether each is
