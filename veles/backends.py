@@ -103,7 +103,7 @@ class DeviceInfo(Logger):
             BLOCK_SIZE, VECTOR_OPT
         """
         dtype = kwargs["dtype"]
-        if type(dtype) != str:
+        if not isinstance(dtype, str):
             dtype = opencl_types.numpy_dtype_to_opencl(dtype)
         krnnme = kwargs.get("kernel", "matrix_multiplication")
         precision = kwargs.get("precision", root.common.engine.precision_level)

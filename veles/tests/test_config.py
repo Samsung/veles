@@ -139,5 +139,4 @@ class TestConfig(unittest.TestCase):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    logging.info("Will test config unit")
     unittest.main()

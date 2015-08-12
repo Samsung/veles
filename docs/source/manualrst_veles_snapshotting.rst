@@ -21,7 +21,10 @@ Such attributes should be created inside :func:`Unit.init_unpickled()` overriden
 method, which is called after each restoration from a snapshot *and* when the unit
 is created. Please note that :func:`__init__()` is **not** called after
 unpickling. :func:`__getstate__` and :func:`__setstate__` methods are used, so
-child classes must call :func:`super()` to override them.
+child classes must call :func:`super()` to override them. During unit's
+initialization, it is possible to know if it was restored from a snapshot by
+reading :attr:`restored_from_snapshot` property. After the main workflow is
+initialized, it is always False.
 
 Snapshots can be compressed with `Snappy <https://en.wikipedia.org/wiki/Snappy_(software)>`_,
 Gzip, Bzip2 and Lzma algorithms. The default compression is Gzip. To change

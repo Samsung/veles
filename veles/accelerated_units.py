@@ -299,7 +299,7 @@ class AcceleratedUnit(Unit):
             raise ValueError("cache_file_name must be a string")
         if dtype is None:
             dtype = root.common.engine.precision_type
-        elif type(dtype) != str:
+        elif not isinstance(dtype, str):
             dtype = opencl_types.numpy_dtype_to_opencl(dtype)
         return self._backend_build_program_(
             defines, cache_file_name, dtype, kwargs)

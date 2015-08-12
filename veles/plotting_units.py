@@ -175,7 +175,7 @@ class AccumulatingPlotter(Plotter):
             value = self.input[self.input_field]
         else:
             value = self.input.__dict__[self.input_field]
-        if type(value) == numpy.ndarray:
+        if isinstance(value, numpy.ndarray):
             value = value[self.input_offset]
         self.values.append(value)
 
@@ -207,7 +207,7 @@ class MatrixPlotter(Plotter):
 
     def redraw(self):
         self.pp.ioff()
-        if type(self.input_field) == int:
+        if isinstance(self.input_field, int):
             if self.input_field < 0 or self.input_field >= len(self.input):
                 return
             value = self.input[self.input_field]
@@ -396,7 +396,7 @@ class ImagePlotter(Plotter):
             pics_to_draw = []
             for i, input_field in enumerate(self.input_fields):
                 value = None
-                if type(input_field) == int:
+                if isinstance(input_field, int):
                     if 0 <= input_field < len(self.inputs[i]):
                         value = self.inputs[i][input_field]
                 else:
@@ -404,7 +404,7 @@ class ImagePlotter(Plotter):
                     if isinstance(self.inputs[i], Array):
                         value = value[0]
                 pics_to_draw.append(self._prepare_image(value)
-                                    if type(value) == numpy.ndarray
+                                    if isinstance(value, numpy.ndarray)
                                     else str(value))
 
             state["inputs"] = None
@@ -462,7 +462,7 @@ class ImagePlotter(Plotter):
         for i, pic in enumerate(self._pics_to_draw):
             ax = figure.add_subplot(len(self._pics_to_draw), 1, i + 1)
             ax.cla()
-            if type(pic) != numpy.ndarray:
+            if not isinstance(pic, numpy.ndarray):
                 ax.axis('off')
                 ax.text(0.5, 0.5, str(pic), ha='center', va='center')
                 continue
@@ -518,8 +518,8 @@ class ImmediatePlotter(Plotter):
 
         for i, input_field in enumerate(self.input_fields):
             value = None
-            if type(input_field) == int:
-                if input_field >= 0 and input_field < len(self.inputs[i]):
+            if isinstance(input_field, int):
+                if 0 <= input_field < len(self.inputs[i]):
                     value = self.inputs[i][input_field]
             else:
                 value = self.inputs[i].__dict__[input_field]

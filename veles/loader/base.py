@@ -612,7 +612,7 @@ class Loader(Unit):
             raise error.BadFormatError("minibatch_data MUST be initialized in "
                                        "create_minibatch_data()")
         self.analyze_dataset()
-        if not kwargs["snapshot"]:
+        if not self.restored_from_snapshot:
             self.shuffle()
 
     def run(self):

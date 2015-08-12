@@ -65,7 +65,7 @@ class TestEnsembleLoader(unittest.TestCase):
         loader = MyEnsembleLoader(
             wf, file=os.path.join(os.path.dirname(__file__),
                                   "res", "wine_ensemble.json"))
-        loader.initialize(device=NumpyDevice(), snapshot=False)
+        loader.initialize(device=NumpyDevice())
         self.assertEqual(loader.original_data.shape, (178, 3, 3))
         self.assertTrue(loader.has_labels)
         self.assertEqual(len(loader.original_labels), 178)
@@ -77,7 +77,7 @@ class TestEnsembleLoader(unittest.TestCase):
         loader = MyEnsembleLoaderLabels(
             wf, file=os.path.join(os.path.dirname(__file__),
                                   "res", "wine_ensemble.json"))
-        loader.initialize(device=NumpyDevice(), snapshot=False)
+        loader.initialize(device=NumpyDevice())
         self.assertEqual(loader.original_data.shape, (178, 3, 3))
         self.assertTrue(loader.has_labels)
         self.assertEqual(len(loader.original_labels), 178)
@@ -91,7 +91,7 @@ class TestEnsembleLoader(unittest.TestCase):
             wf, file=os.path.join(os.path.dirname(__file__),
                                   "res", "wine_ensemble.json"))
         loader.normalizer.analyze(numpy.zeros(1))
-        loader.initialize(device=NumpyDevice(), snapshot=False)
+        loader.initialize(device=NumpyDevice())
         self.assertEqual(loader.original_data.shape, (178, 3, 3))
         self.assertEqual(len(loader.original_labels), 0)
         self.assertFalse(loader.has_labels)

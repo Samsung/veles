@@ -236,12 +236,14 @@ class SnapshotterBase(Unit):
     @staticmethod
     def _import_fobj(fobj):
         try:
-            return pickle.load(fobj)
+            obj = pickle.load(fobj)
         except ImportError as e:
             logging.getLogger("Snapshotter").error(
                 "Are you trying to import snapshot belonging to a different "
                 "workflow?")
             raise from_none(e)
+        obj._restored_from_snapshot_ = True
+        return obj
 
 
 class SnappyFile(object):
