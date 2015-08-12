@@ -320,7 +320,7 @@ class Chromosome(Pickleable, Verified):
                 self.numeric[pos] = self.rand.choice(
                     [min_values[pos], max_values[pos]])
             else:
-                isint = (type(self.numeric[pos]) == int)
+                isint = isinstance(self.numeric[pos], int)
                 diff = max_values[pos] - min_values[pos]
                 max_prob = min_values[pos] + diff / 2
                 gauss = self.rand.normal(max_prob, numpy.sqrt(diff / 6))
@@ -356,7 +356,7 @@ class Chromosome(Pickleable, Verified):
                 self.numeric[pos] = self.rand.choice(
                     [min_values[pos], max_values[pos]])
             else:
-                isint = (type(self.numeric[pos]) == int)
+                isint = isinstance(self.numeric[pos], int)
                 p_m = self.rand.rand()
                 if p_m < probability:
                     rand = self.rand.uniform(min_values[pos], max_values[pos])
@@ -726,7 +726,7 @@ class Population(Pickleable):
                 else:
                     cross1.append(parent2[i])
                     cross2.append(parent1[i])
-            elif type(parent1[i]) == int:
+            elif isinstance(parent1[i], int):
                 k = int(a * parent1[i] + (1 - a) * parent2[i])
                 cross1.append(k)
                 cross2.append(parent1[i] + parent2[i] - k)
@@ -774,7 +774,7 @@ class Population(Pickleable):
                 gene = (correct1 * (numpy.power(
                     correct1 * parent1[i] + correct2, a) * numpy.power(
                     correct1 * parent2[i] + correct2, (1 - a)) - correct2))
-                if type(parent1[i]) == int:
+                if isinstance(parent1[i], int):
                     gene = int(gene)
                 cross.append(gene)
         binary = ""

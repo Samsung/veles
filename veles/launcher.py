@@ -428,7 +428,7 @@ class Launcher(logger.Logger):
             self.device.thread_pool_detach(self.workflow.thread_pool)
 
     @threadsafe
-    def initialize(self, snapshot=False, **kwargs):
+    def initialize(self, **kwargs):
         # Ensure reactor stops in some rare cases when it does not normally
         if not self.interactive:
             self.workflow.thread_pool.register_on_shutdown(
@@ -509,8 +509,7 @@ class Launcher(logger.Logger):
 
         def initialize_workflow():
             try:
-                self.workflow.initialize(device=self.device, snapshot=snapshot,
-                                         **kwargs)
+                self.workflow.initialize(device=self.device, **kwargs)
             except Exception as ie:
                 self.error("Failed to initialize the workflow")
                 self._stop_graphics()

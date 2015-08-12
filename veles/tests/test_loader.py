@@ -92,7 +92,7 @@ class TestFullBatchLoader(AcceleratedTest):
     def _test_random(self, device, force_numpy, N=1000):
         rnd.get().seed(123)
         unit = Loader(self.parent, force_numpy=force_numpy, prng=rnd.get())
-        unit.initialize(device, snapshot=False)
+        unit.initialize(device)
         self.assertTrue(unit.has_labels)
         res_data = numpy.zeros((N,) + unit.minibatch_data.shape,
                                dtype=unit.minibatch_data.dtype)
@@ -119,7 +119,6 @@ class TestHDF5Loader(AcceleratedTest):
         loader = klass(self.parent,
                        validation_path=os.path.join(csd, "res", "test.h5"),
                        train_path=os.path.join(csd, "res", "train.h5"))
-        kwargs["snapshot"] = False
         loader.initialize(**kwargs)
         while not loader.train_ended:
             loader.run()

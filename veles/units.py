@@ -418,6 +418,15 @@ class Unit(Distributable, Verified):
         return self.workflow.testing
 
     @property
+    def restored_from_snapshot(self):
+        """
+        :return: Boolean value indicating whether the underlying workflow
+        is restored from a snapshot. This is always False after main workflow's
+        initialization.
+        """
+        return self.workflow.restored_from_snapshot
+
+    @property
     def run_was_called(self):
         return self._run_calls > 0
 

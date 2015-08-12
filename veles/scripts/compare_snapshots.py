@@ -131,7 +131,8 @@ def main():
     logger = logging.getLogger(os.path.splitext(os.path.basename(__file__))[0])
     logger.info("Loading snapshots...")
     first, second = tuple(load_snapshot(p) for p in (args.first, args.second))
-    if type(first) != type(second) or first.checksum != second.checksum:
+    if (type(first) != type(second) or  # pylint: disable=W0622
+            first.checksum != second.checksum):
         raise ValueError("Cannot compare different workflows")
     logger.info("Comparing snapshots...")
     diffs = list(get_diffs(first.units_in_dependency_order,

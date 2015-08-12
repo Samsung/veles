@@ -596,17 +596,12 @@ class ImageLoader(LoaderWithValidationRatio):
 
         return different_labels, label_key_map
 
-    def initialize(self, **kwargs):
-        self._restored_from_pickle_ = kwargs["snapshot"]
-        super(ImageLoader, self).initialize(**kwargs)
-        del self._restored_from_pickle_
-
     def load_data(self):
         try:
             super(ImageLoader, self).load_data()
         except AttributeError:
             pass
-        if self._restored_from_pickle_:
+        if self.restored_from_snapshot:
             self.info("Scanning for changes...")
             progress = ProgressBar(maxval=self.total_samples, term_width=40)
             progress.start()

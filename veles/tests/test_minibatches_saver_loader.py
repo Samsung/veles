@@ -70,14 +70,14 @@ class TestMinibatchesSaverLoader(unittest.TestCase, Logger):
 
     def testToTheMoonAndBack(self):
         myloader = MyLoader(self.parent, shuffle_limit=0, minibatch_size=100)
-        myloader.initialize(snapshot=False)
+        myloader.initialize()
         self.saver.link_attrs(myloader, *Loader.exports)
-        self.saver.initialize(snapshot=False)
+        self.saver.initialize()
         while not myloader.epoch_ended:
             myloader.run()
             self.saver.run()
         self.saver.stop()
-        self.loader.initialize(snapshot=False)
+        self.loader.initialize()
         counter = 0
         while not self.loader.epoch_ended:
             self.loader.run()
