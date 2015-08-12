@@ -90,7 +90,7 @@ class RESTAPITest(unittest.TestCase):
         workflow.end_point.link_from(api).unlink_from(workflow.start_point)
         workflow.end_point.gate_block <<= True
         loader.gate_block = ~workflow.end_point.gate_block
-        workflow.initialize(snapshot=False)
+        workflow.initialize()
 
         run = api.run
 
@@ -149,7 +149,7 @@ class RESTAPITest(unittest.TestCase):
         workflow.del_ref(base_loader)
         api.link_attrs(loader, "feed", "requests", "minibatch_size")
         api.results = [numpy.ones((3, 3))]
-        api.initialize(snapshot=False)
+        api.initialize()
         new_api = pickle.loads(pickle.dumps(api))
         self.assertIsInstance(new_api.results, list)
         self.assertEqual(len(new_api.results), 1)

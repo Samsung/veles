@@ -120,6 +120,7 @@ class Workflow(Container):
         self._stop_ = self.stop
         self.thread_pool.register_on_shutdown(self._stop_)
         self._is_running = False
+        self._restored_from_snapshot_ = None
         self._slave_error_ = False
         self._run_time_started_ = time.time()
         self._sync_event_ = threading.Event()
@@ -270,6 +271,14 @@ class Workflow(Container):
         return self.workflow.workflow is self
 
     @property
+    def restored_from_snapshot(self):
+        if self._restored_from_snapshot_ is None:
+            if self.is_main:
+                return False
+            return super(Workflow, self).restored_from_snapshot.fget()
+        return self._restored_from_snapshot_
+
+    @property
     def result_file(self):
         return self._result_file
 
@@ -287,11 +296,6 @@ class Workflow(Container):
         """Initializes all the units belonging to this Workflow, in dependency
         order.
         """
-        try:
-            snapshot = kwargs["snapshot"]
-        except KeyError:
-            raise from_none(KeyError(
-                "\"snapshot\" (True/False) must be provided in kwargs"))
         units_number = len(self)
         fin_text = "%d units were initialized" % units_number
         maxlen = max([len(u.name) for u in self] + [len(fin_text)])
@@ -323,7 +327,7 @@ class Workflow(Container):
             if partially:
                 iqueue.append(unit)
             else:
-                if snapshot and not unit._remembers_gates:
+                if self.restored_from_snapshot and not unit._remembers_gates:
                     unit.close_gate()
                     unit.close_upstream()
                 progress.inc()
@@ -334,6 +338,7 @@ class Workflow(Container):
             self.warning("Not all units were initialized (%d left): %s",
                          units_number - initialized_units_number,
                          set(self) - set(units_in_dependency_order))
+        self._restored_from_snapshot_ = None
 
     def run(self):
         """Starts executing the workflow. This function is synchronous
