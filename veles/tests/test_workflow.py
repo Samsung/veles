@@ -38,6 +38,7 @@ import six
 import unittest
 import weakref
 from zope.interface.verify import verifyObject
+from veles.snapshotter import SnapshotterBase
 
 from veles.workflow import Workflow
 from veles.distributable import IDistributable
@@ -273,6 +274,37 @@ class Test(unittest.TestCase):
         TrivialUnit(wf)
         w2 = pickle.loads(pickle.dumps(wf))
         self.assertEqual(len(w2), len(wf))
+
+    def testRestoredFromSnapshot(self):
+        dl = DummyLauncher()
+        wf = Workflow(dl)
+        self.assertFalse(wf.restored_from_snapshot)
+        self.assertFalse(wf.start_point.restored_from_snapshot)
+        self.assertIsNone(wf._restored_from_snapshot_)
+        wf._restored_from_snapshot_ = True
+        self.assertTrue(wf.restored_from_snapshot)
+        self.assertTrue(wf.start_point.restored_from_snapshot)
+        wf._restored_from_snapshot_ = False
+        self.assertFalse(wf.restored_from_snapshot)
+        self.assertFalse(wf.start_point.restored_from_snapshot)
+        w2 = SnapshotterBase._import_fobj(six.BytesIO(pickle.dumps(wf)))
+        self.assertTrue(w2.restored_from_snapshot)
+        self.assertTrue(w2.start_point.restored_from_snapshot)
+        self.assertTrue(w2._restored_from_snapshot_)
+        w2.end_point.link_from(w2.start_point)
+        w2.workflow = dl
+        w2.initialize()
+        self.assertFalse(w2.restored_from_snapshot)
+        self.assertFalse(w2.start_point.restored_from_snapshot)
+        self.assertIsNone(w2._restored_from_snapshot_)
+        w2.link_from(wf)
+        wf.end_point.link_from(w2)
+        w2.workflow = wf
+        self.assertFalse(w2.restored_from_snapshot)
+        self.assertFalse(wf.restored_from_snapshot)
+        wf._restored_from_snapshot_ = True
+        self.assertTrue(w2.restored_from_snapshot)
+        self.assertTrue(w2.start_point.restored_from_snapshot)
 
 
 if __name__ == "__main__":

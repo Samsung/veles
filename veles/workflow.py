@@ -275,7 +275,7 @@ class Workflow(Container):
         if self._restored_from_snapshot_ is None:
             if self.is_main:
                 return False
-            return super(Workflow, self).restored_from_snapshot.fget()
+            return Unit.restored_from_snapshot.fget(self)
         return self._restored_from_snapshot_
 
     @property
