@@ -49,68 +49,104 @@ from veles.accelerated_units import AcceleratedUnit, IOpenCLUnit, ICUDAUnit, \
 class InputJoiner(AcceleratedUnit):
     """Joins several minibatch inputs into one continuous minibatch output.
 
-    Must be assigned before initialize():
-        inputs
-
-    Updates after run():
-        output
-
-    Creates within initialize():
-        output
-
     Attributes:
-        inputs: list of inputs of type memory.Array().
-        output: memory.Array().
+        input_0, input_1, ...: inputs of type Array(), created via link_inputs
+        offset_0, offset_1, ...: offsets of each input in elements,
+                                 have valid values after initialize().
+        length_0, length_1, ...: lengths of each input in elements,
+                                 have valid values after initialize.
+        output: Array()
         minibatch_size: size of the minibatch (will be set to the minimum
                         of the first shapes from the inputs
                         if not provided prior to the initialize)
     """
     def __init__(self, workflow, **kwargs):
         super(InputJoiner, self).__init__(workflow, **kwargs)
-        self.inputs = kwargs["inputs"]
         self.output = Array()
-        self.registered_inputs = {}
+        self._num_inputs = 0
+        self.inputs = kwargs.get("inputs")
 
     def init_unpickled(self):
         super(InputJoiner, self).init_unpickled()
         self.sources_["join"] = {}
 
     @property
+    def num_inputs(self):
+        return self._num_inputs
+
+    @num_inputs.setter
+    def num_inputs(self, value):
+        try:
+            value = int(value)
+        except (ValueError, TypeError):
+            raise ValueError("num_inputs must be copnvertible to int")
+        for x in range(value, self._num_inputs):
+            try:
+                delattr(self, "input_%d" % x)
+                delattr(self, "offset_%d" % x)
+                delattr(self, "length_%d" % x)
+            except AttributeError:
+                pass
+        for x in range(self._num_inputs, value):
+            setattr(self, "input_%d" % x, None)
+            setattr(self, "offset_%d" % x, None)
+            setattr(self, "length_%d" % x, None)
+        self._num_inputs = value
+
+    @property
     def inputs(self):
-        return self._inputs
+        return list(getattr(self, "input_%d" % x)
+                    for x in range(self._num_inputs))
+
+    @property
+    def offsets(self):
+        return list(getattr(self, "offset_%d" % x)
+                    for x in range(self._num_inputs))
+
+    @property
+    def lengths(self):
+        return list(getattr(self, "length_%d" % x)
+                    for x in range(self._num_inputs))
 
     @inputs.setter
     def inputs(self, value):
+        if value is None:
+            self.num_inputs = 0
+            return
         if not hasattr(value, "__iter__"):
             raise TypeError("inputs must be iterable")
-        self._inputs = list(value)
-        if len(self._inputs) == 0:
-            raise ValueError("inputs may not be empty")
+        self.num_inputs = len(value)
+        for i, inp in enumerate(value):
+            setattr(self, "input_%d" % i, inp)
 
-    def register_offset_length_attributes(self, inp):
-        idx = len(self.registered_inputs)
-        attrs = ("offset_%d" % idx, "length_%d" % idx)
-        for attr in attrs:
-            setattr(self, attr, -1)
-        self.registered_inputs[inp] = attrs
-        return attrs
+    def link_inputs(self, other, *args):
+        """Adds more inputs and links them.
+
+        It will link args to attributes named
+        "input_0", "input_1", etc.
+
+        Parameters:
+            other: unit from which to link attributes.
+            args: attribute names to link.
+        """
+        if not len(args):
+            raise ValueError("args may not be empty")
+        num_inputs = self.num_inputs
+        self.num_inputs = num_inputs + len(args)
+        for arg in args:
+            self.link_attrs(other, ("input_%d" % num_inputs, arg))
+            num_inputs += 1
 
     def _init_offset_length_attributes(self):
-        offsets = []
-        lengths = []
+        """Initializes offset_0, offset_1, ...
+                       length_0, length_1, ...
+        """
         offset = 0
-        for inp in self.inputs:
-            offsets.append(offset)
-            lengths.append(inp.sample_size)
-            offset += lengths[-1]
-        for inp, attrs in self.registered_inputs.items():
-            try:
-                idx = self.inputs.index(inp)
-                vals = (offsets[idx], lengths[idx])
-            except ValueError:
-                vals = (-1, -1)
-            for i, attr in enumerate(attrs):
-                setattr(self, attr, vals[i])
+        for i in range(self.num_inputs):
+            inp = getattr(self, "input_%d" % i)
+            setattr(self, "offset_%d" % i, offset)
+            setattr(self, "length_%d" % i, inp.sample_size)
+            offset += inp.sample_size
 
     def initialize(self, device, **kwargs):
         if any(i.mem is None for i in self.inputs):

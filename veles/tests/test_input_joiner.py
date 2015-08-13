@@ -33,28 +33,39 @@ under the License.
 """
 
 
-import gc
 import numpy
-from veles.backends import NumpyDevice
 
+from veles.dummy import DummyUnit
 from veles.memory import Array
 import veles.input_joiner as input_joiner
-from veles.tests import AcceleratedTest, multi_device
+from veles.tests import AcceleratedTest, assign_backend
 
 
 class TestInputJoiner(AcceleratedTest):
-    def tearDown(self):
-        gc.collect()
+    ABSTRACT = True
 
-    def _do_test(self, device):
+    def test_link_inputs(self):
+        self.info("Will test InputJoiner::link_inputs()")
         a = Array()
         a.mem = numpy.arange(250, dtype=numpy.float32).reshape(10, 25)
         b = Array()
         b.mem = numpy.arange(50, dtype=numpy.float32).reshape(10, 5)
+        u_ab = DummyUnit(a=a, b=b)
         c = Array()
         c.mem = numpy.arange(350, dtype=numpy.float32).reshape(10, 35)
-        obj = input_joiner.InputJoiner(self.parent, inputs=[a, b, c])
-        obj.initialize(device=device)
+        u_c = DummyUnit(c=c)
+
+        obj = input_joiner.InputJoiner(self.parent)
+        obj.link_inputs(u_ab, "a", "b")
+        obj.link_inputs(u_c, "c")
+        obj.initialize(device=self.device)
+        self.assertEqual(obj.num_inputs, 3)
+        self.assertEqual(obj.offset_0, 0)
+        self.assertEqual(obj.offset_1, 25)
+        self.assertEqual(obj.offset_2, 30)
+        self.assertEqual(obj.length_0, 25)
+        self.assertEqual(obj.length_1, 5)
+        self.assertEqual(obj.length_2, 35)
 
         # Replace one element without copying back to device
         b.map_write()
@@ -75,7 +86,8 @@ class TestInputJoiner(AcceleratedTest):
                         obj.output.mem[:, a.mem.shape[1] + b.mem.shape[1]:]))
         self.assertEqual(nz, c.mem.size, "Failed")
 
-    def _do_tst2(self, device):
+    def test1(self):
+        self.info("Will test InputJoiner()")
         a = Array()
         a.mem = numpy.arange(250, dtype=numpy.float32).reshape(10, 25)
         b = Array()
@@ -83,10 +95,41 @@ class TestInputJoiner(AcceleratedTest):
         c = Array()
         c.mem = numpy.arange(350, dtype=numpy.float32).reshape(10, 35)
         obj = input_joiner.InputJoiner(self.parent, inputs=[a, b, c])
-        obj.initialize(device=device)
-        a.initialize(device)
-        b.initialize(device)
-        c.initialize(device)
+        obj.initialize(device=self.device)
+
+        # Replace one element without copying back to device
+        b.map_write()
+        b.mem[b.shape[0] // 2] = -1
+
+        obj.run()
+        obj.output.map_read()
+        nz = numpy.count_nonzero(
+            numpy.equal(a.mem, obj.output.mem[:, :a.mem.shape[1]]))
+        self.assertEqual(nz, a.mem.size, "Failed")
+        nz = numpy.count_nonzero(
+            numpy.equal(b.mem,
+                        obj.output.mem[:, a.mem.shape[1]:a.mem.shape[1] +
+                                       b.mem.shape[1]]))
+        self.assertEqual(nz, b.mem.size, "Failed")
+        nz = numpy.count_nonzero(
+            numpy.equal(c.mem,
+                        obj.output.mem[:, a.mem.shape[1] + b.mem.shape[1]:]))
+        self.assertEqual(nz, c.mem.size, "Failed")
+
+    def test2(self):
+        self.info("Will test InputJoiner() "
+                  "with output size greater than inputs.")
+        a = Array()
+        a.mem = numpy.arange(250, dtype=numpy.float32).reshape(10, 25)
+        b = Array()
+        b.mem = numpy.arange(50, dtype=numpy.float32).reshape(10, 5)
+        c = Array()
+        c.mem = numpy.arange(350, dtype=numpy.float32).reshape(10, 35)
+        obj = input_joiner.InputJoiner(self.parent, inputs=[a, b, c])
+        obj.initialize(device=self.device)
+        a.initialize(self.device)
+        b.initialize(self.device)
+        c.initialize(self.device)
         obj.run()
         obj.output.map_read()
         nz = numpy.count_nonzero(
@@ -110,7 +153,9 @@ class TestInputJoiner(AcceleratedTest):
                            c.mem.shape[1]:])
         self.assertEqual(nz, 0, "Failed")
 
-    def _do_tst3(self, device):
+    def test3(self):
+        self.info("Will test InputJoiner() "
+                  "with output size less than inputs.")
         a = Array()
         a.mem = numpy.arange(250, dtype=numpy.float32).reshape(10, 25)
         b = Array()
@@ -118,10 +163,10 @@ class TestInputJoiner(AcceleratedTest):
         c = Array()
         c.mem = numpy.arange(350, dtype=numpy.float32).reshape(10, 35)
         obj = input_joiner.InputJoiner(self.parent, inputs=[a, b, c])
-        obj.initialize(device=device)
-        a.initialize(device)
-        b.initialize(device)
-        c.initialize(device)
+        obj.initialize(device=self.device)
+        a.initialize(self.device)
+        b.initialize(self.device)
+        c.initialize(self.device)
         obj.run()
         obj.output.map_read()
         nz = numpy.count_nonzero(
@@ -141,36 +186,20 @@ class TestInputJoiner(AcceleratedTest):
                 obj.output.mem.shape[1] -
                 (a.mem.shape[1] + b.mem.shape[1])), "Failed")
 
-    @multi_device()
-    def testGPU(self):
-        self.info("Will test InputJoiner() on GPU.")
-        self._do_test(self.device)
 
-    def testCPU(self):
-        self.info("Will test InputJoiner() on CPU.")
-        self._do_test(NumpyDevice())
+@assign_backend("ocl")
+class OCLTestInputJoiner(TestInputJoiner):
+    pass
 
-    @multi_device()
-    def testGPU2(self):
-        self.info("Will test InputJoiner() on GPU "
-                  "with output size greater than inputs.")
-        self._do_tst2(self.device)
 
-    def testCPU2(self):
-        self.info("Will test InputJoiner() on CPU "
-                  "with output size greater than inputs.")
-        self._do_tst2(NumpyDevice())
+@assign_backend("cuda")
+class CUDATestInputJoiner(TestInputJoiner):
+    pass
 
-    @multi_device()
-    def testGPU3(self):
-        self.info("Will test InputJoiner() on GPU "
-                  "with output size less than inputs.")
-        self._do_tst3(self.device)
 
-    def testCPU3(self):
-        self.info("Will test InputJoiner() on CPU "
-                  "with output size less than inputs.")
-        self._do_tst3(NumpyDevice())
+@assign_backend("numpy")
+class NUMPYTestInputJoiner(TestInputJoiner):
+    pass
 
 
 if __name__ == "__main__":
