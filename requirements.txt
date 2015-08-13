@@ -4,6 +4,7 @@ scipy>=0.13.3
 Pillow>=2.0.0
 six>=1.3.0
 tornado>=4.0
+tornado-smtpclient>=0.1.5
 motor<0.4,>=0.3
 pymongo==2.7.1
 twisted>=14.0.0
@@ -32,3 +33,8 @@ h5py>=2.2
 jinja2>=2.7.2
 pycparser>=2.10
 pyodbc>=3.0.10
+markdown>=2.6.2
+py-gfm>=0.1.1
+weasyprint>=0.23
+
+
