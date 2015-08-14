@@ -1,1 +1,0 @@
-using gcc : host : @CXX@ ;

@@ -68,8 +68,8 @@ class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
    *  @param name Name of the parameter
    *  @param value Pointer to the parameter value
    */
-  void SetProperty(const std::string& name,
-                    std::shared_ptr<void> value);
+  template <class T>
+  void SetProperty(const std::string& name, std::shared_ptr<T> value);
   /** @brief Returns a parameter of the workflow
    *  @param name Name of the parameter
    */
@@ -115,6 +115,12 @@ class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
   std::vector<std::shared_ptr<Unit>> units_;
   PropertiesTable props_;
 };
+
+template <class T>
+void Workflow::SetProperty(const std::string& name, std::shared_ptr<T> value) {
+  props_[name] = std::const_pointer_cast<typename std::remove_const<T>::type>(
+      value);
+}
 
 }  // namespace veles
 

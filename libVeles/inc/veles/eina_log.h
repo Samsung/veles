@@ -70,7 +70,7 @@ Eina_Bool eina_log_shutdown(void);
  *
  * Here is an example:
  *
- * @include eina_log_02.c
+ * <removed>
  *
  * If you compiled Eina without debug mode, execution will yield only one log
  * message, which is "argument is negative".
@@ -158,9 +158,9 @@ Eina_Bool eina_log_shutdown(void);
  * Here is an example of custom callback, whose behavior can be
  * changed at runtime:
  *
- * @include eina_log_03.c
- * @example eina_log_02.c
- * @example eina_log_03.c
+ * <removed>
+ * <removed>
+ * <removed>
  */
 
 /**
@@ -206,7 +206,7 @@ Eina_Bool eina_log_shutdown(void);
  * later shut down with eina_shutdown(). Here is a straightforward
  * example:
  *
- * @include eina_log_01.c
+ * <removed>
  *
  * Compile this code with the following command:
  *
@@ -220,7 +220,7 @@ Eina_Bool eina_log_shutdown(void);
  *
  * For more information, you can look at the @ref tutorial_log_page.
  *
- * @example eina_log_01.c
+ * <removed>
  */
 
 /**

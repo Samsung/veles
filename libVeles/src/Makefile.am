@@ -35,16 +35,12 @@ lib_LTLIBRARIES = libVeles.la
 libVeles_la_SOURCES = $(SOURCES)
 
 # Compiler options
-libVeles_la_CPPFLAGS = $(AM_CPPFLAGS) @LIBARCHIVE_CFLAGS@ @YAMLCPP_CFLAGS@
+libVeles_la_CPPFLAGS = $(AM_CPPFLAGS) @LIBARCHIVE_CFLAGS@
 
 # Used libraries
-libVeles_la_LIBADD = @LIBARCHIVE_LIBS@ @YAMLCPP_LIBS@ @EINA_LIBS@ -lboost_filesystem
+libVeles_la_LIBADD = @LIBARCHIVE_LIBS@ @EINA_LIBS@ @ZLIB_LIBS@
 
 libVeles_la_LDFLAGS = $(AM_LDFLAGS) \
-	-version-info $(INTERFACE_VERSION):$(REVISION_NUMBER):$(AGE_NUMBER) \
-	-Wl,--whole-archive,$(STATIC_ZLIB_LIBS),--no-whole-archive \
-	-Wl,--whole-archive,$(STATIC_YAMLCPP_LIBS),--no-whole-archive \
-	-lboost_filesystem \
-        -lboost_system
+	-version-info $(INTERFACE_VERSION):$(REVISION_NUMBER):$(AGE_NUMBER)
 
-PARALLEL_SUBDIRS = $(BOOST_DIR)
+PARALLEL_SUBDIRS = 

@@ -19,8 +19,9 @@
 
 /** @brief Isolated workflow test using Unit Mock
  */
-class WorkflowTest : public ::testing::TestWithParam<
-                              std::tuple<size_t, size_t, size_t, size_t>> {
+class WorkflowTest :
+    public ::testing::TestWithParam<
+        std::tuple<size_t, size_t, size_t, size_t>> {
  protected:
   static const size_t kCount;
 

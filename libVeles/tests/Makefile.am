@@ -23,7 +23,7 @@
 ##  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 ##  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-TESTS = workflow workflow_loader unit unit_factory unit_mock
+TESTS = workflow workflow_loader unit unit_factory unit_mock numpy_array_loader
 
 PARALLEL_SUBDIRS =
 
