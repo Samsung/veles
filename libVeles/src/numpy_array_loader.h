@@ -106,7 +106,15 @@ class NumpyArrayLoader : protected DefaultLogger<NumpyArrayLoader,
 
   Header ParseHeader(char* data);
   template <class T>
-  static void TransposeInplace(T* matrix, int rows, int columns);
+  static void TransposeInplace(int rows, int columns, T* matrix);
+  static void TransposeInplace(int rows, int columns, int esize,
+                               char* matrix);
+  template <class T>
+  static void ConvertType(const void* src, const std::string& dtype, int size,
+                          T* dst);
+  static void ConvertTypeF16(const uint16_t* src, int size, float* dst);
+  static void ConvertTypeI16(const int16_t* src, int size, float* dst);
+  static void ConvertTypeI32(const int32_t* src, int size, float* dst);
 };
 
 template <class T, int D, bool transposed>
@@ -185,10 +193,41 @@ NumpyArray<T, D> NumpyArrayLoader::Load(std::istream* src) {
     throw NumpyArrayLoadingFailedException("failed to read the array contents");
   }
   if (header.fortran_order != transposed) {
-    // transpose
+    // swap axis 0 with axis 1
+    int rows = header.shape[0], cols = header.shape[1];
+    if (header.fortran_order) {
+      std::swap(rows, cols);
+    }
+    int esize = header.DtypeSize();
+    for (int i = 2; i < D; i++) {
+      esize *= header.shape[i];
+    }
+    switch (esize) {
+      case 8:
+        TransposeInplace(rows, cols,
+                         reinterpret_cast<int64_t*>(raw_data.get()));
+        break;
+      case 4:
+        TransposeInplace(rows, cols,
+                         reinterpret_cast<int32_t*>(raw_data.get()));
+        break;
+      case 2:
+        TransposeInplace(rows, cols,
+                         reinterpret_cast<int16_t*>(raw_data.get()));
+        break;
+      case 1:
+        TransposeInplace(rows, cols,
+                         reinterpret_cast<int8_t*>(raw_data.get()));
+        break;
+      default:
+        TransposeInplace(rows, cols, esize, raw_data.get());
+        break;
+    }
   }
   if (!header.DtypeIsTheSameAs<T>()) {
-    std::unique_ptr<T[]> cdata(new T[header.SizeInElements()]);
+    auto cdata = new T[header.SizeInElements()];
+    ConvertType(raw_data.get(), header.dtype, header.SizeInElements(), cdata);
+    raw_data.reset(reinterpret_cast<char*>(cdata));
   }
 
   NumpyArray<T, D> arr;
@@ -202,7 +241,7 @@ NumpyArray<T, D> NumpyArrayLoader::Load(std::istream* src) {
 }
 
 template <class T>
-void NumpyArrayLoader::TransposeInplace(T* matrix, int rows, int columns) {
+void NumpyArrayLoader::TransposeInplace(int rows, int columns, T* matrix) {
   int size = rows * columns;
   assert(size > 0 && "Matrix size must be greater than 0");
   if (size == 1) {
@@ -235,6 +274,24 @@ void NumpyArrayLoader::TransposeInplace(T* matrix, int rows, int columns) {
 
     for (i = 0; i < modulo && !visited[i / 64]; i += 64) {}
     i += __builtin_ctzll(visited[i / 64]);
+  }
+}
+
+template <class T>
+void NumpyArrayLoader::ConvertType(const void* src, const std::string& dtype,
+                                   int size, T* dst) {
+  dtype = dtype.substr(1);
+  if (dtype == "f16") {
+    ConvertTypeF16(reinterpret_cast<uint16_t*>(src), size, dst);
+    return;
+  }
+  if (dtype == "i16") {
+    ConvertTypeI16(reinterpret_cast<int16_t*>(src), size, dst);
+    return;
+  }
+  if (dtype == "i32") {
+    ConvertTypeI32(reinterpret_cast<int32_t*>(src), size, dst);
+    return;
   }
 }
 

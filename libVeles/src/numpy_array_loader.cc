@@ -29,6 +29,7 @@
  */
 
 #include <src/numpy_array_loader.h>
+#include <simd/arithmetic.h>
 
 namespace veles {
 
@@ -87,6 +88,62 @@ NumpyArrayLoader::Header NumpyArrayLoader::ParseHeader(char* data) {
     }
   }
   return header;
+}
+
+void NumpyArrayLoader::TransposeInplace(int rows, int columns, int esize,
+                                        char* matrix) {
+  int size = rows * columns;
+  assert(size > 0 && "Matrix size must be greater than 0");
+  if (size == 1) {
+    return;
+  }
+  if (rows == columns) {
+    for (int y = 0; y < rows; y++) {
+      for (int x = y + 1; x < rows; x++) {
+        std::swap_ranges(matrix + (y * rows + x) * esize,
+                         matrix + (y * rows + x + 1) * esize,
+                         matrix + (x * rows + y) * esize);
+      }
+    }
+    return;
+  }
+  int modulo = size - 1;
+  int visited_size = size / 64 + ((size & (64 - 1)) > 0);
+  std::unique_ptr<uint64_t[]> visited(new uint64_t[visited_size]);
+  memset(visited.get(), 0xFF, visited_size * 8);
+  visited[0]--;
+
+  for (int i = 1; i < modulo;) {
+    int cycle_first = i;
+    char t[esize];
+    memcpy(t, matrix + i * esize, esize);
+    do {
+      int next = (i * rows) % modulo;
+      std::swap_ranges(matrix + next * esize, matrix + (next + 1) * esize, t);
+      visited[i / 64] -= 1ull << (i & (64 - 1));
+      i = next;
+    }
+    while (i != cycle_first);
+
+    for (i = 0; i < modulo && !visited[i / 64]; i += 64) {}
+    i += __builtin_ctzll(visited[i / 64]);
+  }
+}
+
+void NumpyArrayLoader::ConvertTypeF16(const uint16_t* src, int size,
+                                      float* dst) {
+  // TODO(v.markovtsev): use float16_to_float
+  dst[size] = src[0];
+}
+
+void NumpyArrayLoader::ConvertTypeI16(const int16_t* src, int size,
+                                      float* dst) {
+  int16_to_float(src, size, dst);
+}
+
+void NumpyArrayLoader::ConvertTypeI32(const int32_t* src, int size,
+                                      float* dst) {
+  int32_to_float(src, size, dst);
 }
 
 const std::unordered_map<std::string, std::string>

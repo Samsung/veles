@@ -117,6 +117,9 @@ fi
 cd libarchive
 build/autogen.sh
 cd ..
+cd simd
+./autogen.sh
+cd ..
 
 if [ -n "$1" ]; then
 	path=$(pwd)

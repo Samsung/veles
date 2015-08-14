@@ -63,7 +63,11 @@ TEST_P(NumpyArrayLoaderTest, Transpose) {
   InitializeMatrix(matrix, size);
   float reference[size];
   Transpose(matrix, reference, rows, cols);
-  veles::NumpyArrayLoader::TransposeInplace(matrix, rows, cols);
+  veles::NumpyArrayLoader::TransposeInplace(rows, cols, matrix);
+  ASSERT_EQ(std::memcmp(matrix, reference, sizeof(matrix)), 0);
+  InitializeMatrix(matrix, size);
+  veles::NumpyArrayLoader::TransposeInplace(rows, cols, sizeof(float),
+                                            reinterpret_cast<char*>(matrix));
   ASSERT_EQ(std::memcmp(matrix, reference, sizeof(matrix)), 0);
 }
 

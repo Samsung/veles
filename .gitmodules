@@ -23,3 +23,6 @@
 [submodule "mastodon"]
   path = mastodon
   url =  https://github.com/samsung/veles.mastodon
+[submodule "libVeles/simd"]
+	path = libVeles/simd
+	url = https://github.com/Samsung/veles.simd.git

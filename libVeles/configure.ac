@@ -29,6 +29,12 @@ AC_SUBST(INTERFACE_VERSION, [0])
 AC_SUBST(REVISION_NUMBER, [$(cd $srcdir && git rev-list HEAD --count)])
 AC_SUBST(AGE_NUMBER, [0])
 
+AC_CONFIG_SUBDIRS([simd])
+SIMD_LIBS="\$(top_builddir)/simd/src/libSimd.la"
+SIMD_CFLAGS="-I\$(top_srcdir)/simd/inc"
+AC_SUBST([SIMD_CFLAGS])
+AC_SUBST([SIMD_LIBS])
+
 # Check whether to use the built-in libarchive
 AC_ARG_WITH([built-in-libarchive],
     AS_HELP_STRING([--with-built-in-libarchive], [use bundled libarchive]), [
