@@ -56,10 +56,8 @@ from veles.dot_pip import install_dot_pip
 install_dot_pip()
 from veles.loader.libsndfile_loader import SndFileMixin
 from veles.snd_features import SoundFeatures
-from libSoundFeatureExtraction.python.sound_feature_extraction.library import \
-    Library
-from libSoundFeatureExtraction.python.sound_feature_extraction.features_xml \
-    import FeaturesXml
+from sound_feature_extraction.library import Library
+from sound_feature_extraction.features_xml import FeaturesXml
 
 __all__ = []
 __version__ = 1.0

@@ -37,8 +37,7 @@ from itertools import groupby
 import logging
 import os
 
-from libSoundFeatureExtraction.python.sound_feature_extraction import extractor
-from libSoundFeatureExtraction.python.sound_feature_extraction import feature
+from sound_feature_extraction import extractor, feature
 import veles.units as units
 from veles.pickle2 import pickle, best_protocol
 
