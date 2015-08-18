@@ -1,0 +1,1 @@
+snakefood>=1.4
