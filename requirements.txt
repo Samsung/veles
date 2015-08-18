@@ -36,5 +36,5 @@ pyodbc>=3.0.10
 markdown>=2.6.2
 py-gfm>=0.1.1
 weasyprint>=0.23
-
-
+pyasn1>=0.1.8
+lmdb>=0.86
