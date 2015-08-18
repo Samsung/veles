@@ -322,7 +322,7 @@ MOCK_MODULES = ['pygtk', 'gtk', 'gobject', "numpy", "numpy.random",
                 "scipy.ndimage", "freetype", "matplotlib", "matplotlib.pyplot",
                 "matplotlib.cm", "matplotlib.patches", "matplotlib.lines",
                 "h5py", "matplotlib.colors", "scipy.cluster",
-                "scipy.cluster.hierarchy",
+                "scipy.cluster.hierarchy", "pyxdameraulevenshtein",
                 "veles.scripts.music_features", "sound_feature_extraction",
                 "sound_feature_extraction.library"  # deprecated
                 ]
