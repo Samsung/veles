@@ -34,7 +34,7 @@ under the License.
 ███████████████████████████████████████████████████████████████████████████████
 """
 
-
+from codecs import getwriter
 from collections import OrderedDict, defaultdict
 import datetime
 import hashlib
@@ -43,6 +43,8 @@ from itertools import chain
 import json
 import logging
 import os
+import tarfile
+import numpy
 import six
 import sys
 import tempfile
@@ -53,6 +55,7 @@ from zope.interface import implementer
 from veles.compat import from_none, FileExistsError
 from veles.config import root
 from veles.distributable import IDistributable
+from veles.error import VelesException
 from veles.mutable import LinkableAttribute
 from veles.json_encoders import NumpyJSONEncoder
 from veles.result_provider import IResultProvider
@@ -856,3 +859,73 @@ class Workflow(Container):
                 raise
             self._checksum = sha1.hexdigest() + "_%d" % len(self)
         return self._checksum
+
+    def package_export(self, file_name):
+        """Exports workflow to a package which can be executed by native
+        runtime.
+        """
+        exported = [u for u in self if hasattr(u, "package_export")]
+        if len(exported) == 0:
+            raise ValueError(
+                "No units support export. Implement package_export() method "
+                "in at least one.")
+        obj = {"workflow": self.name,
+               "checksum": self.checksum,
+               "units": [{"class": {"name": unit.__class__.__name__,
+                                    "uuid": unit.__class__.__id__},
+                          "data": unit.package_export()}
+                         for unit in exported]}
+        for ind, unit in enumerate(exported):
+            obj["units"][ind]["links"] = [
+                exported.index(u) for u in unit.derefed_links_to()
+                if u in exported]
+        # check the resulting graph's connectivity
+        fifo = [0]
+        seen = set()
+        while len(fifo) > 0:
+            i = fifo.pop(0)
+            seen.add(i)
+            links = obj["units"][i]["links"]
+            if len(links) == 0 and i < len(exported) - 1:
+                raise VelesException(
+                    "Unit %s is not connected to any other unit" % exported[i])
+            for c in links:
+                if c in seen:
+                    raise VelesException(
+                        "Cycles are not allowed (%s -> %s)" % (
+                            exported[i], exported[c]))
+            fifo.extend(links)
+
+        arrays = []
+
+        def array_file_name(narr, index):
+            return "@%04d_%s" % (index, "x".join(map(str, narr.shape)))
+
+        def export_numpy_array(narr):
+            if isinstance(narr, numpy.ndarray):
+                arrays.append(narr)
+                return array_file_name(narr, len(arrays) - 1)
+            raise TypeError("Objects of class other than numpy.ndarray are "
+                            "not supported")
+
+        try:
+            with tarfile.open(file_name, "w:gz") as tar:
+                io = six.BytesIO()
+                json.dump(obj, getwriter("utf-8")(getattr(io, "buffer", io)),
+                          indent=4, sort_keys=True, default=export_numpy_array)
+                ti = tarfile.TarInfo("contents.json")
+                ti.size = io.tell()
+                ti.mode = int("666", 8)
+                io.seek(0)
+                tar.addfile(ti, fileobj=io)
+                for ind, arr in enumerate(arrays):
+                    io = six.BytesIO()
+                    numpy.save(io, arr)
+                    ti = tarfile.TarInfo(array_file_name(arr, ind) + ".npy")
+                    ti.size = io.tell()
+                    ti.mode = int("666", 8)
+                    io.seek(0)
+                    tar.addfile(ti, fileobj=io)
+                self.info("Successfully exported package to %s", file_name)
+        except:
+            self.exception("Failed to export to %s", file_name)
