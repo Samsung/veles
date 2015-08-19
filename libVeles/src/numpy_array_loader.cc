@@ -28,7 +28,7 @@
  *  under the License.
  */
 
-#include <src/numpy_array_loader.h>
+#include "src/numpy_array_loader.h"
 #include <simd/arithmetic.h>
 
 namespace veles {

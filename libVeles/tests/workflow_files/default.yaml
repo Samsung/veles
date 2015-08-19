@@ -1,8 +1,0 @@
-layer 0: !!python/object:saver.NeuralNetworkLayer {activation_function: 0, activation_function_descr: tanh,
-  height: 100, layer_number: 0, width: 784}
-layer 1: !!python/object:saver.NeuralNetworkLayer {activation_function: 1, activation_function_descr: softmax,
-  height: 10, layer_number: 1, width: 100}
-layers_number: 2
-neural_network_type: 0
-neural_network_type_desc: Feedforward neural network
-service_info: SaverUnit2

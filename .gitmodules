@@ -26,3 +26,9 @@
 [submodule "libVeles/simd"]
 	path = libVeles/simd
 	url = https://github.com/Samsung/veles.simd.git
+[submodule "libVeles/rapidjson"]
+	path = libVeles/rapidjson
+	url = https://github.com/miloyip/rapidjson.git
+[submodule "libVeles/variant"]
+	path = libVeles/variant
+	url = https://github.com/mapbox/variant.git

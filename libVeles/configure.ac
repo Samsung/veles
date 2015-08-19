@@ -29,6 +29,10 @@ AC_SUBST(INTERFACE_VERSION, [0])
 AC_SUBST(REVISION_NUMBER, [$(cd $srcdir && git rev-list HEAD --count)])
 AC_SUBST(AGE_NUMBER, [0])
 
+AS_IF([test "x$enable_static" != "xno" -a "x$enable_shared" != "xno" ], [
+    AC_MSG_ERROR([Building both shared and static libraries is not supported (use --disable-shared or --disable-static)])
+])
+
 AC_CONFIG_SUBDIRS([simd])
 SIMD_LIBS="\$(top_builddir)/simd/src/libSimd.la"
 SIMD_CFLAGS="-I\$(top_srcdir)/simd/inc"
@@ -62,9 +66,7 @@ AC_ARG_WITH([built-in-libarchive],
 AC_SUBST([LIBARCHIVE_DIR])
 AC_SUBST([ZLIB_DIR])
 
-AS_IF([test "x$enable_static" != "xno" -a "x$enable_shared" != "xno" ], [
-    AC_MSG_ERROR([Building both shared and static libraries is not supported (use --disable-shared or --disable-static)])
-])
+AM_CPPFLAGS="$AM_CPPFLAGS -I\$(top_srcdir)/rapidjson/include"
 
 # Check whether to use nice Eina logging
 AC_ARG_ENABLE([eina-logging],
