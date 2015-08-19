@@ -77,15 +77,16 @@ struct NumpyArray {
 class NumpyArrayLoader : protected DefaultLogger<NumpyArrayLoader,
                                                  Logger::COLOR_YELLOW> {
  public:
-  NumpyArrayLoader();
+  NumpyArrayLoader() = default;
+  virtual ~NumpyArrayLoader() = default;
 
   template <class T, int D, bool transposed=false>
   NumpyArray<T, D> Load(std::istream* src);
 
  private:
   friend class ::NumpyArrayLoaderTest_Transpose_Test;
+
   struct Header {
-    static const std::unordered_map<std::string, int> kSizesDict;
     static const std::unordered_map<std::string, std::string> kTypesDict;
 
     Header();
@@ -113,8 +114,17 @@ class NumpyArrayLoader : protected DefaultLogger<NumpyArrayLoader,
   static void ConvertType(const void* src, const std::string& dtype, int size,
                           T* dst);
   static void ConvertTypeF16(const uint16_t* src, int size, float* dst);
+  static void ConvertTypeF16(const uint16_t* src, int size, uint16_t* dst);
   static void ConvertTypeI16(const int16_t* src, int size, float* dst);
+  static void ConvertTypeI16(const int16_t* src, int size, int16_t* dst);
+  static void ConvertTypeI16(const int16_t* src, int size, uint16_t* dst);
+  static void ConvertTypeI16(const int16_t* src, int size, int32_t* dst);
   static void ConvertTypeI32(const int32_t* src, int size, float* dst);
+  static void ConvertTypeI32(const int32_t* src, int size, int32_t* dst);
+  static void ConvertTypeI32(const int32_t* src, int size, uint16_t* dst);
+  static void ConvertTypeI32(const int32_t* src, int size, int16_t* dst);
+  template <class T>
+  static void ConvertTypeSame(const T* src, int size, T* dst);
 };
 
 template <class T, int D, bool transposed>
@@ -126,7 +136,7 @@ NumpyArray<T, D> NumpyArrayLoader::Load(std::istream* src) {
   if (src->eof()) {
     throw NumpyArrayLoadingFailedException("failed to read the signature");
   }
-  if (reinterpret_cast<uint8_t>(signature[0]) != 0x93 ||
+  if (reinterpret_cast<uint8_t*>(signature)[0] != 0x93 ||
       strcmp(signature + 1, "NUMPY")) {
     throw NumpyArrayLoadingFailedException("signature is invalid");
   }
@@ -147,12 +157,21 @@ NumpyArray<T, D> NumpyArrayLoader::Load(std::istream* src) {
   if (src->eof()) {
     throw NumpyArrayLoadingFailedException("failed to read the header size");
   }
-  uint16_t header_size;
-  (*src) >> header_size;
+  uint8_t tmp;
+  (*src) >> tmp;
+  if (src->eof()) {
+    throw NumpyArrayLoadingFailedException("failed to read the header size");
+  }
+  uint16_t header_size = tmp;
+  (*src) >> tmp;
+  header_size |= tmp << 8;
+  if (header_size == 0) {
+    throw NumpyArrayLoadingFailedException("corrupted file: header size is 0");
+  }
 #ifdef BOOST_BIG_ENDIAN
   header_size = (header_size << 8) | (header_size >> 8)
 #endif
-  Header&& header;
+  Header header;
   {
     std::unique_ptr<char[]> raw_header(new char[header_size + 1]);
     raw_header[header_size] = 0;
@@ -194,6 +213,7 @@ NumpyArray<T, D> NumpyArrayLoader::Load(std::istream* src) {
   }
   if (header.fortran_order != transposed) {
     // swap axis 0 with axis 1
+    DBG("Performing inplace transposition");
     int rows = header.shape[0], cols = header.shape[1];
     if (header.fortran_order) {
       std::swap(rows, cols);
@@ -225,18 +245,21 @@ NumpyArray<T, D> NumpyArrayLoader::Load(std::istream* src) {
     }
   }
   if (!header.DtypeIsTheSameAs<T>()) {
+    DBG("Performing type conversion: %s -> %s",
+        header.dtype.c_str(), typeid(T).name());
     auto cdata = new T[header.SizeInElements()];
     ConvertType(raw_data.get(), header.dtype, header.SizeInElements(), cdata);
     raw_data.reset(reinterpret_cast<char*>(cdata));
   }
 
   NumpyArray<T, D> arr;
-  arr.data = shared_array<T>(reinterpret_cast<T*>(raw_data.get()));
+  arr.data = shared_array<T>(reinterpret_cast<T*>(raw_data.get()),
+                             header.SizeInElements());
   raw_data.release();
   arr.transposed = transposed;
-  for (int i = 0; i < D; i++) {
-    arr.shape[i] = header.shape[i];
-  }
+  static_assert(sizeof(arr.shape[0]) == sizeof(header.shape[0]),
+                "Shape element size mismatch");
+  memcpy(arr.shape.data(), header.shape.data(), D * sizeof(arr.shape[0]));
   return std::move(arr);
 }
 
@@ -280,19 +303,26 @@ void NumpyArrayLoader::TransposeInplace(int rows, int columns, T* matrix) {
 template <class T>
 void NumpyArrayLoader::ConvertType(const void* src, const std::string& dtype,
                                    int size, T* dst) {
-  dtype = dtype.substr(1);
-  if (dtype == "f16") {
-    ConvertTypeF16(reinterpret_cast<uint16_t*>(src), size, dst);
+  auto shdtype = dtype.substr(1);
+  if (shdtype == "f2") {
+    ConvertTypeF16(reinterpret_cast<const uint16_t*>(src), size, dst);
     return;
   }
-  if (dtype == "i16") {
-    ConvertTypeI16(reinterpret_cast<int16_t*>(src), size, dst);
+  if (shdtype == "i2") {
+    ConvertTypeI16(reinterpret_cast<const int16_t*>(src), size, dst);
     return;
   }
-  if (dtype == "i32") {
-    ConvertTypeI32(reinterpret_cast<int32_t*>(src), size, dst);
+  if (shdtype == "i4") {
+    ConvertTypeI32(reinterpret_cast<const int32_t*>(src), size, dst);
     return;
   }
+  throw NumpyArrayLoadingFailedException(
+      std::string("Conversion of ") + shdtype + " is not implemented");
+}
+
+template <class T>
+void NumpyArrayLoader::ConvertTypeSame(const T* src, int size, T* dst) {
+  memcpy(dst, src, size * sizeof(T));
 }
 
 template <class T>

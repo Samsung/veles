@@ -33,9 +33,6 @@
 
 namespace veles {
 
-NumpyArrayLoader::NumpyArrayLoader() {
-}
-
 NumpyArrayLoader::Header NumpyArrayLoader::ParseHeader(char* data) {
   if (data[0] != '{') {
     throw NumpyArrayLoadingFailedException("failed to parse the header");
@@ -60,7 +57,7 @@ NumpyArrayLoader::Header NumpyArrayLoader::ParseHeader(char* data) {
       last = ',';
       start = data - 1;
     }
-    while (data[0] != last) {
+    while (data[0] && data[0] != last) {
       data++;
     }
     data++[0] = 0;
@@ -132,8 +129,12 @@ void NumpyArrayLoader::TransposeInplace(int rows, int columns, int esize,
 
 void NumpyArrayLoader::ConvertTypeF16(const uint16_t* src, int size,
                                       float* dst) {
-  // TODO(v.markovtsev): use float16_to_float
-  dst[size] = src[0];
+  float16_to_float(src, size, dst);
+}
+
+void NumpyArrayLoader::ConvertTypeF16(const uint16_t* src, int size,
+                                      uint16_t* dst) {
+  ConvertTypeSame(src, size, dst);
 }
 
 void NumpyArrayLoader::ConvertTypeI16(const int16_t* src, int size,
@@ -141,41 +142,51 @@ void NumpyArrayLoader::ConvertTypeI16(const int16_t* src, int size,
   int16_to_float(src, size, dst);
 }
 
+void NumpyArrayLoader::ConvertTypeI16(const int16_t* src, int size,
+                                      int16_t* dst) {
+  ConvertTypeSame(src, size, dst);
+}
+
+void NumpyArrayLoader::ConvertTypeI16(const int16_t* , int, uint16_t*) {
+  assert(false && "Unreachable");
+}
+
+void NumpyArrayLoader::ConvertTypeI16(const int16_t*, int, int32_t*) {
+  assert(false && "Unreachable");
+}
+
 void NumpyArrayLoader::ConvertTypeI32(const int32_t* src, int size,
                                       float* dst) {
   int32_to_float(src, size, dst);
 }
 
+void NumpyArrayLoader::ConvertTypeI32(const int32_t* src, int size,
+                                      int32_t* dst) {
+  ConvertTypeSame(src, size, dst);
+}
+
+void NumpyArrayLoader::ConvertTypeI32(const int32_t*, int, uint16_t*) {
+  assert(false && "Unreachable");
+}
+
+void NumpyArrayLoader::ConvertTypeI32(const int32_t*, int, int16_t*) {
+  assert(false && "Unreachable");
+}
+
 const std::unordered_map<std::string, std::string>
 NumpyArrayLoader::Header::kTypesDict = {
-    {"b", typeid(int8_t).name()},
-    {"i8", typeid(int8_t).name()},
-    {"i16", typeid(int16_t).name()},
-    {"i32", typeid(int32_t).name()},
-    {"i64", typeid(int64_t).name()},
-    {"u8", typeid(uint8_t).name()},
-    {"u16", typeid(uint16_t).name()},
-    {"u32", typeid(uint32_t).name()},
-    {"u64", typeid(uint64_t).name()},
+    {"b1", typeid(int8_t).name()},
+    {"i1", typeid(int8_t).name()},
+    {"i2", typeid(int16_t).name()},
+    {"i4", typeid(int32_t).name()},
+    {"i8", typeid(int64_t).name()},
+    {"u1", typeid(uint8_t).name()},
+    {"u2", typeid(uint16_t).name()},
+    {"u4", typeid(uint32_t).name()},
+    {"u8", typeid(uint64_t).name()},
     {"f2", "float16"},
     {"f4", typeid(float).name()},
     {"f8", typeid(double).name()},
-};
-
-const std::unordered_map<std::string, int>
-NumpyArrayLoader::Header::kSizesDict = {
-    {"b", 1},
-    {"i8", 1},
-    {"i16", 2},
-    {"i32", 4},
-    {"i64", 8},
-    {"u8", 1},
-    {"u16", 2},
-    {"u32", 4},
-    {"u64", 8},
-    {"f2", 2},
-    {"f4", 4},
-    {"f8", 8},
 };
 
 NumpyArrayLoader::Header::Header() : fortran_order(false) {
@@ -184,16 +195,11 @@ NumpyArrayLoader::Header::Header() : fortran_order(false) {
 
 
 int NumpyArrayLoader::Header::DtypeSize() const {
-  auto it = kSizesDict.find(dtype);
-  if (it == kSizesDict.end()) {
-    throw NumpyArrayLoadingFailedException(
-        std::string("unsupported dtype ") + dtype);
-  }
-  return it->second;
+  return std::stoi(dtype.substr(2));
 }
 
 bool NumpyArrayLoader::Header::DtypeIsLittleEndian() const {
-  return dtype[0] == '<';
+  return dtype[0] == '<' || dtype[0] == '|';
 }
 
 int NumpyArrayLoader::Header::Dimensions() const {
@@ -229,7 +235,7 @@ void NumpyArrayLoader::Header::DebugDescribe(NumpyArrayLoader* loader) const {
     }
     ptr += strlen(ptr);
   }
-  DBGI(loader, "header: dtype %s, fortran: %s, shape: (%s)",
+  DBGI(loader, "Header: dtype %s, fortran: %s, shape: (%s)",
        dtype.c_str(), fortran_order? "true" : "false", shape_str);
 }
 

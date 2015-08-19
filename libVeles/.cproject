@@ -29,6 +29,10 @@
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.350235330" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="EINA"/>
 									<listOptionValue builtIn="false" value="EINA_STRIPPED"/>
+									<listOptionValue builtIn="false" value="__AVX__"/>
+									<listOptionValue builtIn="false" value="__SEE41__"/>
+									<listOptionValue builtIn="false" value="__SSE41__"/>
+									<listOptionValue builtIn="false" value="__SSE4_1__"/>
 								</option>
 								<option id="gnu.c.compiler.option.include.paths.1369339968" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}&quot;"/>
@@ -40,6 +44,8 @@
 									<listOptionValue builtIn="false" value="__GXX_EXPERIMENTAL_CXX0X__"/>
 									<listOptionValue builtIn="false" value="EINA"/>
 									<listOptionValue builtIn="false" value="EINA_STRIPPED"/>
+									<listOptionValue builtIn="false" value="__AVX__"/>
+									<listOptionValue builtIn="false" value="__SSE4_1__"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.include.paths.1495967515" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}&quot;"/>
