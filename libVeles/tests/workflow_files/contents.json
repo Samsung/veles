@@ -1,0 +1,36 @@
+{
+    "checksum": "13088da21585f7a4cd7023083405e2094c53d746_2",
+    "units": [
+        {
+            "class": {
+                "name": "All2AllTanh",
+                "uuid": "b3a2bd5c-3c01-46ef-978a-fef22e008f31"
+            },
+            "data": {
+                "activation_mode": "ACTIVATION_TANH",
+                "bias": "@0000_100",
+                "include_bias": true,
+                "weights": "@0001_100x784",
+                "weights_transposed": false
+            },
+            "links": [
+                1
+            ]
+        },
+        {
+            "class": {
+                "name": "All2AllSoftmax",
+                "uuid": "420219fc-3e1a-45b1-87f8-aaa0c1540de4"
+            },
+            "data": {
+                "activation_mode": "ACTIVATION_LINEAR",
+                "bias": "@0002_10",
+                "include_bias": true,
+                "weights": "@0003_10x100",
+                "weights_transposed": false
+            },
+            "links": []
+        }
+    ],
+    "workflow": "MnistWorkflow"
+}

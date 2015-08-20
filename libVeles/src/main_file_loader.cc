@@ -30,7 +30,6 @@
 
 #include "src/main_file_loader.h"
 #include <algorithm>
-#include <sstream>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #include <rapidjson/document.h>
@@ -41,15 +40,31 @@ namespace veles {
 UnitDefinition::UnitDefinition(
     const std::string& name, const std::string& uuid)
     : name_(name) {
-  std::stringstream shex;
-  std::string uuid36(uuid);
-  uuid36.erase(std::remove(uuid36.begin(), uuid36.end(), '-'), uuid36.end());
-  shex << std::hex << uuid36;
-  shex >> uuid_;
+  std::string hex(uuid);
+  hex.erase(std::remove(hex.begin(), hex.end(), '-'), hex.end());
+  for (int i = 0; i < 32; i+=2) {
+    uuid_[i >> 1] = std::stoi(hex.substr(i, 2), nullptr, 16);
+  }
+}
+
+std::string UnitDefinition::uuid_str() const noexcept {
+  std::string res(36, 0);
+  static constexpr char hexmap[] = {'0', '1', '2', '3', '4', '5', '6', '7',
+                                    '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+  int offset = 0;
+  for (int i = 0; i < static_cast<int>(sizeof(uuid_)); i++) {
+    res[i * 2 + offset] = hexmap[uuid_[i] >> 4];
+    res[i * 2 + offset + 1] = hexmap[uuid_[i] & 0xF];
+    if (i == 3 || i == 5 || i == 7 || i == 9) {
+      res[i * 2 + ++offset + 1] = '-';
+    }
+  }
+  return res;
 }
 
 std::vector<std::string> UnitDefinition::PropertyNames() const noexcept {
-  std::vector<std::string> keys(props_.size());
+  std::vector<std::string> keys;
+  keys.reserve(props_.size());
   for (auto& it : props_) {
     keys.push_back(it.first);
   }
@@ -57,7 +72,7 @@ std::vector<std::string> UnitDefinition::PropertyNames() const noexcept {
 }
 
 void UnitDefinition::Link(std::shared_ptr<UnitDefinition> def) {
-  links_.insert(def);
+  links_.push_back(def);
 }
 
 WorkflowDefinition::WorkflowDefinition(
@@ -107,9 +122,11 @@ WorkflowDefinition MainFileLoader::Load(std::istream* src) {
   std::vector<std::shared_ptr<UnitDefinition>> udefs(units.Size());
   for (int i = static_cast<int>(units.Size()) - 1; i >= 0; i--) {
     auto& unit = units[i];
+    auto uuid = unit["class"]["uuid"].GetString();
     auto udef = std::make_shared<UnitDefinition>(
-        unit["class"]["name"].GetString(),
-        unit["class"]["uuid"].GetString());
+        unit["class"]["name"].GetString(), uuid);
+    DBG("Unit %s: %s", uuid, udef->name().c_str());
+    udefs[i] = udef;
     auto& props = unit["data"];
     for (auto pit = props.MemberBegin(); pit != props.MemberEnd(); ++pit) {
       switch (pit->value.GetType()) {
@@ -117,9 +134,19 @@ WorkflowDefinition MainFileLoader::Load(std::istream* src) {
         case rapidjson::kTrueType:
           udef->set(pit->name.GetString(), pit->value.GetBool());
           break;
-        case rapidjson::kStringType:
-          udef->set(pit->name.GetString(), pit->value.GetString());
+        case rapidjson::kStringType: {
+          std::string value = pit->value.GetString();
+          if (value.size() > 1 && value[0] == '@') {
+            value = value.substr(1);
+            if (value[1] != '@') {
+              udef->set(pit->name.GetString(),
+                        NumpyArrayReference(value + ".npy"));
+              break;
+            }
+          }
+          udef->set(pit->name.GetString(), value);
           break;
+        }
         case rapidjson::kNumberType:
           if (pit->value.IsDouble()) {
             udef->set(pit->name.GetString(),
@@ -140,7 +167,10 @@ WorkflowDefinition MainFileLoader::Load(std::istream* src) {
       udef->Link(udefs[links[l].GetInt()]);
     }
   }
-  return { doc["checksum"].GetString(), doc["workflow"].GetString(), udefs[0] };
+  auto checksum = doc["checksum"].GetString();
+  auto name = doc["workflow"].GetString();
+  DBG("Workflow %s: %s", checksum, name);
+  return { checksum, name, udefs[0] };
 }
 
 }  // namespace veles

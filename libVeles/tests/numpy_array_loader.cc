@@ -32,6 +32,7 @@
 #include <gtest/gtest.h>
 #include <veles/logger.h>  // NOLINT(*)
 #include "src/numpy_array_loader.h"
+#include "tests/imemstream.h"
 
 
 class NumpyArrayLoaderTest :
@@ -215,37 +216,6 @@ static const float NUMPY_ARRAY_SAMPLE_ITEMS[] = {
   210.12, 393.25, -329.25, 97.25, -31.594, 449.75, 2.918, 436.75, 262.5, 88.562,
   297.75, 463.0, 218.75, 63.594, -103.0, 357.5, -437.5, 111.88, 428.25, 183.75,
   302.75, -197.38, -164.0, 304.25, 223.75, 443.5, -165.5, -230.75, 38.781, 22.391,
-};
-
-struct membuf: std::streambuf {
-  membuf(char const* base, size_t size) {
-    char* p(const_cast<char*>(base));
-    this->setg(p, p, p + size);
-  }
-
-  virtual pos_type seekoff(off_type offset, std::ios::seekdir seekdir,
-      std::ios::openmode = std::ios::in | std::ios::out) override {
-    switch (seekdir) {
-      case std::ios::beg:
-        _M_in_cur = _M_in_beg + offset;
-        break;
-      case std::ios::cur:
-        _M_in_cur += offset;
-        break;
-      case std::ios::end:
-        _M_in_cur = _M_in_end;
-        break;
-      default:
-        break;
-    }
-    return pos_type(off_type(_M_in_cur - _M_in_beg));
-  }
-};
-struct imemstream: virtual membuf, public std::istream {
-  imemstream(char const* base, size_t size)
-    : membuf(base, size)
-    , std::istream(static_cast<std::streambuf*>(this)) {
-  }
 };
 
 TEST(NumpyArrayLoaderTest, LoadF16F32T) {

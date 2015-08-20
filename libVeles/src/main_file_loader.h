@@ -17,7 +17,6 @@
 #include <memory>
 #include <vector>
 #include <unordered_map>
-#include <unordered_set>
 #include <variant/variant.hpp>
 #include <veles/logger.h>  // NOLINT(*)
 
@@ -26,20 +25,34 @@ using variant = mapbox::util::variant<Types...>;
 
 namespace veles {
 
+class NumpyArrayReference {
+ public:
+  explicit NumpyArrayReference(const std::string& file_name)
+      : file_name_(file_name) {}
+
+  const std::string& file_name() const noexcept { return file_name_; }
+
+ private:
+  std::string file_name_;
+};
+
+using Property = variant<bool, int, float, std::string, NumpyArrayReference>;
+
 class UnitDefinition {
  public:
   UnitDefinition(const std::string& name, const std::string& uuid);
 
   std::string name() const noexcept { return name_; }
   const uint8_t* uuid() const noexcept { return uuid_; }
-  const std::unordered_set<std::shared_ptr<UnitDefinition>>&
+  std::string uuid_str() const noexcept;
+  const std::vector<std::shared_ptr<UnitDefinition>>&
   links() const noexcept {
     return links_;
   }
   template <class T>
-  const T& operator[](const std::string& key) const;
+  const T& get(const std::string& key) const;
   template <class T>
-  T& operator[](const std::string& key);
+  T& get(const std::string& key);
   template <class T>
   void set(const std::string& key, const T& value);
   std::vector<std::string> PropertyNames() const noexcept;
@@ -48,8 +61,8 @@ class UnitDefinition {
  private:
   std::string name_;
   uint8_t uuid_[16];
-  std::unordered_set<std::shared_ptr<UnitDefinition>> links_;
-  std::unordered_map<std::string, variant<bool, int, float, std::string>> props_;
+  std::vector<std::shared_ptr<UnitDefinition>> links_;
+  std::unordered_map<std::string, Property> props_;
 };
 
 class WorkflowDefinition {
@@ -77,13 +90,13 @@ class MainFileLoader : protected DefaultLogger<MainFileLoader,
 };
 
 template <class T>
-const T& UnitDefinition::operator[](const std::string& key) const {
+const T& UnitDefinition::get(const std::string& key) const {
   auto val = props_.find(key)->second;
   return mapbox::util::get<T>(val);
 }
 
 template <class T>
-T& UnitDefinition::operator[](const std::string& key) {
+T& UnitDefinition::get(const std::string& key) {
   return mapbox::util::get<T>(props_[key]);
 }
 
