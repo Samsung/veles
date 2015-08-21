@@ -301,7 +301,7 @@ class ManholeConnection(_ORIGINAL_THREAD):
                 finally:
                     setinterval(old_interval)
                     cry("Cleaned up.")
-        except Exception:
+        except:
             cry("ManholeConnection thread failed:")
             cry(traceback.format_exc())
 

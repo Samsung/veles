@@ -34,17 +34,23 @@ except ImportError:
 __symbols = cycle(('|\r', '/\r', '—\r', '\\\r'))
 __lock = Lock()
 __last_flush_time = clock()
+stdout = None
 
 
 def spin(interval=0.2):
     with __lock:
-        sys.stdout.write(next(__symbols))
+        global stdout
+        if stdout is None or stdout.closed:
+            stdout = sys.stdout
+            if stdout.closed:
+                return
+        stdout.write(next(__symbols))
         if reactor is None or not reactor.running:
             time = clock()
             global __last_flush_time
             if time - __last_flush_time < interval:
                 return
-            sys.stdout.flush()
+            stdout.flush()
             __last_flush_time = time
         else:
-            reactor.callFromThread(sys.stdout.flush)
+            reactor.callFromThread(stdout.flush)
