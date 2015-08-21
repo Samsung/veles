@@ -1,13 +1,13 @@
-/*! @file workflow_loader.cc
- *  @brief Implementation of WorkflowLoader class.
- *  @author Vadim Markovtsev <v.markovtsev@samsung.com>, Bulychev Egor <e.bulychev@samsung.com>
+/*! @file workflow_archive.cc
+ *  @brief Helper class to deal with workflow archives (packages).
+ *  @author Vadim Markovtsev <v.markovtsev@samsung.com>
  *  @version 1.0
  *
  *  @section Notes
  *  This code partially conforms to <a href="http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml">Google C++ Style Guide</a>.
  *
  *  @section Copyright
- *  Copyright © 2013 Samsung R&D Institute Russia
+ *  Copyright © 2015 Samsung R&D Institute Russia
  *
  *  @section License
  *  Licensed to the Apache Software Foundation (ASF) under one
@@ -28,53 +28,54 @@
  *  under the License.
  */
 
-#include "veles/workflow_loader.h"
-#include <istream>
-#include <vector>
+#include "src/workflow_archive.h"
+#include <cassert>
 #include <libarchive/libarchive/archive.h>  // NOLINT(*)
 #include <libarchive/libarchive/archive_entry.h>  // NOLINT(*)
-#include "inc/veles/make_unique.h"
-#include "inc/veles/unit_factory.h"
 #include "src/iarchivestream.h"
-#include "src/main_file_loader.h"
-#include "src/workflow_archive.h"
 
 namespace veles {
 
-/// Name of the file which describes the workflow.
-const char* WorkflowLoader::kMainFile = "contents.json";
-
-WorkflowLoader::WorkflowLoader() {
+WorkflowArchive::WorkflowArchive(const WorkflowDefinition& wdef)
+    : workflow_definition_(wdef) {
 }
 
-Workflow WorkflowLoader::Load(const std::string& /*archive*/) {
-  return Workflow();
+const WorkflowDefinition& WorkflowArchive::workflow_definition() const {
+  return workflow_definition_;
 }
 
-std::shared_ptr<WorkflowArchive> WorkflowLoader::ExtractArchive(
-    const std::string& file_name) {
+std::shared_ptr<std::istream> WorkflowArchive::GetNumpyArrayStream(
+    const std::string& file_name) const {
   int error;
-  auto arch = WorkflowArchive::Open(file_name, &error);
-  if (!arch) {
-    ERR("Failed to open %s: %d", file_name.c_str(), error);
-    return nullptr;
-  }
-  DBG("Successfully opened %s, scanning for %s", file_name.c_str(), kMainFile);
+  auto arch = Open(file_name, &error);
+  assert(arch);
   archive_entry* entry;
   while (archive_read_next_header(arch.get(), &entry) == ARCHIVE_OK) {
     std::string efn = archive_entry_pathname(entry);
-    if (efn == kMainFile) {
-      DBG("Found %s", kMainFile);
-      auto instr = std::make_unique<iarchivestream>(arch.get());
-      auto wdef = MainFileLoader().Load(instr.get());
-      return std::make_shared<WorkflowArchive>(wdef);
+    if (efn == file_name) {
+      return std::make_shared<iarchivestream>(arch.get());
     } else {
-      DBG("Skipping %s...", efn.c_str());
       archive_read_data_skip(arch.get());
     }
   }
-  ERR("%s was not found", kMainFile);
   return nullptr;
+}
+
+std::shared_ptr<archive> WorkflowArchive::Open(
+    const std::string& file_name, int* error) {
+  auto arch = std::shared_ptr<archive>(archive_read_new(), archive_read_free);
+  assert(archive_read_support_filter_all(arch.get()) == ARCHIVE_OK);
+  assert(archive_read_support_format_tar(arch.get()) == ARCHIVE_OK);
+  assert(archive_read_support_format_zip(arch.get()) == ARCHIVE_OK);
+  int res = archive_read_open_filename(
+      arch.get(), file_name.c_str(), UINT16_MAX + 1);
+  if (res != ARCHIVE_OK) {
+    if (error) {
+      *error = res;
+    }
+    return nullptr;
+  }
+  return std::move(arch);
 }
 
 }  // namespace veles

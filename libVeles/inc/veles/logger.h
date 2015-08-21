@@ -1,5 +1,5 @@
 /*! @file logger.h
- *  @brief New file description.
+ *  @brief EINA logger helper class.
  *  @author Markovtsev Vadim <v.markovtsev@samsung.com>
  *  @version 1.0
  *
