@@ -61,13 +61,14 @@ class WorkflowLoadingFailedException : public std::exception {
   std::string message_;
 };
 
+class WorkflowArchive;
+
 /**
  * @brief Factory which produces Workflow objects from packages stored on disk.
  * */
 class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
                                                Logger::COLOR_YELLOW> {
  public:
-  friend class WorkflowLoaderTest;
   WorkflowLoader();
   virtual ~WorkflowLoader() = default;
   /// @brief Main function.
@@ -85,12 +86,9 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
   Workflow Load(const std::string& archive);
 
  private:
-  struct WorkflowArchive {
-    std::string main;
-    std::unordered_map<std::string, void*> arrays;
-  };
+  friend class WorkflowLoaderTest;
 
-  WorkflowArchive ExtractArchive(const std::string& filename);
+  std::shared_ptr<WorkflowArchive> ExtractArchive(const std::string& file_name);
 
    /// Name of the file which describes the workflow.
   static const char* kMainFile;

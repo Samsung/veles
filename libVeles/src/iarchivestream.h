@@ -1,5 +1,5 @@
-/*! @file imemstream.h
- *  @brief istream which reads from buffer in memory.
+/*! @file iarchivestream.h
+ *  @brief istream which reads from libarchive's struct archive *.
  *  @author Vadim Markovtsev <v.markovtsev@samsung.com>
  *  @version 1.0
  *
@@ -7,7 +7,7 @@
  *  This code partially conforms to <a href="http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml">Google C++ Style Guide</a>.
  *
  *  @section Copyright
- *  Copyright © 2013 Samsung R&D Institute Russia
+ *  Copyright © 2015 Samsung R&D Institute Russia
  *
  *  @section License
  *  Licensed to the Apache Software Foundation (ASF) under one
@@ -28,49 +28,38 @@
  *  under the License.
  */
 
-#ifndef TESTS_IMEMSTREAM_H_
-#define TESTS_IMEMSTREAM_H_
+#ifndef SRC_IARCHIVESTREAM_H_
+#define SRC_IARCHIVESTREAM_H_
 
+#include <cassert>
 #include <istream>
 
-namespace {
+struct archive;
 
-struct membuf: std::streambuf {
-  membuf(const char* base, size_t size) {
-    char* p(const_cast<char*>(base));
-    this->setg(p, p, p + size);
-  }
+class archbuf: public std::streambuf {
+ public:
+  archbuf(archive* archive);
+
+  virtual int_type underflow () override;
+
+  virtual pos_type seekoff(off_type offset, std::ios::seekdir seekdir,
+      std::ios::openmode = std::ios::in | std::ios::out) override;
+
+  size_t archive_buffer_pos() const noexcept;
 
  protected:
-  virtual pos_type seekoff(off_type offset, std::ios::seekdir seekdir,
-      std::ios::openmode = std::ios::in | std::ios::out) override {
-    switch (seekdir) {
-      case std::ios::beg:
-        assert(eback() + offset < egptr());
-        _M_in_cur = eback() + offset;
-        break;
-      case std::ios::cur:
-        assert(gptr() + offset < egptr());
-        _M_in_cur += offset;
-        break;
-      case std::ios::end:
-        assert(egptr() - offset >= eback());
-        _M_in_cur = egptr() - offset;
-        break;
-      default:
-        break;
-    }
-    return pos_type(off_type(gptr() - eback()));
-  }
+  static constexpr int kBufferSize = UINT16_MAX + 1;
+
+  archive* archive_;
+  size_t read_;
+  char buffer[kBufferSize];
 };
 
-struct imemstream: virtual membuf, public std::istream {
-  imemstream(const char* base, size_t size)
-    : membuf(base, size)
+struct iarchivestream: public virtual archbuf, public std::istream {
+  iarchivestream(archive* archive)
+    : archbuf(archive)
     , std::istream(static_cast<std::streambuf*>(this)) {
   }
 };
 
-}
-
-#endif  // TESTS_IMEMSTREAM_H_
+#endif  // SRC_IARCHIVESTREAM_H_

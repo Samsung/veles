@@ -1,6 +1,6 @@
 /*! @file workflow_loader.cc
- *  @brief Source for tests for class WorkflowLoder.
- *  @author Bulychev Egor <e.bulychev@samsung.com>
+ *  @brief Tests for class WorkflowLoder.
+ *  @author Vadim Markovtsev <v.markovtsev@samsung.com>
  *  @version 1.0
  *
  *  @section Notes
@@ -28,26 +28,48 @@
  *  under the License.
  */
 
-#include <unistd.h>
-#include <string>
+#include <cassert>
 #include <gtest/gtest.h>
 #include <veles/workflow_loader.h>
+#include "src/workflow_archive.h"
 
 
 namespace veles {
 
-class WorkflowLoaderTest
-    : public ::testing::Test,
-      protected DefaultLogger<WorkflowLoaderTest, Logger::COLOR_VIOLET> {
- public:
-
-  WorkflowLoaderTest() {
-
+struct WorkflowLoaderTest :
+    public ::testing::Test,
+    protected DefaultLogger<WorkflowLoader, Logger::COLOR_CYAN> {
+  std::shared_ptr<WorkflowArchive> ExtractArchive(const std::string& file_name) {
+    return WorkflowLoader().ExtractArchive(file_name);
   }
+
+  virtual void SetUp() override {
+    char currentPath[FILENAME_MAX];
+    assert(getcwd(currentPath, sizeof(currentPath)));
+    std::string paths[] = { "/workflow_files/", "/tests/workflow_files/",
+        "/../workflow_files/", "/../tests/workflow_files/" };
+    INF("Current directory: %s\n", currentPath);
+    for (auto& path : paths) {
+      std::string tmp(currentPath);
+      tmp += path;
+      DBG("Probing %s...", tmp.c_str());
+      if (access(tmp.c_str(), 0) != -1) {
+        INF("Success: path is %s", tmp.c_str());
+        path_to_files = tmp;
+        return;
+      }
+    }
+    assert(false && "Unable to locate the path with test packages");
+  }
+
+  std::string path_to_files;
 };
 
 TEST_F(WorkflowLoaderTest, MnistWorkflow) {
-
+  auto wa = ExtractArchive(path_to_files + "mnist.tar.gz");
+  ASSERT_TRUE(static_cast<bool>(wa));
+  auto& wdef = wa->workflow_definition();
+  ASSERT_EQ("MnistWorkflow", wdef.name());
 }
 
 }  // namespace veles

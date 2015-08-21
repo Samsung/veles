@@ -1,5 +1,5 @@
 /*! @file logger.cc
- *  @brief New file description.
+ *  @brief EIAN logger helper class.
  *  @author Markovtsev Vadim <v.markovtsev@samsung.com>
  *  @version 1.0
  *
@@ -212,4 +212,4 @@ std::string Logger::GetColorByIndex(unsigned
 #endif
 }
 
-}  // namespace sound_feature_extraction
+}  // namespace veles
