@@ -287,7 +287,15 @@ class LinkableAttribute(object):
         self.exposed_attribute_name = name
 
         # assign the attribute of the hosting class
+        previous = getattr(type(obj), name, None)
+        if previous is not None:
+            assert isinstance(previous, LinkableAttribute), \
+                "Linking immutable attribute which already exists"
         setattr(type(obj), name, self)
+
+        # if name exists in obj's own __dict__, remove it to fix __get__()
+        if name in obj.__dict__:
+            del obj.__dict__[name]
 
         # assign the attribute value to "obj"
         setattr(obj, self.real_attribute_name, value)
@@ -298,12 +306,18 @@ class LinkableAttribute(object):
         if obj is None:
             return objtype.__getattribute__(objtype,
                                             self.exposed_attribute_name)
+        # first search for the value in obj's own __dict__
+        if self.exposed_attribute_name in obj.__dict__:
+            return obj.__dict__[self.exposed_attribute_name]
         # get the reference to the attribute value
         pointer = getattr(obj, self.real_attribute_name)
         # dereference it
         return getattr(*pointer) if isinstance(pointer, tuple) else pointer
 
     def __set__(self, obj, value):
+        if self.exposed_attribute_name in obj.__dict__:
+            obj.__dict__[self.exposed_attribute_name] = value
+            return
         if not LinkableAttribute.__is_reference__(value):
             if self.two_way:
                 # update the referenced attribute value and return
