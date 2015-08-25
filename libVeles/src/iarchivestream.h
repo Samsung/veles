@@ -33,12 +33,13 @@
 
 #include <cassert>
 #include <istream>
+#include <memory>
 
 struct archive;
 
 class archbuf: public std::streambuf {
  public:
-  archbuf(archive* archive);
+  archbuf(const std::shared_ptr<archive>& archive);
 
   virtual int_type underflow () override;
 
@@ -50,13 +51,13 @@ class archbuf: public std::streambuf {
  protected:
   static constexpr int kBufferSize = UINT16_MAX + 1;
 
-  archive* archive_;
+  std::shared_ptr<archive> archive_;
   size_t read_;
   char buffer[kBufferSize];
 };
 
 struct iarchivestream: public virtual archbuf, public std::istream {
-  iarchivestream(archive* archive)
+  iarchivestream(const std::shared_ptr<archive>& archive)
     : archbuf(archive)
     , std::istream(static_cast<std::streambuf*>(this)) {
   }

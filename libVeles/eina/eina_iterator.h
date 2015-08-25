@@ -19,9 +19,9 @@
 #ifndef EINA_ITERATOR_H__
 #define EINA_ITERATOR_H__
 
-#include "inc/veles/eina_config.h"
+#include "eina_config.h"
 
-#include "inc/veles/eina_types.h"
+#include "eina_types.h"
 #include "eina_magic.h"
 
 /**

@@ -32,8 +32,9 @@
 #include <gtest/gtest.h>
 #include <veles/logger.h>  // NOLINT(*)
 #include "src/main_file_loader.h"
-#include "tests/imemstream.h"
+#include "src/imemstream.h"
 
+namespace veles {
 
 class MainFileLoaderTest : public ::testing::Test {
 };
@@ -41,7 +42,7 @@ class MainFileLoaderTest : public ::testing::Test {
 static const char contents[] = "{\n    \"checksum\": \"13088da21585f7a4cd7023083405e2094c53d746_2\",\n    \"units\": [\n        {\n            \"class\": {\n                \"name\": \"All2AllTanh\",\n                \"uuid\": \"b3a2bd5c-3c01-46ef-978a-fef22e008f31\"\n            },\n            \"data\": {\n                \"activation_mode\": \"ACTIVATION_TANH\",\n                \"bias\": \"@0000_100\",\n                \"include_bias\": true,\n                \"weights\": \"@0001_100x784\",\n                \"weights_transposed\": false\n            },\n            \"links\": [\n                1\n            ]\n        },\n        {\n            \"class\": {\n                \"name\": \"All2AllSoftmax\",\n                \"uuid\": \"420219fc-3e1a-45b1-87f8-aaa0c1540de4\"\n            },\n            \"data\": {\n                \"activation_mode\": \"ACTIVATION_LINEAR\",\n                \"bias\": \"@0002_10\",\n                \"include_bias\": true,\n                \"weights\": \"@0003_10x100\",\n                \"weights_transposed\": false\n            },\n            \"links\": []\n        }\n    ],\n    \"workflow\": \"MnistWorkflow\"\n}";
 
 TEST(MainFileLoaderTest, Proof) {
-  imemstream ms(contents, sizeof(contents));
+  imemstream<const char> ms(contents, sizeof(contents));
   veles::MainFileLoader loader;
   auto wd = loader.Load(&ms);
   EXPECT_EQ("MnistWorkflow", wd.name());
@@ -69,6 +70,7 @@ TEST(MainFileLoaderTest, Proof) {
   ASSERT_EQ(5, unit->PropertyNames().size());
 }
 
+}  // namespace veles
 
 #include "tests/google/src/gtest_main.cc"
 

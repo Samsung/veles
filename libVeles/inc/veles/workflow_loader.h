@@ -75,23 +75,11 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
   /**
    * @param[in] archive Path to the package.
    * @return The loaded and ready to be initialized Workflow instance.
-   *
-   * 1) Extract archive (using libarchive) to directory kWorkDirectory.\n
-   * 2) Read WorkflowDescription from kWorkflowDecompressedFile\n
-   * 3) Go through workflow units, reading properties and dereferencing binary\n
-   * references.\n
-   * 4) Construct the workflow from links tree.\n
-   * 5) Delete kWorkDirectory with all files.
    */
   Workflow Load(const std::string& archive);
 
  private:
   friend class WorkflowLoaderTest;
-
-  std::shared_ptr<WorkflowArchive> ExtractArchive(const std::string& file_name);
-
-   /// Name of the file which describes the workflow.
-  static const char* kMainFile;
 };
 
 }  // namespace Veles

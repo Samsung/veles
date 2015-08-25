@@ -32,25 +32,43 @@
 #define SRC_WORKFLOW_ARCHIVE_H_
 
 #include <string>
+#include <unordered_map>
+#include "inc/veles/logger.h"
 #include "src/main_file_loader.h"
+#include "src/shared_array.h"
 
 struct archive;
 
 namespace veles {
 
-class WorkflowArchive {
+class WorkflowArchive : protected DefaultLogger<WorkflowArchive,
+                                                Logger::COLOR_YELLOW> {
  public:
   explicit WorkflowArchive(const WorkflowDefinition& wdef);
+  virtual ~WorkflowArchive() = default;
 
   const WorkflowDefinition& workflow_definition() const;
+  const std::string& file_name() const;
 
-  std::shared_ptr<std::istream> GetNumpyArrayStream(
-      const std::string& file_name) const;
+  static std::shared_ptr<WorkflowArchive> Load(const std::string& file_name);
 
-  static std::shared_ptr<archive> Open(const std::string& file_name, int* error);
+  std::shared_ptr<std::istream> GetStream(const std::string& file_name) const;
 
  private:
+  friend class WorkflowArchiveTest_MnistWorkflow_Test;
+  /// @brief Initializes a new instance of struct archive (from libarchive).
+  /// @param file_name The path to the archive to open.
+  /// @param error Used for reporting back the errors (may be nullptr).
+  /// @return Shared pointer to struct archive with the proper destructor.
+  static std::shared_ptr<archive> Open(const std::string& file_name, int* error);
+
+  /// Name of the file which describes the workflow.
+  static const char* kMainFile;
+  static const Logger kLogger;
+
   WorkflowDefinition workflow_definition_;
+  std::string file_name_;
+  std::unordered_map<std::string, shared_array<uint8_t>> files_;
 };
 
 }  // namespace veles

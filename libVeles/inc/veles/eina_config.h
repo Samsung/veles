@@ -33,8 +33,8 @@
 #endif
 
 
-#ifdef EINA_SAFETY_CHECKS
-# undef EINA_SAFETY_CHECKS
+#ifndef EINA_SAFETY_CHECKS
+# define EINA_SAFETY_CHECKS
 #endif
 
 #ifndef EINA_HAVE_THREADS

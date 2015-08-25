@@ -95,10 +95,9 @@ AC_CONFIG_COMMANDS([Creating docs directory in build],
 AC_CONFIG_LINKS([docs/neural-network.jpg:docs/neural-network.jpg])
 
 AM_COND_IF([TESTS], [
-    AC_CONFIG_LINKS([tests/workflow_files/remove_folder_testing.tar.gz:tests/workflow_files/remove_folder_testing.tar.gz
-                     tests/workflow_files/test_archive.tar.gz:tests/workflow_files/test_archive.tar.gz
-                     tests/workflow_files/neural_network.tar.gz:tests/workflow_files/neural_network.tar.gz
-                     tests/workflow_files/workflow.tar.gz:tests/workflow_files/workflow.tar.gz])    
+    AC_CONFIG_LINKS([tests/workflow_files/mnist.tar.gz:tests/workflow_files/mnist.tar.gz
+                     tests/workflow_files/mnist.zip:tests/workflow_files/mnist.zip
+                     tests/workflow_files/contents.json:tests/workflow_files/contents.json])    
 ])
 
 # Link with Makefile.am in additional source directories
