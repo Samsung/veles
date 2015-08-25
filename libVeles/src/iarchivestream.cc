@@ -31,14 +31,15 @@
 #include "src/iarchivestream.h"
 #include <libarchive/libarchive/archive.h>  // NOLINT(*)
 
-archbuf::archbuf(archive* archive) : archive_(archive), read_(0) {
+archbuf::archbuf(const std::shared_ptr<archive>& archive)
+    : archive_(archive), read_(0) {
   auto end = buffer + sizeof(buffer);
   setg(end, end, end);
 }
 
 archbuf::int_type archbuf::underflow () {
-  assert(pptr() == epptr());
-  auto read = archive_read_data(archive_, buffer, sizeof(buffer));
+  assert(gptr() == egptr());
+  auto read = archive_read_data(archive_.get(), buffer, sizeof(buffer));
   if (read == 0) {
     return EOF;
   }
@@ -52,11 +53,11 @@ archbuf::pos_type archbuf::seekoff(
   switch (seekdir) {
     case std::ios::beg:
       offset -= archive_buffer_pos();
-      assert(eback() + offset < egptr());
+      assert(eback() + offset <= egptr());
       _M_in_cur = eback() + offset;
       break;
     case std::ios::cur:
-      assert(gptr() + offset < egptr());
+      assert(gptr() + offset <= egptr());
       _M_in_cur += offset;
       break;
     case std::ios::end:
@@ -66,7 +67,7 @@ archbuf::pos_type archbuf::seekoff(
     default:
       break;
   }
-  return pos_type(off_type(gptr() - eback()));
+  return read_ - pos_type(off_type(egptr() - gptr()));
 }
 
 size_t archbuf::archive_buffer_pos() const noexcept {

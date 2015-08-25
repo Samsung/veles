@@ -29,52 +29,16 @@
  */
 
 #include "veles/workflow_loader.h"
-#include <istream>
-#include <vector>
-#include <libarchive/libarchive/archive.h>  // NOLINT(*)
-#include <libarchive/libarchive/archive_entry.h>  // NOLINT(*)
-#include "inc/veles/make_unique.h"
 #include "inc/veles/unit_factory.h"
-#include "src/iarchivestream.h"
-#include "src/main_file_loader.h"
 #include "src/workflow_archive.h"
 
 namespace veles {
-
-/// Name of the file which describes the workflow.
-const char* WorkflowLoader::kMainFile = "contents.json";
 
 WorkflowLoader::WorkflowLoader() {
 }
 
 Workflow WorkflowLoader::Load(const std::string& /*archive*/) {
   return Workflow();
-}
-
-std::shared_ptr<WorkflowArchive> WorkflowLoader::ExtractArchive(
-    const std::string& file_name) {
-  int error;
-  auto arch = WorkflowArchive::Open(file_name, &error);
-  if (!arch) {
-    ERR("Failed to open %s: %d", file_name.c_str(), error);
-    return nullptr;
-  }
-  DBG("Successfully opened %s, scanning for %s", file_name.c_str(), kMainFile);
-  archive_entry* entry;
-  while (archive_read_next_header(arch.get(), &entry) == ARCHIVE_OK) {
-    std::string efn = archive_entry_pathname(entry);
-    if (efn == kMainFile) {
-      DBG("Found %s", kMainFile);
-      auto instr = std::make_unique<iarchivestream>(arch.get());
-      auto wdef = MainFileLoader().Load(instr.get());
-      return std::make_shared<WorkflowArchive>(wdef);
-    } else {
-      DBG("Skipping %s...", efn.c_str());
-      archive_read_data_skip(arch.get());
-    }
-  }
-  ERR("%s was not found", kMainFile);
-  return nullptr;
 }
 
 }  // namespace veles
