@@ -36,20 +36,21 @@ under the License.
 
 from codecs import getwriter
 from collections import OrderedDict, defaultdict
+from itertools import chain
 import datetime
 import hashlib
 import inspect
-from itertools import chain
 import json
 import logging
-import os
-import tarfile
 import numpy
+import os
 import six
 import sys
+import tarfile
 import tempfile
-import time
 import threading
+import time
+import zipfile
 from zope.interface import implementer
 
 from veles.compat import from_none, FileExistsError
@@ -860,10 +861,19 @@ class Workflow(Container):
             self._checksum = sha1.hexdigest() + "_%d" % len(self)
         return self._checksum
 
-    def package_export(self, file_name):
+    def package_export(self, file_name, archive_format="zip", precision=32):
         """Exports workflow to a package which can be executed by native
         runtime.
         """
+        if archive_format not in ("zip", "tgz"):
+            raise ValueError(
+                "Only \"zip\" and \"tgz\" formats are supported (got %s)" %
+                archive_format)
+        if precision not in (16, 32):
+            raise ValueError(
+                "Only 16-bit and 32-bit floats are supported (got %s)" %
+                precision)
+
         exported = [u for u in self if hasattr(u, "package_export")]
         if len(exported) == 0:
             raise ValueError(
@@ -898,34 +908,64 @@ class Workflow(Container):
 
         arrays = []
 
-        def array_file_name(narr, index):
-            return "@%04d_%s" % (index, "x".join(map(str, narr.shape)))
+        def array_file_name(narr, index, json_mode):
+            name = "%04d_%s" % (index, "x".join(map(str, narr.shape)))
+            return "@" + name if json_mode else name + ".npy"
 
         def export_numpy_array(narr):
             if isinstance(narr, numpy.ndarray):
                 arrays.append(narr)
-                return array_file_name(narr, len(arrays) - 1)
+                return array_file_name(narr, len(arrays) - 1, True)
             raise TypeError("Objects of class other than numpy.ndarray are "
                             "not supported")
 
+        def print_success():
+            self.info("Successfully exported package to %s", file_name)
+
+        MAIN_FILE_NAME = "contents.json"
+
+        if archive_format == "zip":
+            try:
+                with zipfile.ZipFile(
+                        file_name, mode="w",
+                        compression=zipfile.ZIP_DEFLATED) as azip:
+                    azip.writestr(
+                        MAIN_FILE_NAME,
+                        json.dumps(obj, indent=4, sort_keys=True,
+                                   default=export_numpy_array))
+                    for ind, arr in enumerate(arrays):
+                        io = six.BytesIO()
+                        numpy.save(io, arr.astype("float%d" % precision))
+                        azip.writestr(array_file_name(arr, ind, False),
+                                      io.getvalue())
+            except Exception as e:
+                self.error("Failed to export to %s", file_name)
+                raise from_none(e)
+            else:
+                print_success()
+                return
+
+        assert archive_format == "tgz"
         try:
             with tarfile.open(file_name, "w:gz") as tar:
                 io = six.BytesIO()
                 json.dump(obj, getwriter("utf-8")(getattr(io, "buffer", io)),
                           indent=4, sort_keys=True, default=export_numpy_array)
-                ti = tarfile.TarInfo("contents.json")
+                ti = tarfile.TarInfo(MAIN_FILE_NAME)
                 ti.size = io.tell()
                 ti.mode = int("666", 8)
                 io.seek(0)
                 tar.addfile(ti, fileobj=io)
                 for ind, arr in enumerate(arrays):
                     io = six.BytesIO()
-                    numpy.save(io, arr)
-                    ti = tarfile.TarInfo(array_file_name(arr, ind) + ".npy")
+                    numpy.save(io, arr.astype("float%d" % precision))
+                    ti = tarfile.TarInfo(array_file_name(arr, ind, False))
                     ti.size = io.tell()
                     ti.mode = int("666", 8)
                     io.seek(0)
                     tar.addfile(ti, fileobj=io)
-                self.info("Successfully exported package to %s", file_name)
-        except:
-            self.exception("Failed to export to %s", file_name)
+        except Exception as e:
+            self.error("Failed to export to %s", file_name)
+            raise from_none(e)
+        else:
+            print_success()
