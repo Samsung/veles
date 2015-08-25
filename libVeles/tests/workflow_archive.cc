@@ -1,5 +1,5 @@
-/*! @file workflow_loader.cc
- *  @brief Tests for class WorkflowLoder.
+/*! @file workflow_archive.cc
+ *  @brief Tests for WorkflowArchive class.
  *  @author Vadim Markovtsev <v.markovtsev@samsung.com>
  *  @version 1.0
  *
@@ -7,7 +7,7 @@
  *  This code partially conforms to <a href="http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml">Google C++ Style Guide</a>.
  *
  *  @section Copyright
- *  Copyright © 2013 Samsung R&D Institute Russia
+ *  Copyright © 2015 Samsung R&D Institute Russia
  *
  *  @section License
  *  Licensed to the Apache Software Foundation (ASF) under one
@@ -30,19 +30,15 @@
 
 #include <cassert>
 #include <gtest/gtest.h>
-#include <veles/workflow_loader.h>
 #include "src/workflow_archive.h"
+#include "src/numpy_array_loader.h"
 
 
 namespace veles {
 
-struct WorkflowLoaderTest :
+struct WorkflowArchiveTest :
     public ::testing::Test,
-    protected DefaultLogger<WorkflowLoader, Logger::COLOR_CYAN> {
-  std::shared_ptr<WorkflowArchive> ExtractArchive(const std::string& file_name) {
-    return WorkflowLoader().ExtractArchive(file_name);
-  }
-
+    protected DefaultLogger<WorkflowArchive, Logger::COLOR_CYAN> {
   virtual void SetUp() override {
     char currentPath[FILENAME_MAX];
     assert(getcwd(currentPath, sizeof(currentPath)));
@@ -65,11 +61,26 @@ struct WorkflowLoaderTest :
   std::string path_to_files;
 };
 
-TEST_F(WorkflowLoaderTest, MnistWorkflow) {
-  auto wa = ExtractArchive(path_to_files + "mnist.tar.gz");
+TEST_F(WorkflowArchiveTest, MnistWorkflow) {
+  auto wa = WorkflowArchive::Load(path_to_files + "mnist.tar.gz");
   ASSERT_TRUE(static_cast<bool>(wa));
   auto& wdef = wa->workflow_definition();
   ASSERT_EQ("MnistWorkflow", wdef.name());
+  ASSERT_EQ("All2AllTanh", wdef.start()->name());
+  ASSERT_EQ(1, wdef.start()->links().size());
+  ASSERT_EQ("All2AllSoftmax", wdef.start()->links()[0]->name());
+  ASSERT_EQ(4, wa->files_.size());
+}
+
+TEST_F(WorkflowArchiveTest, GetStream) {
+  auto wa = WorkflowArchive::Load(path_to_files + "mnist.zip");
+  auto stream = wa->GetStream("0001_100x784.npy");
+  NumpyArrayLoader nal;
+  auto array = nal.Load<float, 2, true>(stream.get());
+  ASSERT_EQ(2, array.shape.size());
+  EXPECT_EQ(100, array.shape[0]);
+  EXPECT_EQ(784, array.shape[1]);
+  EXPECT_EQ(100 * 784, array.data.size());
 }
 
 }  // namespace veles

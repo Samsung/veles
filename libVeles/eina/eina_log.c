@@ -30,7 +30,7 @@
 #include <errno.h>
 #include <pthread.h>
 
-#include "inc/veles/eina_config.h"
+#include "eina_config.h"
 #if defined HAVE_EXECINFO_H && defined HAVE_BACKTRACE && defined HAVE_BACKTRACE_SYMBOLS
 # include <execinfo.h>
 # define EINA_LOG_BACKTRACE
@@ -44,7 +44,7 @@
 #include "eina_inlist.h"
 #include "eina_thread.h"
 #include "eina_safety_checks.h"
-#include "inc/veles/eina_log.h"
+#include "eina_log.h"
 #include "eina_inline_private.h"
 
 /* TODO
@@ -2207,7 +2207,8 @@ eina_log_timing(int domain,
    //d = _log_domains + domain;
    t = _log_timing + domain;
 #ifdef EINA_SAFETY_CHECKS
-   if (EINA_UNLIKELY(d->deleted))
+   if (EINA_LIKELY(domain < _log_domains_count) &&
+       EINA_UNLIKELY(_log_domains[domain].deleted))
      {
         fprintf(stderr,
                 "ERR: eina_log_print() domain %d is deleted\n",

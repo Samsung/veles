@@ -31,7 +31,10 @@ lib_LTLIBRARIES = libEina.la
 # Build information for libEina.la
 
 # Source files
-libEina_la_SOURCES = eina_log.c eina_inlist.c
+libEina_la_SOURCES = eina_log.c eina_inlist.c eina_safety_checks.c eina_error.c
+
+# Compiler options
+libEina_la_CPPFLAGS = -I$(top_srcdir)/inc/veles -I$(top_srcdir)/inc
 
 # Used libraries
 libEina_la_LIBADD = -lm
