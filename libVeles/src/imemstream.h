@@ -28,16 +28,31 @@
  *  under the License.
  */
 
-#ifndef TESTS_IMEMSTREAM_H_
-#define TESTS_IMEMSTREAM_H_
+#ifndef SRC_IMEMSTREAM_H_
+#define SRC_IMEMSTREAM_H_
 
 #include <istream>
+#include "src/shared_array.h"
 
-namespace {
+namespace veles {
 
-struct membuf: std::streambuf {
-  membuf(const char* base, size_t size) {
-    char* p(const_cast<char*>(base));
+template <class T>
+class membuf: public std::streambuf {
+  static_assert(sizeof(T) == 1, "Only 1-byte types are accepted");
+
+ public:
+  explicit membuf(const shared_array<T>& mem) : mem_(mem) {
+    char* p(const_cast<char*>(reinterpret_cast<const char*>(mem.get_raw())));
+    this->setg(p, p, p + mem.size());
+  }
+
+  membuf(const std::unique_ptr<T[]>& mem, size_t size) {
+    char* p(const_cast<char*>(reinterpret_cast<const char*>(mem.get())));
+    this->setg(p, p, p + size);
+  }
+
+  membuf(const T* mem, size_t size) {
+    char* p(const_cast<char*>(reinterpret_cast<const char*>(mem)));
     this->setg(p, p, p + size);
   }
 
@@ -46,11 +61,11 @@ struct membuf: std::streambuf {
       std::ios::openmode = std::ios::in | std::ios::out) override {
     switch (seekdir) {
       case std::ios::beg:
-        assert(eback() + offset < egptr());
+        assert(eback() + offset <= egptr());
         _M_in_cur = eback() + offset;
         break;
       case std::ios::cur:
-        assert(gptr() + offset < egptr());
+        assert(gptr() + offset <= egptr());
         _M_in_cur += offset;
         break;
       case std::ios::end:
@@ -62,15 +77,31 @@ struct membuf: std::streambuf {
     }
     return pos_type(off_type(gptr() - eback()));
   }
+
+ private:
+  shared_array<char> mem_;
 };
 
-struct imemstream: virtual membuf, public std::istream {
-  imemstream(const char* base, size_t size)
-    : membuf(base, size)
-    , std::istream(static_cast<std::streambuf*>(this)) {
+template <class T>
+struct imemstream: public virtual membuf<T>, public std::istream {
+  static_assert(sizeof(T) == 1, "Only 1-byte types are accepted");
+
+  explicit imemstream(const shared_array<T>& mem)
+    : membuf<T>(mem),
+      std::istream(static_cast<std::streambuf*>(this)) {
+  }
+
+  imemstream(const std::unique_ptr<T[]>& mem, size_t size)
+    : membuf<T>(mem, size),
+      std::istream(static_cast<std::streambuf*>(this)) {
+  }
+
+  imemstream(const T* mem, size_t size)
+    : membuf<T>(mem, size),
+      std::istream(static_cast<std::streambuf*>(this)) {
   }
 };
 
-}
+}  // namespace veles
 
-#endif  // TESTS_IMEMSTREAM_H_
+#endif  // SRC_IMEMSTREAM_H_
