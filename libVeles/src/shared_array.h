@@ -98,6 +98,10 @@ class shared_array {
   int use_count() const noexcept { return sp_.use_count(); }
   /** @brief Returns number of elements in shared array. */
   size_t size() const noexcept { return size_; }
+  /** @brief Alters the reported size of the array (memory remains intact). */
+  void set_size(size_t size) {
+    size_ = size;
+  }
   /** @brief Returns memory size occupied by shared array. */
   size_t memsize() const noexcept { return sizeof(T) * size_; }
 

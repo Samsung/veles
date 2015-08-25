@@ -40,8 +40,6 @@
 #include "src/shared_array.h"
 #include "src/endian2.h"
 
-class NumpyArrayLoaderTest_Transpose_Test;
-
 namespace veles {
 
 class NumpyArrayLoadingFailedException : public std::exception {
@@ -84,7 +82,7 @@ class NumpyArrayLoader : protected DefaultLogger<NumpyArrayLoader,
   NumpyArray<T, D> Load(std::istream* src);
 
  private:
-  friend class ::NumpyArrayLoaderTest_Transpose_Test;
+  friend class NumpyArrayLoaderTest_Transpose_Test;
 
   struct Header {
     static const std::unordered_map<std::string, std::string> kTypesDict;
@@ -102,7 +100,7 @@ class NumpyArrayLoader : protected DefaultLogger<NumpyArrayLoader,
     int SizeInElements() const;
     template <class T>
     bool DtypeIsTheSameAs() const;
-    void DebugDescribe(NumpyArrayLoader* loader) const;
+    void Describe(NumpyArrayLoader* loader) const;
   };
 
   Header ParseHeader(char* data);
@@ -181,7 +179,7 @@ NumpyArray<T, D> NumpyArrayLoader::Load(std::istream* src) {
     }
     header = ParseHeader(raw_header.get());
   }
-  header.DebugDescribe(this);
+  header.Describe(this);
   if (header.Dimensions() != D) {
     throw NumpyArrayLoadingFailedException(
         std::string("array dimensions mismatch: requested ") +

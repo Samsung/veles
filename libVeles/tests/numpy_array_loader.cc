@@ -32,8 +32,10 @@
 #include <gtest/gtest.h>
 #include <veles/logger.h>  // NOLINT(*)
 #include "src/numpy_array_loader.h"
-#include "tests/imemstream.h"
+#include "src/imemstream.h"
+#include "inc/veles/make_unique.h"
 
+namespace veles {
 
 class NumpyArrayLoaderTest :
     public ::testing::TestWithParam<std::tuple<int, int>>,
@@ -220,9 +222,8 @@ static const float NUMPY_ARRAY_SAMPLE_ITEMS[] = {
 
 TEST(NumpyArrayLoaderTest, LoadF16F32T) {
   auto loader = veles::NumpyArrayLoader();
-  std::unique_ptr<imemstream> sample(
-      new imemstream(reinterpret_cast<const char*>(NUMPY_ARRAY_SAMPLE),
-                     sizeof(NUMPY_ARRAY_SAMPLE)));
+  auto sample = std::make_unique<imemstream<const uint8_t>>(
+      NUMPY_ARRAY_SAMPLE, sizeof(NUMPY_ARRAY_SAMPLE));
   ASSERT_TRUE(sample->good());
   auto array = loader.Load<float, 2, true>(sample.get());
   EXPECT_TRUE(array.transposed);
@@ -240,9 +241,8 @@ TEST(NumpyArrayLoaderTest, LoadF16F32T) {
 
 TEST(NumpyArrayLoaderTest, LoadF16F32) {
   auto loader = veles::NumpyArrayLoader();
-  std::unique_ptr<imemstream> sample(
-      new imemstream(reinterpret_cast<const char*>(NUMPY_ARRAY_SAMPLE),
-                     sizeof(NUMPY_ARRAY_SAMPLE)));
+  auto sample = std::make_unique<imemstream<const uint8_t>>(
+      NUMPY_ARRAY_SAMPLE, sizeof(NUMPY_ARRAY_SAMPLE));
   auto array = loader.Load<float, 2>(sample.get());
   EXPECT_FALSE(array.transposed);
   EXPECT_EQ(array.shape[0], 40);
@@ -259,9 +259,8 @@ TEST(NumpyArrayLoaderTest, LoadF16F32) {
 
 TEST(NumpyArrayLoaderTest, LoadF16F16) {
   auto loader = veles::NumpyArrayLoader();
-  std::unique_ptr<imemstream> sample(
-      new imemstream(reinterpret_cast<const char*>(NUMPY_ARRAY_SAMPLE),
-                     sizeof(NUMPY_ARRAY_SAMPLE)));
+  auto sample = std::make_unique<imemstream<const uint8_t>>(
+          NUMPY_ARRAY_SAMPLE, sizeof(NUMPY_ARRAY_SAMPLE));
   auto array = loader.Load<uint16_t, 2>(sample.get());
   EXPECT_FALSE(array.transposed);
   EXPECT_EQ(array.shape[0], 40);
@@ -285,9 +284,8 @@ TEST(NumpyArrayLoaderTest, LoadF32F32) {
   memset(fake_sample.get() + sizeof(NUMPY_ARRAY_SAMPLE), 0,
          sizeof(NUMPY_ARRAY_SAMPLE) - 80);
   fake_sample[23] = '4';
-  std::unique_ptr<imemstream> sample(new imemstream(
-      reinterpret_cast<const char*>(fake_sample.get()),
-      sizeof(NUMPY_ARRAY_SAMPLE) * 2 - 80));
+  auto sample = std::make_unique<imemstream<uint8_t>>(
+      fake_sample, sizeof(NUMPY_ARRAY_SAMPLE) * 2 - 80);
   auto array = loader.Load<float, 2>(sample.get());
   EXPECT_FALSE(array.transposed);
   EXPECT_EQ(array.shape[0], 40);
@@ -311,9 +309,8 @@ TEST(NumpyArrayLoaderTest, LoadF32F32T) {
   memset(fake_sample.get() + sizeof(NUMPY_ARRAY_SAMPLE), 0,
          sizeof(NUMPY_ARRAY_SAMPLE) - 80);
   fake_sample[23] = '4';
-  std::unique_ptr<imemstream> sample(new imemstream(
-      reinterpret_cast<const char*>(fake_sample.get()),
-      sizeof(NUMPY_ARRAY_SAMPLE) * 2 - 80));
+  auto sample = std::make_unique<imemstream<uint8_t>>(
+      fake_sample, sizeof(NUMPY_ARRAY_SAMPLE) * 2 - 80);
   auto array = loader.Load<float, 2, true>(sample.get());
   EXPECT_TRUE(array.transposed);
   EXPECT_EQ(array.shape[0], 40);
@@ -328,6 +325,8 @@ TEST(NumpyArrayLoaderTest, LoadF32F32T) {
     }
   }
 }
+
+}  // namespace veles
 
 #include "tests/google/src/gtest_main.cc"
 
