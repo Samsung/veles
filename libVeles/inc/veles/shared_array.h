@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) 2014, Samsung Electronics Co.,Ltd.
+ * Copyright (c) 2014, 2015 Samsung Electronics Co.,Ltd.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,15 +30,16 @@
 
 /*! @file shared_array.h
  *  @brief std::shared_ptr for arrays.
- *  @author Senin Dmitry <d.senin@samsung.com>
+ *  @author Senin Dmitry <d.senin@samsung.com>,
+ *  Vadim Markovtsev <v.markovtsev@samsung.com>
  *  @version 1.0
  *
  *  @section Copyright
- *  Copyright 2014 Samsung R&D Institute Russia
+ *  Copyright © 2014, 2015 Samsung R&D Institute Russia
  */
 
-#ifndef SRC_SHARED_ARRAY_H_
-#define SRC_SHARED_ARRAY_H_
+#ifndef INC_VELES_SHARED_ARRAY_H_
+#define INC_VELES_SHARED_ARRAY_H_
 
 #include <algorithm>
 #include <memory>
@@ -224,4 +225,4 @@ void swap(shared_array<T>& a, shared_array<T>& b) {
 
 }  // namespace veles
 
-#endif  // SRC_SHARED_ARRAY_H_
+#endif  // INC_VELES_SHARED_ARRAY_H_

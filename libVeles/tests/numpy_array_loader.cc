@@ -37,10 +37,12 @@
 
 namespace veles {
 
+namespace internal {
+
 class NumpyArrayLoaderTest :
     public ::testing::TestWithParam<std::tuple<int, int>>,
-    protected veles::DefaultLogger<
-        NumpyArrayLoaderTest, veles::Logger::COLOR_VIOLET> {
+    protected DefaultLogger<
+        NumpyArrayLoaderTest, Logger::COLOR_VIOLET> {
 };
 
 void InitializeMatrix(float* matrix, int size) {
@@ -66,11 +68,11 @@ TEST_P(NumpyArrayLoaderTest, Transpose) {
   InitializeMatrix(matrix, size);
   float reference[size];
   Transpose(matrix, reference, rows, cols);
-  veles::NumpyArrayLoader::TransposeInplace(rows, cols, matrix);
+  NumpyArrayLoader::TransposeInplace(rows, cols, matrix);
   ASSERT_EQ(std::memcmp(matrix, reference, sizeof(matrix)), 0);
   InitializeMatrix(matrix, size);
-  veles::NumpyArrayLoader::TransposeInplace(rows, cols, sizeof(float),
-                                            reinterpret_cast<char*>(matrix));
+  NumpyArrayLoader::TransposeInplace(rows, cols, sizeof(float),
+                                     reinterpret_cast<char*>(matrix));
   ASSERT_EQ(std::memcmp(matrix, reference, sizeof(matrix)), 0);
 }
 
@@ -221,7 +223,7 @@ static const float NUMPY_ARRAY_SAMPLE_ITEMS[] = {
 };
 
 TEST(NumpyArrayLoaderTest, LoadF16F32T) {
-  auto loader = veles::NumpyArrayLoader();
+  auto loader = NumpyArrayLoader();
   auto sample = std::make_unique<imemstream<const uint8_t>>(
       NUMPY_ARRAY_SAMPLE, sizeof(NUMPY_ARRAY_SAMPLE));
   ASSERT_TRUE(sample->good());
@@ -240,7 +242,7 @@ TEST(NumpyArrayLoaderTest, LoadF16F32T) {
 }
 
 TEST(NumpyArrayLoaderTest, LoadF16F32) {
-  auto loader = veles::NumpyArrayLoader();
+  auto loader = NumpyArrayLoader();
   auto sample = std::make_unique<imemstream<const uint8_t>>(
       NUMPY_ARRAY_SAMPLE, sizeof(NUMPY_ARRAY_SAMPLE));
   auto array = loader.Load<float, 2>(sample.get());
@@ -258,7 +260,7 @@ TEST(NumpyArrayLoaderTest, LoadF16F32) {
 }
 
 TEST(NumpyArrayLoaderTest, LoadF16F16) {
-  auto loader = veles::NumpyArrayLoader();
+  auto loader = NumpyArrayLoader();
   auto sample = std::make_unique<imemstream<const uint8_t>>(
           NUMPY_ARRAY_SAMPLE, sizeof(NUMPY_ARRAY_SAMPLE));
   auto array = loader.Load<uint16_t, 2>(sample.get());
@@ -277,7 +279,7 @@ TEST(NumpyArrayLoaderTest, LoadF16F16) {
 }
 
 TEST(NumpyArrayLoaderTest, LoadF32F32) {
-  auto loader = veles::NumpyArrayLoader();
+  auto loader = NumpyArrayLoader();
   std::unique_ptr<uint8_t[]> fake_sample(
       new uint8_t[sizeof(NUMPY_ARRAY_SAMPLE) * 2 - 80]);
   memcpy(fake_sample.get(), NUMPY_ARRAY_SAMPLE, sizeof(NUMPY_ARRAY_SAMPLE));
@@ -302,7 +304,7 @@ TEST(NumpyArrayLoaderTest, LoadF32F32) {
 }
 
 TEST(NumpyArrayLoaderTest, LoadF32F32T) {
-  auto loader = veles::NumpyArrayLoader();
+  auto loader = NumpyArrayLoader();
   std::unique_ptr<uint8_t[]> fake_sample(
       new uint8_t[sizeof(NUMPY_ARRAY_SAMPLE) * 2 - 80]);
   memcpy(fake_sample.get(), NUMPY_ARRAY_SAMPLE, sizeof(NUMPY_ARRAY_SAMPLE));
@@ -325,6 +327,8 @@ TEST(NumpyArrayLoaderTest, LoadF32F32T) {
     }
   }
 }
+
+}  // namespace internal
 
 }  // namespace veles
 

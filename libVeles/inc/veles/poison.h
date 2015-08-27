@@ -31,7 +31,7 @@
 #ifndef INC_VELES_POISON_H_
 #define INC_VELES_POISON_H_
 
-#if __GNUC__ >= 4
+#if __GNUC__ >= 4 && !defined(ANTIDOTE)
 // Use the logging facilities instead
 #pragma GCC poison printf fprintf cout cerr
 #endif

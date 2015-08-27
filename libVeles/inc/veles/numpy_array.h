@@ -1,13 +1,13 @@
-/*! @file workflow.cc
- *  @brief VELES workflow tests
- *  @author Ernesto Sanches <ernestosanches@gmail.com>
+/*! @file numpy_array.h
+ *  @brief NumpyArray class definition.
+ *  @author markhor
  *  @version 1.0
  *
  *  @section Notes
  *  This code partially conforms to <a href="http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml">Google C++ Style Guide</a>.
  *
  *  @section Copyright
- *  Copyright © 2013 Samsung R&D Institute Russia
+ *  Copyright © 2015 Samsung R&D Institute Russia
  *
  *  @section License
  *  Licensed to the Apache Software Foundation (ASF) under one
@@ -28,13 +28,34 @@
  *  under the License.
  */
 
-#define ANTIDOTE
-#include <cmath>
-#include <algorithm>
-#include <stdexcept>
-#include "inc/veles/make_unique.h"
-#include "inc/veles/workflow.h"
-#include <gtest/gtest.h>
-//#include "tests/unit_mock.h"
+#ifndef INC_VELES_NUMPY_ARRAY_H_
+#define INC_VELES_NUMPY_ARRAY_H_
 
-#include "tests/google/src/gtest_main.cc"
+#include <array>
+#include <type_traits>
+#include <veles/shared_array.h>
+
+namespace veles {
+
+struct NumpyArrayBase {
+  constexpr static int SHAPE_MAX = 8;
+};
+
+template <class T, int D>
+struct NumpyArray : NumpyArrayBase {
+  static_assert(std::is_arithmetic<T>::value,
+                "the element type must be either integer or a floating point "
+                "number.");
+  static_assert(D > 0 && D < SHAPE_MAX,
+                "the number of dimensions must be between 1 and "
+                "NumpyArray::SHAPE_MAX.");
+  typedef T ElementType;
+
+  std::array<uint32_t, D> shape;
+  bool transposed;
+  shared_array<T> data;
+};
+
+}  // namespace veles
+
+#endif  // INC_VELES_NUMPY_ARRAY_H_

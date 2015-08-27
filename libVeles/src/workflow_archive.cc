@@ -41,10 +41,11 @@
 
 namespace veles {
 
+namespace internal {
+
 /// Name of the file which describes the workflow.
 const char* WorkflowArchive::kMainFile = "contents.json";
-const Logger WorkflowArchive::kLogger = Logger(
-    "WorkflowArchive", EINA_COLOR_YELLOW);
+const Logger WorkflowArchive::kLogger( "WorkflowArchive", EINA_COLOR_YELLOW);
 
 WorkflowArchive::WorkflowArchive(const WorkflowDefinition& wdef)
     : workflow_definition_(wdef) {
@@ -165,5 +166,7 @@ std::shared_ptr<archive> WorkflowArchive::Open(
   }
   return std::move(arch);
 }
+
+}  // namespace internal
 
 }  // namespace veles

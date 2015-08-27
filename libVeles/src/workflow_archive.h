@@ -35,11 +35,13 @@
 #include <unordered_map>
 #include "inc/veles/logger.h"
 #include "src/main_file_loader.h"
-#include "src/shared_array.h"
+#include "inc/veles/shared_array.h"
 
 struct archive;
 
 namespace veles {
+
+namespace internal {
 
 class WorkflowArchive : protected DefaultLogger<WorkflowArchive,
                                                 Logger::COLOR_YELLOW> {
@@ -70,6 +72,8 @@ class WorkflowArchive : protected DefaultLogger<WorkflowArchive,
   std::string file_name_;
   std::unordered_map<std::string, shared_array<uint8_t>> files_;
 };
+
+}  // namespace internal
 
 }  // namespace veles
 #endif  // SRC_WORKFLOW_ARCHIVE_H_

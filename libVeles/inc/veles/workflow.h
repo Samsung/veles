@@ -1,13 +1,13 @@
 /*! @file workflow.h
- *  @brief VELES Workflow
- *  @author Ernesto Sanches <ernestosanches@gmail.com>
+ *  @brief VELES Workflow class declaration.
+ *  @author Markovtsev Vadim <v.markovtsev@samsung.com>
  *  @version 1.0
  *
  *  @section Notes
  *  This code partially conforms to <a href="http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml">Google C++ Style Guide</a>.
  *
  *  @section Copyright
- *  Copyright © 2013 Samsung R&D Institute Russia
+ *  Copyright © 2013, 2015 Samsung R&D Institute Russia
  *
  *  @section License
  *  Licensed to the Apache Software Foundation (ASF) under one
@@ -28,17 +28,15 @@
  *  under the License.
  */
 
-#ifndef INC_WORKFLOW_H_
-#define INC_WORKFLOW_H_
+#ifndef INC_VELES_WORKFLOW_H_
+#define INC_VELES_WORKFLOW_H_
 
 #include <memory>
 #include <string>
-#include <unordered_map>
-#include <vector>
-#include <algorithm>
 #include <veles/logger.h>
 #include <veles/unit.h>
 #include <veles/make_unique.h>
+#include <veles/memory_node.h>
 
 #if __GNUC__ >= 4
 #pragma GCC visibility push(default)
@@ -46,99 +44,71 @@
 
 namespace veles {
 
-/// Type that contains Unit properties
-typedef std::unordered_map<std::string, std::shared_ptr<void>> PropertiesTable;
+class ParentUnitDoesNotExistException : public std::exception {
+ public:
+  ParentUnitDoesNotExistException(const std::string& unit)
+      : message_(std::string("Parent unit \"") + unit + "\" does not exist.") {
+  }
 
-/// Properties sequence.
-typedef std::vector<std::shared_ptr<void>> PropertiesSequence;
+  virtual const char* what() const noexcept {
+    return message_.c_str();
+  }
+
+ private:
+  std::string message_;
+};
 
 /** @brief VELES workflow */
 class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
  public:
+  explicit Workflow(const std::string& name, const std::string& checksum,
+                    const std::shared_ptr<Unit>& head,
+                    const std::shared_ptr<Engine>& engine);
   virtual ~Workflow() = default;
-  /** @brief Appends a unit to the end of workflow
-   *  @param unit VELES unit
-   */
-  void Add(const std::shared_ptr<Unit>& unit) {
-    units_.push_back(unit);
-  }
+  const std::string& name() const noexcept { return name_; }
+  const std::string& checksum() const noexcept { return checksum_; }
+
   /** @brief Clears the Workflow
    */
-  void Clear() {
-    units_.clear();
-  }
+  void Clear() noexcept;
+
   /** @brief Number of units
    */
-  size_t Size() const noexcept {
-    return units_.size();
-  }
-  /* @brief Number of workflow inputs
+  size_t Size() const noexcept;
+
+  std::shared_ptr<Unit> Tail() const noexcept;
+
+  std::shared_ptr<Unit> Head() const noexcept { return head_; }
+
+  /** @brief Prepares the workflow for execution.
+   *  @param input The input data for the first unit.
    */
-  size_t InputCount() const noexcept {
-    return Size() ? units_.front()->InputCount() : 0;
-  }
-  /* @brief Number of workflow outputs
+  void Initialize(const void* input);
+
+  void Run();
+
+  /** @brief Returns the output from the last unit. The pointer is guaranteed
+   *  to not change before the next call to Initialize().
    */
-  size_t OutputCount() const noexcept {
-    return Size() ? units_.back()->OutputCount() : 0;
+  void* output() const noexcept {
+    return Tail()->output();
   }
-  /** @brief Sets a parameter of the workflow
-   *  @param name Name of the parameter
-   *  @param value Pointer to the parameter value
-   */
+
+  static void* malloc_aligned_void(size_t size);
   template <class T>
-  void SetProperty(const std::string& name, std::shared_ptr<T> value);
-  /** @brief Returns a parameter of the workflow
-   *  @param name Name of the parameter
-   */
-  std::shared_ptr<void> GetProperty(const std::string& name);
-  /** @brief Returns a unit from workflow
-   *  @param index Unit position in workflow
-   */
-  std::shared_ptr<Unit> Get(size_t index) const;
-  /** @brief Executes the workflow
-   *  @param begin Iterator to the first element of initial data
-   *  @param end Iterator to the end of initial data
-   *  @param out Output iterator for the result
-   */
-  template<class InputIterator, class OutputIterator>
-  void Execute(InputIterator begin, InputIterator end,
-               OutputIterator out) const {
-    size_t max_size = MaxUnitSize();
-    auto input = std::uniquify(mallocf(max_size), std::free);
-    auto output = std::uniquify(mallocf(max_size), std::free);
-    std::copy(begin, end, input.get());
-
-    float* curr_in = input.get();
-    float* curr_out = output.get();
-    if (!units_.empty()) {
-      for (const auto& unit : units_) {
-        unit->Execute(curr_in, curr_out);
-        std::swap(curr_in, curr_out);
-      }
-      std::copy(curr_in, curr_in + units_.back()->OutputCount(), out);
-    }
+  static T* malloc_aligned(size_t length) {
+    return reinterpret_cast<T*>(malloc_aligned_void(length * sizeof(T)));
   }
-
-  static float* mallocf(size_t length);
 
  private:
-  friend class WorkflowLoader;
-  /** @brief Get maximum input and output size of containing units
-   *  @return Maximum size
-   */
-  size_t MaxUnitSize() const noexcept;
-  void SetProperties(const PropertiesTable& table);
+  std::vector<internal::MemoryNode> StateMemoryOptimizationProblem() const;
 
-  std::vector<std::shared_ptr<Unit>> units_;
-  PropertiesTable props_;
+  std::string name_;
+  std::string checksum_;
+  std::shared_ptr<Unit> head_;
+  std::shared_ptr<Engine> engine_;
+  std::shared_ptr<uint8_t> boilerplate_;
 };
-
-template <class T>
-void Workflow::SetProperty(const std::string& name, std::shared_ptr<T> value) {
-  props_[name] = std::const_pointer_cast<typename std::remove_const<T>::type>(
-      value);
-}
 
 }  // namespace veles
 
@@ -146,4 +116,4 @@ void Workflow::SetProperty(const std::string& name, std::shared_ptr<T> value) {
 #pragma GCC visibility pop
 #endif
 
-#endif  // INC_WORKFLOW_H_
+#endif  // INC_VELES_WORKFLOW_H_

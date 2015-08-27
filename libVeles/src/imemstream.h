@@ -32,9 +32,11 @@
 #define SRC_IMEMSTREAM_H_
 
 #include <istream>
-#include "src/shared_array.h"
+#include "inc/veles/shared_array.h"
 
 namespace veles {
+
+namespace internal {
 
 template <class T>
 class membuf: public std::streambuf {
@@ -101,6 +103,8 @@ struct imemstream: public virtual membuf<T>, public std::istream {
       std::istream(static_cast<std::streambuf*>(this)) {
   }
 };
+
+}  // namespace internal
 
 }  // namespace veles
 
