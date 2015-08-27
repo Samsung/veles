@@ -1,1 +1,3 @@
 snakefood>=1.4
+backports.lzma>=0.0.3
+protobuf>=2.0
