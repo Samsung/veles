@@ -166,8 +166,6 @@ class Logger {
 
   Logger& operator=(const Logger& other) noexcept;
 
-  Logger& operator=(Logger&& other) noexcept;
-
   virtual ~Logger();
 
   int log_domain() const noexcept;
@@ -198,7 +196,7 @@ class Logger {
 };
 
 template <class T, unsigned C = 0>
-class DefaultLogger : public Logger {
+class DefaultLogger : public virtual Logger {
  public:
   DefaultLogger() : Logger(StripVelesNamespace(Demangle(typeid(T).name())),
                            GetColorByIndex(C)) {

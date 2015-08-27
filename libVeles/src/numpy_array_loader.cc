@@ -33,6 +33,8 @@
 
 namespace veles {
 
+namespace internal {
+
 NumpyArrayLoader::Header NumpyArrayLoader::ParseHeader(char* data) {
   if (data[0] != '{') {
     throw NumpyArrayLoadingFailedException("failed to parse the header");
@@ -238,5 +240,7 @@ void NumpyArrayLoader::Header::Describe(NumpyArrayLoader* loader) const {
   DBGI(loader, "Header: dtype %s, fortran: %s, shape: (%s)",
        dtype.c_str(), fortran_order? "true" : "false", shape_str);
 }
+
+}  // namespace internal
 
 }  // namespace veles

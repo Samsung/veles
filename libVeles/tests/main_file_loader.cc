@@ -36,6 +36,8 @@
 
 namespace veles {
 
+namespace internal {
+
 class MainFileLoaderTest : public ::testing::Test {
 };
 
@@ -43,7 +45,7 @@ static const char contents[] = "{\n    \"checksum\": \"13088da21585f7a4cd7023083
 
 TEST(MainFileLoaderTest, Proof) {
   imemstream<const char> ms(contents, sizeof(contents));
-  veles::MainFileLoader loader;
+  MainFileLoader loader;
   auto wd = loader.Load(&ms);
   EXPECT_EQ("MnistWorkflow", wd.name());
   EXPECT_EQ("13088da21585f7a4cd7023083405e2094c53d746_2", wd.checksum());
@@ -59,9 +61,9 @@ TEST(MainFileLoaderTest, Proof) {
   EXPECT_TRUE(var2);
   var2 = unit->get<bool>("weights_transposed");
   EXPECT_FALSE(var2);
-  auto var3 = unit->get<veles::NumpyArrayReference>("bias");
+  auto var3 = unit->get<NumpyArrayReference>("bias");
   EXPECT_EQ("0000_100.npy", var3.file_name());
-  var3 = unit->get<veles::NumpyArrayReference>("weights");
+  var3 = unit->get<NumpyArrayReference>("weights");
   EXPECT_EQ("0001_100x784.npy", var3.file_name());
   unit = unit->links()[0];
   EXPECT_EQ("All2AllSoftmax", unit->name());
@@ -69,6 +71,8 @@ TEST(MainFileLoaderTest, Proof) {
   EXPECT_EQ(0, unit->links().size());
   ASSERT_EQ(5, unit->PropertyNames().size());
 }
+
+}  // namespace internal
 
 }  // namespace veles
 

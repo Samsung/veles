@@ -48,8 +48,8 @@ UnitFactory& UnitFactory::InstanceRW() {
 }
 
 UnitFactory::UnitConstructor UnitFactory::operator[](
-    const std::string& name) const {
-  auto f = map_.find(name);
+    const std::string& uuid) const {
+  auto f = map_.find(uuid);
   if (f != map_.end()) {
     return f->second;
   }

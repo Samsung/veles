@@ -1,13 +1,13 @@
-/*! @file workflow.h
- *  @brief New file description.
- *  @author Ernesto Sanches <ernestosanches@gmail.com>
+/*! @file memory_optimizer.h
+ *  @brief Class to pack sliding blocks to reach the minimal height.
+ *  @author Markovtsev Vadim <v.markovtsev@samsung.com>
  *  @version 1.0
  *
  *  @section Notes
  *  This code partially conforms to <a href="http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml">Google C++ Style Guide</a>.
  *
  *  @section Copyright
- *  Copyright © 2013 Samsung R&D Institute Russia
+ *  Copyright © 2015 Samsung R&D Institute Russia
  *
  *  @section License
  *  Licensed to the Apache Software Foundation (ASF) under one
@@ -28,31 +28,28 @@
  *  under the License.
  */
 
-#ifndef TESTS_WORKFLOW_H_
-#define TESTS_WORKFLOW_H_
+#ifndef SRC_MEMORY_OPTIMIZER_H_
+#define SRC_MEMORY_OPTIMIZER_H_
 
+#include <list>
 #include <vector>
-#include <gtest/gtest.h>
-#include "inc/veles/workflow.h"
+#include "inc/veles/memory_node.h"
 
-/** @brief Isolated workflow test using Unit Mock
- */
-class WorkflowTest :
-    public ::testing::TestWithParam<
-        std::tuple<size_t, size_t, size_t, size_t>> {
- protected:
-  static const size_t kCount;
+namespace veles {
 
-  virtual void SetUp() override;
+namespace internal {
 
-  /** @brief Get expected result of applying UnitMock's repeating algorithm
-   *  to the input vector.
-   *  @detail Example for configuration of sizes: 5 2 3 5:
-   *  in -> [1 2 3 4 5] -> [1 2] (*2) -> [1 2 1] (*4) -> [1 2 1 1 2] (*8) -> out
-   */
-  void GetExpected(std::vector<size_t>* out);
+class MemoryOptimizer {
+ public:
+  size_t Optimize(std::vector<MemoryNode>* nodes) const;
 
-  veles::Workflow workflow_;
+ private:
+  typedef std::vector<std::list<std::pair<size_t, size_t>>> map;
+
+  static size_t FindLowestPosition(const map& map, const MemoryNode& node);
 };
 
-#endif  // TESTS_WORKFLOW_H_
+}  // namespace internal
+
+}  // namespace veles
+#endif  // SRC_MEMORY_OPTIMIZER_H_

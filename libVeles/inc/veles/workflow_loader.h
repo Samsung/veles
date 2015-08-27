@@ -61,8 +61,6 @@ class WorkflowLoadingFailedException : public std::exception {
   std::string message_;
 };
 
-class WorkflowArchive;
-
 /**
  * @brief Factory which produces Workflow objects from packages stored on disk.
  * */
@@ -73,10 +71,10 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
   virtual ~WorkflowLoader() = default;
   /// @brief Main function.
   /**
-   * @param[in] archive Path to the package.
+   * @param[in] file_name Path to the package.
    * @return The loaded and ready to be initialized Workflow instance.
    */
-  Workflow Load(const std::string& archive);
+  Workflow Load(const std::string& file_name);
 
  private:
   friend class WorkflowLoaderTest;

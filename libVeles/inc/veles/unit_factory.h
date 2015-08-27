@@ -59,9 +59,9 @@ class UnitFactory : protected Logger {
   /// @brief Returns the unique instance of UnitFactory class.
   static const UnitFactory& Instance();
 
-  /// @brief Returns the factory function for the requested Unit name.
+  /// @brief Returns the factory function for the requested Unit UUID.
   /// @param name The name of the Unit.
-  UnitConstructor operator[](const std::string& name) const;
+  UnitConstructor operator[](const std::string& uuid) const;
 
   /// @brief Prints the names of registered units to stdout.
   void PrintRegisteredUnits() const;
@@ -91,7 +91,7 @@ class RegisterUnit : DefaultLogger<RegisterUnit<T>, Logger::COLOR_LIGHTBLUE> {
   /// undefined.
   RegisterUnit() {
     T unit;
-    UnitFactory::InstanceRW().map_[unit.Name()] = std::make_shared<T>;
+    UnitFactory::InstanceRW().map_[unit.Uuid()] = std::make_shared<T>;
     INF("I am registered");
   }
 };
