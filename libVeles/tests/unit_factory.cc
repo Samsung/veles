@@ -28,42 +28,44 @@
  *  under the License.
  */
 
-
-
 #include <gtest/gtest.h>
 #include "inc/veles/unit_factory.h"
 
 namespace veles {
 
-class DummyUnit : public Unit {
+class DummyUnit : public virtual Unit,
+                  public virtual DefaultLogger<DummyUnit, Logger::COLOR_ORANGE> {
  public:
-  virtual std::string Name() const noexcept override {
-    return "Dummy";
+  DummyUnit() : Unit(nullptr) {}
+
+  virtual const std::string& Uuid() const noexcept override {
+    return uuid_;
   }
 
-  virtual void SetParameter(const std::string&,
-                            std::shared_ptr<const void>) override {
+  virtual void SetParameter(const std::string&, const Property&) override {
   }
 
-  virtual void Execute(const float*, float*) const override {
-  }
-
-  virtual size_t InputCount() const noexcept {
+  virtual size_t OutputSize() const override {
     return 0;
   }
 
-  virtual size_t OutputCount() const noexcept {
-    return 0;
+  virtual void Execute() override {
   }
+
+ private:
+  static const std::string uuid_;
 };
-  REGISTER_UNIT(DummyUnit);
+
+const std::string DummyUnit::uuid_ = "abcd";
+
+REGISTER_UNIT(DummyUnit);
 
 }  // namespace veles
 
 
 TEST(UnitRegistry, DummyCreate) {
-  auto dummy = veles::UnitFactory::Instance()["Dummy"]();
-  ASSERT_STREQ("Dummy", dummy->Name().c_str());
+  auto dummy = veles::UnitFactory::Instance()["abcd"]();
+  ASSERT_STREQ("abcd", dummy->Uuid().c_str());
 }
 
 #include "tests/google/src/gtest_main.cc"

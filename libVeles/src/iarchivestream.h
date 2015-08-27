@@ -37,6 +37,10 @@
 
 struct archive;
 
+namespace veles {
+
+namespace internal {
+
 class archbuf: public std::streambuf {
  public:
   archbuf(const std::shared_ptr<archive>& archive);
@@ -62,5 +66,9 @@ struct iarchivestream: public virtual archbuf, public std::istream {
     , std::istream(static_cast<std::streambuf*>(this)) {
   }
 };
+
+}  // namespace internal
+
+}  // namepsace veles
 
 #endif  // SRC_IARCHIVESTREAM_H_

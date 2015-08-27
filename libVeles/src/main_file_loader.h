@@ -43,6 +43,8 @@ using variant = mapbox::util::variant<Types...>;
 
 namespace veles {
 
+namespace internal {
+
 class NumpyArrayReference {
  public:
   explicit NumpyArrayReference(const std::string& file_name)
@@ -124,6 +126,8 @@ template <class T>
 void UnitDefinition::set(const std::string& key, const T& value) {
   props_[key] = value;
 }
+
+}  // namespace internal
 
 }  // namespace veles
 #endif  // MAIN_FILE_LOADER_H_

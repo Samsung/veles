@@ -37,6 +37,8 @@
 
 namespace veles {
 
+namespace internal {
+
 UnitDefinition::UnitDefinition(
     const std::string& name, const std::string& uuid)
     : name_(name) {
@@ -172,5 +174,7 @@ WorkflowDefinition MainFileLoader::Load(std::istream* src) {
   DBG("Workflow %s: %s", checksum, name);
   return { checksum, name, udefs[0] };
 }
+
+}  // namespace internal
 
 }  // namespace veles

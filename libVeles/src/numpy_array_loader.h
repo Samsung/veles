@@ -37,10 +37,13 @@
 #include <unordered_map>
 #include <veles/logger.h>  // NOLINT(*)
 #include <veles/poison.h>  // NOLINT(*)
-#include "src/shared_array.h"
+#include <veles/shared_array.h>
+#include <veles/numpy_array.h>
 #include "src/endian2.h"
 
 namespace veles {
+
+namespace internal {
 
 class NumpyArrayLoadingFailedException : public std::exception {
  public:
@@ -54,22 +57,6 @@ class NumpyArrayLoadingFailedException : public std::exception {
 
  private:
   std::string message_;
-};
-
-template <class T, int D>
-struct NumpyArray {
-  constexpr static int SHAPE_MAX = 8;
-  static_assert(std::is_arithmetic<T>::value,
-                "the element type must be either integer or a floating point "
-                "number.");
-  static_assert(D > 0 && D < SHAPE_MAX,
-                "the number of dimensions must be between 1 and "
-                "NumpyArray::SHAPE_MAX.");
-  typedef T ElementType;
-
-  std::array<uint32_t, D> shape;
-  bool transposed;
-  shared_array<T> data;
 };
 
 class NumpyArrayLoader : protected DefaultLogger<NumpyArrayLoader,
@@ -91,7 +78,7 @@ class NumpyArrayLoader : protected DefaultLogger<NumpyArrayLoader,
 
     std::string dtype;
     bool fortran_order;
-    std::array<uint32_t, NumpyArray<int, 1>::SHAPE_MAX> shape;
+    std::array<uint32_t, NumpyArrayBase::SHAPE_MAX> shape;
 
     int DtypeSize() const;
     bool DtypeIsLittleEndian() const;
@@ -328,6 +315,8 @@ bool NumpyArrayLoader::Header::DtypeIsTheSameAs() const {
   return !strcmp(typeid(T).name(),
                  kTypesDict.find(dtype.c_str() + 1)->second.c_str());
 }
+
+}  // namespace internal
 
 }  // namespace veles
 #endif  // NUMPY_ARRAY_LOADER_H_

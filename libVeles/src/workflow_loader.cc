@@ -37,8 +37,11 @@ namespace veles {
 WorkflowLoader::WorkflowLoader() {
 }
 
-Workflow WorkflowLoader::Load(const std::string& /*archive*/) {
-  return Workflow();
+Workflow WorkflowLoader::Load(const std::string& file_name) {
+  auto war = internal::WorkflowArchive::Load(file_name);
+  auto& wdef = war->workflow_definition();
+  Workflow wf(wdef.name(), wdef.checksum(), nullptr, nullptr);
+  return std::move(wf);
 }
 
 }  // namespace veles

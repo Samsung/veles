@@ -31,6 +31,10 @@
 #include "src/iarchivestream.h"
 #include <libarchive/libarchive/archive.h>  // NOLINT(*)
 
+namespace veles {
+
+namespace internal {
+
 archbuf::archbuf(const std::shared_ptr<archive>& archive)
     : archive_(archive), read_(0) {
   auto end = buffer + sizeof(buffer);
@@ -73,3 +77,7 @@ archbuf::pos_type archbuf::seekoff(
 size_t archbuf::archive_buffer_pos() const noexcept {
   return read_ - (egptr() - eback());
 }
+
+}  // namespace internal
+
+}  // namespace veles

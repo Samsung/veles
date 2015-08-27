@@ -36,6 +36,8 @@
 
 namespace veles {
 
+namespace internal {
+
 struct WorkflowArchiveTest :
     public ::testing::Test,
     protected DefaultLogger<WorkflowArchive, Logger::COLOR_CYAN> {
@@ -82,6 +84,8 @@ TEST_F(WorkflowArchiveTest, GetStream) {
   EXPECT_EQ(784, array.shape[1]);
   EXPECT_EQ(100 * 784, array.data.size());
 }
+
+}  // namespace internal
 
 }  // namespace veles
 
