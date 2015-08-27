@@ -28,21 +28,28 @@
  *  under the License.
  */
 
+#include "inc/veles/workflow.h"
 #include <cassert>
 #include <cstdlib>
 #include <numeric>
 #include <algorithm>
 #include <unordered_set>
-#include "inc/veles/workflow.h"
+#include "inc/veles/unit.h"
 #include "src/memory_optimizer.h"
+#include "src/engine.h"
 
 namespace veles {
 
 Workflow::Workflow(const std::string& name, const std::string& checksum,
                    const std::shared_ptr<Unit>& head,
-                   const std::shared_ptr<Engine>& engine)
-    : name_(name), checksum_(checksum), head_(head), engine_(engine) {
+                   const std::shared_ptr<internal::Engine>& engine)
+    : name_(name), checksum_(checksum), head_(head), engine_(engine),
+      engine_key_(engine->RegisterOnFinish(std::bind(&Workflow::Reset, this))) {
 }
+
+ Workflow::~Workflow() noexcept {
+   engine_->UnregisterOnFinish(engine_key_);
+ }
 
 void Workflow::Clear() noexcept {
   head_ = nullptr;
@@ -84,6 +91,16 @@ void Workflow::Initialize(const void* input) {
 
 void Workflow::Run() {
   head_->Run();
+}
+
+void Workflow::Reset() {
+  if (head_) {
+    head_->Reset();
+  }
+}
+
+void* Workflow::output() const noexcept {
+  return Tail()->output();
 }
 
 std::vector<internal::MemoryNode>

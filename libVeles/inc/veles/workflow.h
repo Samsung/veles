@@ -33,16 +33,24 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 #include <veles/logger.h>
-#include <veles/unit.h>
-#include <veles/make_unique.h>
-#include <veles/memory_node.h>
 
 #if __GNUC__ >= 4
 #pragma GCC visibility push(default)
 #endif
 
 namespace veles {
+
+class Unit;
+
+namespace internal {
+
+class Engine;
+
+struct MemoryNode;
+
+}  // namespace internal
 
 class ParentUnitDoesNotExistException : public std::exception {
  public:
@@ -63,8 +71,8 @@ class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
  public:
   explicit Workflow(const std::string& name, const std::string& checksum,
                     const std::shared_ptr<Unit>& head,
-                    const std::shared_ptr<Engine>& engine);
-  virtual ~Workflow() = default;
+                    const std::shared_ptr<internal::Engine>& engine);
+  virtual ~Workflow() noexcept;
   const std::string& name() const noexcept { return name_; }
   const std::string& checksum() const noexcept { return checksum_; }
 
@@ -90,9 +98,7 @@ class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
   /** @brief Returns the output from the last unit. The pointer is guaranteed
    *  to not change before the next call to Initialize().
    */
-  void* output() const noexcept {
-    return Tail()->output();
-  }
+  void* output() const noexcept;
 
   static void* malloc_aligned_void(size_t size);
   template <class T>
@@ -102,12 +108,14 @@ class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
 
  private:
   std::vector<internal::MemoryNode> StateMemoryOptimizationProblem() const;
+  void Reset();
 
   std::string name_;
   std::string checksum_;
   std::shared_ptr<Unit> head_;
-  std::shared_ptr<Engine> engine_;
+  std::shared_ptr<internal::Engine> engine_;
   std::shared_ptr<uint8_t> boilerplate_;
+  int engine_key_;
 };
 
 }  // namespace veles

@@ -44,6 +44,10 @@
 #include <algorithm>
 #include <memory>
 
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
+
 namespace veles {
 
 /** @brief Class to provide shared array storage. */
@@ -224,5 +228,9 @@ void swap(shared_array<T>& a, shared_array<T>& b) {
 }
 
 }  // namespace veles
+
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
 
 #endif  // INC_VELES_SHARED_ARRAY_H_

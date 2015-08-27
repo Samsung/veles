@@ -45,6 +45,12 @@
 
 namespace veles {
 
+namespace internal {
+
+class Engine;
+
+}  // namespace internal
+
 class WorkflowLoadingFailedException : public std::exception {
  public:
   WorkflowLoadingFailedException(const std::string& file,
@@ -74,7 +80,8 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
    * @param[in] file_name Path to the package.
    * @return The loaded and ready to be initialized Workflow instance.
    */
-  Workflow Load(const std::string& file_name);
+  Workflow Load(const std::string& file_name,
+                const std::shared_ptr<internal::Engine>& engine);
 
  private:
   friend class WorkflowLoaderTest;

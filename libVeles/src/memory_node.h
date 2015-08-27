@@ -1,5 +1,5 @@
-/*! @file engine.cc
- *  @brief Class which is responsible for scheduling unit runs.
+/*! @file memory_node.h
+ *  @brief MemoryNode struct definition.
  *  @author Markovtsev Vadim <v.markovtsev@samsung.com>
  *  @version 1.0
  *
@@ -28,46 +28,29 @@
  *  under the License.
  */
 
-#include "src/engine.h"
-#include "src/thread_pool.h"
-#include "inc/veles/engine.h"
+#ifndef SRC_MEMORY_NODE_H_
+#define SRC_MEMORY_NODE_H_
+
+#include <cstddef>
 
 namespace veles {
 
 namespace internal {
 
-void Engine::Finish() {
-  for (auto& cb : callbacks_) {
-    cb.second();
+struct MemoryNode {
+  MemoryNode() : time_start(-1), time_finish(-1), value(-1), position(-1),
+                 data(nullptr) {
   }
-}
 
-int Engine::RegisterOnFinish(const Callable& callback) noexcept {
-  callbacks_[counter_] = callback;
-  return counter_++;
-}
-
-bool Engine::UnregisterOnFinish(int key) noexcept {
-  auto it = callbacks_.find(key);
-  if (it == callbacks_.end()) {
-    return false;
-  }
-  callbacks_.erase(it);
-  return true;
-}
-
-ThreadPoolEngine::ThreadPoolEngine(size_t threads_number)
-    : pool_(new ThreadPool(threads_number)) {
-}
-
-void ThreadPoolEngine::Schedule(const Callable& callable) {
-  pool_->enqueue(callable);
-}
+  int time_start;
+  int time_finish;
+  size_t value;
+  size_t position;
+  const void* data;
+};
 
 }  // namespace internal
 
-EnginePtr GetEngine() {
-  return std::make_shared<internal::ThreadPoolEngine>(2);
-}
-
 }  // namespace veles
+
+#endif  // SRC_MEMORY_NODE_H_

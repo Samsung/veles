@@ -1,5 +1,5 @@
-/*! @file engine.cc
- *  @brief Class which is responsible for scheduling unit runs.
+/*! @file veles.h
+ *  @brief VELES native platform cumulative include.
  *  @author Markovtsev Vadim <v.markovtsev@samsung.com>
  *  @version 1.0
  *
@@ -28,46 +28,11 @@
  *  under the License.
  */
 
-#include "src/engine.h"
-#include "src/thread_pool.h"
-#include "inc/veles/engine.h"
+#ifndef INC_VELES_VELES_H_
+#define INC_VELES_VELES_H_
 
-namespace veles {
+#include <veles/engine.h>
+#include <veles/unit.h>
+#include <veles/workflow.h>
 
-namespace internal {
-
-void Engine::Finish() {
-  for (auto& cb : callbacks_) {
-    cb.second();
-  }
-}
-
-int Engine::RegisterOnFinish(const Callable& callback) noexcept {
-  callbacks_[counter_] = callback;
-  return counter_++;
-}
-
-bool Engine::UnregisterOnFinish(int key) noexcept {
-  auto it = callbacks_.find(key);
-  if (it == callbacks_.end()) {
-    return false;
-  }
-  callbacks_.erase(it);
-  return true;
-}
-
-ThreadPoolEngine::ThreadPoolEngine(size_t threads_number)
-    : pool_(new ThreadPool(threads_number)) {
-}
-
-void ThreadPoolEngine::Schedule(const Callable& callable) {
-  pool_->enqueue(callable);
-}
-
-}  // namespace internal
-
-EnginePtr GetEngine() {
-  return std::make_shared<internal::ThreadPoolEngine>(2);
-}
-
-}  // namespace veles
+#endif  // INC_VELES_VELES_H_

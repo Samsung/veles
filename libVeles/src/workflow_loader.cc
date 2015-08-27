@@ -37,10 +37,12 @@ namespace veles {
 WorkflowLoader::WorkflowLoader() {
 }
 
-Workflow WorkflowLoader::Load(const std::string& file_name) {
+Workflow WorkflowLoader::Load(const std::string& file_name,
+                              const std::shared_ptr<internal::Engine>& engine) {
   auto war = internal::WorkflowArchive::Load(file_name);
   auto& wdef = war->workflow_definition();
-  Workflow wf(wdef.name(), wdef.checksum(), nullptr, nullptr);
+  // TODO(v.markovtsev): Convert the tree of UnitDefinition-s to the tree of Unit-s
+  Workflow wf(wdef.name(), wdef.checksum(), nullptr, engine);
   return std::move(wf);
 }
 

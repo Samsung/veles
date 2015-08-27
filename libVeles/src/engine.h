@@ -1,5 +1,5 @@
-/*! @file memory_node.h
- *  @brief MemoryNode struct definition.
+/*! @file engine.h
+ *  @brief Class which is responsible for scheduling unit runs.
  *  @author Markovtsev Vadim <v.markovtsev@samsung.com>
  *  @version 1.0
  *
@@ -28,29 +28,53 @@
  *  under the License.
  */
 
-#ifndef INC_VELES_MEMORY_NODE_H_
-#define INC_VELES_MEMORY_NODE_H_
+#ifndef SRC_ENGINE_H_
+#define SRC_ENGINE_H_
 
-#include <cstddef>
+#include <functional>
+#include <thread>
+#include <unordered_map>
+#include "inc/veles/logger.h"
 
 namespace veles {
 
 namespace internal {
 
-struct MemoryNode {
-  MemoryNode() : time_start(-1), time_finish(-1), value(-1), position(-1),
-                 data(nullptr) {
-  }
+class Engine {
+ public:
+  typedef std::function<void(void)> Callable;
 
-  int time_start;
-  int time_finish;
-  size_t value;
-  size_t position;
-  const void* data;
+  virtual ~Engine() = default;
+
+  virtual void Schedule(const Callable& callable) = 0;
+
+  void Finish();
+
+  int RegisterOnFinish(const Callable& callback) noexcept;
+
+  bool UnregisterOnFinish(int key) noexcept;
+
+ private:
+  std::unordered_map<int, Callable> callbacks_;
+  int counter_ = 0;
+};
+
+class ThreadPool;
+
+class ThreadPoolEngine
+    : public Engine,
+      protected DefaultLogger<ThreadPoolEngine, Logger::COLOR_BLUE> {
+ public:
+  explicit ThreadPoolEngine(
+      size_t threads_number = std::thread::hardware_concurrency());
+
+  virtual void Schedule(const Callable& callable) override;
+
+ private:
+  std::shared_ptr<ThreadPool> pool_;
 };
 
 }  // namespace internal
 
 }  // namespace veles
-
-#endif  // INC_VELES_MEMORY_NODE_H_
+#endif  // SRC_ENGINE_H_

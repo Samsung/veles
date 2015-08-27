@@ -37,7 +37,6 @@
 #include <unordered_map>
 #include <vector>
 #include <variant/variant.hpp>
-#include <veles/engine.h>
 #include <veles/numpy_array.h>
 #include <veles/logger.h>
 
@@ -46,6 +45,12 @@
 #endif
 
 namespace veles {
+
+namespace internal {
+
+class Engine;
+
+}  // namespace internal
 
 class UnexpectedRunException : public std::exception {
  public:
@@ -91,7 +96,7 @@ struct WalkDecision {
  */
 class Unit : public virtual Logger, public std::enable_shared_from_this<Unit> {
  public:
-  Unit(const std::shared_ptr<Engine>& engine);
+  Unit(const std::shared_ptr<internal::Engine>& engine);
   virtual ~Unit() = default;
   /** @brief UUID4 which identifies the corresponding VELES unit class.
    */
@@ -162,7 +167,7 @@ class Unit : public virtual Logger, public std::enable_shared_from_this<Unit> {
   virtual void Execute() = 0;
 
  private:
-  std::shared_ptr<Engine> engine_;
+  std::shared_ptr<internal::Engine> engine_;
   mutable void* output_;
   bool gate_;
   /// this -> children

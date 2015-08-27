@@ -34,7 +34,7 @@
 #include <ostream>
 #include <list>
 #include <vector>
-#include "inc/veles/memory_node.h"
+#include "src/memory_node.h"
 
 namespace veles {
 
