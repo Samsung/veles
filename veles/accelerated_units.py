@@ -119,6 +119,10 @@ class ICUDAUnit(Interface):
 
 INTERFACE_MAPPING = {OpenCLDevice: IOpenCLUnit, CUDADevice: ICUDAUnit,
                      NumpyDevice: INumpyUnit}
+OCL = "ocl"
+OCLS = "cl"
+CUDA = "cuda"
+CUDAS = "cu"
 
 
 @implementer(IUnit)
@@ -326,22 +330,21 @@ class AcceleratedUnit(Unit):
         """
 
         def cache_is_valid(cache):
-            return (self.device.queue_.device.name ==
-                    cache["devices"][0][0] and
-                    self.device.queue_.device.platform.name ==
-                    cache["devices"][0][1])
+            dev = self.device.queue_.device
+            return any((dev.name, dev.platform.name, dev.driver_version) == did
+                       for did in cache["devices"])
 
         binaries, my_defines = self._load_binary(
-            defines, cache_file_name, dtype, "ocl", "cl", cache_is_valid,
+            defines, cache_file_name, dtype, OCL, OCLS, cache_is_valid,
             template_kwargs)
         if binaries is not None:
             self.program_ = self.device.queue_.context.create_program(
                 binaries, binary=True)
-            self._log_about_cache(cache_file_name, "ocl")
+            self._log_about_cache(cache_file_name, OCL)
             return my_defines
-        include_dirs = self._get_include_dirs("ocl")
+        include_dirs = self._get_include_dirs(OCL)
         source, my_defines = self._generate_source(
-            defines, include_dirs, dtype, "cl", template_kwargs)
+            defines, include_dirs, dtype, OCLS, template_kwargs)
         show_logs = self.logger.isEnabledFor(logging.DEBUG)
         if show_logs:
             self.debug("%s: source code\n%s\n%s", cache_file_name, "-" * 80,
@@ -352,8 +355,8 @@ class AcceleratedUnit(Unit):
                 "-cl-nv-verbose" if show_logs and "cl_nv_compiler_options"
                 in self.device.queue_.device.extensions else "")
         except Exception as e:
-            with NamedTemporaryFile(mode="w", prefix="ocl_src_", suffix=".cl",
-                                    delete=False) as fout:
+            with NamedTemporaryFile(mode="w", prefix="ocl_src_",
+                                    suffix="." + OCLS, delete=False) as fout:
                 fout.write(source)
                 self.error("Failed to build OpenCL program. The input file "
                            "source was dumped to %s", fout.name)
@@ -364,10 +367,12 @@ class AcceleratedUnit(Unit):
                 if not s:
                     continue
                 self.debug("Non-empty OpenCL build log encountered: %s", s)
-        self._save_to_cache(cache_file_name, "cl", self.program_.source,
-                            self.program_.binaries,
-                            {"devices": [(d.name, d.platform.name)
-                                         for d in self.program_.devices]})
+        self._save_to_cache(
+            cache_file_name, OCLS, self.program_.source,
+            self.program_.binaries, {
+                "devices": [(d.name, d.platform.name, d.driver_version)
+                            for d in self.program_.devices]
+            })
         return my_defines
 
     def cuda_build_program(self, defines, cache_file_name, dtype,
@@ -381,15 +386,15 @@ class AcceleratedUnit(Unit):
             return self.device.context.device.name == cache["device"]
 
         binaries, my_defines = self._load_binary(
-            defines, cache_file_name, dtype, "cuda", "cu", cache_is_valid,
+            defines, cache_file_name, dtype, CUDA, CUDAS, cache_is_valid,
             template_kwargs)
         if binaries is not None:
             self.program_ = self.device.context.create_module(ptx=binaries)
-            self._log_about_cache(cache_file_name, "cuda")
+            self._log_about_cache(cache_file_name, CUDA)
             return my_defines
-        include_dirs = self._get_include_dirs("cuda")
+        include_dirs = self._get_include_dirs(CUDA)
         source, my_defines = self._generate_source(
-            defines, include_dirs, dtype, "cu", template_kwargs)
+            defines, include_dirs, dtype, CUDAS, template_kwargs)
         show_logs = self.logger.isEnabledFor(logging.DEBUG)
         if show_logs:
             self.debug("%s: source code\n%s\n%s", cache_file_name, "-" * 80,
@@ -399,8 +404,8 @@ class AcceleratedUnit(Unit):
                 source=source, include_dirs=include_dirs,
                 nvcc_path=root.common.engine.cuda.nvcc)
         except Exception as e:
-            with NamedTemporaryFile(mode="w", prefix="cuda_src_", suffix=".cu",
-                                    delete=False) as fout:
+            with NamedTemporaryFile(mode="w", prefix="cuda_src_",
+                                    suffix="." + CUDAS, delete=False) as fout:
                 fout.write(source)
                 self.error("Failed to build CUDA program. The input file "
                            "source was dumped to %s", fout.name)
@@ -408,13 +413,13 @@ class AcceleratedUnit(Unit):
         if show_logs and len(self.program_.stderr):
             self.debug("Non-empty CUDA build log encountered: %s",
                        self.program_.stderr)
-        self._save_to_cache(cache_file_name, "cu", source.encode("utf-8"),
+        self._save_to_cache(cache_file_name, CUDAS, source.encode("utf-8"),
                             self.program_.ptx,
                             {"device": self.device.context.device.name})
         return my_defines
 
     def _log_about_cache(self, cache_name, engine):
-        self.debug('Used the cached %s for engine "%s"', cache_name, engine)
+        self.debug('Used cached %s for engine "%s"', cache_name, engine)
 
     def ocl_get_kernel(self, name):
         return self.program_.get_kernel(name)
@@ -615,16 +620,17 @@ class AcceleratedUnit(Unit):
                         real_source = fr.read()
                     if cached_source != real_source:
                         return None, None
-                cache = pickle.loads(tar.extractfile("binaries.pickle").read())
+                cache = pickle.loads(tar.extractfile(
+                    "binaries.%d.pickle" % best_protocol).read())
                 if not cache_is_valid(cache):
                     return None, None
                 bins = cache["binaries"]
                 if not isinstance(bins, bytes) and (
                         not isinstance(bins, list) or len(bins) == 0 or
-                        not isinstance(bins[0], bytes)):
+                        not all(isinstance(b, bytes) for b in bins)):
                     self.warning("Cached binaries have an invalid format")
                     return None, None
-                return cache["binaries"], my_defines
+                return bins, my_defines
         except Exception as e:
             self.debug("Failed to load %s: %s", cache_file_name, e)
             return None, None
@@ -657,7 +663,7 @@ class AcceleratedUnit(Unit):
                 binaries = {"binaries": program_binaries}
                 binaries.update(device_id_dict)
                 pickler.dump(binaries)
-                ti = tarfile.TarInfo("binaries.pickle")
+                ti = tarfile.TarInfo("binaries.%d.pickle" % best_protocol)
                 ti.size = binaries_io.tell()
                 ti.mode = int("666", 8)
                 binaries_io.seek(0)
