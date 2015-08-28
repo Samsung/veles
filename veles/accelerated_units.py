@@ -469,7 +469,8 @@ class AcceleratedUnit(Unit):
 
     def init_vectors(self, *vecs):
         for vec in vecs:
-            vec.initialize(self.device)
+            if vec:
+                vec.initialize(self.device)
 
     def unmap_vectors(self, *vecs):
         for vec in vecs:
