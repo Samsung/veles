@@ -42,11 +42,10 @@
 
 namespace veles {
 
+class Engine;
 class Unit;
 
 namespace internal {
-
-class Engine;
 
 struct MemoryNode;
 
@@ -71,7 +70,7 @@ class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
  public:
   explicit Workflow(const std::string& name, const std::string& checksum,
                     const std::shared_ptr<Unit>& head,
-                    const std::shared_ptr<internal::Engine>& engine);
+                    const std::shared_ptr<Engine>& engine);
   virtual ~Workflow() noexcept;
   const std::string& name() const noexcept { return name_; }
   const std::string& checksum() const noexcept { return checksum_; }
@@ -113,7 +112,7 @@ class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
   std::string name_;
   std::string checksum_;
   std::shared_ptr<Unit> head_;
-  std::shared_ptr<internal::Engine> engine_;
+  std::shared_ptr<Engine> engine_;
   std::shared_ptr<uint8_t> boilerplate_;
   int engine_key_;
 };

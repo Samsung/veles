@@ -28,14 +28,14 @@
  *  under the License.
  */
 
-#include "src/numpy_array_loader.h"
+#include "inc/veles//numpy_array_loader.h"
 #include <simd/arithmetic.h>
 
 namespace veles {
 
 namespace internal {
 
-NumpyArrayLoader::Header NumpyArrayLoader::ParseHeader(char* data) {
+NumpyArrayLoader::Header NumpyArrayLoader::ParseHeader(char* data) const {
   if (data[0] != '{') {
     throw NumpyArrayLoadingFailedException("failed to parse the header");
   }
@@ -225,7 +225,7 @@ int NumpyArrayLoader::Header::SizeInElements() const {
   return prod;
 }
 
-void NumpyArrayLoader::Header::Describe(NumpyArrayLoader* loader) const {
+void NumpyArrayLoader::Header::Describe(const NumpyArrayLoader* loader) const {
   int dims = Dimensions();
   char shape_str[(5 + 2) * dims];
   char* ptr = shape_str;

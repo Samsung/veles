@@ -32,6 +32,7 @@
 #define INC_VELES_ENGINE_H_
 
 #include <memory>
+#include <unordered_map>
 
 #if __GNUC__ >= 4
 #pragma GCC visibility push(default)
@@ -39,15 +40,26 @@
 
 namespace veles {
 
-namespace internal {
+class Engine {
+ public:
+  typedef std::function<void(void)> Callable;
 
-class Engine;
+  virtual ~Engine() = default;
 
-}  // namespace internal
+  virtual void Schedule(const Callable& callable) = 0;
 
-typedef std::shared_ptr<internal::Engine> EnginePtr;
+  void Finish();
 
-EnginePtr GetEngine();
+  int RegisterOnFinish(const Callable& callback) noexcept;
+
+  bool UnregisterOnFinish(int key) noexcept;
+
+ private:
+  std::unordered_map<int, Callable> callbacks_;
+  int counter_ = 0;
+};
+
+std::shared_ptr<Engine> GetEngine();
 
 }  // namespace veles
 

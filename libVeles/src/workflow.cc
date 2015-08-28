@@ -34,15 +34,15 @@
 #include <numeric>
 #include <algorithm>
 #include <unordered_set>
+#include "inc/veles/engine.h"
 #include "inc/veles/unit.h"
 #include "src/memory_optimizer.h"
-#include "src/engine.h"
 
 namespace veles {
 
 Workflow::Workflow(const std::string& name, const std::string& checksum,
                    const std::shared_ptr<Unit>& head,
-                   const std::shared_ptr<internal::Engine>& engine)
+                   const std::shared_ptr<Engine>& engine)
     : name_(name), checksum_(checksum), head_(head), engine_(engine),
       engine_key_(engine->RegisterOnFinish(std::bind(&Workflow::Reset, this))) {
 }

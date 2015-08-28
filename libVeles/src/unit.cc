@@ -31,12 +31,12 @@
 
 #include "inc/veles/unit.h"
 #include <list>
-#include <veles/logger.h>
-#include "src/engine.h"
+#include "inc/veles/logger.h"
+#include "inc/veles/engine.h"
 
 namespace veles {
 
-Unit::Unit(const std::shared_ptr<internal::Engine>& engine)
+Unit::Unit(const std::shared_ptr<Engine>& engine)
     : engine_(engine), output_(nullptr), gate_(false) {
 }
 

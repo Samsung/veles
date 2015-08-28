@@ -39,10 +39,10 @@ UnitFactory::UnitFactory()
 }
 
 const UnitFactory& UnitFactory::Instance() {
-  return InstanceRW();
+  return Origin();
 }
 
-UnitFactory& UnitFactory::InstanceRW() {
+UnitFactory& UnitFactory::Origin() {
   static UnitFactory instance;
   return instance;
 }
@@ -57,7 +57,7 @@ UnitFactory::UnitConstructor UnitFactory::operator[](
 }
 
 void UnitFactory::PrintRegisteredUnits() const {
-  for (auto tit : map_) {
+  for (auto& tit : map_) {
     INF("%s", tit.first.c_str());
   }
 }

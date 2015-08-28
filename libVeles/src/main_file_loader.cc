@@ -66,8 +66,8 @@ std::string UnitDefinition::uuid_str() const noexcept {
 
 std::vector<std::string> UnitDefinition::PropertyNames() const noexcept {
   std::vector<std::string> keys;
-  keys.reserve(props_.size());
-  for (auto& it : props_) {
+  keys.reserve(properties_.size());
+  for (auto& it : properties_) {
     keys.push_back(it.first);
   }
   return keys;

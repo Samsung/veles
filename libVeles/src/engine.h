@@ -33,31 +33,12 @@
 
 #include <functional>
 #include <thread>
-#include <unordered_map>
 #include "inc/veles/logger.h"
+#include "inc/veles/engine.h"
 
 namespace veles {
 
 namespace internal {
-
-class Engine {
- public:
-  typedef std::function<void(void)> Callable;
-
-  virtual ~Engine() = default;
-
-  virtual void Schedule(const Callable& callable) = 0;
-
-  void Finish();
-
-  int RegisterOnFinish(const Callable& callback) noexcept;
-
-  bool UnregisterOnFinish(int key) noexcept;
-
- private:
-  std::unordered_map<int, Callable> callbacks_;
-  int counter_ = 0;
-};
 
 class ThreadPool;
 

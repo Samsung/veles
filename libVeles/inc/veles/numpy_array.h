@@ -1,6 +1,6 @@
 /*! @file numpy_array.h
- *  @brief NumpyArray class definition.
- *  @author markhor
+ *  @brief Numpy array related classes.
+ *  @author Vadim Markovtsev <v.markovtsev@samsung.com>
  *  @version 1.0
  *
  *  @section Notes
@@ -32,8 +32,10 @@
 #define INC_VELES_NUMPY_ARRAY_H_
 
 #include <array>
+#include <istream>
 #include <type_traits>
 #include <veles/shared_array.h>
+#include <veles/numpy_array_loader.h>
 
 namespace veles {
 

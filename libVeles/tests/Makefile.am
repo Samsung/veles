@@ -24,7 +24,7 @@
 ##  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 TESTS = workflow workflow_archive unit unit_factory numpy_array_loader \
-main_file_loader memory_optimizer
+main_file_loader memory_optimizer workflow_loader
 
 PARALLEL_SUBDIRS =
 

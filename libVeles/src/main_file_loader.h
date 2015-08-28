@@ -78,12 +78,15 @@ class UnitDefinition {
   void set(const std::string& key, const T& value);
   std::vector<std::string> PropertyNames() const noexcept;
   void Link(std::shared_ptr<UnitDefinition> def);
+  const std::unordered_map<std::string, Property> properties() const noexcept {
+    return properties_;
+  }
 
  private:
   std::string name_;
   uint8_t uuid_[16];
   std::vector<std::shared_ptr<UnitDefinition>> links_;
-  std::unordered_map<std::string, Property> props_;
+  std::unordered_map<std::string, Property> properties_;
 };
 
 class WorkflowDefinition {
@@ -113,18 +116,18 @@ class MainFileLoader : protected DefaultLogger<MainFileLoader,
 
 template <class T>
 const T& UnitDefinition::get(const std::string& key) const {
-  auto val = props_.find(key)->second;
+  auto val = properties_.find(key)->second;
   return mapbox::util::get<T>(val);
 }
 
 template <class T>
 T& UnitDefinition::get(const std::string& key) {
-  return mapbox::util::get<T>(props_[key]);
+  return mapbox::util::get<T>(properties_[key]);
 }
 
 template <class T>
 void UnitDefinition::set(const std::string& key, const T& value) {
-  props_[key] = value;
+  properties_[key] = value;
 }
 
 }  // namespace internal

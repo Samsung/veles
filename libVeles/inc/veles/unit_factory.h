@@ -42,6 +42,8 @@
 
 namespace veles {
 
+class Engine;
+
 /// @brief Unit factory class.
 /// @details Use it the following way:
 /// auto unit = UnitFactory::Instance()["All2All"]();
@@ -51,7 +53,8 @@ class UnitFactory : protected Logger {
   friend class RegisterUnit;
  public:
   /// @brief Factory function type.
-  typedef std::function<std::shared_ptr<Unit>(void)> UnitConstructor;
+  typedef std::function<std::shared_ptr<Unit>(
+      const std::shared_ptr<Engine>&)> UnitConstructor;
 
   /// @brief Map of Unit names to factory functions.
   typedef std::unordered_map<std::string, UnitConstructor> FactoryMap;
@@ -69,9 +72,11 @@ class UnitFactory : protected Logger {
  private:
   UnitFactory();
   UnitFactory(const UnitFactory&) = delete;
+  UnitFactory(UnitFactory&&) = delete;
   UnitFactory& operator=(const UnitFactory&) = delete;
+  UnitFactory& operator=(UnitFactory&&) = delete;
 
-  static UnitFactory& InstanceRW();
+  static UnitFactory& Origin();
 
   FactoryMap map_;
 };
@@ -90,8 +95,9 @@ class RegisterUnit : DefaultLogger<RegisterUnit<T>, Logger::COLOR_LIGHTBLUE> {
   /// default constructor! The order of execution of static constructors is
   /// undefined.
   RegisterUnit() {
-    T unit;
-    UnitFactory::InstanceRW().map_[unit.Uuid()] = std::make_shared<T>;
+    T unit(nullptr);
+    UnitFactory::Origin().map_[unit.Uuid()] =
+        std::make_shared<T, const std::shared_ptr<Engine>&>;
     INF("I am registered");
   }
 };

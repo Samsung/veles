@@ -1,6 +1,6 @@
 /*! @file workflow.cc
- *  @brief VELES workflow tests
- *  @author Ernesto Sanches <ernestosanches@gmail.com>
+ *  @brief Workflow class tests.
+ *  @author Vadim Markovtsev <v.markovtsev@samsung.com>
  *  @version 1.0
  *
  *  @section Notes
@@ -29,12 +29,7 @@
  */
 
 #define ANTIDOTE
-#include <cmath>
-#include <algorithm>
-#include <stdexcept>
-#include "inc/veles/make_unique.h"
-#include "inc/veles/workflow.h"
+#include <veles/workflow.h>
 #include <gtest/gtest.h>
-//#include "tests/unit_mock.h"
 
 #include "tests/google/src/gtest_main.cc"

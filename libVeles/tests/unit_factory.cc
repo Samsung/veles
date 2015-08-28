@@ -36,7 +36,7 @@ namespace veles {
 class DummyUnit : public virtual Unit,
                   public virtual DefaultLogger<DummyUnit, Logger::COLOR_ORANGE> {
  public:
-  DummyUnit() : Unit(nullptr) {}
+  DummyUnit(const std::shared_ptr<Engine>&) : Unit(nullptr) {}
 
   virtual const std::string& Uuid() const noexcept override {
     return uuid_;
@@ -64,7 +64,7 @@ REGISTER_UNIT(DummyUnit);
 
 
 TEST(UnitRegistry, DummyCreate) {
-  auto dummy = veles::UnitFactory::Instance()["abcd"]();
+  auto dummy = veles::UnitFactory::Instance()["abcd"](nullptr);
   ASSERT_STREQ("abcd", dummy->Uuid().c_str());
 }
 

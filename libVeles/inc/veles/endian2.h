@@ -25,8 +25,8 @@
  * defined the BOOST_ENDIAN macro.
  */
 
-#ifndef BOOST_DETAIL_ENDIAN_HPP
-#define BOOST_DETAIL_ENDIAN_HPP
+#ifndef INC_VELES_ENDIAN2_H_
+#define INC_VELES_ENDIAN2_H_
 
 #include "config.h"
 #include <limits.h>
@@ -129,5 +129,4 @@
 #endif
 
 
-#endif
-
+#endif  // namespace INC_VELES_ENDIAN2_H_

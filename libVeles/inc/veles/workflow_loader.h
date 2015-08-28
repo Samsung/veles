@@ -45,9 +45,14 @@
 
 namespace veles {
 
-namespace internal {
+class Unit;
 
 class Engine;
+
+namespace internal {
+
+class UnitDefinition;
+class WorkflowArchive;
 
 }  // namespace internal
 
@@ -55,8 +60,23 @@ class WorkflowLoadingFailedException : public std::exception {
  public:
   WorkflowLoadingFailedException(const std::string& file,
                                  const std::string& reason)
-      : message_(std::string("Extraction of the workflow \"") + file +
+      : message_(std::string("Extraction of the workflow from \"") + file +
                  "\" has failed due to " + reason + ".") {
+  }
+
+  virtual const char* what() const noexcept {
+    return message_.c_str();
+  }
+
+ private:
+  std::string message_;
+};
+
+class UnitNotFoundException : public std::exception {
+ public:
+  UnitNotFoundException(const std::string& uuid, const std::string& name)
+      : message_(std::string("Unit ") + uuid + " (\"" + name + "\") is not "
+          "registered.") {
   }
 
   virtual const char* what() const noexcept {
@@ -81,10 +101,16 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
    * @return The loaded and ready to be initialized Workflow instance.
    */
   Workflow Load(const std::string& file_name,
-                const std::shared_ptr<internal::Engine>& engine);
+                const std::shared_ptr<Engine>& engine);
 
  private:
   friend class WorkflowLoaderTest;
+
+  std::shared_ptr<Unit> CreateUnit(
+      const std::shared_ptr<internal::WorkflowArchive> war,
+      const std::shared_ptr<internal::UnitDefinition>& udef,
+      const std::shared_ptr<Engine>& engine,
+      std::shared_ptr<Unit> parent) const;
 };
 
 }  // namespace Veles

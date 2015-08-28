@@ -37,8 +37,8 @@
 #include <unordered_map>
 #include <vector>
 #include <variant/variant.hpp>
-#include <veles/numpy_array.h>
 #include <veles/logger.h>
+#include <veles/packaged_numpy_array.h>
 
 #if __GNUC__ >= 4
 #pragma GCC visibility push(default)
@@ -46,11 +46,7 @@
 
 namespace veles {
 
-namespace internal {
-
 class Engine;
-
-}  // namespace internal
 
 class UnexpectedRunException : public std::exception {
  public:
@@ -70,7 +66,7 @@ class UnexpectedRunException : public std::exception {
 template<typename... Types>
 using variant = mapbox::util::variant<Types...>;
 
-using Property = variant<bool, int, float, std::string, NumpyArrayBase>;
+using Property = variant<bool, int, float, std::string, PackagedNumpyArray>;
 
 struct WalkDecision {
   WalkDecision() : value(0) {}
@@ -96,7 +92,7 @@ struct WalkDecision {
  */
 class Unit : public virtual Logger, public std::enable_shared_from_this<Unit> {
  public:
-  Unit(const std::shared_ptr<internal::Engine>& engine);
+  Unit(const std::shared_ptr<Engine>& engine);
   virtual ~Unit() = default;
   /** @brief UUID4 which identifies the corresponding VELES unit class.
    */
@@ -167,7 +163,7 @@ class Unit : public virtual Logger, public std::enable_shared_from_this<Unit> {
   virtual void Execute() = 0;
 
  private:
-  std::shared_ptr<internal::Engine> engine_;
+  std::shared_ptr<Engine> engine_;
   mutable void* output_;
   bool gate_;
   /// this -> children

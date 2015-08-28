@@ -38,12 +38,61 @@ WorkflowLoader::WorkflowLoader() {
 }
 
 Workflow WorkflowLoader::Load(const std::string& file_name,
-                              const std::shared_ptr<internal::Engine>& engine) {
+                              const std::shared_ptr<Engine>& engine) {
   auto war = internal::WorkflowArchive::Load(file_name);
   auto& wdef = war->workflow_definition();
-  // TODO(v.markovtsev): Convert the tree of UnitDefinition-s to the tree of Unit-s
-  Workflow wf(wdef.name(), wdef.checksum(), nullptr, engine);
-  return std::move(wf);
+  auto head = CreateUnit(war, wdef.start(), engine, nullptr);
+  return Workflow(wdef.name(), wdef.checksum(), head, engine);
+}
+
+namespace {
+
+class PropertyVisitor {
+ public:
+  PropertyVisitor(const std::shared_ptr<internal::WorkflowArchive>& archive,
+          veles::Property* property) : archive_(archive), property_(property) {
+  }
+
+  template <class T>
+  void operator()(const T& value) {
+    *property_ = value;
+  }
+
+  void operator()(const internal::NumpyArrayReference& ref) {
+    *property_ = PackagedNumpyArray(ref, archive_);
+  }
+
+ private:
+  const std::shared_ptr<internal::WorkflowArchive>& archive_;
+  Property* property_;
+};
+
+}
+
+std::shared_ptr<Unit> WorkflowLoader::CreateUnit(
+    const std::shared_ptr<internal::WorkflowArchive> war,
+    const std::shared_ptr<internal::UnitDefinition>& udef,
+    const std::shared_ptr<Engine>& engine,
+    std::shared_ptr<Unit> parent) const {
+  auto ctor = UnitFactory::Instance()[udef->uuid_str()];
+  if (ctor == nullptr) {
+    throw UnitNotFoundException(udef->uuid_str(), udef->name());
+  }
+  auto unit = ctor(engine);
+
+  for (auto& prop : udef->properties()) {
+    Property value;
+    PropertyVisitor visitor(war, &value);
+    internal::Property::visit(prop.second, visitor);
+    unit->SetParameter(prop.first, value);
+  }
+  if (parent) {
+    unit->LinkFrom(parent);
+  }
+  for (auto& childdef : udef->links()) {
+    CreateUnit(war, childdef, engine, unit);
+  }
+  return unit;
 }
 
 }  // namespace veles

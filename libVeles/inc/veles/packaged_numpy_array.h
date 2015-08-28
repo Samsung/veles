@@ -1,6 +1,7 @@
-/*! @file veles.h
- *  @brief VELES native platform cumulative include.
- *  @author Markovtsev Vadim <v.markovtsev@samsung.com>
+/*! @file packaged_numpy_array.h
+ *  @brief PackagedNumpyArray class definition. This class is a proxy between
+ *  NumpyArrayReference and NumpyArray.
+ *  @author Vadim Markovtsev <v.markovtsev@samsung.com>
  *  @version 1.0
  *
  *  @section Notes
@@ -28,13 +29,39 @@
  *  under the License.
  */
 
-#ifndef INC_VELES_VELES_H_
-#define INC_VELES_VELES_H_
+#ifndef INC_VELES_PACKAGED_NUMPY_ARRAY_H_
+#define INC_VELES_PACKAGED_NUMPY_ARRAY_H_
 
-#include <veles/engine.h>
-#include <veles/unit.h>
-#include <veles/unit_factory.h>
-#include <veles/workflow.h>
-#include <veles/workflow_loader.h>
+#include <veles/numpy_array_loader.h>
 
-#endif  // INC_VELES_VELES_H_
+namespace veles {
+
+namespace internal {
+
+class NumpyArrayReference;
+class WorkflowArchive;
+
+}  // namespace internal
+
+class PackagedNumpyArray {
+ public:
+  PackagedNumpyArray(const internal::NumpyArrayReference& ref,
+                     const std::shared_ptr<internal::WorkflowArchive>& war);
+
+  template <class T, int D, bool transposed=false>
+  NumpyArray<T, D> get() const {
+    auto stream = GetStream();
+    return loader_.Load<T, D, transposed>(stream.get());
+  }
+
+ private:
+  std::shared_ptr<std::istream> GetStream() const;
+
+  const std::string file_name_;
+  std::shared_ptr<internal::WorkflowArchive> war_;
+  const internal::NumpyArrayLoader loader_;
+};
+
+}  // namespace veles
+
+#endif  // INC_VELES_PACKAGED_NUMPY_ARRAY_H_

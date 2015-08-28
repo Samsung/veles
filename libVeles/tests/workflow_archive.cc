@@ -31,36 +31,14 @@
 #include <cassert>
 #include <gtest/gtest.h>
 #include "src/workflow_archive.h"
-#include "src/numpy_array_loader.h"
-
+#include "inc/veles//numpy_array_loader.h"
+#include "tests/package_mixin.h"
 
 namespace veles {
 
 namespace internal {
 
-struct WorkflowArchiveTest :
-    public ::testing::Test,
-    protected DefaultLogger<WorkflowArchive, Logger::COLOR_CYAN> {
-  virtual void SetUp() override {
-    char currentPath[FILENAME_MAX];
-    assert(getcwd(currentPath, sizeof(currentPath)));
-    std::string paths[] = { "/workflow_files/", "/tests/workflow_files/",
-        "/../workflow_files/", "/../tests/workflow_files/" };
-    INF("Current directory: %s\n", currentPath);
-    for (auto& path : paths) {
-      std::string tmp(currentPath);
-      tmp += path;
-      DBG("Probing %s...", tmp.c_str());
-      if (access(tmp.c_str(), 0) != -1) {
-        INF("Success: path is %s", tmp.c_str());
-        path_to_files = tmp;
-        return;
-      }
-    }
-    assert(false && "Unable to locate the path with test packages");
-  }
-
-  std::string path_to_files;
+struct WorkflowArchiveTest : PackageMixin<WorkflowArchiveTest> {
 };
 
 TEST_F(WorkflowArchiveTest, MnistWorkflow) {

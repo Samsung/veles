@@ -31,9 +31,9 @@
 
 #include <gtest/gtest.h>
 #include <veles/logger.h>  // NOLINT(*)
-#include "src/numpy_array_loader.h"
-#include "src/imemstream.h"
 #include "inc/veles/make_unique.h"
+#include "inc/veles/numpy_array_loader.h"
+#include "src/imemstream.h"
 
 namespace veles {
 

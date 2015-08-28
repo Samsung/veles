@@ -28,8 +28,8 @@
  *  under the License.
  */
 
-#ifndef NUMPY_ARRAY_LOADER_H_
-#define NUMPY_ARRAY_LOADER_H_
+#ifndef INC_VELES_NUMPY_ARRAY_LOADER_H_
+#define INC_VELES_NUMPY_ARRAY_LOADER_H_
 
 #include <cassert>
 #include <cstring>
@@ -37,9 +37,8 @@
 #include <unordered_map>
 #include <veles/logger.h>  // NOLINT(*)
 #include <veles/poison.h>  // NOLINT(*)
-#include <veles/shared_array.h>
+#include <veles/endian2.h>
 #include <veles/numpy_array.h>
-#include "src/endian2.h"
 
 namespace veles {
 
@@ -66,7 +65,7 @@ class NumpyArrayLoader : protected DefaultLogger<NumpyArrayLoader,
   virtual ~NumpyArrayLoader() = default;
 
   template <class T, int D, bool transposed=false>
-  NumpyArray<T, D> Load(std::istream* src);
+  NumpyArray<T, D> Load(std::istream* src) const;
 
  private:
   friend class NumpyArrayLoaderTest_Transpose_Test;
@@ -87,10 +86,10 @@ class NumpyArrayLoader : protected DefaultLogger<NumpyArrayLoader,
     int SizeInElements() const;
     template <class T>
     bool DtypeIsTheSameAs() const;
-    void Describe(NumpyArrayLoader* loader) const;
+    void Describe(const NumpyArrayLoader* loader) const;
   };
 
-  Header ParseHeader(char* data);
+  Header ParseHeader(char* data) const;
   template <class T>
   static void TransposeInplace(int rows, int columns, T* matrix);
   static void TransposeInplace(int rows, int columns, int esize,
@@ -113,7 +112,7 @@ class NumpyArrayLoader : protected DefaultLogger<NumpyArrayLoader,
 };
 
 template <class T, int D, bool transposed>
-NumpyArray<T, D> NumpyArrayLoader::Load(std::istream* src) {
+NumpyArray<T, D> NumpyArrayLoader::Load(std::istream* src) const {
   static_assert(!transposed || D > 1, "No point in transposing 1D arrays");
   char signature[7];
   signature[6] = 0;
@@ -319,4 +318,4 @@ bool NumpyArrayLoader::Header::DtypeIsTheSameAs() const {
 }  // namespace internal
 
 }  // namespace veles
-#endif  // NUMPY_ARRAY_LOADER_H_
+#endif  // INC_VELES_NUMPY_ARRAY_LOADER_H_

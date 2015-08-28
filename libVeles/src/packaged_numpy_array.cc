@@ -1,6 +1,6 @@
-/*! @file veles.h
- *  @brief VELES native platform cumulative include.
- *  @author Markovtsev Vadim <v.markovtsev@samsung.com>
+/*! @file packaged_numpy_array.cc
+ *  @brief PackagedNumpyArray implementation.
+ *  @author Vadim Markovtsev <v.markovtsev@samsung.com>
  *  @version 1.0
  *
  *  @section Notes
@@ -28,13 +28,20 @@
  *  under the License.
  */
 
-#ifndef INC_VELES_VELES_H_
-#define INC_VELES_VELES_H_
+#include "inc/veles/packaged_numpy_array.h"
+#include "src/main_file_loader.h"
+#include "src/workflow_archive.h"
 
-#include <veles/engine.h>
-#include <veles/unit.h>
-#include <veles/unit_factory.h>
-#include <veles/workflow.h>
-#include <veles/workflow_loader.h>
+namespace veles {
 
-#endif  // INC_VELES_VELES_H_
+PackagedNumpyArray::PackagedNumpyArray(
+    const internal::NumpyArrayReference& ref,
+    const std::shared_ptr<internal::WorkflowArchive>& war)
+    : file_name_(ref.file_name()), war_(war) {
+}
+
+std::shared_ptr<std::istream> PackagedNumpyArray::GetStream() const {
+  return war_->GetStream(file_name_);
+}
+
+}  // namespace veles

@@ -34,15 +34,15 @@
 
 namespace veles {
 
-namespace internal {
-
 void Engine::Finish() {
+  assert(this && "Engine is nullptr");
   for (auto& cb : callbacks_) {
     cb.second();
   }
 }
 
 int Engine::RegisterOnFinish(const Callable& callback) noexcept {
+  assert(this && "Engine is nullptr");
   callbacks_[counter_] = callback;
   return counter_++;
 }
@@ -56,8 +56,12 @@ bool Engine::UnregisterOnFinish(int key) noexcept {
   return true;
 }
 
+namespace internal {
+
 ThreadPoolEngine::ThreadPoolEngine(size_t threads_number)
     : pool_(new ThreadPool(threads_number)) {
+  DBG("Launched a thread pool with %d threads",
+      static_cast<int>(threads_number));
 }
 
 void ThreadPoolEngine::Schedule(const Callable& callable) {
@@ -66,7 +70,7 @@ void ThreadPoolEngine::Schedule(const Callable& callable) {
 
 }  // namespace internal
 
-EnginePtr GetEngine() {
+std::shared_ptr<Engine> GetEngine() {
   return std::make_shared<internal::ThreadPoolEngine>(2);
 }
 
