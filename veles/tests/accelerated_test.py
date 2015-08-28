@@ -24,6 +24,20 @@ from veles.opencl_types import dtypes
 from veles.units import Unit
 
 
+def collect_garbage(self):
+    # Garbage collection
+    if PY3:
+        Array.reset_all()
+    self.parent = None
+    self.device = None
+    gc.collect()
+    Unit.reset_thread_pool()
+    gc.collect()
+    self.parent = self.getParent()
+    if PY3:
+        assert len(gc.garbage) == 0, str(gc.garbage)
+
+
 def multi_device(numpy=False):
     def real_multi_device(fn):
         def test_wrapped(self):
@@ -37,17 +51,7 @@ def multi_device(numpy=False):
                 self.seed()
                 res = fn(self)
 
-                # Garbage collection
-                if PY3:
-                    Array.reset_all()
-                self.parent = None
-                self.device = None
-                gc.collect()
-                Unit.reset_thread_pool()
-                gc.collect()
-                self.parent = self.getParent()
-                if PY3:
-                    assert len(gc.garbage) == 0, str(gc.garbage)
+                collect_garbage(self)
 
                 if res:
                     break
@@ -102,14 +106,7 @@ class AcceleratedTest(unittest.TestCase, Logger):
         pass
 
     def tearDown(self):
-        if PY3:
-            Array.reset_all()
-        if sys.exc_info() == (None,) * 3:
-            del self.parent
-        del self.device
-        gc.collect()
-        if PY3:
-            assert len(gc.garbage) == 0, str(gc.garbage)
+        collect_garbage(self)
 
     def run(self, result=None):
         failure = getattr(type(self), "__unittest_expecting_failure__", False)
