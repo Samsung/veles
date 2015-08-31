@@ -87,6 +87,10 @@ void Workflow::Initialize(const void* input) {
     auto unit = const_cast<Unit*>(reinterpret_cast<const Unit*>(node.data));
     unit->set_output(boilerplate_.get() + node.position);
   }
+  head_->BreadthFirstWalk([](const Unit* unit) {
+    const_cast<Unit*>(unit)->Initialize();
+    return true;
+  });
 }
 
 void Workflow::Run() {
@@ -121,7 +125,8 @@ Workflow::StateMemoryOptimizationProblem() const {
     node.value = out_size;
     node.data = unit;
     int time = 0;
-    unit->ReversedBreadthFirstWalk([&time](const Unit*) { return ++time; });
+    unit->ReversedBreadthFirstWalk(
+        [&time](const Unit*) { time++; return true; }, false);
     node.time_start = time;
     std::unordered_set<const Unit*> visited;
     visited.insert(head_.get());
@@ -142,6 +147,8 @@ Workflow::StateMemoryOptimizationProblem() const {
       return true;
     });
     node.time_finish = time + unit->Children().size();
+    DBG("%s: %d -> %d\n", unit->Uuid().c_str(), node.time_start,
+        node.time_finish);
     assert(node.time_finish > node.time_start);
   }
   return std::move(nodes);

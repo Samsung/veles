@@ -85,6 +85,22 @@ struct WalkDecision {
 
   operator bool() const noexcept { return value; }
 
+  bool operator==(const WalkDecision& other) const noexcept {
+    return value == other.value;
+  }
+
+  bool operator!=(const WalkDecision& other) const noexcept {
+    return !(value == other.value);
+  }
+
+  bool operator==(int other) const noexcept {
+    return value == other;
+  }
+
+  bool operator!=(int other) const noexcept {
+    return !(value == other);
+  }
+
   int value;
 };
 

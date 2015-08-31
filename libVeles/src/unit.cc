@@ -95,11 +95,16 @@ const Unit* Unit::BreadthFirstWalk(
     bool include_self) const {
   const Unit* unit = nullptr;
   std::list<const Unit*> fifo;
+  std::unordered_map<const Unit*, int> visited;
   fifo.push_back(this);
+  visited[this] = Parents().size();
   while (fifo.size()) {
     unit = fifo.front();
     fifo.pop_front();
     if (unit != this || include_self) {
+      if (visited[unit]++ > 0) {
+        continue;
+      }
       auto res = payload(unit);
       if (!res) {
         break;
@@ -120,11 +125,15 @@ const Unit* Unit::DepthFirstWalk(
     bool include_self) const {
   const Unit* unit = nullptr;
   std::list<const Unit*> lifo;
+  std::unordered_map<const Unit*, int> visited;
   lifo.push_back(this);
   while (lifo.size()) {
     unit = lifo.back();
     lifo.pop_back();
     if (unit != this || include_self) {
+      if (visited[unit]++ > 0) {
+        continue;
+      }
       auto res = payload(unit);
       if (!res) {
         break;
@@ -145,11 +154,15 @@ const Unit* Unit::ReversedBreadthFirstWalk(
     bool include_self) const {
   const Unit* unit = nullptr;
   std::list<const Unit*> fifo;
+  std::unordered_map<const Unit*, int> visited;
   fifo.push_back(this);
   while (fifo.size()) {
     unit = fifo.front();
     fifo.pop_front();
     if (unit != this || include_self) {
+      if (visited[unit]++ > 0) {
+        continue;
+      }
       auto res = payload(unit);
       if (!res) {
         break;
@@ -170,11 +183,15 @@ const Unit* Unit::ReversedDepthFirstWalk(
     bool include_self) const {
   const Unit* unit = nullptr;
   std::list<const Unit*> lifo;
+  std::unordered_map<const Unit*, int> visited;
   lifo.push_back(this);
   while (lifo.size()) {
     unit = lifo.back();
     lifo.pop_back();
     if (unit != this || include_self) {
+      if (visited[unit]++ > 0) {
+        continue;
+      }
       auto res = payload(unit);
       if (!res) {
         break;
