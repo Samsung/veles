@@ -44,7 +44,9 @@ Workflow::Workflow(const std::string& name, const std::string& checksum,
                    const std::shared_ptr<Unit>& head,
                    const std::shared_ptr<Engine>& engine)
     : name_(name), checksum_(checksum), head_(head), engine_(engine),
-      engine_key_(engine->RegisterOnFinish(std::bind(&Workflow::Reset, this))) {
+      engine_key_(engine->RegisterOnFinish(std::bind(&Workflow::Reset, this))),
+      input_(nullptr) {
+  head_->set_workflow(this);
 }
 
  Workflow::~Workflow() noexcept {

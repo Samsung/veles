@@ -37,7 +37,7 @@
 namespace veles {
 
 Unit::Unit(const std::shared_ptr<Engine>& engine)
-    : engine_(engine), output_(nullptr), gate_(false) {
+    : engine_(engine), output_(nullptr), gate_(false), workflow_(nullptr) {
 }
 
 void Unit::LinkFrom(const std::shared_ptr<Unit>& parent) {
@@ -50,6 +50,7 @@ void Unit::LinkFrom(const std::shared_ptr<Unit>& parent) {
   }
   parent->links_from_.push_back(shared_from_this());
   links_to_.push_back(parent);
+  workflow_ = parent->workflow_;
 }
 
 void Unit::Initialize() {
@@ -81,6 +82,15 @@ bool Unit::Ready() const noexcept {
     }
   }
   return true;
+}
+
+void Unit::set_workflow(const Workflow* workflow) {
+  assert(Parents().size() == 0 &&
+         "Setting workflow is possible only for the head unit");
+  BreadthFirstWalk([workflow](const Unit* unit) {
+    const_cast<Unit*>(unit)->workflow_ = workflow;
+    return true;
+  });
 }
 
 void Unit::Reset() {

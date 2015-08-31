@@ -34,7 +34,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
 #include <veles/logger.h>  // NOLINT(*)
 #include <veles/workflow.h>  // NOLINT(*)
 #include <veles/poison.h>  // NOLINT(*)
@@ -42,6 +41,17 @@
 #if __GNUC__ >= 4
 #pragma GCC visibility push(default)
 #endif
+
+namespace mapbox {
+
+namespace util {
+
+template<typename... Types>
+class variant;
+
+}  // namespace util
+
+}  // namespace mapbox
 
 namespace veles {
 
@@ -53,6 +63,10 @@ namespace internal {
 
 class UnitDefinition;
 class WorkflowArchive;
+template<typename... Types>
+using variant = mapbox::util::variant<Types...>;
+class NumpyArrayReference;
+using Property = variant<bool, int, float, std::string, NumpyArrayReference>;
 
 }  // namespace internal
 
@@ -107,10 +121,15 @@ class WorkflowLoader : protected DefaultLogger<WorkflowLoader,
   friend class WorkflowLoaderTest;
 
   std::shared_ptr<Unit> CreateUnit(
-      const std::shared_ptr<internal::WorkflowArchive> war,
+      const std::shared_ptr<internal::WorkflowArchive>& war,
       const std::shared_ptr<internal::UnitDefinition>& udef,
       const std::shared_ptr<Engine>& engine,
       std::shared_ptr<Unit> parent) const;
+
+  void AssignParameters(
+      const std::shared_ptr<internal::WorkflowArchive>& war,
+      const std::unordered_map<std::string, internal::Property>& props,
+      Unit* unit) const;
 };
 
 }  // namespace Veles

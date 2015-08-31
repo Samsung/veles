@@ -56,7 +56,8 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="inc/boost|fftf/tests/google|tests/google|src/boost" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="variant|inc/boost|fftf/tests/google|tests/google|src/boost" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="variant"/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
