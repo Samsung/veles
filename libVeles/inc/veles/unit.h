@@ -36,9 +36,9 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
-#include <variant/variant.hpp>
 #include <veles/logger.h>
 #include <veles/packaged_numpy_array.h>
+#include <veles/variant/variant.hpp>
 
 #if __GNUC__ >= 4
 #pragma GCC visibility push(default)
@@ -47,6 +47,7 @@
 namespace veles {
 
 class Engine;
+class Workflow;
 
 class UnexpectedRunException : public std::exception {
  public:
@@ -70,11 +71,6 @@ using Property = variant<bool, int, float, std::string, PackagedNumpyArray>;
 
 struct WalkDecision {
   WalkDecision() : value(0) {}
-#if 0
-  template <class T,
-            typename std::enable_if<std::is_integral<T>::value>::type = false>
-  /* not explicit */ WalkDecision(T v) : value(v) {}
-#endif
   WalkDecision(size_t v) : value(v) {}
   WalkDecision(bool v) : value(v) {}
   WalkDecision(int v) : value(v) {}
@@ -108,7 +104,7 @@ struct WalkDecision {
  */
 class Unit : public virtual Logger, public std::enable_shared_from_this<Unit> {
  public:
-  Unit(const std::shared_ptr<Engine>& engine);
+  explicit Unit(const std::shared_ptr<Engine>& engine);
   virtual ~Unit() = default;
   /** @brief UUID4 which identifies the corresponding VELES unit class.
    */
@@ -122,7 +118,15 @@ class Unit : public virtual Logger, public std::enable_shared_from_this<Unit> {
   virtual void SetParameter(const std::string& name, const Property& value) = 0;
   /** @brief Returns the needed output size in bytes.
    */
-  virtual size_t OutputSize() const = 0;
+  virtual size_t OutputSize() const noexcept = 0;
+  /** @brief Returns the dependencies between parameters assigned via
+   * SetPArameter(). Thus, each second element in a pair will be set earlier
+   * than the first.
+   */
+  virtual std::vector<std::pair<std::string, std::string>>
+  GetParameterDependencies() const noexcept {
+    return {};
+  }
   /** @brief Performs initial unit initialization. By default, it just calls
    * Reset().
    */
@@ -151,6 +155,12 @@ class Unit : public virtual Logger, public std::enable_shared_from_this<Unit> {
   void set_output(void* value) noexcept {
     output_ = value;
   }
+
+  const Workflow* workflow() const {
+    return workflow_;
+  }
+
+  void set_workflow(const Workflow* workflow);
 
   bool gate() const noexcept { return gate_; }
   /** @brief Reset the unit, so that it is ready for the next execution.
@@ -186,6 +196,7 @@ class Unit : public virtual Logger, public std::enable_shared_from_this<Unit> {
   std::vector<std::shared_ptr<Unit>> links_from_;
   /// parents -> this
   std::vector<std::weak_ptr<Unit>> links_to_;
+  const Workflow* workflow_;
 };
 
 }  // namespace veles

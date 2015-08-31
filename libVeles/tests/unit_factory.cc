@@ -45,7 +45,7 @@ class DummyUnit : public virtual Unit,
   virtual void SetParameter(const std::string&, const Property&) override {
   }
 
-  virtual size_t OutputSize() const override {
+  virtual size_t OutputSize() const noexcept override {
     return 0;
   }
 

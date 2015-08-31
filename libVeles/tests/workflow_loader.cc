@@ -62,7 +62,7 @@ class All2AllTanh : public Unit {
     }
   }
 
-  virtual size_t OutputSize() const override {
+  virtual size_t OutputSize() const noexcept override {
     return 1024;
   }
 
@@ -91,7 +91,7 @@ class All2AllSoftmax : public Unit {
   virtual void SetParameter(const std::string&, const Property&) override {
   }
 
-  virtual size_t OutputSize() const override {
+  virtual size_t OutputSize() const noexcept override {
     return 2048;
   }
 

@@ -24,4 +24,12 @@
 ##  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Append header file names which you want to ship here
-pkginclude_HEADERS = veles/workflow_loader.h veles/unit.h veles/unit_factory.h
+pkginclude_HEADERS = veles/eina_config.h veles/eina_inline_log.x \
+veles/eina_log.h veles/eina_types.h veles/endian2.h veles/engine.h \
+veles/logger.h veles/make_unique.h veles/numpy_array.h \
+veles/numpy_array_loader.h veles/packaged_numpy_array.h veles/poison.h \
+veles/shared_array.h veles/unit_factory.h veles/unit.h veles/veles.h \
+veles/workflow.h veles/workflow_loader.h
+
+nobase_pkginclude_HEADERS = variant/variant.hpp variant/recursive_wrapper.hpp \
+variant/variant_io.hpp variant/optional.hpp

@@ -48,7 +48,7 @@ class DummyUnit : public Unit {
   virtual void SetParameter(const std::string&, const Property&) override {
   }
 
-  virtual size_t OutputSize() const override {
+  virtual size_t OutputSize() const noexcept override {
     return 100;
   }
 
@@ -97,6 +97,7 @@ TEST(Workflow, Initialize) {
   for (auto& unit : units) {
     EXPECT_FALSE(*unit->initialized);
     EXPECT_FALSE(*unit->executed);
+    EXPECT_EQ(&workflow, unit->workflow());
   }
   float data[10];
   workflow.Initialize(data);

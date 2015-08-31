@@ -119,6 +119,8 @@ build/autogen.sh
 cd ..
 cd simd
 ./autogen.sh
+echo "\$(dirname \$0)/configure \$@ --disable-simd-fftf --disable-tests --disable-doxygen" > configure.gnu
+chmod +x configure.gnu
 cd ..
 
 if [ -n "$1" ]; then

@@ -68,9 +68,9 @@ class ParentUnitDoesNotExistException : public std::exception {
 /** @brief VELES workflow */
 class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
  public:
-  explicit Workflow(const std::string& name, const std::string& checksum,
-                    const std::shared_ptr<Unit>& head,
-                    const std::shared_ptr<Engine>& engine);
+  Workflow(const std::string& name, const std::string& checksum,
+           const std::shared_ptr<Unit>& head,
+           const std::shared_ptr<Engine>& engine);
   virtual ~Workflow() noexcept;
   const std::string& name() const noexcept { return name_; }
   const std::string& checksum() const noexcept { return checksum_; }
@@ -94,6 +94,8 @@ class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
 
   void Run();
 
+  const void* input() const noexcept { return input_; }
+
   /** @brief Returns the output from the last unit. The pointer is guaranteed
    *  to not change before the next call to Initialize().
    */
@@ -115,6 +117,7 @@ class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
   std::shared_ptr<Engine> engine_;
   std::shared_ptr<uint8_t> boilerplate_;
   int engine_key_;
+  const void* input_;
 };
 
 }  // namespace veles

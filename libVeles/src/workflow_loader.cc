@@ -29,6 +29,7 @@
  */
 
 #include "veles/workflow_loader.h"
+#include <unordered_set>
 #include "inc/veles/unit_factory.h"
 #include "src/workflow_archive.h"
 
@@ -70,7 +71,7 @@ class PropertyVisitor {
 }
 
 std::shared_ptr<Unit> WorkflowLoader::CreateUnit(
-    const std::shared_ptr<internal::WorkflowArchive> war,
+    const std::shared_ptr<internal::WorkflowArchive>& war,
     const std::shared_ptr<internal::UnitDefinition>& udef,
     const std::shared_ptr<Engine>& engine,
     std::shared_ptr<Unit> parent) const {
@@ -79,20 +80,54 @@ std::shared_ptr<Unit> WorkflowLoader::CreateUnit(
     throw UnitNotFoundException(udef->uuid_str(), udef->name());
   }
   auto unit = ctor(engine);
-
-  for (auto& prop : udef->properties()) {
-    Property value;
-    PropertyVisitor visitor(war, &value);
-    internal::Property::visit(prop.second, visitor);
-    unit->SetParameter(prop.first, value);
-  }
   if (parent) {
     unit->LinkFrom(parent);
   }
+  AssignParameters(war, udef->properties(), unit.get());
   for (auto& childdef : udef->links()) {
     CreateUnit(war, childdef, engine, unit);
   }
   return unit;
+}
+
+void WorkflowLoader::AssignParameters(
+    const std::shared_ptr<internal::WorkflowArchive>& war,
+    const std::unordered_map<std::string, internal::Property>& props,
+    Unit* unit) const {
+  auto dep_pairs = unit->GetParameterDependencies();
+  std::unordered_map<std::string, std::unordered_set<std::string>> deps;
+  for (auto& pair : dep_pairs) {
+    deps[pair.first].insert(pair.second);
+  }
+  // FIXME(v.markovtsev): complex dependency chains ( a -> b, b -> c => a -> c )
+  // are not handled.
+  std::unordered_set<std::string> assigned_props;
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    for (auto& prop : props) {
+      if (assigned_props.find(prop.first) != assigned_props.end()) {
+        continue;
+      }
+      bool all_deps_satisfied = true;
+      for (auto& dep : deps[prop.first]) {
+        if (assigned_props.find(dep) == assigned_props.end()) {
+          all_deps_satisfied = false;
+          break;
+        }
+      }
+      if (!all_deps_satisfied) {
+        continue;
+      }
+      assigned_props.insert(prop.first);
+      changed = true;
+      Property value;
+      PropertyVisitor visitor(war, &value);
+      internal::Property::visit(prop.second, visitor);
+      unit->SetParameter(prop.first, value);
+    }
+  }
+  assert(assigned_props.size() == props.size());
 }
 
 }  // namespace veles
