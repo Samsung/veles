@@ -60,6 +60,8 @@ class FileImageLoaderBase(ImageLoader, FileFilter):
         kwargs["file_type"] = "image"
         kwargs["file_subtypes"] = kwargs.get("file_subtypes", ["jpeg", "png"])
         super(FileImageLoaderBase, self).__init__(workflow, **kwargs)
+        if self.testing:
+            self.complete = self.epoch_ended
 
     def get_image_info(self, key):
         """
