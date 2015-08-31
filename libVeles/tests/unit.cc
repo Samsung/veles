@@ -1,5 +1,5 @@
 /*! @file unit.cc
- *  @brief New file description.
+ *  @brief Unit class tests.
  *  @author Markovtsev Vadim <v.markovtsev@samsung.com>
  *  @version 1.0
  *
@@ -7,7 +7,7 @@
  *  This code partially conforms to <a href="http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml">Google C++ Style Guide</a>.
  *
  *  @section Copyright
- *  Copyright © 2013 Samsung R&D Institute Russia
+ *  Copyright © 2015 Samsung R&D Institute Russia
  *
  *  @section License
  *  Licensed to the Apache Software Foundation (ASF) under one
@@ -30,12 +30,62 @@
 
 
 #include <gtest/gtest.h>
+#include <veles/engine.h>
 #include "inc/veles/unit.h"
 
+namespace veles {
 
-// TODO(v.markovtsev): remove this dummy test after adding real code
-TEST(Unit, Empty) {
+class DummyUnit : public virtual Unit,
+                  public virtual DefaultLogger<DummyUnit, Logger::COLOR_ORANGE> {
+ public:
+  DummyUnit(const std::shared_ptr<Engine>& e) : Unit(e) {}
+
+  virtual const std::string& Uuid() const noexcept override {
+    return uuid_;
+  }
+
+  virtual void SetParameter(const std::string&, const Property&) override {
+  }
+
+  virtual size_t OutputSize() const override {
+    return 0;
+  }
+
+  virtual void Execute() override {
+  }
+
+ private:
+  static const std::string uuid_;
+};
+
+const std::string DummyUnit::uuid_ = "abcd";
+
+class DummyEngine : public Engine {
+ public:
+  virtual void Schedule(const Callable&) override {
+  }
+};
+
+TEST(Unit, Run) {
+  auto engine = std::make_shared<DummyEngine>();
+  bool finished = false;
+  engine->RegisterOnFinish([&]() {
+    finished = true;
+  });
+  DummyUnit unit(engine);
+  ASSERT_FALSE(unit.gate());
+  unit.Run();
+  ASSERT_TRUE(unit.gate());
+  ASSERT_TRUE(finished);
+  unit.Initialize();
+  ASSERT_FALSE(unit.gate());
+  unit.Run();
+  ASSERT_TRUE(unit.gate());
+  unit.Reset();
+  ASSERT_FALSE(unit.gate());
 }
+
+}  // namespace veles
 
 #include "tests/google/src/gtest_main.cc"
 

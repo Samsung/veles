@@ -29,7 +29,83 @@
  */
 
 #define ANTIDOTE
+#include <veles/engine.h>
 #include <veles/workflow.h>
+#include <veles/unit.h>
 #include <gtest/gtest.h>
+
+namespace veles {
+
+class DummyUnit : public Unit {
+ public:
+  DummyUnit(const std::shared_ptr<Engine>& e,
+            int* in, int* ex) : Unit(e), initialized(in), executed(ex) {}
+
+  virtual const std::string& Uuid() const noexcept override {
+    return uuid_;
+  }
+
+  virtual void SetParameter(const std::string&, const Property&) override {
+  }
+
+  virtual size_t OutputSize() const override {
+    return 100;
+  }
+
+  virtual void Initialize() override {
+    Unit::Initialize();
+    *initialized = true;
+  }
+
+  virtual void Execute() override {
+    *executed = true;
+  }
+
+  int* initialized;
+  int* executed;
+
+ private:
+  static const std::string uuid_;
+};
+
+const std::string DummyUnit::uuid_ = "";
+
+class DummyEngine : public Engine {
+ public:
+  virtual void Schedule(const Callable&) override {
+  }
+};
+
+TEST(Workflow, Initialize) {
+  auto engine = std::make_shared<DummyEngine>();
+  std::vector<int> initialized { 0, 0, 0, 0 };
+  std::vector<int> executed { 0, 0, 0, 0 };
+  auto head = std::make_shared<DummyUnit>(
+      engine, initialized.data(), executed.data());
+  auto second = std::make_shared<DummyUnit>(
+      engine, initialized.data() + 1, executed.data() + 1);
+  second->LinkFrom(head);
+  auto third = std::make_shared<DummyUnit>(
+      engine, initialized.data() + 2, executed.data() + 2);
+  third->LinkFrom(head);
+  auto fourth = std::make_shared<DummyUnit>(
+      engine, initialized.data() + 3, executed.data() + 3);
+  fourth->LinkFrom(second);
+  fourth->LinkFrom(third);
+  DummyUnit* units[] { head.get(), second.get(), third.get(), fourth.get() };
+  Workflow workflow("TestWorkflow", "checksum", head, engine);
+  for (auto& unit : units) {
+    EXPECT_FALSE(*unit->initialized);
+    EXPECT_FALSE(*unit->executed);
+  }
+  float data[10];
+  workflow.Initialize(data);
+  for (auto& unit : units) {
+    EXPECT_TRUE(*unit->initialized);
+  }
+  workflow.Run();
+}
+
+}  // namespace veles
 
 #include "tests/google/src/gtest_main.cc"
