@@ -157,6 +157,7 @@ class FileListLoaderBase(Unit):
         self.path_to_test_text_file = kwargs.get("path_to_test_text_file", "")
         self.path_to_val_text_file = kwargs.get("path_to_val_text_file", "")
         self.path_to_train_text_file = kwargs.get("path_to_train_text_file")
+        self.path_to_folder = kwargs.get("path_to_folder")
         self._labels = {}
 
     @property
@@ -164,6 +165,14 @@ class FileListLoaderBase(Unit):
         return self._labels
 
     def scan_files(self, pathname):
+        def get_real_path(path_to_image):
+            if self.path_to_folder is not None:
+                real_path = os.path.join(
+                    self.path_to_folder, path_to_image)
+            else:
+                real_path = path_to_image
+            return real_path[:-1]
+
         self.info("Scanning %s..." % pathname)
         files = []
         if pathname.endswith(".json"):
@@ -172,24 +181,27 @@ class FileListLoaderBase(Unit):
                 for image in images.values():
                     if len(image["label"]) > 0:
                         label = image["label"][0]
-                        self.labels[image["path"]] = label
-                        files.append(image["path"])
+                        real_path = get_real_path(image["path"])
+                        self.labels[real_path] = label
+                        files.append(real_path)
         else:
             with open(pathname, "r") as fin:
                 for line in fin:
                     path_to_image, _, label = line.partition(' ')
+                    real_path = get_real_path(path_to_image)
                     if label:
-                        self.labels[path_to_image] = label
+                        self.labels[real_path] = label
                     else:
                         assert self.testing
-                    files.append(path_to_image)
+                    files.append(real_path)
         if not len(files):
             self.warning("No files were taken from %s" % pathname)
             return []
         return files
 
     def get_label_from_filename(self, filename):
-        return self.labels[filename]
+        if len(self.labels) > 0:
+            return self.labels[filename]
 
 
 class FileLoaderBase(FileFilter):
