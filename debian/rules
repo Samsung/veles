@@ -44,3 +44,5 @@ override_dh_install:
 	mkdir debian/python3-veles/usr/share/veles/data
 	cp veles/znicz/samples/DemoKohonen/kohonen.txt.gz debian/python3-veles/usr/share/veles/data/kohonen.txt.gz
 	cp veles/znicz/samples/Wine/wine.txt.gz debian/python3-veles/usr/share/veles/data/wine.txt.gz
+	cp veles/znicz/samples/MNIST/mnist_test debian/python3-veles/usr/share/veles/data/mnist_test
+	cp veles/znicz/samples/MNIST/mnist_test.txt debian/python3-veles/usr/share/veles/data/mnist_test.txt
