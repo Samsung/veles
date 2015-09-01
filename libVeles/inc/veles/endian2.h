@@ -28,7 +28,6 @@
 #ifndef INC_VELES_ENDIAN2_H_
 #define INC_VELES_ENDIAN2_H_
 
-#include "config.h"
 #include <limits.h>
 
 //
