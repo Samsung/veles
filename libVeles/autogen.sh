@@ -49,6 +49,18 @@ if [ ! -e "$mypath/simd/configure.ac" ]; then
 else
     git submodule update libVeles/simd
 fi
+
+if [ ! -e "$mypath/variant/variant.hpp" ]; then
+    git submodule update --init	libVeles/variant
+else
+    git submodule update libVeles/variant
+fi
+
+if [ ! -e "$mypath/rapidjson/CMakeLists.txt" ]; then
+    git submodule update --init	libVeles/rapidjson
+else
+    git submodule update libVeles/rapidjson
+fi
 cd $mypath
 
 echo "CFLAGS=\"-I$mypath/zlib -DHAVE_LIBZ=1\" \
