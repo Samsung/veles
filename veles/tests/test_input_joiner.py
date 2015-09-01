@@ -58,7 +58,11 @@ class TestInputJoiner(AcceleratedTest):
         obj = input_joiner.InputJoiner(self.parent)
         obj.link_inputs(u_ab, "a", "b")
         obj.link_inputs(u_c, "c")
-        obj.initialize(device=self.device)
+        tmp = c.mem
+        c.mem = None
+        self.assertTrue(bool(obj.initialize(device=self.device)))
+        c.mem = tmp
+        self.assertFalse(bool(obj.initialize(device=self.device)))
         self.assertEqual(obj.num_inputs, 3)
         self.assertEqual(obj.offset_0, 0)
         self.assertEqual(obj.offset_1, 25)
