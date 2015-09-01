@@ -38,6 +38,7 @@ from cuda4py.blas import CUBLAS_OP_N, CUBLAS_OP_T
 import numpy
 import opencl4py.blas as clblas
 import os
+import threading
 import weakref
 from zope.interface import implementer
 
@@ -85,6 +86,7 @@ class OCLBLAS(Logger):
 
     def __init__(self, device):
         super(OCLBLAS, self).__init__()
+        self._lock_ = threading.Lock()
         self._device = weakref.ref(device)
         self.kernels = {}
         self._const_i = numpy.zeros(3, dtype=numpy.uint64)
@@ -177,6 +179,14 @@ class OCLBLAS(Logger):
 
         Matricies are assumed to be tightly packed and stored like in CUBLAS.
         """
+        with self._lock_:
+            self._veles_gemm(transA, transB,
+                             rowsCountA, columnCountB, commonSideLength,
+                             alpha, A, B, beta, C, offsetA, offsetB, offsetC)
+
+    def _veles_gemm(self, transA, transB,
+                    rowsCountA, columnCountB, commonSideLength,
+                    alpha, A, B, beta, C, offsetA, offsetB, offsetC):
         dtype = alpha.dtype
         key = (transA, transB, rowsCountA, columnCountB, commonSideLength,
                dtype)
