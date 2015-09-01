@@ -40,6 +40,10 @@
 #include <veles/endian2.h>
 #include <veles/numpy_array.h>
 
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
+
 namespace veles {
 
 namespace internal {
@@ -318,4 +322,9 @@ bool NumpyArrayLoader::Header::DtypeIsTheSameAs() const {
 }  // namespace internal
 
 }  // namespace veles
+
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
+
 #endif  // INC_VELES_NUMPY_ARRAY_LOADER_H_

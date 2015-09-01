@@ -37,6 +37,10 @@
 #include <veles/shared_array.h>
 #include <veles/numpy_array_loader.h>
 
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
+
 namespace veles {
 
 struct NumpyArrayBase {
@@ -57,6 +61,10 @@ struct NumpyArray : NumpyArrayBase {
   bool transposed;
   shared_array<T> data;
 };
+
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
 
 }  // namespace veles
 
