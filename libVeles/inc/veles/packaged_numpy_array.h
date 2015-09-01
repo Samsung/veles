@@ -34,6 +34,10 @@
 
 #include <veles/numpy_array_loader.h>
 
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
+
 namespace veles {
 
 namespace internal {
@@ -61,6 +65,10 @@ class PackagedNumpyArray {
   std::shared_ptr<internal::WorkflowArchive> war_;
   const internal::NumpyArrayLoader loader_;
 };
+
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
 
 }  // namespace veles
 
