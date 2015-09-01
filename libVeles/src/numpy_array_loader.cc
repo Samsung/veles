@@ -114,7 +114,7 @@ void NumpyArrayLoader::TransposeInplace(int rows, int columns, int esize,
 
   for (int i = 1; i < modulo;) {
     int cycle_first = i;
-    char t[esize];
+    auto t = reinterpret_cast<char*>(alloca(esize));
     memcpy(t, matrix + i * esize, esize);
     do {
       int next = (i * rows) % modulo;
