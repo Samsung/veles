@@ -225,7 +225,11 @@ int NumpyArrayLoader::Header::SizeInElements() const {
   return prod;
 }
 
-void NumpyArrayLoader::Header::Describe(const NumpyArrayLoader* loader) const {
+void NumpyArrayLoader::Header::Describe(const NumpyArrayLoader*
+#ifdef EINA
+                                        loader
+#endif
+                                        ) const {
   int dims = Dimensions();
   char shape_str[(5 + 2) * dims];
   char* ptr = shape_str;
