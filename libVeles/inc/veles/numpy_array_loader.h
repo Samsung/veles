@@ -38,6 +38,7 @@
 #include <veles/logger.h>  // NOLINT(*)
 #include <veles/poison.h>  // NOLINT(*)
 #include <veles/endian2.h>
+#include <veles/make_unique.h>
 #include <veles/numpy_array.h>
 
 #if __GNUC__ >= 4
@@ -188,7 +189,7 @@ NumpyArray<T, D> NumpyArrayLoader::Load(std::istream* src) const {
   }
 #endif
   auto data_size = header.SizeInBytes();
-  std::unique_ptr<char[]> raw_data(new(std::nothrow) char[data_size]);
+  auto raw_data = std::unique_aligned<char>(data_size);
   if (!raw_data) {
     throw NumpyArrayLoadingFailedException(
         std::string("out of memory (") + std::to_string(data_size) +
@@ -235,14 +236,16 @@ NumpyArray<T, D> NumpyArrayLoader::Load(std::istream* src) const {
   if (!header.DtypeIsTheSameAs<T>()) {
     DBG("Performing type conversion: %s -> %s",
         header.dtype.c_str(), typeid(T).name());
-    auto cdata = new T[header.SizeInElements()];
+    auto cdata = reinterpret_cast<T*>(malloc_aligned(
+        header.SizeInElements() * sizeof(T)));
     ConvertType(raw_data.get(), header.dtype, header.SizeInElements(), cdata);
     raw_data.reset(reinterpret_cast<char*>(cdata));
   }
 
   NumpyArray<T, D> arr;
   arr.data = shared_array<T>(reinterpret_cast<T*>(raw_data.get()),
-                             header.SizeInElements());
+                             header.SizeInElements(),
+                             std::free);
   raw_data.release();
   arr.transposed = transposed;
   static_assert(sizeof(arr.shape[0]) == sizeof(header.shape[0]),

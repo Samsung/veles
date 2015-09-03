@@ -60,7 +60,8 @@ class shared_array {
   /** @brief Creates shared array with corresponding size. */
   explicit shared_array(size_t size);
   /** @brief Creates shared array based on raw pointer and data size. */
-  shared_array(T* ptr, size_t size);
+  template <class D = std::default_delete<T[]>>
+  shared_array(T* ptr, size_t size, D deleter = std::default_delete<T[]>());
   /** @brief Creates shared array based on shared pointer and data size. */
   shared_array(const std::shared_ptr<T>& sp, size_t size);
 
@@ -126,8 +127,9 @@ shared_array<T>::shared_array(size_t size)
 }
 
 template <typename T>
-shared_array<T>::shared_array(T* ptr, size_t size)
-    : sp_(ptr, std::default_delete<T[]>()),
+template <class D>
+shared_array<T>::shared_array(T* ptr, size_t size, D deleter)
+    : sp_(ptr, deleter),
       size_(size) {
 }
 

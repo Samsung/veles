@@ -34,7 +34,10 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <condition_variable>
+#include <mutex>
 #include <veles/logger.h>
+#include <simd/memory.h>
 
 #if __GNUC__ >= 4
 #pragma GCC visibility push(default)
@@ -94,6 +97,8 @@ class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
 
   void Run();
 
+  void Wait();
+
   const void* input() const noexcept { return input_; }
 
   /** @brief Returns the output from the last unit. The pointer is guaranteed
@@ -101,10 +106,9 @@ class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
    */
   void* output() const noexcept;
 
-  static void* malloc_aligned_void(size_t size);
   template <class T>
   static T* malloc_aligned(size_t length) {
-    return reinterpret_cast<T*>(malloc_aligned_void(length * sizeof(T)));
+    return reinterpret_cast<T*>(::malloc_aligned(length * sizeof(T)));
   }
 
  private:
@@ -118,6 +122,8 @@ class Workflow : protected DefaultLogger<Workflow, Logger::COLOR_ORANGE> {
   std::shared_ptr<uint8_t> boilerplate_;
   int engine_key_;
   const void* input_;
+  std::shared_ptr<std::condition_variable> sync_;
+  std::shared_ptr<std::mutex> sync_mutex_;
 };
 
 }  // namespace veles

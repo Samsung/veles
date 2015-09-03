@@ -32,6 +32,7 @@
 #define INC_VELES_MAKE_UNIQUE_H_
 
 #include <memory>
+#include <simd/memory.h>
 
 namespace std {
 
@@ -48,6 +49,13 @@ std::unique_ptr<T, D> uniquify(T* ptr, D destructor) {
 template<typename T, typename D>
 std::unique_ptr<T, D*> uniquify(T* ptr, D* destructor) {
   return std::unique_ptr<T, D*>(ptr, *destructor);
+}
+
+template<typename T>
+std::unique_ptr<T[], decltype(&std::free)> unique_aligned(size_t length) {
+  auto mem = malloc_aligned(length * sizeof(T));
+  return std::unique_ptr<T[], decltype(&std::free)>(
+      reinterpret_cast<T*>(mem), std::free);
 }
 
 }  // namespace std

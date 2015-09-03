@@ -37,6 +37,7 @@
 #include "inc/veles/engine.h"
 #include "inc/veles/unit.h"
 #include "src/memory_optimizer.h"
+#include <simd/arithmetic.h>
 
 namespace veles {
 
@@ -69,15 +70,6 @@ std::shared_ptr<Unit> Workflow::Tail() const noexcept {
   }))->shared_from_this();
 }
 
-void* Workflow::malloc_aligned_void(size_t size) {
-#ifndef __ANDROID__
-  void *ptr;
-  return posix_memalign(&ptr, 64, size) == 0 ? ptr : nullptr;
-#else
-  return reinterpret_cast<float*>(memalign(64, size));
-#endif
-}
-
 void Workflow::Initialize(const void* input) {
   auto problem = StateMemoryOptimizationProblem();
   size_t boilerplate_size = internal::MemoryOptimizer().Optimize(&problem);
@@ -97,13 +89,21 @@ void Workflow::Initialize(const void* input) {
 }
 
 void Workflow::Run() {
-  head_->Run();
+  sync_.reset(new std::condition_variable());
+  sync_mutex_.reset(new std::mutex());
+  engine_->Schedule([this]() { head_->Run(); });
+}
+
+void Workflow::Wait() {
+  std::unique_lock<std::mutex> lock(*sync_mutex_);
+  sync_->wait(lock);
 }
 
 void Workflow::Reset() {
   if (head_) {
     head_->Reset();
   }
+  sync_->notify_all();
 }
 
 void* Workflow::output() const noexcept {
@@ -122,8 +122,8 @@ Workflow::StateMemoryOptimizationProblem() const {
   for (auto unit : units) {
     auto& node = nodes[i++];
     auto out_size = unit->OutputSize();
-    if (out_size & 0xF) {
-      out_size = (out_size & ~0xF) + 0x10;
+    if (out_size & 0x1F) {
+      out_size = (out_size & ~0x1F) + 0x20;
     }
     node.value = out_size;
     node.data = unit;
