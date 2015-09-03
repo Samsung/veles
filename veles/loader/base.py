@@ -612,7 +612,9 @@ class Loader(Unit):
             raise error.BadFormatError("minibatch_data MUST be initialized in "
                                        "create_minibatch_data()")
         self.analyze_dataset()
-        if not self.restored_from_snapshot:
+        if self.testing:
+            self.shuffled_indices.mem = None
+        if not self.restored_from_snapshot or self.testing:
             self.shuffle()
 
     def run(self):
@@ -709,7 +711,7 @@ class Loader(Unit):
     def shuffle(self):
         """Randomly shuffles the TRAIN dataset.
         """
-        if self.shuffled_indices.mem is None:
+        if not self.shuffled_indices:
             self.shuffled_indices.mem = numpy.arange(
                 self.total_samples, dtype=Loader.INDEX_DTYPE)
         if self.shuffle_limit <= 0 or self.class_lengths[TRAIN] == 0:

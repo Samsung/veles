@@ -149,6 +149,8 @@ class Unit(Distributable, Verified):
         self._timings = kwargs.get("timings", timings)
         assert isinstance(self._timings, bool)
         self.workflow = workflow
+        if getattr(workflow, "restored_from_snapshot", False):
+            self._override_restored_from_snapshot_ = False
         self.add_method_to_storage("initialize")
         self.add_method_to_storage("run")
         self.add_method_to_storage("stop")
@@ -424,7 +426,8 @@ class Unit(Distributable, Verified):
         is restored from a snapshot. This is always False after main workflow's
         initialization.
         """
-        return self.workflow.restored_from_snapshot
+        return getattr(self, "_override_restored_from_snapshot_",
+                       self.workflow.restored_from_snapshot)
 
     @property
     def run_was_called(self):

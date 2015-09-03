@@ -601,7 +601,7 @@ class ImageLoader(LoaderWithValidationRatio):
             super(ImageLoader, self).load_data()
         except AttributeError:
             pass
-        if self.restored_from_snapshot:
+        if self.restored_from_snapshot and not self.testing:
             self.info("Scanning for changes...")
             progress = ProgressBar(maxval=self.total_samples, term_width=40)
             progress.start()
