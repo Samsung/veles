@@ -85,6 +85,7 @@ void Workflow::Initialize(const void* input) {
       malloc_aligned<uint8_t>(boilerplate_size), std::free);
   assert(!(reinterpret_cast<intptr_t>(input) & 0xF) &&
          "input must be aligned to 16 bytes");
+  input_ = input;
   for (auto& node : problem) {
     auto unit = const_cast<Unit*>(reinterpret_cast<const Unit*>(node.data));
     unit->set_output(boilerplate_.get() + node.position);

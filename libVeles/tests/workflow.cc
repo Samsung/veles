@@ -99,8 +99,9 @@ TEST(Workflow, Initialize) {
     EXPECT_FALSE(*unit->executed);
     EXPECT_EQ(&workflow, unit->workflow());
   }
-  float data[10];
+  alignas(64) float data[10];
   workflow.Initialize(data);
+  EXPECT_EQ(data, workflow.input());
   for (auto& unit : units) {
     EXPECT_TRUE(*unit->initialized);
   }
