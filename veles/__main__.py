@@ -59,6 +59,13 @@ from email.utils import formatdate
 import errno
 import gc
 import logging
+try:
+    # Fixes late numba ImportError conflict with veles.prng
+    import numba  # pylint: disable=W0611
+    if not __unittest:
+        del sys.modules["unittest"]
+except ImportError:
+    pass
 import os
 import resource
 import runpy
