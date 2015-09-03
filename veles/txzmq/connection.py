@@ -47,8 +47,7 @@ from tempfile import mkstemp
 import six
 from six.moves import cPickle as pickle
 import snappy
-from zmq import constants, error
-from zmq import Socket
+from zmq import constants, error, Socket, ZMQError
 from zope.interface import implementer
 from twisted.internet import reactor
 from twisted.internet.interfaces import IFileDescriptor, IReadDescriptor
@@ -598,9 +597,13 @@ class ZmqConnection(Logger):
                     except ValueError:
                         raise from_none(ValueError("Failed to parse %s" %
                                                    endpoint.address))
-                    rnd_vals.append(self.socket.bind_to_random_port(
-                        proto + addr, int(min_port), int(max_port),
-                        int(max_tries)))
+                    try:
+                        rnd_vals.append(self.socket.bind_to_random_port(
+                            proto + addr, int(min_port), int(max_port),
+                            int(max_tries)))
+                    except ZMQError as e:
+                        self.warning("Failed to bind to %s%s: ZMQError: %s",
+                                     proto, addr, e)
                 elif endpoint.address.startswith("rndipc://"):
                     prefix, suffix = endpoint.address[9:].split(':')
                     ipc_fd, ipc_fn = mkstemp(suffix, prefix)
