@@ -226,7 +226,8 @@ class GeneticsOptimizer(Unit):
                     suffix=".%d.pickle" % best_protocol) as fres:
                 argv = ["--result-file", fres.name, "--stealth", "--log-id",
                         self.launcher.log_id] + self._filtered_argv_ + \
-                    ["root.common.disable.publishing=True"]
+                    ["root.common.disable.snapshotting=True",
+                     "root.common.disable.publishing=True"]
                 if self.plotters_are_disabled:
                     argv = ["-p", ""] + argv
                 i = -1
