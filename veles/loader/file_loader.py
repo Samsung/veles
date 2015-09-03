@@ -168,7 +168,7 @@ class FileListLoaderBase(Unit):
         def get_abs_path(path_to_image):
             if self.base_directory is not None:
                 abs_path = os.path.join(
-                    self.path_to_folder, path_to_image)
+                    self.base_directory, path_to_image)
             else:
                 abs_path = path_to_image
             return abs_path.strip("\n")
