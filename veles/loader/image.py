@@ -375,6 +375,7 @@ class ImageLoader(LoaderWithValidationRatio):
             else:
                 self._background = numpy.zeros(self.shape)
                 self._background[:] = self.background_color
+        self._background = self._background.astype(self.source_dtype)
         return self._background.copy()
 
     @property
@@ -441,6 +442,8 @@ class ImageLoader(LoaderWithValidationRatio):
         return data, label_value, bbox
 
     def scale_image(self, data, bbox):
+        assert self.background.dtype == data.dtype
+        assert self.background.shape[:2] == self.uncropped_shape[:2]
         bbox = numpy.array(bbox, float)
         if self.scale_maintain_aspect_ratio:
             if data.shape[1] >= data.shape[0]:
