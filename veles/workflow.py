@@ -42,6 +42,7 @@ import hashlib
 import inspect
 import json
 import logging
+import weakref
 import numpy
 import os
 import six
@@ -969,3 +970,79 @@ class Workflow(Container):
             raise from_none(e)
         else:
             print_success()
+
+    def change_unit(
+            self, prev_unit_name, new_unit, save_gates=True,
+            units_to_link_to=None, units_to_link_from=None):
+        """
+        Changing one unit to another in already linked Workflow.
+
+        :param prev_unit_name: name of unit, which will be replaced
+        :param new_unit: unit, which will replace old unit
+        :param save_gates: determines whether saving of gates conditions
+        :param units_to_link_to: names of units to link to new unit
+        :param units_to_link_from: names of units to link from new unit
+        :return: unit, which will replace old unit
+        """
+
+        def units_from_none(units):
+            if units is None:
+                units = []
+            return units
+
+        def get_unit_name(unit):
+            if isinstance(unit, weakref.ref):
+                unit = unit()
+
+            # TODO: make sure that week refs will be with correct names
+            # TODO: and remove StartPoint and EndPoint renaming
+            if isinstance(unit, StartPoint):
+                unit_name = self.start_point.name
+            elif isinstance(unit, EndPoint):
+                unit_name = self.end_point.name
+            else:
+                unit_name = unit.name
+            return unit_name
+
+        def get_units_to_link(units_to_link, links):
+            if isinstance(units_to_link, list) and len(units_to_link) == 0:
+                for unit in links:
+                    units_to_link.append(get_unit_name(unit))
+
+        prev_unit = self[prev_unit_name]
+
+        units_to_link_to = units_from_none(units_to_link_to)
+        units_to_link_from = units_from_none(units_to_link_from)
+
+        get_units_to_link(units_to_link_to, prev_unit.links_from)
+        get_units_to_link(units_to_link_from, prev_unit.links_to)
+
+        gate_block = prev_unit.gate_block
+        gate_skip = prev_unit.gate_skip
+        ignores_gate = prev_unit.ignores_gate
+
+        # Unlink previous unit
+        prev_unit.unlink_all()
+
+        # Delete instance of previous unit
+        self.del_ref(prev_unit)
+
+        # Create new unit
+        setattr(self, new_unit.name, new_unit)
+
+        # Control flow link
+        for unit_before in units_to_link_to:
+            new_unit.link_from(self[unit_before])
+        for unit_after in units_to_link_from:
+            self[unit_after].link_from(new_unit)
+
+        # Save Gates
+        if save_gates:
+            new_unit.gate_block = gate_block
+            new_unit.gate_skip = gate_skip
+            new_unit.ignores_gate = ignores_gate
+
+        # Data links
+        # TODO: add data links transmission
+
+        return new_unit
