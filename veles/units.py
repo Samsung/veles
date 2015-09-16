@@ -134,6 +134,8 @@ class Unit(Distributable, Verified):
         self._links_from = {}
         self._links_to = {}
         super(Unit, self).__init__(**kwargs)
+        self.attributes_to = []
+        self.attributes_from = []
         validate_kwargs(self, **kwargs)
         self.verify_interface(IUnit)
         self._gate_block = Bool(False)
@@ -774,6 +776,10 @@ class Unit(Distributable, Verified):
             self.error("Unable to link %s.%s to %s.%s",
                        other, yours, self, mine)
             raise from_none(e)
+        self.attributes_to.append((other, yours, mine))
+        attributes_from = getattr(other, "attributes_from")
+        attributes_from.append((self, yours, mine))
+        setattr(other, "attributes_from", attributes_from)
         if Unit.is_immutable(attr):
             LinkableAttribute(self, mine, (other, yours), two_way=two_way)
         else:
