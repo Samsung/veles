@@ -134,6 +134,8 @@ class Unit(Distributable, Verified):
         self._links_from = {}
         self._links_to = {}
         super(Unit, self).__init__(**kwargs)
+        self.attributes_to = []
+        self.attributes_from = []
         validate_kwargs(self, **kwargs)
         self.verify_interface(IUnit)
         self._gate_block = Bool(False)
@@ -195,6 +197,12 @@ class Unit(Distributable, Verified):
             self.stop = self._track_call(self.stop, "_stopped")
         Unit.timers[self.id] = 0
         self._workflow_ = lambda: None
+
+    def patch_on_unpickle(self):
+        """Patches this unit's workflow links after loading from snapshot.
+
+        Should be called on each unit of workflow after loading from snapshot.
+        """
         links = "_links_from", "_links_to"
         for this, other in links, reversed(links):
             for unit, value in getattr(self, this).items():
@@ -778,6 +786,13 @@ class Unit(Distributable, Verified):
             LinkableAttribute(self, mine, (other, yours), two_way=two_way)
         else:
             setattr(self, mine, attr)
+        self.attributes_to.append((other, yours, mine))
+        try:
+            attributes_from = getattr(other, "attributes_from")
+            attributes_from.append((self, yours, mine))
+            setattr(other, "attributes_from", attributes_from)
+        except:
+            self.warning("There are no attributes_from in %s unit" % other)
 
     def _check_gate_and_run(self, src):
         """Check gate state and run if it is open.

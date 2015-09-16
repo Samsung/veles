@@ -609,6 +609,8 @@ class Main(Logger, CommandLineBase):
                 self.workflow = Workflow(self.launcher, **wfkw)
                 self.info("Created %s", self.workflow)
             else:
+                for unit in self.workflow:
+                    unit.patch_on_unpickle()
                 self.info("Loaded the workflow snapshot from %s: %s",
                           self.snapshot_file_name, self.workflow)
                 if self._visualization_mode:
