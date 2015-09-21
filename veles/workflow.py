@@ -95,7 +95,6 @@ class Workflow(Container):
         _run_time: the total time workflow has been running for.
         _method_time: Workflow's method timings measured by method_timed
                       decorator. Used mainly to profile master-slave.
-        fitness: numeric fitness or None (used by genetic optimization).
     """
     hide_from_registry_all = True
     json_encoder = NumpyJSONEncoder
