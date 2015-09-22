@@ -16,7 +16,7 @@ Interactively compose the command line in web browser and run it::
     
 Run "Mnist" sample::
 
-    python3 -m veles -s veles/znicz/samples/mnist.py -
+    python3 -m veles -s veles/znicz/samples/MNIST/mnist.py -
    
 .. note:: 
    "-" is a shorthand for ``mnist_config.py``.
