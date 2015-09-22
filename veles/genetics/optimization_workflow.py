@@ -46,6 +46,7 @@ from zope.interface import implementer
 from veles import prng, __root__
 from veles.compat import from_none
 
+from veles.accelerated_units import AcceleratedWorkflow
 from veles.config import root
 from veles.distributable import IDistributable
 from veles.genetics.config import process_config, Range, print_config, \
@@ -58,7 +59,6 @@ from veles.plotting_units import AccumulatingPlotter
 from veles.plumbing import Repeater
 from veles.result_provider import IResultProvider
 from veles.units import IUnit, UnitCommandLineArgumentsRegistry, Unit
-from veles.workflow import Workflow
 
 
 class EvaluationError(Exception):
@@ -288,7 +288,7 @@ class GeneticsOptimizer(Unit):
         self._chromosome_index = self.size - 1
 
 
-class OptimizationWorkflow(Workflow):
+class OptimizationWorkflow(AcceleratedWorkflow):
     KWATTRS = set(GeneticsOptimizer.KWATTRS)
 
     def __init__(self, workflow, **kwargs):
