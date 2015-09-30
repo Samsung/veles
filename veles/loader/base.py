@@ -874,6 +874,7 @@ class Loader(Unit):
             self.minibatch_class == VALID or
             (self.minibatch_class == TEST and self.class_lengths[TRAIN] ==
                 self.class_lengths[VALID] == 0) or
+            (self.minibatch_class == TEST and self.testing) or
             (self.minibatch_class == TRAIN and self.class_lengths[VALID] == 0))
 
     def _advance_global_offset(self):
