@@ -221,7 +221,7 @@ class AcceleratedUnit(Unit):
         if device is None:
             raise ValueError("device may not be None")
         if not isinstance(device, Device):
-            raise TypeError("deviec must be of type %s" % Device)
+            raise TypeError("device must be of type %s" % Device)
         if self._force_numpy:
             device = NumpyDevice()
 
