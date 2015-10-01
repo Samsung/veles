@@ -21,7 +21,7 @@ deserializing received units and calling :meth:`redraw()` on each. Thanks to the
 Matplotlib plotting works, units do not need to recreate everything from scratch,
 though they should be ready to.
 
-Normally, one graphics client instance is launched during VELEs startup,
+Normally, one graphics client instance is launched during VELES startup,
 but can be disabled with ``--no-graphics-client``. To launch a graphics client manually,
 execute::
 
@@ -30,7 +30,7 @@ execute::
 where <endpoint> is the broadcast ZeroMQ address, printed in startup logs or viewable 
 through the web status page.
 
-You may specify WebAgg Matplotlib backend (``-b`` option here, or ``-p`` in velescli.py),
+You may specify WebAgg Matplotlib backend (``-b`` option here, or ``-p`` in command line),
 so that plots will be accessible through the local network or the internet.
 
 There is a feature to write each plot into a PDF file. To activate PDf mode,

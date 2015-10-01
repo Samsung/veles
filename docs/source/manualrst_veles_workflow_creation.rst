@@ -44,7 +44,7 @@ defines structure of Model. ``mcdnnic_topology`` is a way to set topology like
 in artical http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.
 ``layers`` is a list of dictionary with layers of Model. ``layers`` also
 defines parameters for each layer. To set parameters for ``mcdnnic_topology``,
-use ``mcdnnic_parameters`` (see :mod:`veles.znicz.samples.lines` and :mod:`veles.znicz.samples.lines_config`).
+use ``mcdnnic_parameters`` (see :mod:`veles.znicz.samples.Lines.lines` and :mod:`veles.znicz.samples.Lines.lines_config`).
 ``loader_name`` defines the name of Loader, which will be used to read the data.
 ``loader_config`` defines loader parameters. To set parameters, add them
 in :func:`load` function
