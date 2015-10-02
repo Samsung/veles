@@ -45,11 +45,11 @@ The code above looks like JSON and feels like JSON and was designed to be like J
 
    .. code-block:: python
 
-   import json
-   from veles.json_encoders import ConfigJSONEncoder
-   from veles.config import root
+       import json
+       from veles.json_encoders import ConfigJSONEncoder
+       from veles.config import root
 
-   print(json.dumps(root, cls=ConfigJSONEncoder))
+       print(json.dumps(root, cls=ConfigJSONEncoder))
 
 ``Config`` objects are pickleable as well.
 
