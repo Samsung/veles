@@ -53,7 +53,7 @@ __project__ = "Veles Machine Learning Platform"
 __versioninfo__ = 0, 9, 2
 __version__ = ".".join(map(str, __versioninfo__))
 __license__ = "Apache 2.0"
-__copyright__ = u"© 2013-215 Samsung Electronics Co., Ltd."
+__copyright__ = u"© 2013-2015 Samsung Electronics Co., Ltd."
 __authors__ = ["Gennady Kuznetsov", "Vadim Markovtsev", "Alexey Kazantsev",
                "Lyubov Podoynitsina", "Denis Seresov", "Dmitry Senin",
                "Alexey Golovizin", "Egor Bulychev", "Ernesto Sanches"]
@@ -254,7 +254,7 @@ class VelesModule(ModuleType):
                    "! -path '*docs*' ! -path '*.pybuild*' "
                    "-exec cloc --quiet --csv {} \; | "
                    "sed -n '1p;0~3p' | tail -n +2 | cut -d ',' -f 5 | "
-                   "tr '\n' '+' | head -c -1) | bc") %\
+                   "tr '\n' '+' | head -c -1) | bc") % \
                   (self.__root__, cond)
             print(cmd)
             discovery = Popen(cmd, shell=True, stdout=PIPE)
