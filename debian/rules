@@ -42,5 +42,5 @@ override_dh_install:
 	cp deploy/upstart/*.conf debian/python3-veles/etc/init
 	cp -r web/dist debian/python3-veles/usr/share/veles/web
 	mkdir debian/python3-veles/usr/share/veles/data
-	cp veles/znicz/samples/MNIST/mnist_test debian/python3-veles/usr/share/veles/data/mnist_test
+	cp -r veles/znicz/samples/MNIST/mnist_test debian/python3-veles/usr/share/veles/data/mnist_test
 	cp veles/znicz/samples/MNIST/mnist_test.txt debian/python3-veles/usr/share/veles/data/mnist_test.txt
