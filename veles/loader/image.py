@@ -442,8 +442,9 @@ class ImageLoader(LoaderWithValidationRatio):
         return data, label_value, bbox
 
     def scale_image(self, data, bbox):
-        assert self.background.dtype == data.dtype
-        assert self.background.shape[:2] == self.uncropped_shape[:2]
+        back = self.background.copy()
+        back = back.astype(data.dtype)
+        assert back.shape[:2] == self.uncropped_shape[:2]
         bbox = numpy.array(bbox, float)
         if self.scale_maintain_aspect_ratio:
             if data.shape[1] >= data.shape[0]:
@@ -465,7 +466,7 @@ class ImageLoader(LoaderWithValidationRatio):
                 interpolation=cv2.INTER_CUBIC)
             dst_x_max = dst_x_min + data.shape[1]
             dst_y_max = dst_y_min + data.shape[0]
-            sample = self.background
+            sample = back
             sample[dst_y_min:dst_y_max, dst_x_min:dst_x_max] = data
             data = sample.copy()
             bbox[:2] *= (dst_y_max - dst_y_min) / (bbox[1] - bbox[0])
@@ -529,6 +530,9 @@ class ImageLoader(LoaderWithValidationRatio):
             self._intersection(bbox, crop_bbox)
 
     def distort(self, data, mirror, rot):
+        back = self.background.copy()
+        back = back.astype(data.dtype)
+        assert back.shape[:2] == self.uncropped_shape[:2]
         if mirror:
             data = cv2.flip(data, 1)
         data = numpy.resize(data, data.shape[:2] + (data.shape[-1] + 1,))
@@ -541,7 +545,7 @@ class ImageLoader(LoaderWithValidationRatio):
         real = data[:, :, :-1]
         imag = data[:, :, -1]
         real *= imag[..., None]
-        real += self.background * (1 - imag)[..., None]
+        real += back * (1 - imag)[..., None]
         return real
 
     def get_distortion_by_index(self, index):
