@@ -210,9 +210,12 @@ class Publisher(Unit, TriviallyDistributable):
         info.update({"days": days, "hours": hours, "mins": mins, "secs": secs})
         if self.loader_unit is not None:
             unit = self.loader_unit
-            if unit.has_labels:
-                info.update({"labels": tuple(unit.labels_mapping),
-                             "label_stats": (dict(unit.test_diff_labels),
+            if hasattr(unit, "labels_mapping"):
+                info.update({"labels": tuple(unit.labels_mapping)})
+            if (hasattr(unit, "test_diff_labels") and
+                    hasattr(unit, "valid_diff_labels") and
+                    hasattr(unit, "train_diff_labels")):
+                info.update({"label_stats": (dict(unit.test_diff_labels),
                                              dict(unit.valid_diff_labels),
                                              dict(unit.train_diff_labels))})
             info.update({"class_lengths": tuple(unit.class_lengths),
