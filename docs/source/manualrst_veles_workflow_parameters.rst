@@ -237,6 +237,10 @@ You can change data parameters at ``root.name_of_your_workflow.loader`` .
 
 Here are some parameters of different Loaders:
 
+'''''''''''''''''''''''''''''''''''''''''''''
+:class:`veles.loader.base.Loader` descendants
+'''''''''''''''''''''''''''''''''''''''''''''
+
 1. `prng` - sets random seed in shuffling the data. Default value is random_generator.get()
 2. `normalization_type` - sets type of normalization loading data. Default value is "none". All normalization types (see at :mod:`veles.normalization`):
 
@@ -257,30 +261,145 @@ Here are some parameters of different Loaders:
 3. `normalization_parameters` - parameters for normalization. For example, "mean_source" must be defined for "external_mean" normalization.
 4. `shuffle_limit` - sets limit of shuffling data. If shuffle_limit=-1: not shuffling. If shuffle_limit=1: shuffling data just one time (just like in Caffe). If shuffle_limit=numpy.iinfo(numpy.uint32).max: shuffle data every epoch. Default value is numpy.iinfo(numpy.uint32).max.
 5. `minibatch_size` - sets size of one minibatch. Default value is 100
-6. If `validation_ratio` is a number from 0 to 1, Loader automatically extracts a validation sample from train with that ratio. Default value is None.
-7. `color_space`
-8. `add_sobel`
-9. `mirror`
-10. `scale`
-11. `scale_maintain_aspect_ratio`
-12. `rotations`
-13. `background_image`
-14. `background_color`
-15. `crop`
-16. `smart_crop`
-17. `crop_number`
-18. `filename_types`
-19. `ignored_files`
-20. `included_files`
-21. `path_to_test_text_file`
-22. `path_to_val_text_file`
-23. `path_to_train_text_file`
-24. `test_paths`
-25. `validation_paths`
-26. `train_paths`
-27. `label_regexp`
-28. `target_paths`
+6. `train_ratio`
 
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+:class:`veles.loader.base.LoaderMSEMixin` and :class:`veles.loader.base.LoaderMSE` descendants
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+1. `targets_shape`
+2. `target_normalization_type`
+3. `target_normalization_parameters`
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+:class:`veles.loader.base.LoaderWithValidationRatio` descendants
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+1. If `validation_ratio` is a number from 0 to 1, Loader automatically extracts a validation sample from train with that ratio. Default value is None.
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+:class:`veles.loader.ensemble.EnsembleLoaderBase` descendants
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+1. `file`
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+:class:`veles.loader.file_image.FileImageLoaderBase` descendants
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+1. `file_type`
+2. `file_subtypes`
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+:class:`veles.loader.file_loader.FileFilter` descendants
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+1. `ignored_files`
+2. `included_files`
+3. `file_type`
+4. `file_subtypes`
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+:class:`veles.loader.file_loader.FileListLoaderBase` descendants
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+1. `path_to_test_text_file`
+2. `path_to_val_text_file`
+3. `path_to_train_text_file`
+4. `base_directory`
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+:class:`veles.loader.file_loader.FileLoaderBase` descendants
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+1. `test_paths` - defines path to the directory with test data
+2. `validation_paths` - defines path to the directory with validation data
+3. `train_paths` - defines path to the directory with train data
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+:class:`veles.loader.file_loader.AutoLabelFileLoader` descendants
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+1. `label_regexp`
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+:class:`veles.loader.hdfs_loader.HDFSTextLoader` descendants
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+1. `file`
+2. `chunk`
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''
+:class:`veles.loader.image.ImageLoader` descendants
+'''''''''''''''''''''''''''''''''''''''''''''''''''
+
+1. `color_space`
+2. `add_sobel`
+3. `mirror`
+4. `scale`
+5. `scale_maintain_aspect_ratio`
+6. `rotations`
+7. `background_image`
+8. `background_color`
+9. `crop`
+10. `smart_crop`
+11. `crop_number`
+12. `path_to_mean`
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+:class:`veles.loader.image_mse.FileImageLoaderMSEMixin` descendants
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+1. `target_paths` - defines path to the directory with targets data
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+:class:`veles.loader.interactive.InteractiveLoader` descendants
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+1. `loadtxt_kwargs`
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+:class:`veles.loader.loader_hdf5.HDF5LoaderBase` descendants
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+1. `test_path`
+2. `validation_path`
+3. `train_path`
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+:class:`veles.loader.pickles.PicklesLoader` descendants
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+1. `test_pickles`
+2. `validation_pickles`
+3. `train_pickles`
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+:class:`veles.loader.pickles.PicklesImageFullBatchLoader` descendants
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+1. `color_space`
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+:class:`veles.loader.restful.RestfulLoader` descendants
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+1. `max_response_time`
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+:class:`veles.loader.saver.MinibatchesSaver` descendants
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+1. `file_name`
+2. `compression`
+3. `compression_level`
+4. `class_chunk_sizes`
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+:class:`veles.loader.saver.MinibatchesLoader` descendants
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+1. `file_name`
 
 Model structure and layer's parameters
 --------------------------------------
@@ -398,22 +517,22 @@ Symbols `->` setting parameters for forward propagation.
 
 Here are some of forward propagation parameters:
 
-1. `kx`
-2. `weights_stddev`
+1. `kx` - horisontal size of kernel
+2. `weights_stddev` - initial std distribution of weights
 3. `include_bias`
-4. `n_kernels`
-5. `bias_stddev`
-6. `bias_filling`
+4. `n_kernels` - number of neurons in layer (for Convolutional NN)
+5. `bias_stddev` - initial std distribution of bias
+6. `bias_filling` - type of initially filling of bias (“uniform”, “gaussian”, “constant”)
 7. `unpack_size`
-8. `ky`
+8. `ky` - vertical size of kernel
 9. `sliding`
 10. `rand`
 11. `padding`
-12. `weights_filling`
+12. `weights_filling` - type of initially filling of weights (“uniform”, “gaussian”, “constant”)
 13. `weights_transposed`
 14. `output_dtype`
-15. `output_sample_shape`
-16. `output_samples_number`
+15. `output_sample_shape` - number of neurons in layer (for Fully Connected NN)
+16. `output_samples_number` - minibatch size
 17. `unsafe_padding`
 18. `grouping`
 19. `beta`
@@ -435,11 +554,12 @@ Symbols `<-` setting parameters for backward propagation.
 Here are some of backward propagation parameters:
 
 1. `include_bias`
-2. `weights_decay_bias`
+2. `weights_decay_bias` - weights regularization coefficient for bias
 3. `last_minibatch`
 4. `factor_ortho`
 5. `fast_learning_rate`
-6. `gradient_moment`
+6. `gradient_moment` - momentum (used to diminish the fluctuations in weight
+changes over consecutive iterations) for weights
 7. `accumulate_gradient`
 8. `weights_transposed`
 9. `variant_gradient`
@@ -448,14 +568,14 @@ Here are some of backward propagation parameters:
 12. `variant_moment_gradient`
 13. `adagrad_epsilon`
 14. `adadelta_epsilon`
-15. `l1_vs_l2`
-16. `learning_rate`
+15. `l1_vs_l2` - defines type of regularization (L1 or L2)
+16. `learning_rate` - velocity of gradient descent for weights
 17. `adadelta_adom`
-18. `gradient_moment_bias`
-19. `weights_decay`
+18. `gradient_moment_bias` - momentum for bias
+19. `weights_decay` - weights regularization coefficient for weights
 20. `solvers`
 21. `l1_vs_l2_bias`
-22. `learning_rate_bias`
+22. `learning_rate_bias` - velocity of gradient descent for bias
 
 Second way to set topology
 ..........................

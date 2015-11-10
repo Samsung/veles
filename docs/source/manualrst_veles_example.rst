@@ -722,6 +722,26 @@ See :doc:`manualrst_veles_ensembles`.
 Optimization parameters
 :::::::::::::::::::::::
 
+.. code-block:: python
+
+    from veles.config import root
+    from veles.genetics import Range
+
+    root.mnistr.update({
+        ...
+        "loader": {"minibatch_size": Range(20, 1, 1000),
+                   "normalization_type": "linear",
+                   "data_path": "/path/to/dataset"},
+        ...})
+
+
+To optimize parameters of Workflow by Genetic Algorithm use Range
+(veles.genetics.config.Range) for every parameter, which you want to optimize.
+When optimization is off, the first parameter will be used by default. In MNIST
+example minibatch size will be equal 20. If optimization is on, the second and
+the third parameter will be used as range to optimize. In MNIST example
+minibatch size will be selected from 1 to 1000 by Genetic Algorithm.
+
 See :doc:`manualrst_veles_genetic_optimization`.
 
 :::::::::::::::::::
