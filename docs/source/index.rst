@@ -20,6 +20,7 @@ Veles Machine Learning Platform
     
     manualrst_veles_cml_examples
     manualrst_veles_example
+    manualrst_veles_example_advanced
     manualrst_veles_basics
     manualrst_veles_configuration
     manualrst_veles_snapshotting

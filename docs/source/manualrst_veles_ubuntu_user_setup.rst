@@ -4,6 +4,12 @@ User's setup on Ubuntu (level 1 and 2)
 Users on Ubuntu have an ability to install Veles much easier than with other
 methods.
 
+Run command below::
+
+    wget -O - https://velesnet.ml/ubuntu-install.sh | bash -
+
+Or follow next steps
+
 .. include:: manualrst_veles_ubuntu_repositories_setup.rst
 
 Veles package installation
