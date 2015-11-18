@@ -120,8 +120,7 @@ def scan_workflows(debug_imports):
             for func in dir(mod):
                 if func == "run" and \
                         getargspec(mod.run).args == ["load", "main"]:
-                    wf_path = os.path.relpath(f_path, root_dir)
-                    workflows.append(os.path.abspath(wf_path))
+                    workflows.append(f_path)
                     if debug_imports:
                         print("OK")
                     break
