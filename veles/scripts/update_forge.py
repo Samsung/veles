@@ -63,7 +63,8 @@ class Main(Logger):
                 self.info("Update workflow %s in VELESForge" % workflow_folder)
                 subprocess.call(
                     ["python3", "-m", "veles", "forge", "upload", "-s",
-                     server_url, "-d", workflow_folder])
+                     server_url, "-d", workflow_folder, "-i",
+                     "d87b520bc374bd679f71c39c826c5fef26a5a5b1"])
             else:
                 self.info("Workflow %s is not in Forge" % workflow)
 
