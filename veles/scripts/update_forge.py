@@ -64,7 +64,7 @@ class Main(Logger):
                 subprocess.call(
                     ["python3", "-m", "veles", "forge", "upload", "-s",
                      server_url, "-d", workflow_folder, "-i",
-                     "d87b520bc374bd679f71c39c826c5fef26a5a5b1"])
+                     "41a8a51b-b866-4b67-afa3-3ea78805cac0"])
             else:
                 self.info("Workflow %s is not in Forge" % workflow)
 
