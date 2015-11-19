@@ -1,0 +1,13 @@
+{
+    "author": "VELES team",
+    "configuration": "genetics_config.py",
+    "long_description": "Simple example of usage Genetic Algorithm. Workflow for one run of fitness computation",
+    "name": "GeneticExample",
+    "requires": [
+        "veles >= 0.9.2",
+        "veles.znicz >= 0.8.2"
+    ],
+    "short_description": "Simple example of usage Genetic Algorithm",
+    "workflow": "genetics.py",
+    "files": ["__init__.py"]
+}
