@@ -92,6 +92,26 @@ Go to the `docs` folder and try to generate the documentation::
 
 Output files will be located in docs/build/html.
 
+Installing veles-blog. How to create post
+:::::::::::::::::::::::::::::::::::::::::
+
+To create post in veles-blog (https://velesnet.ml/blog/ )::
+
+    sudo pip3 install pelican typogrify
+
+    sudo pip3 install git+https://github.com/vmarkovtsev/py-gfm.git
+
+    git clone https://github.com/vmarkovtsev/veles-blog.git
+
+    cd veles-blog
+
+    make
+
+
+Create post. Make sure, that it looks ok. Finally, change SSH_USER in Makefile and upload::
+
+   make ssh_upload
+
 Periodical system update
 ::::::::::::::::::::::::
 
