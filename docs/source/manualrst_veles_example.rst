@@ -69,7 +69,7 @@ For convolutional MNISTWorkflow::
 Use existing Workflow and existing Configuration file
 +++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Use existing Workflows from samples or download them from VelesForge.
+Use existing Workflows from samples or download them from :doc:`manualrst_veles_forge`.
 
 To run veles from command line you need to set path to workflow and path to
 configuration files as arguments::
@@ -107,7 +107,7 @@ First copy samples to a local directory::
 
     cp -r /usr/lib/python3/dist-packages/veles/znicz/samples /home/user/
 
-or download Model from VelesForge.
+or download Model from :doc:`manualrst_veles_forge`.
 
 There 2 ways to change configuration parameters:
 
@@ -144,7 +144,7 @@ Use existing test Workflow or script
 ++++++++++++++++++++++++++++++++++++
 
 If test Workflow is exists it is located in the directory with
-train Workflow. See samples or download Model from VelesForge.
+train Workflow. See samples or download Model from :doc:`manualrst_veles_forge`.
 
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
 Use --test and --result-file arguments in command line
