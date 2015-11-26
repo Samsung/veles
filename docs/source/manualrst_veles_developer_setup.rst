@@ -1,5 +1,5 @@
-Developer's setup (level 2 and 3)
-=================================
+Developer's setup on Ubuntu (medium/high level users)
+=====================================================
 
 The following procedure works only if your OS is Ubuntu and you have local
 administrator's rights (that is, ``sudo``).
@@ -11,11 +11,11 @@ Clone
 
 ::
 
-    git clone ssh://<user name>@alserver.rnd.samsung.ru:29418/Veles
-    cd Veles
+    sudo apt-get install git
+    git clone https://github.com/Samsung/veles.git
+    cd veles
     ./init
     
-If you don't have a user name, please contact the administator: v.markovtsev@samsung.com.
 Execution of ``init`` script is neccessary, because Veles submodules require
 special processing.
 
@@ -24,15 +24,16 @@ special processing.
 Packages installation
 :::::::::::::::::::::
 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Upgrading existing packages
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Ensure that your current packages are up to date::
+
+    sudo apt-get update
+    sudo apt-get upgrade
+
 .. include:: manualrst_veles_developer_ubuntu_packages.rst
-
-Check that the patched twisted and pyzmq are installed::
-
-   python3
-   >>> import twisted.web.client
-   >>> import zmq
-   
-No error messages should appear!
 
 ^^^^^^^^^^^^^^
 Python version
@@ -46,12 +47,42 @@ If not (can be with Ubuntu 14.04), double check that you successfully passed `Ve
 Install required pip packages
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Invoke pip install on requirements.txt::
+Invoke pip install on requirements.txt. For python3::
 
    sudo pip3 install -r requirements.txt
-   
+   sudo pip3 install -r requirements-dev.3.txt
+
+For python2::
+
+   sudo pip install -r requirements.txt
+   sudo pip install -r requirements-dev.2.txt
+
 Looks like your Veles is ready to run! The last steps are :doc:`manualrst_veles_ocl`
 and :doc:`manualrst_veles_eclipse` or :doc:`manualrst_veles_pycharm`.
+
+^^^^^^^^^^^^^^^^^^^^^^^^
+Set path to the datasets
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+After first workflow run, you will see something like this::
+
+    ERROR:MnistWorkflow:Unit "MnistLoader" failed to initialize
+    ERROR:Launcher:Failed to initialize the workflow
+    ERROR:Main:Failed to initialize the launcher.
+    Traceback (most recent call last):
+      File "/home/lyubov/Projects/veles/veles/__main__.py", line 639, in _main
+        self.launcher.initialize(**kwargs)
+      File "veles/launcher.py", line 391, in wrapped
+        return fn(self, *args, **kwargs)
+      File "veles/launcher.py", line 521, in initialize
+        initialize_workflow()
+      File "veles/launcher.py", line 517, in initialize_workflow
+        raise from_none(ie)
+    OSError: [Errno 2] No such file or directory: '/data/veles/datasets/MNIST'
+
+It means that you need to change common datasets directory to yours. It could be done in veles/site_config.py.
+Change "datasets" field in root.common.dirs from "/data/veles/datasets" to the preferred path with all datasets.
+You don't need to download datasets in this folder, just make sure that this path exists and has correct permissions.
 
 Importing project
 :::::::::::::::::
@@ -120,5 +151,4 @@ the following commands::
 
    sudo apt-get update && sudo apt-get upgrade
    sudo pip3 install -r requirements.txt --upgrade
-   
-.. include:: manualrst_veles_cmdline_autocomplete.rst
+

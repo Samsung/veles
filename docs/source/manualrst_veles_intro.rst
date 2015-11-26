@@ -19,7 +19,13 @@ level users additionally write new units.
 
 :doc:`manualrst_veles_user_setup`
 
-:doc:`manualrst_veles_developer_setup` Here is introduction video "Veles in 2013":
+For ubuntu:
+
+:doc:`manualrst_veles_ubuntu_user_setup`
+
+:doc:`manualrst_veles_developer_setup`
+
+Here is introduction video "Veles in 2013":
 
 .. raw:: html
 

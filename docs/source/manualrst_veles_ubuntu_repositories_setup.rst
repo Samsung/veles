@@ -8,6 +8,7 @@ Veles Debian repository
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 Add Smaug repository to your /etc/apt/sources.list: ``deb https://velesnet.ml/apt trusty main``
+
 On newer Ubuntu, replace trusty with your distribution code name.
 
 If Smaug is not accessible from your point, there are two options left: either
@@ -81,13 +82,3 @@ e.g. via email or file sharing though 3-rd party. Execute and  carefully read th
     aptly serve
 
 Replace "trusty" with the proper distribution codename (see ``lsb_release -c``).
-
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Upgrading existing packages
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Ensure that your current packages are up to date::
-
-    sudo apt-get update
-    sudo apt-get upgrade
-

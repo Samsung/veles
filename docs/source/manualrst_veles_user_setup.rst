@@ -1,23 +1,25 @@
-User's setup (level 1)
-======================
+User's setup (Cluster deployers and entry/medium level users of GNU/Linux)
+==========================================================================
 
 Cluster deployers and users of GNU/Linux other than Ubuntu should setup Veles
-via ``deploy.sh`` script. If you are using Ubuntu, it is better to follow
-:doc:`manualrst_veles_ubuntu_user_setup`. The first step depends on how one
-gets the Veles sources.
+via ``deploy.sh`` script.
+
+.. note:: If you are using Ubuntu, follow :doc:`manualrst_veles_ubuntu_user_setup`.
+
+The first step depends on how one gets the Veles sources.
 
 Via Git
 :::::::
 
 ::
 
-    git clone http://alserver.rnd.samsung.ru/gerrit/Veles
-    cd Veles
+    sudo apt-get install git
+    git clone https://github.com/Samsung/veles.git
+    cd veles
     ./init
 
 Execution of ``init`` script is neccessary, because Veles submodules require
-special processing. Substitute ``alserver.rnd.samsung.ru/gerrit`` with your
-local mirror, if neccessary.
+special processing.
     
 Via the redistributable package
 :::::::::::::::::::::::::::::::
@@ -49,7 +51,7 @@ Execute the following script::
 It will build the needed environment, including Python interpreter, dependency
 libraries, packages, etc. If everything is alright, proceed to the next step,
 otherwise, please send an email with the script output (``deploy.sh post &> deploy.log``)
-to v.markovtsev@samsung.com.    
+to gmarkhor@gmail.com.
  
 The virtual environment will be located inside ``deploy/pyenv`` directory.
  
@@ -72,5 +74,3 @@ This allows running ``python3 -m veles`` from any directory other than Veles
 root.
 
 Proceed to :doc:`manualrst_veles_ocl`.
-
-.. include:: manualrst_veles_cmdline_autocomplete.rst

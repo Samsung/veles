@@ -1,14 +1,25 @@
-User's setup on Ubuntu (level 1 and 2)
-======================================
+User's setup on Ubuntu (entry/medium level users)
+=================================================
 
 Users on Ubuntu have an ability to install Veles much easier than with other
 methods.
 
-Run command below::
+Via ubintu-install script
+:::::::::::::::::::::::::
+
+Veles can be installed just with one command. Run::
 
     wget -O - https://velesnet.ml/ubuntu-install.sh | bash -
 
-Or follow next steps
+It will be located at /usr/lib/python3/dist-packages/veles.
+
+After instalation of veles, copy samples from
+/usr/lib/python3/dist-packages/veles/znicz/samples and /usr/lib/python3/dist-packages/veles/samples
+to your local directory (/home/user/veles_samples for example). And run veles::
+
+    python3 -m veles -s /home/user/veles_samples/MNIST/mnist.py -
+
+If you have some issues, follow next steps
 
 .. include:: manualrst_veles_ubuntu_repositories_setup.rst
 

@@ -6,10 +6,11 @@ Install required Ubuntu packages
 
 ::
 
-    python3-matplotlib python-matplotlib python3-twisted-experimental \
-    python-twisted python3-numpy python-numpy python3-cffi python-cffi \
-    python3-pymongo python-pymongo python3-ecdsa python-ecdsa python-lzma \
-    python3-zmq python-zmq python3-scipy python-scipy libsnappy-dev python3-pip \
-    python-pip python3-sip python-sip python3-pyqt4 python-qt4 python3-pil \
-    python-pil python3-six python-six python3-ply python-ply  python3-psutils \
-    python-psutils libgit2-21 graphviz
+    sudo apt-get install libgit2-dev libffi6 cython3 cython libhdf5-dev \
+    unixodbc-dev liblzma-dev python3-pip python-pip python3-matplotlib \
+    python-matplotlib libffi-dev python3-scipy python-scipy libsnappy-dev \
+    python3-twisted python-twisted
+
+Make sure, that there are no twisted in /usr/local/lib/python2.7/dist-packages/ and /usr/local/lib/python3.4/dist-packages/
+
+Do not install twisted, matplotlib and scipy with pip or there could be problems.
