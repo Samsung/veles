@@ -143,6 +143,47 @@ Create post. Make sure, that it looks ok. Finally, change SSH_USER in Makefile a
 
    make ssh_upload
 
+How to make a contribution
+::::::::::::::::::::::::::
+
+First, register on https://velesnet.ml/gerrit/ . Contact Podoynitsina Lyubov podoynitsinalv@gmail.com or Markovtsev Vadim gmarkhor@gmail.com.
+
+Add Gerrit remote (after cloning Veles and running ./init script)::
+
+    git remote remove origin
+    git remote add origin your_ssh_path_to_gerrit_veles_repo
+    git remote
+    git fetch origin
+
+Go to https://velesnet.ml/gerrit to Projects->List->Samsung/veles. You will see your_ssh_path_to_gerrit_repo on top of "Description". Do the same for znicz and other repositories, in which you want to contribute::
+
+    cd veles/znicz
+    git remote remove origin
+    git remote add origin your_ssh_path_to_gerrit_znicz_repo
+    git fetch origin
+
+Go to https://velesnet.ml/gerrit Projects->List->Samsung/veles.znicz for your_ssh_path_to_gerrit_znicz_repo.
+
+Make some changes, create commit and send it to the Gerrit review::
+
+    git add something.py
+    git commit -m "Created something.py"
+    git push origin HEAD:refs/for/master/number_of_github_issue
+
+Don't forget to add your number of github issue to the end of HEAD:refs/for/master. List of veles issues: https://github.com/Samsung/veles/issues .
+List of znicz issues: https://github.com/Samsung/veles.znicz/issues . Create issue for your commit if it is necessary.
+
+Make sure that your commit was verified by Jenkins https://velesnet.ml/jenkins/ (after commit will appear in https://velesnet.ml/gerrit/ ). Jenkins checks if all tests was running successful, presence of pep8 and pylint warnings and some other things.
+
+If you added commit in znicz, update Veles after that::
+
+    git add veles.znicz
+    git commit -m "Updated znicz"
+    git push origin HEAD:refs/for/master
+
+In that case number of ticket is not necessary.
+
+
 Periodical system update
 ::::::::::::::::::::::::
 
