@@ -14,63 +14,68 @@ Interactively compose the command line in web browser and run it::
 
     python3 -m veles --frontend
     
+To run the Model, set path to the workflow and path to the configuration file (replace ``<workflow>`` and ``<config>`` with
+actual workflow and configuration paths)::
+
+    python3 -m veles <workflow> <config>
+
 Run "Mnist" sample::
 
     python3 -m veles -s veles/znicz/samples/MNIST/mnist.py -
-   
-.. note:: 
-   "-" is a shorthand for ``mnist_config.py``.
-    
-Draw specific workflow's scheme (replace ``workflow.py`` and ``config.py`` with
-actual workflow and configuration paths)::
 
-    python3 -m veles -p '' -s --disable-opencl --dry-run=init --workflow-graph scheme.png workflow.py config.py
-    xdg-open scheme.png
+.. note::
+   "-" is a shorthand for ``veles/znicz/samples/MNIST/mnist_config.py``.
+
+.. note::
+   If you see warnings "Launcher:Failed to upload the status", use "-s" option to disable reporting status to the Web Status Server.
     
 Specify OpenCL device at once::
 
-    python3 -m veles -d 0:0
-    
+    python3 -m veles -d 0:0 <workflow> <config>
+
 .. note::
    The first number is the platform number and the second is the device number in that platform,
    for example "NVIDIA" platform and first (probably, only) device.
 
-Run workflow without any OpenCL usage (slooow!)::
+Specify CUDA device at once::
 
-    python3 -m veles --disable-opencl
+    python3 -m veles -d 0 <workflow> <config>
+
+Change backend ("auto" for AutoDevice, "cuda" for CUDADevice, "numpy" for NumpyDevice, "ocl" for OpenCLDevice)::
+
+    python3 -m veles --backend "cuda" <workflow> <config>
+
+Training from snapshotted state of the model (replace ``<snapshot>`` with actual path to the snapshot, could be amazon link)::
+
+    python3 -m veles --snapshot <snapshot> <workflow> <config>
+
+Run in testing mode (use trained model)::
+
+    python3 -m veles --test --snapshot <snapshot> <workflow> <config>
+
+Run workflow without any OpenCL/CUDA/any accelerations  usage (slooow!)::
+
+    python3 -m veles --force-numpy <workflow> <config>
 
 Disable plotters during workflow run::
 
-    python3 -m veles -p ''
+    python3 -m veles -p '' <workflow> <config>
     
 Do not send reports to web status server (for example, because it is not running)::
 
-    python3 -m veles -s
+    python3 -m veles -s <workflow> <config>
     
 Write only warnings and errors::
 
-    python3 -m veles -v warning
+    python3 -m veles -v warning <workflow> <config>
     
 Write extended information from unit of class "Class"::
 
-    python3 -m veles --debug Class
+    python3 -m veles --debug Class <workflow> <config>
 
-Run workflow in distributed environment::
+Draw specific workflow's scheme::
 
-    # on master node
-    python3 -m veles -l 0.0.0.0:5000 workflow.py config.py
-    # on slave node
-    python3 -m veles -m <master host name or IP>:5000 workflow.py config.py
-    
-.. note::
-   5000 is the port number - use any you like!
- 
-Run workflow in distributed environment (known nodes)::
- 
-    # on master node
-    python3 -m veles -l 0.0.0.0:5000 -n <slave 1>/0:0,<slave 2>/0:0 workflow.py config.py
- 
-.. note::   
-   "0:0" sets the OpenCL device to use. Syntax can be much more complicated,
-   for example, ``0:0-3x2`` launches 8 instances overall: two instances on each device
-   from 0:0, 0:1, 0:2 and 0:3.
+    python3 -m veles --workflow-graph scheme.png <workflow> <config>
+    xdg-open scheme.png
+
+.. include:: manualrst_veles_cml_examples_distributed.rst

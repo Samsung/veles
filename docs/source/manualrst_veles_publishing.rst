@@ -43,3 +43,5 @@ A typical report consists of several sections.
 Publisher can be extended with more report data by overriding
 :func:`veles.publishing.publisher.Publisher.gather_info` method and adding the corresponding
 support to the used backends.
+
+.. image:: _static/publishing.png

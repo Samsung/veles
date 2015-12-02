@@ -2,7 +2,6 @@
 Introduction
 ============
 
-
 VELES is a distributed platform, which provides machine learning and
 data processing services for a user. It is written in Python.
 

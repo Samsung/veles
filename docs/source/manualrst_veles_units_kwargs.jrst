@@ -11,8 +11,8 @@
   {% endfor %}
   {{ caller() }}
 {% endmacro %}
-Parameters of Units
-:::::::::::::::::::
+Units. Parameters of the units
+::::::::::::::::::::::::::::::
 
 All existing Units with parameters
 
@@ -82,8 +82,8 @@ RBM Units
 
 {% call render_kwargs("rbm") %}{% endcall %}
 
-Working Units
--------------
+Other Working Units
+-------------------
 
 Units, which can be used in Workflows.
 
