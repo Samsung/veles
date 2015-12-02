@@ -71,7 +71,12 @@ class UnitsKeywordArgumentsGenerator(Logger):
 
     @staticmethod
     def get_condition_working_units(unit):
-        return True
+        return (str(unit).find("rbm") < 0 and str(unit).find("kohonen") < 0 and
+                not issubclass(unit, Plotter) and
+                not issubclass(unit, Activation) and
+                not issubclass(unit, GradientDescentBase) and
+                not issubclass(unit, ForwardBase) and
+                not isinstance(unit, UserLoaderRegistry))
 
     @staticmethod
     def get_condition_base_units(unit):
