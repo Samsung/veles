@@ -332,7 +332,8 @@ To stop interactive mode and continue execution type "exit()"::
 Distributed training
 ++++++++++++++++++++
 
-See :doc:`manualrst_veles_cml_examples`.
+See :doc:`manualrst_veles_distributed_training`.
+
 
 ++++++++++++++++++
 Training ensembles
@@ -421,5 +422,3 @@ Using publisher
 :::::::::::::::
 
 See :doc:`manualrst_veles_publishing`.
-
-.. image:: _static/publishing.png

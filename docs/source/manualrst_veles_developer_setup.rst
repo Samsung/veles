@@ -80,7 +80,7 @@ After first workflow run, you will see something like this::
         raise from_none(ie)
     OSError: [Errno 2] No such file or directory: '/data/veles/datasets/MNIST'
 
-It means that you need to change common datasets directory to yours. It could be done in veles/site_config.py.
+It means that you need to change common datasets directory to yours. It could be done in veles/site_config.py (see: :doc:`manualrst_veles_configuration`).
 Change "datasets" field in root.common.dirs from "/data/veles/datasets" to the preferred path with all datasets.
 You don't need to download datasets in this folder, just make sure that this path exists and has correct permissions.
 

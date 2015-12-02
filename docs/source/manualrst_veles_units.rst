@@ -119,10 +119,9 @@ The passing data will be **shared** between those units.
 Service units
 -------------
 
-TODO: move Znicz units into znicz docs.
-
 * `Loaders` load raw images, pre-process them and make the initial data vectors.
 * `Repeater` is a dummy unit that should be linked from `start_point` and from the last unit of the Workflow.
-* `Decision` decides whether to stop training or continue.
 * `Snapshotter` makes `pickle` snapshots from the `Workflow` each epoch.
 * `Plotters` are used to draw plots: weight matrices, error for epochs, etc.
+
+More units: :doc:`manualrst_veles_units_kwargs`.

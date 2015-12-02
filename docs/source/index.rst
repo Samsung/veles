@@ -17,25 +17,25 @@ Veles Machine Learning Platform
     manualrst_veles_ocl
     manualrst_veles_distributed_setup
     manualrst_veles_pypy
-    manualrst_veles_mongo
-    
+
     manualrst_veles_cml_examples
     manualrst_veles_example
     manualrst_veles_example_advanced
     manualrst_veles_basics
     manualrst_veles_configuration
+    manualrst_veles_distributed_training
     manualrst_veles_snapshotting
     manualrst_veles_graphics
     manualrst_veles_publishing
     manualrst_veles_genetic_optimization
     manualrst_veles_ensembles
+    manualrst_veles_forge
+    manualrst_veles_mongo
     manualrst_veles_advanced
+
     manualrst_veles_workflow_creation
     manualrst_veles_workflow_parameters
-    manualrst_veles_units
     manualrst_veles_units_kwargs
-
-    manualrst_veles_forge
     
     veles
     dependencies
