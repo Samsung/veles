@@ -40,3 +40,12 @@ Veles Machine Learning Platform
     veles
     dependencies
 
+Znicz Neural Networks plugin
+============================
+
+.. toctree::
+    :maxdepth: 2
+    :numbered:
+
+    manualrst_veles_znicz_docs
+    veles.znicz
