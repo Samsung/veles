@@ -47,7 +47,7 @@ from veles import prng, __root__
 from veles.compat import from_none
 
 from veles.accelerated_units import AcceleratedWorkflow
-from veles.config import root
+from veles.config import root, fix_contents
 from veles.distributable import IDistributable
 from veles.genetics.config import process_config, Range, print_config, \
     ConfigChromosome, ConfigPopulation
@@ -161,6 +161,13 @@ class GeneticsOptimizer(Unit):
         self.info("Best snapshot: %s", self.best.snapshot)
         self.info("Best configuration")
         print_config(self.best.config)
+        path_to_the_best_config = "%s_best_config.py" % self._model_.__name__
+        with open(path_to_the_best_config, "w") as fout:
+            fout.write(
+                "from veles.config import root\n\n\nroot.update(%s)" %
+                fix_contents(self.best.config))
+        self.info(
+            "Best configuration was saved to %s" % path_to_the_best_config)
 
     def get_metric_names(self):
         return {"Fitness", "Best configuration", "Generation"}
