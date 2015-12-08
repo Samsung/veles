@@ -49,6 +49,14 @@ root = None
 __protected__ = defaultdict(set)
 
 
+def fix_contents(obj):
+    fixed_contents = content = obj.__content__
+    for k, v in content.items():
+        if isinstance(v, Config):
+            fixed_contents[k] = fix_contents(v)
+    return fixed_contents
+
+
 class Config(object):
     """Config service class.
     """
@@ -76,13 +84,6 @@ class Config(object):
         __protected__[self].update(names)
 
     def print_(self, indent=1, width=80, file=sys.stdout):
-        def fix_contents(obj):
-            fixed_contents = content = obj.__content__
-            for k, v in content.items():
-                if isinstance(v, Config):
-                    fixed_contents[k] = fix_contents(v)
-            return fixed_contents
-
         print_('-' * width, file=file)
         print_('Configuration "%s":' % self.__path__, file=file)
         pprint(fix_contents(self), indent=indent, width=width, stream=file)
