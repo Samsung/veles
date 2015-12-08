@@ -37,7 +37,6 @@ through running::
 Prerequisites
 :::::::::::::
 
-.. include:: manualrst_veles_user_ubuntu_packages.rst
 .. include:: manualrst_veles_user_centos_packages.rst
 .. include:: manualrst_veles_user_fedora_packages.rst
 

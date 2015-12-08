@@ -7,8 +7,7 @@ one can insert a properly configured :class:`veles.publishing.publisher.Publishe
 unit before :class:`veles.plumbing.EndPoint` to write HTML or PDF or online wiki
 page with very detailed information what input data and the configuration
 were specified, how the workflow ran, what metric values were achieved and what
-plots were drawn. Currently, only Confluence publishing backend is supported,
-but more backends will eventually emerge later.
+plots were drawn. Confluence, Markdown and PDF publishing backend are supported.
 
 If you are using :class:`veles.znicz.standard_workflow.StandardWorkflow`, using
 Publisher is as simple as calling::
@@ -43,3 +42,5 @@ A typical report consists of several sections.
 Publisher can be extended with more report data by overriding
 :func:`veles.publishing.publisher.Publisher.gather_info` method and adding the corresponding
 support to the used backends.
+
+.. image:: _static/publishing.png

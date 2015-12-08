@@ -9,9 +9,9 @@ Veles Machine Learning Platform
     manualrst_veles_intro
     manualrst_veles_algorithms.rst
     manualrst_veles_system_requirements
-    manualrst_veles_user_setup
     manualrst_veles_ubuntu_user_setup
     manualrst_veles_developer_setup
+    manualrst_veles_user_setup
     manualrst_veles_eclipse
     manualrst_veles_pycharm
     manualrst_veles_ocl
