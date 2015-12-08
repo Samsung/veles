@@ -57,7 +57,7 @@ For python2::
    sudo pip install -r requirements.txt
    sudo pip install -r requirements-dev.2.txt
 
-Looks like your Veles is ready to run! The last steps are :doc:`manualrst_veles_ocl`
+Looks like your Veles is ready to run! To run Veles see: :doc:`manualrst_veles_cml_examples` . The last steps are :doc:`manualrst_veles_ocl`
 and :doc:`manualrst_veles_eclipse` or :doc:`manualrst_veles_pycharm`.
 
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -82,7 +82,7 @@ After first workflow run, you will see something like this::
 
 It means that you need to change common datasets directory to yours. It could be done in veles/site_config.py (see: :doc:`manualrst_veles_configuration`).
 Change "datasets" field in root.common.dirs from "/data/veles/datasets" to the preferred path with all datasets.
-You don't need to download datasets in this folder, just make sure that this path exists and has correct permissions.
+**You don't need to download datasets** in this folder, just make sure that this path exists and has correct permissions.
 
 Importing project
 :::::::::::::::::

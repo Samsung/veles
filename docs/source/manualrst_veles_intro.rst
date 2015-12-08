@@ -15,14 +15,15 @@ The first level users are supposed just to change model settings and do not
 write any code, whereas second level users may write custom models and third
 level users additionally write new units.
 
-
-:doc:`manualrst_veles_user_setup`
-
-For ubuntu:
+For Ubuntu:
 
 :doc:`manualrst_veles_ubuntu_user_setup`
 
 :doc:`manualrst_veles_developer_setup`
+
+For Cluster deployers and other GNU/Linux:
+
+:doc:`manualrst_veles_user_setup`
 
 Here is introduction video "Veles in 2013":
 

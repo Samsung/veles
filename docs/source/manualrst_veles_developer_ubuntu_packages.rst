@@ -4,7 +4,7 @@
 Install required Ubuntu packages
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-::
+Make sure, that you successfully passed `Veles Debian repository`_ step. Run::
 
     sudo apt-get install libgit2-dev libffi6 cython3 cython libhdf5-dev \
     unixodbc-dev liblzma-dev python3-pip python-pip python3-matplotlib \
