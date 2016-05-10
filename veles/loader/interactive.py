@@ -189,7 +189,7 @@ class InteractiveImageLoader(InteractiveLoader, ImageLoader):
         self.path_to_mean = loader.path_to_mean
         self.add_sobel = loader.add_sobel
         self.mirror = loader.mirror
-        self.scale = loader.shape
+        self.scale = loader.scale
         self.scale_maintain_aspect_ratio = loader.scale_maintain_aspect_ratio
         self.rotations = loader.rotations
         self.crop = loader.crop
