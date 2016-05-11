@@ -611,8 +611,6 @@ class Loader(Unit):
         if not self.minibatch_data:
             raise error.BadFormatError("minibatch_data MUST be initialized in "
                                        "create_minibatch_data()")
-        self.shuffled_indices.mem = numpy.arange(
-            self.total_samples, dtype=Loader.INDEX_DTYPE)
         self.analyze_dataset()
         if self.testing:
             self.shuffled_indices.mem = None
