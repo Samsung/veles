@@ -9,7 +9,7 @@ motor<0.4,>=0.3
 pymongo==2.7.1
 twisted>=14.0.0
 ply>=3.4
-paramiko>=1.11.0
+paramiko==1.13.0
 opencl4py>=1.0
 argcomplete>=0.8
 ipython<4.0.0
