@@ -53,10 +53,10 @@ class WrappedRandom(object):
     def __getattr__(self, item):
         if item in self.__dict__:
             return self.__dict__[item]
-        raise AttributeError(
-            "veles.prng disables any direct usage of numpy.random. You can "
-            "use veles.prng.get().%(item)s or self.prng.%(item)s instead." %
-            locals())
+        # remove disabling any direct usage of numpy.random because there
+        # is import of some random in new version of numpy
+        # TODO(lyubov.p) get better fix
+        return getattr(my_random, item)
 
 numpy.random = WrappedRandom()
 

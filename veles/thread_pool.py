@@ -40,7 +40,6 @@ import functools
 import logging
 import signal
 import six
-from six.moves import queue
 from six import add_metaclass
 import sys
 import threading
@@ -84,7 +83,7 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
     _manhole = None
     sigint_printed = False
 
-    def __init__(self, minthreads=2, maxthreads=1024, queue_size=2048,
+    def __init__(self, minthreads=2, maxthreads=1024,
                  name=None, workflow=None):
         """
         Initializes a new thread pool.
@@ -103,7 +102,10 @@ class ThreadPool(threadpool.ThreadPool, logger.Logger):
             threadpool.ThreadPool.__init__(
                 self, minthreads=minthreads, maxthreads=maxthreads, name=name)
         logger.Logger.__init__(self)
-        self.q = queue.Queue(queue_size)
+        # remove queue_size, because it is not allowed to set q attribute
+        # in new version of threadpool.ThreadPool
+        # self.q = queue.Queue(queue_size)
+        # TODO(lyubov.p) get better fix
         self.silent = False
         self._dead = False
         self._stopping = False

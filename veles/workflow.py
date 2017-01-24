@@ -69,10 +69,14 @@ import veles.external.pydot as pydot
 from veles.timeit2 import timeit
 
 
-class MultiMap(OrderedDict, defaultdict):
+class MultiMap(OrderedDict):
     def __init__(self, default_factory=list, *items, **kwargs):
         OrderedDict.__init__(self, *items, **kwargs)
-        defaultdict.__init__(self, default_factory)
+        self.default_factory = default_factory
+
+    def __missing__(self, key):
+        result = self[key] = self.default_factory()
+        return result
 
 
 class NoMoreJobs(Exception):
