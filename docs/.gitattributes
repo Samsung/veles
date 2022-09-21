@@ -1,8 +1,0 @@
-deps.sh export-ignore
-draw_clones.py export-ignore
-generate_docs.py export-ignore
-Makefile export-ignore
-requirements.txt export-ignore
-sfood_clusters.txt export-ignore
-source export-ignore
-html export-ignore
