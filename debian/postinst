@@ -1,7 +1,0 @@
-#!/bin/sh -e
-
-echo "pip3 install -q -r /usr/share/veles/requirements.txt"
-echo "This will take some time..."
-pip3 install -q -r /usr/share/veles/requirements.txt
-VELES_ALLOW_ROOT= generate_veles_frontend
-chown -R $SUDO_USER $HOME/.veles || true
