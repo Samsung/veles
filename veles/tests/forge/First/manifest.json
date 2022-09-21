@@ -1,9 +1,0 @@
-{
-    "name": "First",
-    "workflow": "workflow.py",
-    "configuration": "workflow_config.py",
-    "short_description": "First test model",
-    "long_description": "First test model LOOONG text",
-    "author": "VELES Team",
-    "requires": []
-}

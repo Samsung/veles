@@ -1,5 +1,0 @@
-{% for i in var %}
-{{ i }}
-{% endfor %}
-
-# include<fourth.jcc>
