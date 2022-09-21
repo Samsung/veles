@@ -1,8 +1,0 @@
-[display]
-viewport=1280x720
-multi-sampling=true
-
-[gource]
-seconds-per-day=1
-hide=filenames,dirnames
-path=history.log.fixed
