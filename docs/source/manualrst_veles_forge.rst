@@ -32,8 +32,7 @@ To create a package for uploading, you need to create a manifest file (required 
     "workflow": "kanji.py",
     "image": "kanji.png",
     "tags": ["kanji", "self-constructing", "mse", "fully-connected"],
-    "files": ["generate_kanji.py", "__init__.py"],
-    "snapshots": ["https://s3-eu-west-1.amazonaws.com/veles.forge/Kanji/kanji_8.1958_2.8874_validation_2.74_train_0.11.4.pickle.gz"]}
+    "files": ["generate_kanji.py", "__init__.py"]}
 
 To create manifest file use ``veles forge assist`` command from command line. Example::
 

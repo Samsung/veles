@@ -52,18 +52,16 @@ Here is manifest.json of MNIST:
     {
     ...
     "snapshots":
-    ["https://s3-eu-west-1.amazonaws.com/veles.forge/MNIST/mnist_validation_1.92_train_0.04.4.pickle.gz",
-    "https://s3-eu-west-1.amazonaws.com/veles.forge/MNIST/mnist_caffe_validation_0.86_train_0.23.4.pickle",
-    "https://s3-eu-west-1.amazonaws.com/veles.forge/MNIST/mnist_conv_validation_0.73_train_0.11.4.pickle"]
+    []
     }
 
 Or use path to the amazon snapshot as command line argument. For fully-connected MNISTWorkflow::
 
-    python3 -m veles -s -d 0 -w=https://s3-eu-west-1.amazonaws.com/veles.forge/MNIST/mnist_validation_1.92_train_0.04.4.pickle.gz veles/znicz/samples/MNIST/mnist.py -
+    python3 -m veles -s -d 0 -w=MNIST/mnist_validation_1.92_train_0.04.4.pickle.gz veles/znicz/samples/MNIST/mnist.py -
 
 For convolutional MNISTWorkflow::
 
-    python3 -m veles -s -d 0 -w=https://s3-eu-west-1.amazonaws.com/veles.forge/MNIST/mnist_conv_validation_0.73_train_0.11.4.pickle veles/znicz/samples/MNIST/mnist.py veles/znicz/samples/MNIST/mnist_conv_config.py
+    python3 -m veles -s -d 0 -w=MNIST/mnist_conv_validation_0.73_train_0.11.4.pickle veles/znicz/samples/MNIST/mnist.py veles/znicz/samples/MNIST/mnist_conv_config.py
 
 +++++++++++++++++++++++++++++++++++++++++++++++++++++
 Use existing Workflow and existing Configuration file

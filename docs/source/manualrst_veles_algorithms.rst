@@ -28,7 +28,7 @@ Status:
    3. MSE NN with standard workflow help: Kanji/kanji.py Kanji/kanji_config.py Download: https://velesnet.ml/forge/fetch?name=Kanji&version=master
 
 4. Usage example: MNIST/mnist_forward.py. Download: https://velesnet.ml/forge/fetch?name=MNIST&version=master
-5. Results: 1.48% validation errors on MNIST (Download snapshot: https://s3-eu-west-1.amazonaws.com/veles.forge/MnistSimple/mnist_validation_1.48_train_0.00.4.pickle.gz)
+5. Results: 1.48% validation errors on MNIST
 
 *****************************
 Convolutional Neural Networks
@@ -47,8 +47,8 @@ Status:
    2. AlexNet/imagenet_workflow.py AlexNet/imagenet_workflow_config.py. Download: https://velesnet.ml/forge/fetch?name=AlexNet&version=master
 
 4. Usage example: AlexNet/ImagenetForward.ipynb. Download: https://velesnet.ml/forge/fetch?name=AlexNet&version=master
-5. Results: 17.21% validation errors on CIFAR10 (Download snapshot: https://s3-eu-west-1.amazonaws.com/veles.forge/CIFAR10/cifar_caffe_validation_17.21_train_8.31.4.pickle.gz )
-            35.10% validation errors on STL10 (Download snapshot: https://s3-eu-west-1.amazonaws.com/veles.forge/Stl10/stl10_validation_35.10_train_0.12.4.pickle.gz )
+5. Results: 17.21% validation errors on CIFAR10
+            35.10% validation errors on STL10
 
 ***************************
 Autoencoder Neural Networks
@@ -66,7 +66,7 @@ Status:
 
    2. VideoAE/video_ae.py VideoAE/video_ae_config.py. Download: https://velesnet.ml/forge/fetch?name=VideoAE&version=master
 
-4. Results: 0.5478 validation rmse on MNIST (Download snapshot: https://s3-eu-west-1.amazonaws.com/veles.forge/MnistAE/mnist_ae_0.5478_0.5482.4.pickle )
+4. Results: 0.5478 validation rmse on MNIST
 
 ************
 Kohonen maps

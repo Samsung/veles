@@ -271,7 +271,7 @@ First, load Workflow from snapshot:
     kwargs = {
         "dry_run": "init",
         "snapshot":
-        "https://s3-eu-west-1.amazonaws.com/veles.forge/MNIST/mnist_conv_"
+        "MNIST/mnist_conv_"
         "validation_0.78_train_0.16.4.pickle"}
     path_to_model = "veles/znicz/samples/MNIST/mnist.py"
 
@@ -280,7 +280,7 @@ First, load Workflow from snapshot:
 The code above runs Veles inside of python/ipython script and it is equivalent to
 the execution of the following command from the command line::
 
-    python3 -m veles --dry-run init --snapshot=https://s3-eu-west-1.amazonaws.com/veles.forge/MNIST/mnist_conv_validation_0.78_train_0.16.4.pickle path_to_model -
+    python3 -m veles --dry-run init --snapshot=MNIST/mnist_conv_validation_0.78_train_0.16.4.pickle path_to_model -
 
 Next, switch to the testing mode:
 
@@ -335,10 +335,7 @@ First, load Workflow from snapshot:
 .. code-block:: python
 
     kwargs = {
-        "dry_run": "init",
-        "snapshot":
-        "https://s3-eu-west-1.amazonaws.com/veles.forge/MNIST/mnist_conv_"
-        "validation_0.78_train_0.16.4.pickle"}
+        "dry_run": "init"}
     path_to_model = "veles/znicz/samples/MNIST/mnist.py"
 
     launcher = veles(path_to_model, **kwargs)  # pylint: disable=E1102
@@ -391,10 +388,7 @@ To create custom test Workflow load Workflow from snapshot with one of two ways.
 .. code-block:: python
 
     kwargs = {
-        "dry_run": "init",
-        "snapshot":
-        "https://s3-eu-west-1.amazonaws.com/veles.forge/MNIST/mnist_conv_"
-        "validation_0.78_train_0.16.4.pickle"}
+        "dry_run": "init"}
     path_to_model = "veles/znicz/samples/MNIST/mnist.py"
 
     launcher = veles(path_to_model, **kwargs)  # pylint: disable=E1102
@@ -404,7 +398,7 @@ To create custom test Workflow load Workflow from snapshot with one of two ways.
 
 .. code-block:: python
 
-    snapshot_name = "https://s3-eu-west-1.amazonaws.com/veles.forge/MNIST/mnist_conv_validation_0.78_train_0.16.4.pickle"
+    snapshot_name = "MNIST/mnist_conv_validation_0.78_train_0.16.4.pickle"
     workflow = SnapshotterToFile.import_(snapshot_name)
 
 Relink Workflow as you want and run it. For example, you can delete backward
