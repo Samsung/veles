@@ -98,7 +98,26 @@ class TestForgeServer(unittest.TestCase):
                 shutil.rmtree(path)
             with TarFile.open(
                     os.path.join(base, "%s.git.tar.gz" % name)) as tar:
-                tar.extractall(os.path.join(base, name))
+                def is_within_directory(directory, target):
+                    
+                    abs_directory = os.path.abspath(directory)
+                    abs_target = os.path.abspath(target)
+                
+                    prefix = os.path.commonprefix([abs_directory, abs_target])
+                    
+                    return prefix == abs_directory
+                
+                def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+                
+                    for member in tar.getmembers():
+                        member_path = os.path.join(path, member.name)
+                        if not is_within_directory(path, member_path):
+                            raise Exception("Attempted Path Traversal in Tar File")
+                
+                    tar.extractall(path, members, numeric_owner=numeric_owner) 
+                    
+                
+                safe_extract(tar, os.path.join(base,name))
         sys.stderr = sys.stdout
         cls.server = ForgeServer(ForgeServerArgs(
             base, PORT, "smtp_host", 25, "user", "password", "from", True))
@@ -236,7 +255,26 @@ class TestForgeServer(unittest.TestCase):
             self.assertTrue(os.path.exists(deldir))
             backup_file = list(os.walk(deldir))[0][2][0]
             with TarFile.open(os.path.join(deldir, backup_file)) as tar:
-                tar.extractall(deldir)
+                def is_within_directory(directory, target):
+                    
+                    abs_directory = os.path.abspath(directory)
+                    abs_target = os.path.abspath(target)
+                
+                    prefix = os.path.commonprefix([abs_directory, abs_target])
+                    
+                    return prefix == abs_directory
+                
+                def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+                
+                    for member in tar.getmembers():
+                        member_path = os.path.join(path, member.name)
+                        if not is_within_directory(path, member_path):
+                            raise Exception("Attempted Path Traversal in Tar File")
+                
+                    tar.extractall(path, members, numeric_owner=numeric_owner) 
+                    
+                
+                safe_extract(tar, deldir)
             orig_files = set(list(os.walk(dirname + ".bak"))[0][2])
             extr_files = set(list(os.walk(deldir))[0][2])
             self.assertEqual(extr_files.difference(orig_files), {backup_file})
